@@ -26,7 +26,7 @@ or a decision._
 | Feature | Status | Notes |
 |---------|--------|-------|
 | HTTP transport (`…/manifest.json`) | Planned | M1 |
-| Legacy transport (`/stremio/v1`) | Unsupported | ADR-0007 |
+| Legacy transport (`/stremio/v1`) | Unsupported | ADR-0007; excluded from the parity goal (owner decision 2026-10-06) |
 | IPFS/IPNS transport | Unsupported | ADR-0007 |
 | Manifest parsing and validation | Planned | M1 |
 | Catalog `extra` (full and short form) | Planned | M1 |

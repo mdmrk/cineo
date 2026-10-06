@@ -109,7 +109,8 @@ as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
 
 - Hosting, indexing or recommending content sources. Cineo is a client.
 - Stremio's private APIs, streaming server, branding or assets.
-- The legacy (`/stremio/v1`) and IPFS addon transports.
+- The legacy (`/stremio/v1`) and IPFS addon transports, even though the
+  reference client still supports legacy (owner decision 2026-10-06).
 - Analytics and telemetry.
 - **Cloud or account sync, for now** (owner decision 2026-10-06). Cineo is
   local-only. Data export and import cover moving between machines.
