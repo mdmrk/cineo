@@ -1,0 +1,761 @@
+//! The application state and its pure transition function.
+//!
+//! Shells render [`State`], send [`Action`]s to [`update`], and execute the
+//! returned [`Effect`]s, reporting results back as `*Loaded` actions. Results
+//! are matched to the request that produced them by `(addon, path)`; results
+//! nobody waits for any more (stale) are dropped.
+
+use url::Url;
+
+use super::library::LibraryItem;
+use super::plan::{self, CatalogTarget};
+use crate::addon::{
+    ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, Subtitle,
+    TransportUrl,
+};
+
+/// An installed addon: identity (transport URL) plus its manifest.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstalledAddon {
+    pub transport: TransportUrl,
+    pub manifest: Manifest,
+}
+
+/// The state of one asynchronous value.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Loadable<T> {
+    Loading,
+    Ready(T),
+    /// A user-presentable reason.
+    Failed(String),
+}
+
+impl<T> Loadable<T> {
+    pub fn ready(&self) -> Option<&T> {
+        match self {
+            Self::Ready(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn is_loading(&self) -> bool {
+        matches!(self, Self::Loading)
+    }
+}
+
+/// A row of catalog items (board, search).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Row {
+    pub target: CatalogTarget,
+    pub items: Loadable<Vec<MetaPreview>>,
+}
+
+/// The Discover page: one catalog, an optional genre, paged with `skip`.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Discover {
+    pub target: Option<CatalogTarget>,
+    pub genre: Option<String>,
+    pub items: Vec<MetaPreview>,
+    /// The page request in flight, if any.
+    pub pending: Option<ResourcePath>,
+    pub error: Option<String>,
+    /// `skip` value of the next page, if the catalog supports paging and the
+    /// last page was not empty.
+    pub next_skip: Option<usize>,
+}
+
+/// Streams from one addon.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StreamGroup {
+    pub addon: TransportUrl,
+    pub addon_name: String,
+    pub path: ResourcePath,
+    pub streams: Loadable<Vec<Stream>>,
+}
+
+/// The detail page of one item.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Detail {
+    pub content_type: ContentType,
+    pub id: String,
+    /// Shown while the full meta loads.
+    pub preview: Option<MetaPreview>,
+    pub meta: Loadable<Meta>,
+    /// Remaining meta addons to try if the current one fails.
+    pub meta_fallbacks: Vec<(TransportUrl, ResourcePath)>,
+    pub meta_request: Option<(TransportUrl, ResourcePath)>,
+    pub selected_video: Option<String>,
+    pub streams: Vec<StreamGroup>,
+}
+
+/// What the player shell needs to start playback.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayRequest {
+    /// Always `http(s)` (checked by [`update`]).
+    pub url: Url,
+    pub title: String,
+    pub headers: Vec<(String, String)>,
+    pub subtitles: Vec<Subtitle>,
+    pub start_ms: u64,
+    pub meta_id: String,
+    pub video_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct State {
+    pub addons: Vec<InstalledAddon>,
+    /// Addons whose manifests are being (re)loaded, e.g. at startup.
+    pub addons_loading: Vec<TransportUrl>,
+    /// Result of the last install attempt, for the addon screen.
+    pub install: Option<Loadable<String>>,
+    pub board: Vec<Row>,
+    pub discover: Discover,
+    pub search_query: String,
+    pub search: Vec<Row>,
+    pub detail: Option<Detail>,
+    pub library: Vec<LibraryItem>,
+    /// Last playback problem to show to the user.
+    pub notice: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Action {
+    // --- startup / persistence ---
+    /// Restore saved addon URLs (in order) and library items.
+    Restore {
+        addons: Vec<TransportUrl>,
+        library: Vec<LibraryItem>,
+    },
+    // --- user actions ---
+    InstallAddon(String),
+    RemoveAddon(TransportUrl),
+    /// Move the addon at `from` to position `to`.
+    MoveAddon {
+        from: usize,
+        to: usize,
+    },
+    LoadBoard,
+    OpenDiscover {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    SetDiscoverGenre(Option<String>),
+    LoadMoreDiscover,
+    Search(String),
+    OpenDetail {
+        content_type: ContentType,
+        id: String,
+        preview: Option<Box<MetaPreview>>,
+    },
+    CloseDetail,
+    SelectVideo(String),
+    Play {
+        group: usize,
+        stream: usize,
+    },
+    /// Reported by the player shell.
+    PlaybackProgress {
+        meta_id: String,
+        video_id: String,
+        time_ms: u64,
+        duration_ms: u64,
+        now_ms: u64,
+    },
+    PlaybackFailed(String),
+    RemoveFromLibrary(String),
+    DismissNotice,
+    // --- IO results ---
+    ManifestLoaded {
+        transport: TransportUrl,
+        result: Result<Box<Manifest>, String>,
+        /// True if this came from a user install (vs. startup restore).
+        install: bool,
+    },
+    CatalogLoaded {
+        addon: TransportUrl,
+        path: ResourcePath,
+        result: Result<Vec<MetaPreview>, String>,
+    },
+    MetaLoaded {
+        addon: TransportUrl,
+        path: ResourcePath,
+        result: Result<Box<Meta>, String>,
+    },
+    StreamsLoaded {
+        addon: TransportUrl,
+        path: ResourcePath,
+        result: Result<Vec<Stream>, String>,
+    },
+}
+
+/// Side effects requested by [`update`]; executed by the shell.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Effect {
+    FetchManifest {
+        transport: TransportUrl,
+        install: bool,
+    },
+    FetchCatalog {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    FetchMeta {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    FetchStreams {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    SaveAddons(Vec<TransportUrl>),
+    SaveLibraryItem(LibraryItem),
+    DeleteLibraryItem(String),
+    Play(PlayRequest),
+}
+
+/// Applies `action` to `state` and returns the effects to run.
+pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
+    match action {
+        Action::Restore { addons, library } => {
+            state.library = library;
+            state.addons_loading.clone_from(&addons);
+            addons
+                .into_iter()
+                .map(|transport| Effect::FetchManifest {
+                    transport,
+                    install: false,
+                })
+                .collect()
+        }
+        Action::InstallAddon(input) => match TransportUrl::parse(&input) {
+            Ok(transport) if state.addons.iter().any(|a| a.transport == transport) => {
+                state.install = Some(Loadable::Failed("This addon is already installed".into()));
+                Vec::new()
+            }
+            Ok(transport) => {
+                state.install = Some(Loadable::Loading);
+                vec![Effect::FetchManifest {
+                    transport,
+                    install: true,
+                }]
+            }
+            Err(err) => {
+                state.install = Some(Loadable::Failed(format!("Invalid addon URL: {err}")));
+                Vec::new()
+            }
+        },
+        Action::RemoveAddon(transport) => {
+            state.addons.retain(|a| a.transport != transport);
+            let mut effects = vec![save_addons(state)];
+            effects.extend(load_board(state));
+            effects
+        }
+        Action::MoveAddon { from, to } => {
+            if from < state.addons.len() && to < state.addons.len() && from != to {
+                let addon = state.addons.remove(from);
+                state.addons.insert(to, addon);
+                let mut effects = vec![save_addons(state)];
+                effects.extend(load_board(state));
+                effects
+            } else {
+                Vec::new()
+            }
+        }
+        Action::LoadBoard => load_board(state),
+        Action::OpenDiscover { addon, path } => {
+            let target = plan::board_targets(&state.addons)
+                .into_iter()
+                .chain(catalogs_with_required(state))
+                .find(|t| t.addon == addon && t.path == path);
+            state.discover = Discover {
+                target,
+                genre: default_genre(state, &addon, &path),
+                ..Discover::default()
+            };
+            discover_page(state, 0)
+        }
+        Action::SetDiscoverGenre(genre) => {
+            state.discover.genre = genre;
+            state.discover.items.clear();
+            discover_page(state, 0)
+        }
+        Action::LoadMoreDiscover => match state.discover.next_skip {
+            Some(skip) if state.discover.pending.is_none() => discover_page(state, skip),
+            _ => Vec::new(),
+        },
+        Action::Search(query) => {
+            let query = query.trim().to_owned();
+            state.search_query.clone_from(&query);
+            if query.is_empty() {
+                state.search.clear();
+                return Vec::new();
+            }
+            state.search = plan::search_targets(&state.addons, &query)
+                .into_iter()
+                .map(|target| Row {
+                    target,
+                    items: Loadable::Loading,
+                })
+                .collect();
+            state
+                .search
+                .iter()
+                .map(|r| fetch_catalog(&r.target))
+                .collect()
+        }
+        Action::OpenDetail {
+            content_type,
+            id,
+            preview,
+        } => {
+            let mut candidates = plan::meta_candidates(&state.addons, &content_type, &id);
+            let first = if candidates.is_empty() {
+                None
+            } else {
+                Some(candidates.remove(0))
+            };
+            state.detail = Some(Detail {
+                meta: if first.is_some() {
+                    Loadable::Loading
+                } else {
+                    Loadable::Failed("No installed addon provides details for this item".into())
+                },
+                content_type,
+                id,
+                preview: preview.map(|p| *p),
+                meta_fallbacks: candidates,
+                meta_request: first.clone(),
+                selected_video: None,
+                streams: Vec::new(),
+            });
+            first
+                .map(|(addon, path)| vec![Effect::FetchMeta { addon, path }])
+                .unwrap_or_default()
+        }
+        Action::CloseDetail => {
+            state.detail = None;
+            Vec::new()
+        }
+        Action::SelectVideo(video_id) => select_video(state, video_id),
+        Action::Play { group, stream } => play(state, group, stream),
+        Action::PlaybackProgress {
+            meta_id,
+            video_id,
+            time_ms,
+            duration_ms,
+            now_ms,
+        } => {
+            let Some(item) = state.library.iter_mut().find(|i| i.id == meta_id) else {
+                return Vec::new();
+            };
+            item.video_id = video_id;
+            item.time_offset_ms = time_ms;
+            if duration_ms > 0 {
+                item.duration_ms = duration_ms;
+            }
+            item.updated_ms = now_ms;
+            vec![Effect::SaveLibraryItem(item.clone())]
+        }
+        Action::PlaybackFailed(reason) => {
+            state.notice = Some(reason);
+            Vec::new()
+        }
+        Action::RemoveFromLibrary(id) => {
+            state.library.retain(|i| i.id != id);
+            vec![Effect::DeleteLibraryItem(id)]
+        }
+        Action::DismissNotice => {
+            state.notice = None;
+            Vec::new()
+        }
+        Action::ManifestLoaded {
+            transport,
+            result,
+            install,
+        } => manifest_loaded(state, &transport, result, install),
+        Action::CatalogLoaded {
+            addon,
+            path,
+            result,
+        } => {
+            catalog_loaded(state, &addon, &path, result);
+            Vec::new()
+        }
+        Action::MetaLoaded {
+            addon,
+            path,
+            result,
+        } => meta_loaded(state, &addon, &path, result),
+        Action::StreamsLoaded {
+            addon,
+            path,
+            result,
+        } => {
+            if let Some(group) = state.detail.as_mut().and_then(|d| {
+                d.streams
+                    .iter_mut()
+                    .find(|g| g.addon == addon && g.path == path)
+            }) {
+                group.streams = match result {
+                    Ok(streams) => Loadable::Ready(streams),
+                    Err(err) => Loadable::Failed(err),
+                };
+            }
+            Vec::new()
+        }
+    }
+}
+
+fn save_addons(state: &State) -> Effect {
+    Effect::SaveAddons(state.addons.iter().map(|a| a.transport.clone()).collect())
+}
+
+fn fetch_catalog(target: &CatalogTarget) -> Effect {
+    Effect::FetchCatalog {
+        addon: target.addon.clone(),
+        path: target.path.clone(),
+    }
+}
+
+fn load_board(state: &mut State) -> Vec<Effect> {
+    state.board = plan::board_targets(&state.addons)
+        .into_iter()
+        .map(|target| Row {
+            target,
+            items: Loadable::Loading,
+        })
+        .collect();
+    state
+        .board
+        .iter()
+        .map(|r| fetch_catalog(&r.target))
+        .collect()
+}
+
+/// Catalogs with required extras (only reachable through Discover).
+fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
+    state
+        .addons
+        .iter()
+        .flat_map(|a| {
+            a.manifest
+                .catalogs
+                .iter()
+                .filter(|c| !c.is_browsable())
+                .map(move |c| CatalogTarget {
+                    addon: a.transport.clone(),
+                    addon_name: a.manifest.name.clone(),
+                    path: ResourcePath::catalog(c.content_type.clone(), c.id.clone()),
+                    title: c.name.clone().unwrap_or_else(|| c.id.clone()),
+                })
+        })
+        .collect()
+}
+
+/// A required `genre` defaults to its first option (reference behavior).
+fn default_genre(state: &State, addon: &TransportUrl, path: &ResourcePath) -> Option<String> {
+    let catalog = state
+        .addons
+        .iter()
+        .find(|a| &a.transport == addon)?
+        .manifest
+        .catalog(&path.content_type, &path.id)?;
+    let genre = catalog.extra.iter().find(|e| e.name == "genre")?;
+    if genre.is_required {
+        genre.options.first().cloned()
+    } else {
+        None
+    }
+}
+
+fn discover_page(state: &mut State, skip: usize) -> Vec<Effect> {
+    let Some(target) = state.discover.target.clone() else {
+        return Vec::new();
+    };
+    let mut extra = Vec::new();
+    if let Some(genre) = &state.discover.genre {
+        extra.push(ExtraValue::new("genre", genre.clone()));
+    }
+    if skip > 0 {
+        extra.push(ExtraValue::new("skip", skip.to_string()));
+    }
+    let path = target.path.clone().with_extra(extra);
+    // Never request what the addon does not declare.
+    let supported = state
+        .addons
+        .iter()
+        .find(|a| a.transport == target.addon)
+        .is_some_and(|a| a.manifest.supports(&path));
+    if !supported {
+        state.discover.error = Some("This catalog does not support that filter".into());
+        return Vec::new();
+    }
+    state.discover.error = None;
+    state.discover.pending = Some(path.clone());
+    vec![Effect::FetchCatalog {
+        addon: target.addon,
+        path,
+    }]
+}
+
+fn manifest_loaded(
+    state: &mut State,
+    transport: &TransportUrl,
+    result: Result<Box<Manifest>, String>,
+    install: bool,
+) -> Vec<Effect> {
+    state.addons_loading.retain(|t| t != transport);
+    match result {
+        Ok(manifest) => {
+            if install {
+                state.install = Some(Loadable::Ready(manifest.name.clone()));
+            }
+            let addon = InstalledAddon {
+                transport: transport.clone(),
+                manifest: *manifest,
+            };
+            if let Some(existing) = state.addons.iter_mut().find(|a| &a.transport == transport) {
+                *existing = addon;
+            } else {
+                state.addons.push(addon);
+            }
+            let mut effects = Vec::new();
+            if install {
+                effects.push(save_addons(state));
+            }
+            if state.addons_loading.is_empty() {
+                effects.extend(load_board(state));
+            }
+            effects
+        }
+        Err(err) => {
+            if install {
+                state.install = Some(Loadable::Failed(err));
+            } else {
+                state.notice = Some(format!("An addon could not be loaded: {err}"));
+            }
+            if !install && state.addons_loading.is_empty() {
+                load_board(state)
+            } else {
+                Vec::new()
+            }
+        }
+    }
+}
+
+fn catalog_loaded(
+    state: &mut State,
+    addon: &TransportUrl,
+    path: &ResourcePath,
+    result: Result<Vec<MetaPreview>, String>,
+) {
+    let as_loadable = |result: &Result<Vec<MetaPreview>, String>| match result {
+        Ok(items) => Loadable::Ready(items.clone()),
+        Err(err) => Loadable::Failed(err.clone()),
+    };
+    for row in state.board.iter_mut().chain(state.search.iter_mut()) {
+        if &row.target.addon == addon && &row.target.path == path {
+            row.items = as_loadable(&result);
+        }
+    }
+    let discover = &mut state.discover;
+    let is_current = discover.pending.as_ref() == Some(path)
+        && discover.target.as_ref().is_some_and(|t| &t.addon == addon);
+    if is_current {
+        discover.pending = None;
+        match result {
+            Ok(items) => {
+                let skip = path
+                    .extra
+                    .iter()
+                    .find(|e| e.name == "skip")
+                    .and_then(|e| e.value.parse::<usize>().ok())
+                    .unwrap_or(0);
+                let pages = state
+                    .addons
+                    .iter()
+                    .find(|a| &a.transport == addon)
+                    .and_then(|a| a.manifest.catalog(&path.content_type, &path.id))
+                    .is_some_and(|c| c.extra.iter().any(|e| e.name == "skip"));
+                discover.next_skip = (pages && !items.is_empty()).then(|| skip + items.len());
+                if skip == 0 {
+                    discover.items = items;
+                } else {
+                    // Some addons repeat items across pages; keep the first.
+                    for item in items {
+                        if !discover.items.iter().any(|i| i.id == item.id) {
+                            discover.items.push(item);
+                        }
+                    }
+                }
+            }
+            Err(err) => discover.error = Some(err),
+        }
+    }
+}
+
+fn meta_loaded(
+    state: &mut State,
+    addon: &TransportUrl,
+    path: &ResourcePath,
+    result: Result<Box<Meta>, String>,
+) -> Vec<Effect> {
+    let Some(detail) = state.detail.as_mut() else {
+        return Vec::new();
+    };
+    if detail.meta_request.as_ref() != Some(&(addon.clone(), path.clone())) {
+        return Vec::new(); // stale
+    }
+    match result {
+        Ok(meta) => {
+            let auto_video = if meta.videos.is_empty() {
+                Some(meta.preview.id.clone())
+            } else {
+                meta.default_video_id
+                    .clone()
+                    .filter(|id| meta.videos.iter().any(|v| &v.id == id))
+            };
+            detail.meta = Loadable::Ready(*meta);
+            detail.meta_request = None;
+            match auto_video {
+                Some(video_id) => select_video(state, video_id),
+                None => Vec::new(),
+            }
+        }
+        Err(err) => {
+            if detail.meta_fallbacks.is_empty() {
+                detail.meta = Loadable::Failed(err);
+                detail.meta_request = None;
+                Vec::new()
+            } else {
+                let (addon, path) = detail.meta_fallbacks.remove(0);
+                detail.meta_request = Some((addon.clone(), path.clone()));
+                vec![Effect::FetchMeta { addon, path }]
+            }
+        }
+    }
+}
+
+fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
+    let addons = &state.addons;
+    let Some(detail) = state.detail.as_mut() else {
+        return Vec::new();
+    };
+    detail.streams = plan::stream_targets(addons, &detail.content_type, &video_id)
+        .into_iter()
+        .map(|(addon, path)| StreamGroup {
+            addon_name: addons
+                .iter()
+                .find(|a| a.transport == addon)
+                .map(|a| a.manifest.name.clone())
+                .unwrap_or_default(),
+            addon,
+            path,
+            streams: Loadable::Loading,
+        })
+        .collect();
+    detail.selected_video = Some(video_id);
+    detail
+        .streams
+        .iter()
+        .map(|g| Effect::FetchStreams {
+            addon: g.addon.clone(),
+            path: g.path.clone(),
+        })
+        .collect()
+}
+
+fn play(state: &mut State, group: usize, stream: usize) -> Vec<Effect> {
+    let Some(detail) = state.detail.as_ref() else {
+        return Vec::new();
+    };
+    let Some(video_id) = detail.selected_video.clone() else {
+        return Vec::new();
+    };
+    let Some(stream) = detail
+        .streams
+        .get(group)
+        .and_then(|g| g.streams.ready())
+        .and_then(|s| s.get(stream))
+    else {
+        return Vec::new();
+    };
+    let crate::addon::StreamSource::Url(url) = &stream.source else {
+        state.notice = Some(format!(
+            "{} streams are not supported yet",
+            stream.source.kind_label()
+        ));
+        return Vec::new();
+    };
+    if !stream.source.is_playable() {
+        state.notice = Some(format!("Unsupported stream scheme `{}`", url.scheme()));
+        return Vec::new();
+    }
+    let preview = detail
+        .meta
+        .ready()
+        .map(|m| m.preview.clone())
+        .or_else(|| detail.preview.clone());
+    let name = preview.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let episode_title = detail.meta.ready().and_then(|m| {
+        m.videos
+            .iter()
+            .find(|v| v.id == video_id)
+            .map(|v| match (v.season, v.episode) {
+                (Some(s), Some(e)) => format!("S{s:02}E{e:02} {}", v.title),
+                _ => v.title.clone(),
+            })
+    });
+    let title = match episode_title {
+        Some(ep) => format!("{name} — {ep}"),
+        None => name.clone(),
+    };
+    let mut subtitles = stream.subtitles.clone();
+    subtitles.dedup_by(|a, b| a.url == b.url);
+    let request = PlayRequest {
+        url: url.clone(),
+        title,
+        headers: stream.request_headers.clone(),
+        subtitles,
+        start_ms: 0,
+        meta_id: detail.id.clone(),
+        video_id: video_id.clone(),
+    };
+    let content_type = detail.content_type.clone();
+    let meta_id = detail.id.clone();
+
+    // Create or update the library entry; resume where the user left off.
+    let start_ms = match state.library.iter_mut().find(|i| i.id == meta_id) {
+        Some(item) => {
+            let start = item.resume_ms(&video_id);
+            if item.video_id != video_id {
+                item.video_id.clone_from(&video_id);
+                item.time_offset_ms = 0;
+                item.duration_ms = 0;
+            }
+            start
+        }
+        None => {
+            state.library.push(LibraryItem {
+                id: meta_id.clone(),
+                content_type,
+                name,
+                poster: preview.and_then(|p| p.poster),
+                video_id,
+                time_offset_ms: 0,
+                duration_ms: 0,
+                updated_ms: 0,
+            });
+            0
+        }
+    };
+    let mut effects = Vec::new();
+    if let Some(item) = state.library.iter().find(|i| i.id == meta_id) {
+        effects.push(Effect::SaveLibraryItem(item.clone()));
+    }
+    effects.push(Effect::Play(PlayRequest {
+        start_ms,
+        ..request
+    }));
+    effects
+}

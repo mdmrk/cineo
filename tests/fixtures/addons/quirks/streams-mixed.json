@@ -1,0 +1,10 @@
+{
+  "streams": [
+    { "url": "rtmp://live.example/stream" },
+    { "url": "not a url", "name": "Broken" },
+    { "infoHash": "xyz", "name": "Bad hash" },
+    { "url": "https://media.example/ok.mp4", "behaviorHints": { "proxyHeaders": { "request": { "Bad Header": "x", "X-Ok": "1", "X-Inject": "a\r\nHost: evil" } } } },
+    { "name": "No source" },
+    42
+  ]
+}

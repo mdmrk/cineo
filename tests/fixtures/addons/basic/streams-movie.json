@@ -1,0 +1,22 @@
+{
+  "streams": [
+    {
+      "name": "1080p",
+      "description": "Example HTTP stream",
+      "url": "https://media.example/v/1.mp4",
+      "subtitles": [{ "id": "s1", "url": "https://subs.example/1.srt", "lang": "eng" }],
+      "behaviorHints": {
+        "bingeGroup": "example-1080p",
+        "filename": "film.mp4",
+        "videoSize": 1234567,
+        "notWebReady": true,
+        "proxyHeaders": { "request": { "User-Agent": "Cineo-Test", "Referer": "https://media.example/" } }
+      }
+    },
+    { "name": "Torrent", "title": "Deprecated title field", "infoHash": "0123456789ABCDEF0123456789ABCDEF01234567", "fileIdx": 2, "sources": ["tracker:udp://tracker.example:1337"] },
+    { "ytId": "aqz-KE-bpKQ" },
+    { "externalUrl": "https://watch.example/film" },
+    { "rarUrls": [{ "url": "https://files.example/a.rar", "bytes": 10 }] },
+    { "nzbUrl": "https://nzb.example/a.nzb" }
+  ]
+}

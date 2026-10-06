@@ -1,0 +1,8 @@
+{
+  "id": "org.cineo.fixture.streams",
+  "version": "0.3.0",
+  "name": "Streams Fixture",
+  "types": ["movie", "series"],
+  "catalogs": [],
+  "resources": [{ "name": "stream", "types": ["movie", "series"], "idPrefixes": ["tt"] }]
+}

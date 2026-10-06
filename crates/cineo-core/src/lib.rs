@@ -7,4 +7,5 @@
 //! depends on none of them. See `docs/ARCHITECTURE.md`.
 
 pub mod addon;
+pub mod app;
 pub mod diagnostics;

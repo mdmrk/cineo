@@ -6,8 +6,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cineo_core::addon::{
-    CatalogResponse, Manifest, ManifestError, ResourcePath, ResponseError, TransportUrl,
-    parse_catalog_response, parse_manifest,
+    CatalogResponse, Manifest, ManifestError, Meta, ResourcePath, ResponseError, Stream, Subtitle,
+    TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
+    parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::diagnostics::Parsed;
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
@@ -109,10 +110,58 @@ impl AddonClient {
         addon: &TransportUrl,
         path: &ResourcePath,
     ) -> Result<Parsed<CatalogResponse>, FetchError> {
+        self.fetch_resource(addon, path, parse_catalog_response)
+            .await
+    }
+
+    /// Fetches `meta/{type}/{id}.json`.
+    pub async fn fetch_meta(
+        &self,
+        addon: &TransportUrl,
+        path: &ResourcePath,
+    ) -> Result<Parsed<Meta>, FetchError> {
+        self.fetch_resource(addon, path, parse_meta_response).await
+    }
+
+    /// Fetches `stream/{type}/{videoId}.json`.
+    pub async fn fetch_streams(
+        &self,
+        addon: &TransportUrl,
+        path: &ResourcePath,
+    ) -> Result<Parsed<Vec<Stream>>, FetchError> {
+        self.fetch_resource(addon, path, parse_stream_response)
+            .await
+    }
+
+    /// Fetches `subtitles/{type}/{id}[/{extra}].json`.
+    pub async fn fetch_subtitles(
+        &self,
+        addon: &TransportUrl,
+        path: &ResourcePath,
+    ) -> Result<Parsed<Vec<Subtitle>>, FetchError> {
+        self.fetch_resource(addon, path, parse_subtitles_response)
+            .await
+    }
+
+    /// Fetches an image (poster, background, logo) under the same network
+    /// policy, with `max_bytes` as the size limit. Returns the raw bytes.
+    pub async fn fetch_image(&self, url: &Url, max_bytes: usize) -> Result<Vec<u8>, FetchError> {
+        let span = info_span!("image_request", req = next_request_id(), origin = %origin(url));
+        self.get_limited(url.clone(), max_bytes, "image/*")
+            .instrument(span)
+            .await
+    }
+
+    async fn fetch_resource<T>(
+        &self,
+        addon: &TransportUrl,
+        path: &ResourcePath,
+        parse: fn(&[u8]) -> Result<Parsed<T>, ResponseError>,
+    ) -> Result<Parsed<T>, FetchError> {
         let span = info_span!("addon_request", req = next_request_id(), addon = %origin(addon.as_url()), resource = %path.to_url_path());
         async {
             let body = self.get(addon.resource_url(path)).await?;
-            let parsed = parse_catalog_response(&body)?;
+            let parsed = parse(&body)?;
             log_warnings(&parsed.warnings);
             Ok(parsed)
         }
@@ -122,12 +171,21 @@ impl AddonClient {
 
     /// GETs `url` and returns the decoded body, enforcing the size limit.
     async fn get(&self, url: Url) -> Result<Vec<u8>, FetchError> {
+        self.get_limited(url, self.policy.max_body_bytes, "application/json")
+            .await
+    }
+
+    async fn get_limited(
+        &self,
+        url: Url,
+        limit: usize,
+        accept: &str,
+    ) -> Result<Vec<u8>, FetchError> {
         self.policy.check_url(&url)?;
-        let limit = self.policy.max_body_bytes;
         let mut response = self
             .http
             .get(url)
-            .header(reqwest::header::ACCEPT, "application/json")
+            .header(reqwest::header::ACCEPT, accept)
             .send()
             .await
             .map_err(|err| classify(&err))?;

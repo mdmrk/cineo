@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "id": "tt0000010",
+    "type": "series",
+    "name": "Example Series",
+    "poster": "https://images.example/p/10.jpg",
+    "background": "https://images.example/b/10.jpg",
+    "description": "A series used in tests.",
+    "releaseInfo": "2001-2005",
+    "runtime": "22 min",
+    "genres": ["Comedy"],
+    "cast": ["Actor One", "Actor Two"],
+    "videos": [
+      { "id": "tt0000010:2:1", "name": "Second Season Opener", "season": 2, "episode": 1, "released": "2002-09-01T00:00:00.000Z" },
+      { "id": "tt0000010:1:2", "title": "Pilot, Part Two", "season": 1, "episode": 2, "overview": "It continues." },
+      { "id": "tt0000010:1:1", "title": "Pilot", "season": 1, "episode": 1, "thumbnail": "https://images.example/t/1.jpg", "description": "It begins." },
+      { "id": "tt0000010:0:1", "title": "Special", "season": 0, "episode": 1 }
+    ]
+  }
+}

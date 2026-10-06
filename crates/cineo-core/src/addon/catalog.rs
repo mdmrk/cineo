@@ -70,7 +70,11 @@ pub fn parse_catalog_response(bytes: &[u8]) -> Result<Parsed<CatalogResponse>, R
     Ok(warnings.finish(CatalogResponse { metas }))
 }
 
-fn parse_meta_preview(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<MetaPreview> {
+pub(super) fn parse_meta_preview(
+    item: &Value,
+    loc: &str,
+    warnings: &mut Warnings,
+) -> Option<MetaPreview> {
     let Value::Object(obj) = item else {
         warnings.skipped(loc, format!("expected object, got {}", kind(item)));
         return None;

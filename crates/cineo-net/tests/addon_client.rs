@@ -198,3 +198,64 @@ async fn errors_do_not_leak_addon_configuration() {
     assert!(matches!(err, FetchError::Connect(_)), "got {err:?}");
     assert!(!err.to_string().contains("SECRET-TOKEN"), "{err}");
 }
+
+#[tokio::test]
+async fn fetches_meta_and_streams() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/cfg/meta/series/tt0000010.json",
+        fixture("addons/basic/meta-series.json"),
+    )
+    .await;
+    // `:` in the video id is percent-encoded on the wire (encodeURIComponent).
+    serve(
+        &server,
+        "/cfg/stream/series/tt0000010%3A1%3A1.json",
+        fixture("addons/basic/streams-movie.json"),
+    )
+    .await;
+    let client = AddonClient::new(local_policy()).unwrap();
+    let addon = transport(&server);
+    let series = ContentType::new("series").unwrap();
+    let meta_path = ResourcePath {
+        resource: cineo_core::addon::ResourceName::Meta,
+        content_type: series.clone(),
+        id: "tt0000010".into(),
+        extra: Vec::new(),
+    };
+    let meta = client.fetch_meta(&addon, &meta_path).await.unwrap().value;
+    assert_eq!(meta.videos.len(), 4);
+    let stream_path = ResourcePath {
+        resource: cineo_core::addon::ResourceName::Stream,
+        content_type: series,
+        id: "tt0000010:1:1".into(),
+        extra: Vec::new(),
+    };
+    let streams = client
+        .fetch_streams(&addon, &stream_path)
+        .await
+        .unwrap()
+        .value;
+    assert_eq!(streams.len(), 6);
+}
+
+#[tokio::test]
+async fn images_use_their_own_size_limit() {
+    let server = MockServer::start().await;
+    serve(&server, "/poster.jpg", vec![0_u8; 2048]).await;
+    let client = AddonClient::new(local_policy()).unwrap();
+    let url = url::Url::parse(&format!("{}/poster.jpg", server.uri())).unwrap();
+    assert_eq!(client.fetch_image(&url, 4096).await.unwrap().len(), 2048);
+    let err = client.fetch_image(&url, 1024).await.unwrap_err();
+    assert!(
+        matches!(err, FetchError::TooLarge { limit: 1024 }),
+        "got {err:?}"
+    );
+
+    let blocked = AddonClient::new(NetPolicy::default()).unwrap();
+    assert!(matches!(
+        blocked.fetch_image(&url, 4096).await,
+        Err(FetchError::Blocked(_))
+    ));
+}

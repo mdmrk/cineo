@@ -32,17 +32,17 @@ _Last reviewed: 2026-10-06._
 | Resource filtering (`types`, `idPrefixes`) | Supported | `short_resource_inherits_*`, `full_resource_uses_only_its_own_filters`, `catalog_support_checks_*` |
 | Catalog requests: `genre`, `skip`, `search` | Verified | `encodes_extra_like_encode_uri_component`; live: Cinemeta `genre`, `search` |
 | Catalog response (`metas`) | Verified | `basic_catalog_parses`, `quirky_catalog_*`, `null_metas_*`; live: Cinemeta |
-| Meta response, videos/episodes | Planned | M2 |
-| Stream response: `url` (http/https) | Planned | M2 |
+| Meta response, videos/episodes | Supported | `series_meta_parses_and_sorts_videos`, `movie_meta_without_videos_*`, `fetches_meta_and_streams` |
+| Stream response: `url` (http/https) | Supported | `stream_sources_are_recognized_in_reference_order`; playback in M3 |
 | Stream response: `ytId` | Planned | v0.x; resolution strategy UNKNOWN (ADR-0010) |
 | Stream response: `externalUrl` | Planned | M2; opened in the system browser after confirmation |
 | Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Planned | M9, own streaming engine (ADR-0010) |
 | Stream response: archives (`rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls`, `tarUrls`) | Planned | M10 (ADR-0010) |
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
-| Stream `behaviorHints.proxyHeaders` | Planned | M3; validated headers only |
+| Stream `behaviorHints.proxyHeaders` | Partial | Parsed and validated (`quirky_streams_drop_bad_sources_and_unsafe_headers`); sent by the player in M3 |
 | Stream `behaviorHints.bingeGroup` | Planned | v0.x binge-watching |
 | Subtitles resource | Planned | M6 |
-| Subtitles in stream objects | Planned | M6 |
+| Subtitles in stream objects | Partial | Parsed (`stream_sources_*`); loaded into the player in M6 |
 | `addon_catalog` resource | Planned | v0.x |
 | Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |
 | `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown in UI in M5 |
@@ -57,9 +57,9 @@ _Last reviewed: 2026-10-06._
 | Install/remove/order addons | Planned | M4 (persisted) |
 | Board (browsable catalogs) | Planned | M5 (egui, ADR-0011) |
 | Discover with filters | Planned | M5 |
-| Search across addons | Planned | M2 (aggregation), M5 (UI) |
+| Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; UI in M5 |
 | Detail page | Planned | M5 |
-| Stream list aggregated across addons | Planned | M2 |
+| Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
 | Playback via external mpv | Planned | M3 |
 | Embedded playback in the window | Planned | Future (libmpv render API) |
 | Audio and subtitle track selection | Planned | M3 |

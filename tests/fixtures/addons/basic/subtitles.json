@@ -1,0 +1,1 @@
+{ "subtitles": [ { "id": "1", "url": "https://subs.example/a.srt", "lang": "eng", "label": "English [CC]" }, { "id": "2", "url": "file:///etc/passwd", "lang": "eng" } ] }

@@ -25,8 +25,9 @@ flowchart LR
 |-----------|--------|
 | M0 Engineering foundation | **Done** (2026-10-06) |
 | M1 Manifest + catalog vertical slice | **Done** (2026-10-06) |
-| M2 | Next |
-| M3 – M10 | Planned |
+| M2 Meta, streams, aggregation | **Done** (2026-10-06) |
+| M3 – M5 | In progress |
+| M6 – M10 | Planned |
 
 ---
 
@@ -70,8 +71,11 @@ flowchart LR
   - The reducer/effect structure (ADR-0001) for aggregation: request
     planning across addons, concurrent fetch, partial results, stale-response
     dropping.
-  - CLI `cineo meta`, `cineo streams`, `cineo search`. Addons are passed as
-    repeated `--addon` arguments; there is no persistence yet.
+  - The pure state machine `cineo_core::app` (board, discover paging,
+    search, detail with meta fallback, streams, library/progress).
+    (Changed 2026-10-06: the planned CLI `meta`/`streams` commands were
+    dropped. The state machine tests cover the same behavior, and the GUI
+    is the shell.)
 - **Tests:** reducer tests (effects, partial failure, ordering), stream-source
   fixtures, mock-server aggregation E2E.
 - **Acceptance:** the CLI lists streams from two mock addons, with one failing

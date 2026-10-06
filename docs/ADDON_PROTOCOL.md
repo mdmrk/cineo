@@ -122,9 +122,9 @@ change which addons are asked.
 | Resource | Shape | Rules |
 |----------|-------|-------|
 | catalog | `{ "metas": [MetaPreview] }` | Missing `metas` is an error; `"metas": null` is an empty list (VERIFIED-REF); invalid items are skipped individually (VERIFIED-REF `VecSkipError`) |
-| meta | `{ "meta": Meta }` | M2 |
-| stream | `{ "streams": [Stream] }` | M2; items skipped individually |
-| subtitles | `{ "subtitles": [Subtitle] }` | M6 |
+| meta | `{ "meta": Meta }` | Missing/null `meta` or a meta without valid `id`/`type` is an error; `videos` sorted by (season, episode); video `title` falls back to `name` (VERIFIED-REF alias), `overview` to `description`; invalid videos skipped |
+| stream | `{ "streams": [Stream] }` | Source chosen by field presence in reference order (`url`, `ytId`, `infoHash`, `externalUrl`, archives, `nzbUrl`); `infoHash` must be 40 hex chars; `title` backs `description`; invalid items skipped |
+| subtitles | `{ "subtitles": [Subtitle] }` | `url` must be http(s); missing `lang` → `und` |
 
 ### MetaPreview fields Cineo keeps (M1)
 

@@ -9,7 +9,9 @@
 mod catalog;
 mod json;
 mod manifest;
+mod meta;
 mod request;
+mod stream;
 mod types;
 
 pub use catalog::{CatalogResponse, MetaPreview, PosterShape, parse_catalog_response};
@@ -17,7 +19,11 @@ pub use manifest::{
     BehaviorHints, CatalogDef, ExtraError, ExtraProp, IdFilter, Manifest, ManifestError, Resource,
     parse_manifest,
 };
+pub use meta::{Meta, Video, parse_meta_response};
 pub use request::{ExtraValue, ResourcePath, TransportUrl, TransportUrlError};
+pub use stream::{
+    ArchiveKind, Stream, StreamSource, Subtitle, parse_stream_response, parse_subtitles_response,
+};
 pub use types::{ContentType, ResourceName};
 
 /// Errors for a response that cannot be interpreted at all.

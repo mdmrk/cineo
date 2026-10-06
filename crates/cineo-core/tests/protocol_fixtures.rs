@@ -7,7 +7,8 @@
 
 use cineo_core::addon::{
     ContentType, ExtraError, ExtraValue, IdFilter, ManifestError, PosterShape, ResourceName,
-    ResourcePath, ResponseError, parse_catalog_response, parse_manifest,
+    ResourcePath, ResponseError, StreamSource, parse_catalog_response, parse_manifest,
+    parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -273,4 +274,117 @@ fn response_without_metas_is_rejected() {
         parse_catalog_response(&fixture("invalid/catalog-wrong-resource.json")),
         Err(ResponseError::MissingField("metas"))
     ));
+}
+
+#[test]
+fn series_meta_parses_and_sorts_videos() {
+    let parsed = parse_meta_response(&fixture("basic/meta-series.json")).unwrap();
+    assert_eq!(parsed.warnings, vec![]);
+    let meta = parsed.value;
+    assert_eq!(meta.preview.name, "Example Series");
+    assert_eq!(meta.runtime.as_deref(), Some("22 min"));
+    let ids: Vec<_> = meta.videos.iter().map(|v| v.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        vec![
+            "tt0000010:0:1",
+            "tt0000010:1:1",
+            "tt0000010:1:2",
+            "tt0000010:2:1"
+        ]
+    );
+    // `name` is the reference-client alias of `title`; `description` backs `overview`.
+    assert_eq!(meta.videos[3].title, "Second Season Opener");
+    assert_eq!(meta.videos[1].overview.as_deref(), Some("It begins."));
+    assert_eq!(meta.seasons(), vec![1, 2, 0], "specials last");
+}
+
+#[test]
+fn movie_meta_without_videos_has_its_own_id_as_video() {
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value;
+    assert_eq!(meta.video_ids(), vec!["tt0000001"]);
+    assert_eq!(meta.runtime.as_deref(), Some("120"));
+    assert_eq!(meta.default_video_id.as_deref(), Some("tt0000001"));
+}
+
+#[test]
+fn stream_sources_are_recognized_in_reference_order() {
+    let parsed = parse_stream_response(&fixture("basic/streams-movie.json")).unwrap();
+    assert_eq!(parsed.warnings, vec![]);
+    let streams = parsed.value;
+    let kinds: Vec<_> = streams.iter().map(|s| s.source.kind_label()).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            "HTTP", "Torrent", "YouTube", "External", "Archive", "Usenet"
+        ]
+    );
+    assert!(streams[0].source.is_playable());
+    assert!(streams[1..].iter().all(|s| !s.source.is_playable()));
+
+    let http = &streams[0];
+    assert_eq!(http.binge_group.as_deref(), Some("example-1080p"));
+    assert_eq!(http.video_size, Some(1_234_567));
+    assert_eq!(http.subtitles.len(), 1);
+    assert_eq!(http.request_headers.len(), 2);
+
+    let StreamSource::Torrent {
+        info_hash,
+        file_idx,
+        ..
+    } = &streams[1].source
+    else {
+        panic!("expected torrent");
+    };
+    assert_eq!(info_hash, "0123456789abcdef0123456789abcdef01234567");
+    assert_eq!(*file_idx, Some(2));
+    assert_eq!(
+        streams[1].description.as_deref(),
+        Some("Deprecated title field")
+    );
+}
+
+#[test]
+fn quirky_streams_drop_bad_sources_and_unsafe_headers() {
+    let parsed = parse_stream_response(&fixture("quirks/streams-mixed.json")).unwrap();
+    let streams = &parsed.value;
+    assert_eq!(streams.len(), 2);
+    assert!(
+        !streams[0].source.is_playable(),
+        "rtmp is parsed but not playable"
+    );
+    assert_eq!(
+        streams[1].request_headers,
+        vec![("X-Ok".to_owned(), "1".to_owned())],
+        "invalid names and CR/LF values are dropped"
+    );
+    let mut locations: Vec<_> = parsed
+        .warnings
+        .iter()
+        .map(|w| w.location.as_str())
+        .collect();
+    locations.sort_unstable();
+    assert_eq!(
+        locations,
+        vec![
+            "streams[1]",
+            "streams[1].url",
+            "streams[2]",
+            "streams[2].infoHash",
+            "streams[3].behaviorHints.proxyHeaders.request.Bad Header",
+            "streams[3].behaviorHints.proxyHeaders.request.X-Inject",
+            "streams[4]",
+            "streams[5]",
+        ]
+    );
+}
+
+#[test]
+fn subtitles_require_http_urls() {
+    let parsed = parse_subtitles_response(&fixture("basic/subtitles.json")).unwrap();
+    assert_eq!(parsed.value.len(), 1);
+    assert_eq!(parsed.value[0].label.as_deref(), Some("English [CC]"));
+    assert_eq!(parsed.warnings.len(), 2, "ignored url + skipped item");
 }

@@ -149,8 +149,10 @@ sequenceDiagram
   tested by asserting on returned effects.
 - Request identity: each fetch effect carries the `ResourcePath`, and late
   responses for stale requests are dropped by comparing it.
-- The reducer structure is introduced in M2, once there are two or more
-  interacting requests (aggregation). M1 uses direct calls.
+- Implemented in `cineo_core::app`: `update(&mut State, Action) -> Vec<Effect>`.
+  IO results come back as `*Loaded` actions keyed by `(addon, path)`.
+  Detail meta falls back through candidate addons in user order. Stream
+  groups fail independently.
 
 ## Async and concurrency model
 

@@ -139,3 +139,36 @@ pub(crate) fn kind(value: &Value) -> &'static str {
         Value::Object(_) => "object",
     }
 }
+
+/// Optional non-negative integer; accepts JSON numbers and numeric strings
+/// (addons send both, e.g. `"season": "1"`).
+pub(crate) fn opt_u32(obj: &Object, key: &str, loc: &str, warnings: &mut Warnings) -> Option<u32> {
+    let parsed = match obj.get(key) {
+        None | Some(Value::Null) => return None,
+        Some(Value::Number(n)) => n.as_u64().and_then(|n| u32::try_from(n).ok()),
+        Some(Value::String(s)) => s.trim().parse::<u32>().ok(),
+        Some(_) => None,
+    };
+    if parsed.is_none() {
+        warnings.ignored(field(loc, key), "expected a non-negative integer");
+    }
+    parsed
+}
+
+/// Optional URL with any scheme; used for stream sources whose playability is
+/// decided later. Invalid URLs are absent + warning.
+pub(crate) fn opt_any_url(
+    obj: &Object,
+    key: &str,
+    loc: &str,
+    warnings: &mut Warnings,
+) -> Option<Url> {
+    let raw = opt_string(obj, key, loc, warnings)?;
+    match Url::parse(&raw) {
+        Ok(url) => Some(url),
+        Err(err) => {
+            warnings.ignored(field(loc, key), format!("invalid URL: {err}"));
+            None
+        }
+    }
+}
