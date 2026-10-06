@@ -56,13 +56,13 @@ These are all treated as hostile:
 
 | Risk | Control |
 |------|---------|
-| Option injection via the URL (`--script=…`) | Load media through the IPC `loadfile` command with a JSON array argument. Never build command lines from addon data. Never use `mpv_command_string`-style string commands. |
+| Option injection via the URL (`--script=…`) | Load media through the IPC `loadfile` command with a JSON array argument. Never build command lines from addon data. Never use `mpv_command_string`-style string commands. The title goes through the `force-media-title` property, not the `--title` option (which expands `${…}`). Resuming uses a `seek` after `file-loaded`. |
 | Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv, plus loopback URLs issued by `cineo-stream` (ADR-0010). Local files are allowed only when the **user** picked them. |
 | Untrusted playlists | Do not enable `--load-unsafe-playlists`. |
 | `ytdl` hook running an external program on addon URLs | Start mpv with `--ytdl=no`. `ytId` support (v0.x) may enable it only for URLs Cineo builds from a validated YouTube id (`[A-Za-z0-9_-]{11}`), decided by its own ADR. |
-| User mpv config/scripts changing behavior | Start mpv with `--no-config` plus an explicit option set (INFERRED: gives reproducible behavior; revisit if users want their config). |
+| User mpv config/scripts changing behavior | Start mpv with `--no-config --ytdl=no --idle=once --terminal=no --hwdec=auto-safe` (implemented in `cineo-player-mpv`). Revisit if users want their own config. |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
-| IPC socket hijack | The mpv manual states that IPC is not secure. Put the socket in a per-user runtime directory with `0700` permissions (Unix) and give it a random name. Windows named pipes get a random name. |
+| IPC socket hijack | The mpv manual states that IPC is not secure. The socket lives in `$XDG_RUNTIME_DIR/cineo-<pid>/` (or the temp dir), created with mode `0700`. Its name is `mpv-<pid>-<nanos>`, which is unique but **not** cryptographically random. The directory permissions are the protection. Windows named pipes use the same name scheme and default pipe ACLs (UNKNOWN whether those are sufficient; review before the Windows release). |
 | Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only. There is no "send arbitrary mpv command" path, unlike shell-ng. |
 
 ### Subtitles

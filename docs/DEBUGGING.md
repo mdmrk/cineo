@@ -55,16 +55,18 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 ### Stream failures (M2/M3)
 
-- `cineo streams <type> <video-id>` lists streams per addon, including the
-  unsupported ones and why they are unsupported (torrent, archive, …).
-- Check the stream source scheme. Only `http(s)` is playable.
+- Streams load per addon. A failing addon shows its own error and does not
+  hide the others. Non-`http(s)` sources (torrent, archive, …) are listed
+  but refused with a notice naming the source kind.
+- Logs: `RUST_LOG=cineo_net=debug` shows each `addon_request` span with its
+  resource path.
 
 ### Playback failures (M3)
 
-- `cineo play <url>` with `-v` logs every IPC command sent and every event
-  received, as JSON.
-- mpv's own log: the player passes `--log-file` into the Cineo log directory
-  when debug logging is on.
+- With debug logging (`RUST_LOG=cineo_player_mpv=debug`), every IPC command
+  sent is logged, and so is every `end-file` reason.
+- mpv's own log is not captured yet (mpv runs with `--terminal=no`). To
+  debug mpv itself, reproduce by running `mpv <url>` directly.
 - Common causes: an unsupported codec (check `hwdec` fallback in the mpv log),
   an HTTP 403 (check `proxyHeaders`), an expired stream URL.
 

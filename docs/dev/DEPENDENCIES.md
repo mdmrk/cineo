@@ -20,6 +20,9 @@ Re-check them when adding.
 | `clap` | 4.6.7 | CLI arguments (cli) | MIT/Apache |
 | `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
 
+`tokio` features `process`, `io-util` and `sync` were added for the mpv
+player (M3). `serde_json` is also used there for IPC messages.
+
 ## Planned (researched, not added)
 
 | Concern | Choice | Version | License | MSRV | Added in | Why / alternatives considered |

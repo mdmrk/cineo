@@ -39,7 +39,7 @@ _Last reviewed: 2026-10-06._
 | Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Planned | M9, own streaming engine (ADR-0010) |
 | Stream response: archives (`rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls`, `tarUrls`) | Planned | M10 (ADR-0010) |
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
-| Stream `behaviorHints.proxyHeaders` | Partial | Parsed and validated (`quirky_streams_drop_bad_sources_and_unsafe_headers`); sent by the player in M3 |
+| Stream `behaviorHints.proxyHeaders` | Supported | Validated in the core and again by the player; sent via `http-header-fields` (`sends_typed_commands_and_reports_events`; real mpv delivered them to an HTTP server, 2026-10-06) |
 | Stream `behaviorHints.bingeGroup` | Planned | v0.x binge-watching |
 | Subtitles resource | Planned | M6 |
 | Subtitles in stream objects | Partial | Parsed (`stream_sources_*`); loaded into the player in M6 |
@@ -60,9 +60,9 @@ _Last reviewed: 2026-10-06._
 | Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; UI in M5 |
 | Detail page | Planned | M5 |
 | Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
-| Playback via external mpv | Planned | M3 |
+| Playback via external mpv | Supported | `cineo-player-mpv` tests (fake IPC peer); IPC commands verified against real mpv 0.41 on Linux, headless, 2026-10-06. Windows named pipe: untested |
 | Embedded playback in the window | Planned | Future (libmpv render API) |
-| Audio and subtitle track selection | Planned | M3 |
+| Audio and subtitle track selection | Partial | mpv's own on-screen controls (embedded tracks). Addon subtitles: M6 |
 | Library | Planned | M4 |
 | Watch progress / continue watching | Planned | M4 |
 | Deep links (`cineo://`) | Planned | v0.x |

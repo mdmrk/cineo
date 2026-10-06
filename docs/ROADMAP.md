@@ -26,7 +26,8 @@ flowchart LR
 | M0 Engineering foundation | **Done** (2026-10-06) |
 | M1 Manifest + catalog vertical slice | **Done** (2026-10-06) |
 | M2 Meta, streams, aggregation | **Done** (2026-10-06) |
-| M3 – M5 | In progress |
+| M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
+| M4 – M5 | Next |
 | M6 – M10 | Planned |
 
 ---
