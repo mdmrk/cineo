@@ -29,7 +29,7 @@ flowchart LR
 | M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
 | M4 Persistence + library | **Done** (2026-10-06) |
 | M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](dev/GUI_MANUAL_TEST.md) on Linux and Windows |
-| M9 Streaming engine: torrents | **In progress**; moved ahead of M6/M7 (owner decision 2026-10-06) |
+| M9 Streaming engine: torrents | **Implemented** (2026-10-06); acceptance pending: [torrent manual test](dev/GUI_MANUAL_TEST.md#torrents-m9) on Linux and Windows. Moved ahead of M6/M7 (owner decision 2026-10-06) |
 | M6 Subtitles, M7 Packaging | Next after M9 |
 | M8, M10 | Planned |
 

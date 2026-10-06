@@ -45,9 +45,34 @@ on **Linux and Windows**, and record the date, OS and result in
 | 9 | Open the item from Continue watching → Play | mpv resumes at ~10 minutes |
 | 10 | Discover → pick "Popular — Cinemeta", a genre, "Load more" | Items change with the genre; more items append |
 | 11 | Open a series → choose a season → an episode | Episode list for that season; streams load for the episode |
-| 12 | Play a torrent stream (any torrent addon), if available | Play is disabled; hovering says torrent streams are not supported yet |
+| 12 | Torrent streams | See [Torrents (M9)](#torrents-m9) |
 | 13 | Library → Remove the item | It disappears, and stays gone after a restart |
 | 14 | Install `http://127.0.0.1:9/manifest.json` without `--allow-private-network` | Error mentions the network policy; nothing crashes |
 
 Also watch the `-v` log: no panics, and no full addon or stream URLs (only
 origins and resource paths).
+
+## Torrents (M9)
+
+Use a torrent of content you may share (for example a public-domain film
+from the Internet Archive; each item has a torrent whose info hash is on
+its page). Add a stream to the local addon above, in front of the
+`Local` entry:
+
+```json
+{"name":"Torrent","infoHash":"<40 hex characters>","fileIdx":0}
+```
+
+Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
+
+| # | Do | Expect |
+|---|----|--------|
+| T1 | Open the film; Play the torrent stream | The "Peer-to-peer streaming" notice; nothing appears in the cache directory yet |
+| T2 | Cancel | No playback, no engine log lines (`-v`) |
+| T3 | Play again → Accept and play | A bottom bar "Torrent: looking for peers…", then peers, speed and percent; mpv opens and plays |
+| T4 | Seek forward and back in mpv | Playback resumes within a few seconds |
+| T5 | Close mpv | The bottom bar disappears; the log shows the torrent stopped |
+| T6 | Play it again | No notice this time; starts faster (data in the cache) |
+| T7 | Settings → untick "Show and play torrent streams"; open the film | The torrent stream is gone; "1 torrent stream hidden…" is shown |
+| T8 | Restart with the same directories | The setting is kept |
+| T9 | Look in the cache directory | Only `<info hash>/<file index>` files and `dht.json`; no torrent file names |

@@ -9,7 +9,7 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, State, update};
+use cineo_core::app::{Action, Effect, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
@@ -159,7 +159,7 @@ fn detail_lists_streams_and_only_playable_ones_can_be_played() {
         .iter()
         .map(|b| !b.accesskit_node().is_disabled())
         .collect();
-    assert_eq!(enabled, vec![true, false, false, false, false, false]);
+    assert_eq!(enabled, vec![true, true, false, false, false, false]);
 
     play[0].click();
     harness.run();
@@ -211,4 +211,82 @@ fn notices_are_shown_and_can_be_dismissed() {
     harness.get_by_label("Dismiss").click();
     harness.run();
     assert_eq!(harness.state().2, vec![Action::DismissNotice]);
+}
+
+#[test]
+fn turning_p2p_off_hides_torrent_streams() {
+    let mut state = detail_state();
+    update(&mut state, Action::SetP2pEnabled(false));
+    let harness = harness(state, ViewState::default());
+    assert_eq!(harness.get_all_by_label("Play").count(), 5);
+    harness.get_by_label("1 torrent stream hidden: peer-to-peer is off in Settings");
+}
+
+#[test]
+fn the_first_torrent_play_shows_the_p2p_notice() {
+    let mut state = detail_state();
+    update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 1,
+        },
+    );
+    assert!(state.p2p_prompt.is_some());
+
+    let mut harness = harness(state.clone(), ViewState::default());
+    harness.get_by_label("Peer-to-peer streaming");
+    harness.get_by_label_contains("uploads the parts it has already downloaded");
+    harness.get_by_label("Accept and play").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::AcceptP2p]);
+
+    let mut harness = self::harness(state, ViewState::default());
+    harness.get_by_label("Cancel").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::DeclineP2p]);
+}
+
+#[test]
+fn a_streaming_torrent_shows_its_status() {
+    let mut state = detail_state();
+    update(&mut state, Action::AcceptP2p);
+    update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 1,
+        },
+    );
+    let harness = harness(state.clone(), ViewState::default());
+    harness.get_by_label("Torrent: looking for peers…");
+
+    update(
+        &mut state,
+        Action::TorrentStatus {
+            info_hash: "0123456789abcdef0123456789abcdef01234567".into(),
+            status: TorrentStatus::Streaming {
+                peers: 3,
+                download_bytes_per_sec: 1024 * 1024,
+                downloaded: 1024 * 1024 * 1024,
+                size: 2 * 1024 * 1024 * 1024,
+            },
+        },
+    );
+    let harness = self::harness(state, ViewState::default());
+    harness.get_by_label("Torrent: 3 peers · 1.0 MiB/s · 50% of 2.0 GiB");
+}
+
+#[test]
+fn settings_switch_p2p_off() {
+    let view = ViewState {
+        page: Page::Settings,
+        ..ViewState::default()
+    };
+    let mut harness = harness(State::default(), view);
+    harness
+        .get_by_label("Show and play torrent streams")
+        .click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::SetP2pEnabled(false)]);
 }

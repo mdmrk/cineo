@@ -966,6 +966,7 @@ dependencies = [
  "cineo-net",
  "cineo-player-mpv",
  "cineo-store",
+ "cineo-stream",
  "clap",
  "eframe",
  "egui_extras",

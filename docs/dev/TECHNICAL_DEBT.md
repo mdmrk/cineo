@@ -36,6 +36,19 @@ Format:
   or an upstream hook for UDP destinations; for the DHT, an upstream
   address filter.
 
+### Streaming engine: a cancelled open can leave a paused torrent
+- Where: [app.rs](../../crates/cineo-desktop/src/app.rs) (`start_torrent`),
+  [engine.rs](../../crates/cineo-stream/src/engine.rs) (`open`)
+- Gap: a stop or a new start cancels an `open` still in progress. If that
+  happens after librqbit added the torrent but before the engine recorded
+  it, the torrent stays in the session, paused, until the app exits
+  (INFERRED from the code; not observed).
+- Why: cancelling is what keeps a stuck metadata lookup from blocking the
+  next torrent.
+- Instead: it is paused, so it moves no data; its files stay in the cache.
+- Exit: have `open` record the torrent id before awaiting anything else,
+  or remove unknown torrents from the session at the next `open`.
+
 ### Streaming engine: the torrent being played can exceed the cache limit
 - Where: [cache.rs](../../crates/cineo-stream/src/cache.rs)
 - Gap: eviction runs when a torrent opens and never removes the current

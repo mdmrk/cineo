@@ -4,18 +4,21 @@
 //! - Addon fetches and playback run on the tokio runtime; their results come
 //!   back through a channel that is drained before each frame.
 //! - Store writes go, in order, to one dedicated thread.
+//! - The torrent engine starts with the first torrent played (ADR-0012).
 //! - Rendering ([`crate::view`]) performs no IO.
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
-use cineo_core::app::{Action, Effect, PlayRequest, State, update};
+use cineo_core::app::{Action, Effect, PlayRequest, State, TorrentRequest, update};
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player_mpv::PlayerEvent;
 use cineo_store::Store;
+use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
 use tracing::{debug, error};
 
@@ -28,7 +31,10 @@ use crate::view::{self, ViewState};
 pub struct Options {
     /// Directory holding `cineo.db`.
     pub data_dir: PathBuf,
-    /// Allow addons and images on loopback/LAN addresses (docs/SECURITY.md).
+    /// Directory for torrent data.
+    pub cache_dir: PathBuf,
+    /// Allow addons, images and torrent peers on loopback/LAN addresses
+    /// (docs/SECURITY.md).
     pub allow_private_network: bool,
     /// The mpv executable; `None` means `mpv` on `PATH`.
     pub mpv: Option<PathBuf>,
@@ -58,6 +64,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         runtime: runtime.handle().clone(),
         client: Arc::clone(&client),
         mpv: options.mpv,
+        engine: EngineOptions {
+            allow_private_network: options.allow_private_network,
+            ..EngineOptions::new(options.cache_dir)
+        },
     };
     let native = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -107,7 +117,11 @@ pub(crate) struct Io {
     pub(crate) runtime: tokio::runtime::Handle,
     pub(crate) client: Arc<AddonClient>,
     pub(crate) mpv: Option<PathBuf>,
+    pub(crate) engine: EngineOptions,
 }
+
+/// How often the status of a streaming torrent is reported.
+const TORRENT_STATUS_INTERVAL: Duration = Duration::from_secs(1);
 
 pub(crate) struct CineoApp {
     state: State,
@@ -119,6 +133,12 @@ pub(crate) struct CineoApp {
     /// Taken on exit so the store thread can finish its last writes.
     store_tx: Option<Sender<Effect>>,
     playback: Option<tokio::task::AbortHandle>,
+    /// The engine, once a torrent has been played.
+    engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
+    /// Bumped by every start or stop, so stale torrent work gives up.
+    torrent_generation: Arc<AtomicU64>,
+    /// Opens the current torrent, then reports its status.
+    torrent_task: Option<tokio::task::AbortHandle>,
     seq: u64,
 }
 
@@ -141,6 +161,9 @@ impl CineoApp {
             results_rx,
             store_tx: Some(store_tx),
             playback: None,
+            engine: Arc::default(),
+            torrent_generation: Arc::default(),
+            torrent_task: None,
             seq: 0,
         };
         for action in restore {
@@ -230,18 +253,85 @@ impl CineoApp {
                 }
             }
             Effect::Play(request) => self.play(request),
-            // The streaming engine is not wired in yet; the view keeps
-            // torrent streams disabled until it is.
-            Effect::StartTorrent(request) => {
-                self.spawn(async move {
-                    Action::TorrentFailed {
-                        info_hash: request.info_hash,
-                        reason: "torrent streaming is not available in this build".into(),
-                    }
-                });
-            }
-            Effect::StopTorrent => {}
+            Effect::StartTorrent(request) => self.start_torrent(request),
+            Effect::StopTorrent => self.stop_torrent(),
         }
+    }
+
+    /// Starts the engine if needed, opens `request`'s torrent, answers with
+    /// `TorrentReady` or `TorrentFailed`, then reports its status until a
+    /// newer start or stop.
+    fn start_torrent(&mut self, request: TorrentRequest) {
+        let generation = self.next_torrent_generation();
+        let current = Arc::clone(&self.torrent_generation);
+        let engine = Arc::clone(&self.engine);
+        let options = self.io.engine.clone();
+        let tx = self.results_tx.clone();
+        let ctx = self.ctx.clone();
+        let task = self.io.runtime.spawn(async move {
+            let send = |action| {
+                let _ = tx.send(Msg::Action(action));
+                ctx.request_repaint();
+            };
+            let info_hash = request.info_hash.clone();
+            let opened = {
+                let mut engine = engine.lock().await;
+                if current.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                open_torrent(&mut engine, options, &request).await
+            };
+            match opened {
+                Ok(url) => send(Action::TorrentReady {
+                    info_hash: info_hash.clone(),
+                    url,
+                }),
+                Err(reason) => {
+                    send(Action::TorrentFailed { info_hash, reason });
+                    return;
+                }
+            }
+            let mut ticks = tokio::time::interval(TORRENT_STATUS_INTERVAL);
+            loop {
+                ticks.tick().await;
+                if current.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                let status = engine.lock().await.as_ref().and_then(Engine::status);
+                match status {
+                    Some((hash, status)) if hash == info_hash => send(Action::TorrentStatus {
+                        info_hash: info_hash.clone(),
+                        status,
+                    }),
+                    _ => return,
+                }
+            }
+        });
+        self.torrent_task = Some(task.abort_handle());
+    }
+
+    /// Stops the current torrent; its data stays in the cache.
+    fn stop_torrent(&mut self) {
+        let generation = self.next_torrent_generation();
+        let current = Arc::clone(&self.torrent_generation);
+        let engine = Arc::clone(&self.engine);
+        self.io.runtime.spawn(async move {
+            let engine = engine.lock().await;
+            // A newer start replaces the torrent itself.
+            if current.load(Ordering::SeqCst) == generation
+                && let Some(engine) = engine.as_ref()
+            {
+                engine.stop().await;
+            }
+        });
+    }
+
+    /// Cancels the running torrent task and returns the new generation.
+    fn next_torrent_generation(&mut self) -> u64 {
+        if let Some(task) = self.torrent_task.take() {
+            task.abort();
+        }
+        self.torrent_generation.fetch_add(1, Ordering::SeqCst) + 1
     }
 
     /// Runs `task` and dispatches the action it returns.
@@ -335,7 +425,37 @@ impl eframe::App for CineoApp {
         if let Some(playback) = self.playback.take() {
             playback.abort();
         }
+        self.next_torrent_generation();
+        let engine = Arc::clone(&self.engine);
+        let shutdown = async move {
+            if let Some(engine) = engine.lock().await.take() {
+                engine.shutdown().await;
+            }
+        };
+        // Bounded: data is already on disk, so a slow shutdown is not worth
+        // keeping the window around for.
+        let _ = self
+            .io
+            .runtime
+            .block_on(async { tokio::time::timeout(Duration::from_secs(2), shutdown).await });
     }
+}
+
+/// Opens `request` on the engine in `slot`, starting it first if needed.
+/// Errors are user-facing text.
+async fn open_torrent(
+    slot: &mut Option<Engine>,
+    options: EngineOptions,
+    request: &TorrentRequest,
+) -> Result<url::Url, String> {
+    let engine = match slot {
+        Some(engine) => engine,
+        None => slot.insert(Engine::start(options).await.map_err(|e| e.to_string())?),
+    };
+    engine.open(request).await.map_err(|err| {
+        error!(error = %err, "opening the torrent failed");
+        err.to_string()
+    })
 }
 
 fn now_ms() -> u64 {

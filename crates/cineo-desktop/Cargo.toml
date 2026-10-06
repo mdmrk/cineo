@@ -18,6 +18,7 @@ cineo-core.workspace = true
 cineo-net.workspace = true
 cineo-player-mpv.workspace = true
 cineo-store.workspace = true
+cineo-stream.workspace = true
 clap.workspace = true
 eframe.workspace = true
 egui_extras.workspace = true

@@ -57,13 +57,24 @@ impl From<rusqlite::Error> for StoreError {
 /// `~/Library/Application Support/Cineo` on macOS. `None` if the platform
 /// reports no home directory.
 pub fn default_data_dir() -> Option<PathBuf> {
-    let strategy = choose_app_strategy(AppStrategyArgs {
+    app_strategy().map(|s| s.data_dir())
+}
+
+/// The platform cache directory for Cineo (torrent data): `$XDG_CACHE_HOME/cineo`
+/// (default `~/.cache/cineo`) on Linux, `%LOCALAPPDATA%\Cineo\cache` on
+/// Windows, `~/Library/Caches/Cineo` on macOS. `None` if the platform
+/// reports no home directory.
+pub fn default_cache_dir() -> Option<PathBuf> {
+    app_strategy().map(|s| s.cache_dir())
+}
+
+fn app_strategy() -> Option<impl AppStrategy> {
+    choose_app_strategy(AppStrategyArgs {
         top_level_domain: String::new(),
         author: String::new(),
         app_name: "Cineo".to_owned(),
     })
-    .ok()?;
-    Some(strategy.data_dir())
+    .ok()
 }
 
 /// An open, migrated Cineo database.

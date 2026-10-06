@@ -4,13 +4,13 @@
 
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
 use cineo_core::app::{
-    Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, board_targets,
-    continue_watching,
+    Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, TorrentStatus,
+    board_targets, continue_watching,
 };
 use eframe::egui::{
     self, Align, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Label, Layout,
-    Margin, Mesh, Rect, RichText, ScrollArea, Sense, Stroke, StrokeKind, TextEdit, TextFormat, Ui,
-    UiBuilder, Vec2, text::LayoutJob,
+    Margin, Mesh, Modal, Rect, RichText, ScrollArea, Sense, Stroke, StrokeKind, TextEdit,
+    TextFormat, Ui, UiBuilder, Vec2, text::LayoutJob,
 };
 use url::Url;
 
@@ -25,15 +25,17 @@ pub enum Page {
     Search,
     Library,
     Addons,
+    Settings,
 }
 
 impl Page {
-    const ALL: [Self; 5] = [
+    const ALL: [Self; 6] = [
         Self::Board,
         Self::Discover,
         Self::Search,
         Self::Library,
         Self::Addons,
+        Self::Settings,
     ];
 
     fn label(self) -> &'static str {
@@ -43,6 +45,7 @@ impl Page {
             Self::Search => "Search",
             Self::Library => "Library",
             Self::Addons => "Addons",
+            Self::Settings => "Settings",
         }
     }
 }
@@ -82,6 +85,28 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                 });
             });
     }
+    if let Some(torrent) = &state.torrent {
+        egui::Panel::bottom("torrent")
+            .show_separator_line(false)
+            .frame(
+                Frame::new()
+                    .fill(theme::PANEL)
+                    .inner_margin(Margin::symmetric(0, 8)),
+            )
+            .show(ui, |ui| {
+                column(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        if torrent.status == TorrentStatus::Starting {
+                            ui.spinner();
+                        }
+                        ui.label(dim(&torrent_status_text(&torrent.status)));
+                    });
+                });
+            });
+    }
+    if state.p2p_prompt.is_some() {
+        p2p_prompt(ui, &mut out);
+    }
     egui::CentralPanel::default()
         .frame(Frame::new().fill(theme::BG))
         .show(ui, |ui| {
@@ -95,7 +120,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                 .auto_shrink(false)
                 .show(ui, |ui| {
                     if let Some(detail) = &state.detail {
-                        detail_page(ui, detail, view, &mut out);
+                        detail_page(ui, detail, state.settings.p2p_enabled, view, &mut out);
                     } else {
                         ui.add_space(f32::from(theme::PAGE_MARGIN));
                         column(ui, |ui| match view.page {
@@ -104,6 +129,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                             Page::Search => search_page(ui, state, view, &mut out),
                             Page::Library => library_page(ui, state, &mut out),
                             Page::Addons => addons_page(ui, state, view, &mut out),
+                            Page::Settings => settings_page(ui, state, &mut out),
                         });
                     }
                     ui.add_space(f32::from(theme::PAGE_MARGIN));
@@ -458,7 +484,104 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     }
 }
 
-fn detail_page(ui: &mut Ui, detail: &Detail, view: &mut ViewState, out: &mut Vec<Action>) {
+/// The notice shown before the first torrent plays (ADR-0012).
+fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
+    let modal = Modal::new(egui::Id::new("p2p_prompt"))
+        .frame(
+            Frame::new()
+                .fill(theme::PANEL)
+                .corner_radius(CornerRadius::same(theme::RADIUS))
+                .inner_margin(Margin::same(24)),
+        )
+        .show(ui.ctx(), |ui| {
+            ui.set_max_width(460.0);
+            ui.label(RichText::new("Peer-to-peer streaming").font(theme::heading()));
+            ui.add_space(theme::GAP);
+            ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+            ui.add_space(theme::GAP);
+            ui.horizontal(|ui| {
+                if ui.add(primary_button("Accept and play")).clicked() {
+                    out.push(Action::AcceptP2p);
+                }
+                if ui.button("Cancel").clicked() {
+                    out.push(Action::DeclineP2p);
+                }
+            });
+        });
+    if modal.should_close() && out.is_empty() {
+        out.push(Action::DeclineP2p);
+    }
+}
+
+const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
+plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
+uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
+a local cache. You can turn peer-to-peer streaming off in Settings.";
+
+fn settings_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
+    section(ui, "Peer-to-peer", |_| {});
+    let mut enabled = state.settings.p2p_enabled;
+    if ui
+        .checkbox(&mut enabled, "Show and play torrent streams")
+        .changed()
+    {
+        out.push(Action::SetP2pEnabled(enabled));
+    }
+    ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+}
+
+fn torrent_status_text(status: &TorrentStatus) -> String {
+    match status {
+        TorrentStatus::Starting => "Torrent: looking for peers…".to_owned(),
+        TorrentStatus::Streaming {
+            peers,
+            download_bytes_per_sec,
+            downloaded,
+            size,
+        } => {
+            let percent = if *size == 0 {
+                100
+            } else {
+                downloaded.saturating_mul(100) / size
+            };
+            format!(
+                "Torrent: {} · {}/s · {percent}% of {}",
+                count_label(
+                    usize::try_from(*peers).unwrap_or(usize::MAX),
+                    "peer",
+                    "peers"
+                ),
+                format_bytes(*download_bytes_per_sec),
+                format_bytes(*size),
+            )
+        }
+    }
+}
+
+/// `1.5 GiB`-style sizes.
+fn format_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut unit = 0;
+    let mut whole = bytes;
+    while whole >= 1024 && unit + 1 < UNITS.len() {
+        whole /= 1024;
+        unit += 1;
+    }
+    if unit == 0 {
+        return format!("{bytes} B");
+    }
+    #[expect(clippy::cast_precision_loss, reason = "display only")]
+    let value = bytes as f64 / 1024f64.powi(i32::try_from(unit).unwrap_or(0));
+    format!("{value:.1} {}", UNITS[unit])
+}
+
+fn detail_page(
+    ui: &mut Ui,
+    detail: &Detail,
+    p2p_enabled: bool,
+    view: &mut ViewState,
+    out: &mut Vec<Action>,
+) {
     let meta = detail.meta.ready();
     let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
     let background = preview.and_then(|p| p.background.as_ref());
@@ -559,7 +682,7 @@ fn detail_page(ui: &mut Ui, detail: &Detail, view: &mut ViewState, out: &mut Vec
                         empty(ui, "No installed addon provides streams for this item.");
                     }
                     for (index, group) in detail.streams.iter().enumerate() {
-                        stream_group(ui, index, group, out);
+                        stream_group(ui, index, group, p2p_enabled, out);
                     }
                 }
             });
@@ -715,7 +838,14 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> eg
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-fn stream_group(ui: &mut Ui, index: usize, group: &StreamGroup, out: &mut Vec<Action>) {
+/// One addon's streams. Torrents are left out when P2P is off.
+fn stream_group(
+    ui: &mut Ui,
+    index: usize,
+    group: &StreamGroup,
+    p2p_enabled: bool,
+    out: &mut Vec<Action>,
+) {
     ui.add_space(6.0);
     ui.label(RichText::new(&group.addon_name).color(theme::TEXT_BRIGHT));
     match &group.streams {
@@ -729,13 +859,24 @@ fn stream_group(ui: &mut Ui, index: usize, group: &StreamGroup, out: &mut Vec<Ac
             ui.label(faint("No streams"));
         }
         Loadable::Ready(streams) => {
+            let mut hidden = 0;
             for (stream_index, stream) in streams.iter().enumerate() {
+                if stream.source.is_p2p() && !p2p_enabled {
+                    hidden += 1;
+                    continue;
+                }
                 if stream_row(ui, stream) {
                     out.push(Action::Play {
                         group: index,
                         stream: stream_index,
                     });
                 }
+            }
+            if hidden > 0 {
+                ui.label(faint(&format!(
+                    "{} hidden: peer-to-peer is off in Settings",
+                    count_label(hidden, "torrent stream", "torrent streams")
+                )));
             }
         }
     }
@@ -750,9 +891,7 @@ fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                // Torrents need the streaming engine, which the shell does
-                // not run yet.
-                let playable = stream.source.is_playable() && !stream.source.is_p2p();
+                let playable = stream.source.is_playable();
                 let play = if playable {
                     primary_button("Play")
                 } else {
@@ -1150,6 +1289,15 @@ fn genre_options(state: &State) -> Option<(&[String], bool)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sizes_use_binary_units_with_one_decimal() {
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(1023), "1023 B");
+        assert_eq!(format_bytes(1536), "1.5 KiB");
+        assert_eq!(format_bytes(5 * 1024 * 1024 * 1024), "5.0 GiB");
+        assert_eq!(format_bytes(u64::MAX), "16777216.0 TiB");
+    }
 
     #[test]
     fn cover_crops_a_wide_image_at_the_sides() {

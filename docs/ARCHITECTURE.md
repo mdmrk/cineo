@@ -32,7 +32,7 @@ flowchart TB
   CLI --> CORE
   GUI --> CORE
   CLI --> NET & PLAYER & STORE
-  GUI --> NET & PLAYER & STORE
+  GUI --> NET & PLAYER & STORE & STREAM
   NET --> CORE
   PLAYER --> CORE
   STORE --> CORE
@@ -44,8 +44,7 @@ flowchart TB
 ```
 
 Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv`,
-`cineo-store`, `cineo-desktop` and `cineo-stream` exist (`cineo-stream` is
-not used by a shell yet). The other crates are created by the milestone that
+`cineo-store`, `cineo-desktop` and `cineo-stream` exist. The other crates are created by the milestone that
 needs them ([ROADMAP.md](ROADMAP.md)).
 
 ## Dependency direction
