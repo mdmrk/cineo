@@ -1,0 +1,33 @@
+# cargo-deny configuration. Run: `cargo deny check`. Rationale: docs/dev/DEPENDENCIES.md.
+
+[graph]
+all-features = true
+
+[advisories]
+# Unmaintained/unsound/yanked crates are reported; vulnerabilities always fail.
+unmaintained = "workspace"
+yanked = "deny"
+ignore = []
+
+[licenses]
+# Permissive licenses compatible with distributing Cineo under MIT OR Apache-2.0.
+# Extend this list only when a new dependency needs it, and record why in
+# docs/LEGAL.md. Expected additions with the HTTP/TLS stack (Milestone 1):
+# BSD-3-Clause, ISC, Zlib, Unicode-3.0, CDLA-Permissive-2.0 (CA bundle data).
+allow = ["MIT", "Apache-2.0"]
+unused-allowed-license = "allow"
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+deny = [
+    # TLS: we standardize on rustls; OpenSSL adds a system dependency.
+    { crate = "openssl-sys", reason = "use rustls" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
