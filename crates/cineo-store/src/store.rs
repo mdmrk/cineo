@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
-use cineo_core::app::{Effect, LibraryItem};
+use cineo_core::app::{Effect, LibraryItem, Settings};
 use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use rusqlite::{Connection, ErrorCode, Row, params};
 use tracing::warn;
@@ -190,6 +190,51 @@ impl Store {
         Ok(())
     }
 
+    /// The saved settings; defaults for anything never saved or unreadable.
+    pub fn settings(&self) -> Result<Settings, StoreError> {
+        let mut settings = Settings::default();
+        let mut stmt = self.conn.prepare("SELECT key, value FROM settings")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+        for row in rows {
+            let (key, value) = row?;
+            let flag = match value.as_str() {
+                "true" => true,
+                "false" => false,
+                _ => {
+                    warn!(key, "ignoring an unreadable setting");
+                    continue;
+                }
+            };
+            match key.as_str() {
+                P2P_ENABLED => settings.p2p_enabled = flag,
+                P2P_ACKNOWLEDGED => settings.p2p_acknowledged = flag,
+                _ => {} // written by a newer version
+            }
+        }
+        Ok(settings)
+    }
+
+    /// Saves every setting.
+    pub fn save_settings(&mut self, settings: &Settings) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        {
+            let mut upsert = tx.prepare(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            )?;
+            for (key, flag) in [
+                (P2P_ENABLED, settings.p2p_enabled),
+                (P2P_ACKNOWLEDGED, settings.p2p_acknowledged),
+            ] {
+                upsert.execute(params![key, flag.to_string()])?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     /// Runs a persistence effect from the core. Other effects are ignored
     /// and return `false`.
     pub fn apply(&mut self, effect: &Effect) -> Result<bool, StoreError> {
@@ -197,11 +242,15 @@ impl Store {
             Effect::SaveAddons(addons) => self.save_addons(addons)?,
             Effect::SaveLibraryItem(item) => self.save_library_item(item)?,
             Effect::DeleteLibraryItem(id) => self.delete_library_item(id)?,
+            Effect::SaveSettings(settings) => self.save_settings(settings)?,
             _ => return Ok(false),
         }
         Ok(true)
     }
 }
+
+const P2P_ENABLED: &str = "p2p_enabled";
+const P2P_ACKNOWLEDGED: &str = "p2p_acknowledged";
 
 /// Millisecond values above `i64::MAX` (~292 million years) saturate.
 fn to_sql_int(value: u64) -> i64 {

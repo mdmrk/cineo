@@ -24,6 +24,11 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         duration_ms INTEGER NOT NULL,
         updated_ms INTEGER NOT NULL
     ) STRICT;",
+    // v2 (M9): user settings as key/value pairs; missing keys mean defaults.
+    "CREATE TABLE settings (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+    ) STRICT;",
 ];
 
 /// The schema version this build reads and writes.

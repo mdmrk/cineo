@@ -321,8 +321,10 @@ fn stream_sources_are_recognized_in_reference_order() {
             "HTTP", "Torrent", "YouTube", "External", "Archive", "Usenet"
         ]
     );
-    assert!(streams[0].source.is_playable());
-    assert!(streams[1..].iter().all(|s| !s.source.is_playable()));
+    let playable: Vec<bool> = streams.iter().map(|s| s.source.is_playable()).collect();
+    assert_eq!(playable, [true, true, false, false, false, false]);
+    let p2p: Vec<bool> = streams.iter().map(|s| s.source.is_p2p()).collect();
+    assert_eq!(p2p, [false, true, false, false, false, false]);
 
     let http = &streams[0];
     assert_eq!(http.binge_group.as_deref(), Some("example-1080p"));

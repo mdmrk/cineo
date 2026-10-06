@@ -50,6 +50,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         addons: store.addons()?,
         library: store.library()?,
     };
+    let settings = Action::RestoreSettings(store.settings()?);
     let (results_tx, results_rx) = channel();
     let (store_tx, writer) =
         spawn_store_writer(store, results_tx.clone()).context("cannot start the store thread")?;
@@ -79,7 +80,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Ok(Box::new(CineoApp::new(
                 cc.egui_ctx.clone(),
                 io,
-                restore,
+                [restore, settings],
                 store_tx,
                 (results_tx, results_rx),
             )))
@@ -122,12 +123,12 @@ pub(crate) struct CineoApp {
 }
 
 impl CineoApp {
-    /// Creates the app and dispatches `restore` (the saved addons and
-    /// library).
+    /// Creates the app and dispatches `restore` (the saved addons, library
+    /// and settings).
     pub(crate) fn new(
         ctx: egui::Context,
         io: Io,
-        restore: Action,
+        restore: [Action; 2],
         store_tx: Sender<Effect>,
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
@@ -142,7 +143,9 @@ impl CineoApp {
             playback: None,
             seq: 0,
         };
-        app.dispatch(restore);
+        for action in restore {
+            app.dispatch(action);
+        }
         app
     }
 
@@ -216,7 +219,8 @@ impl CineoApp {
             }
             effect @ (Effect::SaveAddons(_)
             | Effect::SaveLibraryItem(_)
-            | Effect::DeleteLibraryItem(_)) => {
+            | Effect::DeleteLibraryItem(_)
+            | Effect::SaveSettings(_)) => {
                 let sent = self
                     .store_tx
                     .as_ref()
@@ -226,6 +230,17 @@ impl CineoApp {
                 }
             }
             Effect::Play(request) => self.play(request),
+            // The streaming engine is not wired in yet; the view keeps
+            // torrent streams disabled until it is.
+            Effect::StartTorrent(request) => {
+                self.spawn(async move {
+                    Action::TorrentFailed {
+                        info_hash: request.info_hash,
+                        reason: "torrent streaming is not available in this build".into(),
+                    }
+                });
+            }
+            Effect::StopTorrent => {}
         }
     }
 
@@ -290,6 +305,7 @@ impl CineoApp {
                     });
                 }
                 if last {
+                    send(Action::PlaybackStopped);
                     break;
                 }
             }

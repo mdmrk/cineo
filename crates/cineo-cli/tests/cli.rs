@@ -209,7 +209,7 @@ fn doctor_reports_on_the_database() {
     let healthy = stdout_of(&cineo(&["--data-dir", &dir, "doctor"]));
     assert!(
         healthy.contains(
-            "schema version: 1 (supported: 1)\naddons: 0\nlibrary items: 0\nintegrity: ok\n"
+            "schema version: 2 (supported: 2)\naddons: 0\nlibrary items: 0\nintegrity: ok\n"
         ),
         "{healthy}"
     );

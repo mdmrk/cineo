@@ -750,7 +750,9 @@ fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                let playable = stream.source.is_playable();
+                // Torrents need the streaming engine, which the shell does
+                // not run yet.
+                let playable = stream.source.is_playable() && !stream.source.is_p2p();
                 let play = if playable {
                     primary_button("Play")
                 } else {

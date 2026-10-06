@@ -46,9 +46,19 @@ pub enum ArchiveKind {
 }
 
 impl StreamSource {
-    /// Whether Cineo can play this source today (see COMPATIBILITY.md).
+    /// Whether Cineo can play this source today (see COMPATIBILITY.md):
+    /// `http(s)` URLs, and torrents through the streaming engine.
     pub fn is_playable(&self) -> bool {
-        matches!(self, Self::Url(url) if matches!(url.scheme(), "http" | "https"))
+        match self {
+            Self::Url(url) => matches!(url.scheme(), "http" | "https"),
+            Self::Torrent { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Whether playing this source means peer-to-peer traffic.
+    pub fn is_p2p(&self) -> bool {
+        matches!(self, Self::Torrent { .. })
     }
 
     /// Short human label for the source kind.

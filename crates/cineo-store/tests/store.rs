@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use cineo_core::addon::{
     ContentType, TransportUrl, parse_manifest, parse_meta_response, parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, LibraryItem, State, continue_watching, update};
+use cineo_core::app::{Action, Effect, LibraryItem, Settings, State, continue_watching, update};
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
 
@@ -164,6 +164,44 @@ fn v1_fixture_database_opens_and_invalid_rows_are_skipped() {
     assert_eq!(library[0].video_id, "tt0000002:1:2");
     assert_eq!(library[1].time_offset_ms, 600_000);
     assert_eq!(user_version(&path), SCHEMA_VERSION);
+    assert_eq!(store.settings().unwrap(), Settings::default());
+}
+
+#[test]
+fn settings_default_until_saved_and_survive_a_reopen() {
+    let dir = temp_dir("settings");
+    let mut store = Store::open_in(&dir).unwrap();
+    assert_eq!(store.settings().unwrap(), Settings::default());
+    let changed = Settings {
+        p2p_enabled: false,
+        p2p_acknowledged: true,
+    };
+    assert!(store.apply(&Effect::SaveSettings(changed)).unwrap());
+    drop(store);
+    assert_eq!(Store::open_in(&dir).unwrap().settings().unwrap(), changed);
+}
+
+#[test]
+fn unknown_or_unreadable_settings_are_ignored() {
+    let dir = temp_dir("settings-junk");
+    let store = Store::open_in(&dir).unwrap();
+    drop(store);
+    rusqlite::Connection::open(dir.join(DB_FILE))
+        .unwrap()
+        .execute_batch(
+            "INSERT INTO settings VALUES ('p2p_enabled', 'maybe');
+             INSERT INTO settings VALUES ('from_the_future', 'true');
+             INSERT INTO settings VALUES ('p2p_acknowledged', 'true');",
+        )
+        .unwrap();
+    let settings = Store::open_in(&dir).unwrap().settings().unwrap();
+    assert_eq!(
+        settings,
+        Settings {
+            p2p_enabled: true,
+            p2p_acknowledged: true,
+        }
+    );
 }
 
 #[test]

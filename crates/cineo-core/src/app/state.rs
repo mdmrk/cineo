@@ -9,9 +9,10 @@ use url::Url;
 
 use super::library::LibraryItem;
 use super::plan::{self, CatalogTarget};
+use super::torrent::{Settings, TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
-    ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, Subtitle,
-    TransportUrl,
+    ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, StreamSource,
+    Subtitle, TransportUrl,
 };
 
 /// An installed addon: identity (transport URL) plus its manifest.
@@ -91,7 +92,8 @@ pub struct Detail {
 /// What the player shell needs to start playback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayRequest {
-    /// Always `http(s)` (checked by [`update`]).
+    /// Always `http(s)` (checked by [`update`]); for a torrent, the engine's
+    /// loopback URL.
     pub url: Url,
     pub title: String,
     pub headers: Vec<(String, String)>,
@@ -116,6 +118,12 @@ pub struct State {
     pub library: Vec<LibraryItem>,
     /// Last playback problem to show to the user.
     pub notice: Option<String>,
+    pub settings: Settings,
+    /// A torrent stream (`group`, `stream`) waiting for the user to accept
+    /// the P2P notice.
+    pub p2p_prompt: Option<(usize, usize)>,
+    /// The torrent being streamed, if any.
+    pub torrent: Option<TorrentPlayback>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -126,6 +134,8 @@ pub enum Action {
         addons: Vec<TransportUrl>,
         library: Vec<LibraryItem>,
     },
+    /// Restore saved settings.
+    RestoreSettings(Settings),
     // --- user actions ---
     InstallAddon(String),
     RemoveAddon(TransportUrl),
@@ -162,8 +172,15 @@ pub enum Action {
         now_ms: u64,
     },
     PlaybackFailed(String),
+    /// The player closed or reached the end (reported by the player shell).
+    PlaybackStopped,
     RemoveFromLibrary(String),
     DismissNotice,
+    /// The user accepted the P2P notice; play the waiting stream.
+    AcceptP2p,
+    /// The user closed the P2P notice without accepting.
+    DeclineP2p,
+    SetP2pEnabled(bool),
     // --- IO results ---
     ManifestLoaded {
         transport: TransportUrl,
@@ -185,6 +202,19 @@ pub enum Action {
         addon: TransportUrl,
         path: ResourcePath,
         result: Result<Vec<Stream>, String>,
+    },
+    /// The engine serves the torrent at `url`.
+    TorrentReady {
+        info_hash: String,
+        url: Url,
+    },
+    TorrentStatus {
+        info_hash: String,
+        status: TorrentStatus,
+    },
+    TorrentFailed {
+        info_hash: String,
+        reason: String,
     },
 }
 
@@ -210,7 +240,13 @@ pub enum Effect {
     SaveAddons(Vec<TransportUrl>),
     SaveLibraryItem(LibraryItem),
     DeleteLibraryItem(String),
+    SaveSettings(Settings),
     Play(PlayRequest),
+    /// Start serving a torrent, replacing any other; answer with
+    /// `TorrentReady` or `TorrentFailed`, then `TorrentStatus` updates.
+    StartTorrent(TorrentRequest),
+    /// Stop the torrent engine's current torrent.
+    StopTorrent,
 }
 
 /// Applies `action` to `state` and returns the effects to run.
@@ -226,6 +262,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                     install: false,
                 })
                 .collect()
+        }
+        Action::RestoreSettings(settings) => {
+            state.settings = settings;
+            Vec::new()
         }
         Action::InstallAddon(input) => match TransportUrl::parse(&input) {
             Ok(transport) if state.addons.iter().any(|a| a.transport == transport) => {
@@ -358,7 +398,29 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::PlaybackFailed(reason) => {
             state.notice = Some(reason);
+            stop_torrent(state)
+        }
+        Action::PlaybackStopped => stop_torrent(state),
+        Action::AcceptP2p => {
+            state.settings.p2p_acknowledged = true;
+            let mut effects = vec![Effect::SaveSettings(state.settings)];
+            if let Some((group, stream)) = state.p2p_prompt.take() {
+                effects.extend(play(state, group, stream));
+            }
+            effects
+        }
+        Action::DeclineP2p => {
+            state.p2p_prompt = None;
             Vec::new()
+        }
+        Action::SetP2pEnabled(enabled) => {
+            state.settings.p2p_enabled = enabled;
+            let mut effects = vec![Effect::SaveSettings(state.settings)];
+            if !enabled {
+                state.p2p_prompt = None;
+                effects.extend(stop_torrent(state));
+            }
+            effects
         }
         Action::RemoveFromLibrary(id) => {
             state.library.retain(|i| i.id != id);
@@ -403,6 +465,47 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             }
             Vec::new()
         }
+        Action::TorrentReady { info_hash, url } => torrent_ready(state, &info_hash, url),
+        Action::TorrentStatus { info_hash, status } => {
+            if let Some(torrent) = state.torrent.as_mut().filter(|t| t.info_hash == info_hash) {
+                torrent.status = status;
+            }
+            Vec::new()
+        }
+        Action::TorrentFailed { info_hash, reason } => {
+            if state
+                .torrent
+                .as_ref()
+                .is_some_and(|t| t.info_hash == info_hash)
+            {
+                state.notice = Some(format!("The torrent could not be played: {reason}"));
+                stop_torrent(state)
+            } else {
+                Vec::new()
+            }
+        }
+    }
+}
+
+fn stop_torrent(state: &mut State) -> Vec<Effect> {
+    if state.torrent.take().is_some() {
+        vec![Effect::StopTorrent]
+    } else {
+        Vec::new()
+    }
+}
+
+fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
+    let Some(torrent) = state.torrent.as_mut().filter(|t| t.info_hash == info_hash) else {
+        return Vec::new(); // stale
+    };
+    if !is_engine_url(&url) {
+        state.notice = Some("The torrent engine returned an unexpected address".into());
+        return stop_torrent(state);
+    }
+    match torrent.pending.take() {
+        Some(request) => vec![Effect::Play(PlayRequest { url, ..request })],
+        None => Vec::new(),
     }
 }
 
@@ -665,7 +768,7 @@ fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
         .collect()
 }
 
-fn play(state: &mut State, group: usize, stream: usize) -> Vec<Effect> {
+fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let Some(detail) = state.detail.as_ref() else {
         return Vec::new();
     };
@@ -676,21 +779,36 @@ fn play(state: &mut State, group: usize, stream: usize) -> Vec<Effect> {
         .streams
         .get(group)
         .and_then(|g| g.streams.ready())
-        .and_then(|s| s.get(stream))
+        .and_then(|s| s.get(stream_index))
     else {
         return Vec::new();
     };
-    let crate::addon::StreamSource::Url(url) = &stream.source else {
-        state.notice = Some(format!(
-            "{} streams are not supported yet",
-            stream.source.kind_label()
-        ));
-        return Vec::new();
+    let (url, torrent) = match &stream.source {
+        StreamSource::Url(url) if stream.source.is_playable() => (url.clone(), None),
+        StreamSource::Url(url) => {
+            state.notice = Some(format!("Unsupported stream scheme `{}`", url.scheme()));
+            return Vec::new();
+        }
+        StreamSource::Torrent { .. } if !state.settings.p2p_enabled => {
+            state.notice = Some("Torrent streams are turned off in Settings".into());
+            return Vec::new();
+        }
+        StreamSource::Torrent { .. } if !state.settings.p2p_acknowledged => {
+            state.p2p_prompt = Some((group, stream_index));
+            return Vec::new();
+        }
+        StreamSource::Torrent { .. } => match TorrentRequest::from_stream(stream) {
+            Some(request) => (request.magnet(), Some(request)),
+            None => return Vec::new(),
+        },
+        _ => {
+            state.notice = Some(format!(
+                "{} streams are not supported yet",
+                stream.source.kind_label()
+            ));
+            return Vec::new();
+        }
     };
-    if !stream.source.is_playable() {
-        state.notice = Some(format!("Unsupported stream scheme `{}`", url.scheme()));
-        return Vec::new();
-    }
     let preview = detail
         .meta
         .ready()
@@ -712,10 +830,15 @@ fn play(state: &mut State, group: usize, stream: usize) -> Vec<Effect> {
     };
     let mut subtitles = stream.subtitles.clone();
     subtitles.dedup_by(|a, b| a.url == b.url);
+    let headers = if torrent.is_some() {
+        Vec::new()
+    } else {
+        stream.request_headers.clone()
+    };
     let request = PlayRequest {
-        url: url.clone(),
+        url,
         title,
-        headers: stream.request_headers.clone(),
+        headers,
         subtitles,
         start_ms: 0,
         meta_id: detail.id.clone(),
@@ -753,9 +876,23 @@ fn play(state: &mut State, group: usize, stream: usize) -> Vec<Effect> {
     if let Some(item) = state.library.iter().find(|i| i.id == meta_id) {
         effects.push(Effect::SaveLibraryItem(item.clone()));
     }
-    effects.push(Effect::Play(PlayRequest {
+    let request = PlayRequest {
         start_ms,
         ..request
-    }));
+    };
+    match torrent {
+        None => {
+            effects.extend(stop_torrent(state));
+            effects.push(Effect::Play(request));
+        }
+        Some(torrent) => {
+            state.torrent = Some(TorrentPlayback {
+                info_hash: torrent.info_hash.clone(),
+                status: TorrentStatus::Starting,
+                pending: Some(request),
+            });
+            effects.push(Effect::StartTorrent(torrent));
+        }
+    }
     effects
 }

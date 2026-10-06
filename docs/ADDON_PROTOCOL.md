@@ -157,6 +157,17 @@ before then.
 `behaviorHints.proxyHeaders.request` become player HTTP headers only after
 validation (no CR/LF; header names restricted to tokens).
 
+Torrent streams (`infoHash`, M9; ADR-0012):
+- The file to play is `fileIdx` if it names a file, else the file whose name
+  equals `behaviorHints.filename` (case-insensitive, folders ignored), else
+  the largest video file, else the largest file. The SDK documents only the
+  "largest file" default; the rest is INFERRED
+  (`choose_file` unit tests in `cineo-core`).
+- `sources` entries `tracker:<url>` add `http(s)`/`udp` trackers. `dht:`
+  entries add nothing, since DHT is always used. Other entries are ignored.
+- Real addons may send no `sources` at all: Torrentio's streams had only
+  `infoHash`, `fileIdx` and `behaviorHints.filename` (VERIFIED 2026-10-06).
+
 ## Doc vs reference differences
 
 | Topic | SDK docs | Reference client | Cineo follows |

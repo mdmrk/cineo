@@ -4,10 +4,14 @@
 mod library;
 mod plan;
 mod state;
+mod torrent;
 
 pub use library::{LibraryItem, continue_watching};
 pub use plan::{CatalogTarget, board_targets, meta_candidates, search_targets, stream_targets};
 pub use state::{
     Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Row, State,
     StreamGroup, update,
+};
+pub use torrent::{
+    Settings, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file,
 };
