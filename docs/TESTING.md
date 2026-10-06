@@ -41,32 +41,15 @@ first test needs it.
 - Assertions on warnings compare **locations**, so that wording changes do
   not break tests.
 
-## Commands
+## Not set up yet
 
-```sh
-cargo test --workspace                 # everything (uses std harness)
-cargo nextest run --workspace          # faster, used in CI (install: cargo install --locked cargo-nextest)
-cargo test --workspace --doc           # doctests (nextest skips them)
-cargo test -p cineo-core some_name     # one test
-scripts/check.sh                       # all gates CI runs
-```
+Added only with a concrete first use: property tests (`proptest`, e.g. URL
+encoding round-trips), fuzzing (`cargo-fuzz`; targets: the manifest, catalog,
+meta and stream parsers and mpv IPC decoding; nightly, not per PR), snapshot
+tests (`insta`, only for large structured output), benchmarks (only for a
+measured problem), and a replayed compatibility corpus (v1.0 goal).
 
-## Later, when justified
-
-These are not set up now. Each needs a concrete first use.
-
-- **Property tests (`proptest`).** For URL encoding round-trips once
-  `ResourcePath` parsing exists, and for "the parser never panics on
-  arbitrary JSON".
-- **Fuzzing (`cargo-fuzz`).** Targets: manifest, catalog, meta and stream
-  parsers; mpv IPC message decoding. Run nightly, not per PR.
-- **Snapshot tests (`insta`).** Only for large structured outputs such as
-  CLI `inspect` rendering, if they grow. Not for domain logic.
-- **Benchmarks.** Only once there is a measured performance problem, for
-  example aggregating 30 addons or parsing 5 MB catalogs. Use `divan` or
-  `criterion`, decided then.
-- **Compatibility corpus.** Recorded responses from consenting addon authors
-  or our own deployments, replayed in CI (v1.0 goal).
+Commands are in [CONTRIBUTING.md](../CONTRIBUTING.md#everyday-commands).
 
 ## Per-subsystem strategy
 

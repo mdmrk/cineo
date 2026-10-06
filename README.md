@@ -33,7 +33,7 @@ cargo run -p cineo-desktop --release   # the desktop app (needs mpv on PATH to p
 ```
 
 The toolchain is pinned in `rust-toolchain.toml`. More in
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Architecture at a glance
 

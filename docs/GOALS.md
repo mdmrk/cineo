@@ -144,16 +144,3 @@ as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
    automated test, and every Verified row has a dated manual or live check.
 3. A new contributor, human or agent, can make a correct, reviewed change by
    reading `AGENTS.md` and the docs it links. They do not need tribal knowledge.
-
-## The smallest meaningful slice (next)
-
-The first vertical slice (Milestone 1 in [ROADMAP.md](ROADMAP.md)) is a
-headless `cineo` CLI that:
-
-1. Fetches and validates a manifest.
-2. Checks that a catalog is declared and that the extra arguments are
-   acceptable.
-3. Fetches that catalog through the network safety policy and prints it.
-
-"Done" for the slice means it is tested against fixtures and against a mock
-addon in CI, and checked live against at least one public addon.

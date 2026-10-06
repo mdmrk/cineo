@@ -1,18 +1,17 @@
 # Debugging
 
 Failures must be observable without a debugger. This page says what each
-subsystem logs and how to diagnose it. Sections marked (M_n_) describe tools
-that arrive with that milestone.
+subsystem logs and how to diagnose it.
 
 ## Logging
 
 - `tracing` everywhere. Libraries never print. Only shells write to
   stdout/stderr.
-- CLI (M1): `-v` gives debug logs for Cineo crates, `-vv` gives trace for
+- CLI: `-v` gives debug logs for Cineo crates, `-vv` gives trace for
   everything. `RUST_LOG` overrides both, for example
   `RUST_LOG=cineo_net=trace`. Logs go to **stderr**, so stdout stays
   machine-readable.
-- GUI (M5): `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
+- GUI: `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
   `RUST_LOG` rules. A log file and a diagnostics view are not implemented
   yet ([TECHNICAL_DEBT.md](dev/TECHNICAL_DEBT.md)).
 
@@ -21,7 +20,7 @@ that arrive with that milestone.
 | Span | Fields | Emitted by |
 |------|--------|-----------|
 | `addon_request` | `req` (process-unique id), `addon` (origin only), `resource` (encoded resource path) | `cineo-net` |
-| `playback` | `session`, `meta_id`, `video_id`, `source` (scheme + host) | player (M3) |
+| `playback` | `session`, `meta_id`, `video_id`, `source` (scheme + host) | player |
 | `startup` | `phase` | shells |
 
 **Never log** full transport URLs, query strings of addon URLs, stream URLs
@@ -31,7 +30,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 ### Addon failures
 
-1. `cineo -v addon inspect <manifest-url>` (M1). This shows the parsed
+1. `cineo -v addon inspect <manifest-url>`. This shows the parsed
    manifest, every **warning** (field location + reason), and the request
    span.
 2. Read the error type. It is one of:
@@ -47,22 +46,25 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 ### Catalog / metadata failures
 
-- `cineo -v catalog <url> <type> <id> [--extra k=v]` (M1). It refuses
+- `cineo -v catalog <url> <type> <id> [--extra k=v]`. It refuses
   undeclared catalogs and invalid extras **before** sending a request, and
   the message says which rule failed.
 - Skipped items appear as `warn` lines with `metas[i]` locations.
 - An empty result with no warnings means the addon returned
   `"metas": []` or `null`.
 
-### Stream failures (M2/M3)
+### Stream failures
 
 - Streams load per addon. A failing addon shows its own error and does not
-  hide the others. Non-`http(s)` sources (torrent, archive, …) are listed
-  but refused with a notice naming the source kind.
+  hide the others.
+- Torrent streams go through `cineo-stream`; they show a notice instead when
+  P2P is turned off in Settings. Other non-`http(s)` sources (archives, NZB,
+  …) are listed but refused with a notice naming the source kind.
 - Logs: `RUST_LOG=cineo_net=debug` shows each `addon_request` span with its
-  resource path.
+  resource path; `RUST_LOG=cineo_stream=debug` shows player connections and
+  proxy handshakes of the torrent engine.
 
-### Playback failures (M3)
+### Playback failures
 
 - With debug logging (`RUST_LOG=cineo_player_mpv=debug`), every IPC command
   sent is logged, and so is every `end-file` reason.
@@ -71,12 +73,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 - Common causes: an unsupported codec (check `hwdec` fallback in the mpv log),
   an HTTP 403 (check `proxyHeaders`), an expired stream URL.
 
-### Subtitle failures (M6)
-
-- Logged per subtitle: source addon, language, URL origin, load result from
-  mpv `track-list`.
-
-### Persistence problems (M4)
+### Persistence problems
 
 - `cineo doctor` prints the database path, schema version, row counts and an
   integrity-check result.
@@ -86,7 +83,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 - A corrupt database or one from a newer Cineo is reported and never
   modified. To start over, move `cineo.db` away (keep it for the report).
 
-### UI / core synchronization (M5)
+### UI / core synchronization
 
 - Every action and every effect result goes through one dispatch function,
   which logs at `debug` with a sequence number. A UI showing stale data means

@@ -27,6 +27,6 @@ paths:
 - Async: only in IO crates and shells (tokio). `cineo-core` stays sync and
   pure.
 - Dependencies: add only via `[workspace.dependencies]`, with minimal
-  features, after the research steps in `docs/DEVELOPMENT.md`.
+  features, after the research steps in `CONTRIBUTING.md`.
 - Tests: behavior-named; fixtures from `tests/fixtures/`; no network, no
   sleeps. Test crates may `#![allow(clippy::unwrap_used, clippy::expect_used)]`.

@@ -26,7 +26,7 @@ flowchart LR
 | M0 Engineering foundation | **Done** (2026-10-06) |
 | M1 Manifest + catalog vertical slice | **Done** (2026-10-06) |
 | M2 Meta, streams, aggregation | **Done** (2026-10-06) |
-| M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
+| M3 mpv player | **Done on Linux** (2026-10-06); Windows untested (acceptance: a stream from a mock addon plays and sends progress events) |
 | M4 Persistence + library | **Done** (2026-10-06) |
 | M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](dev/GUI_MANUAL_TEST.md) on Linux and Windows |
 | M9 Streaming engine: torrents | **Implemented** (2026-10-06); acceptance pending: [torrent manual test](dev/GUI_MANUAL_TEST.md#torrents-m9) on Linux and Windows. Moved ahead of M6/M7 (owner decision 2026-10-06) |
@@ -35,80 +35,8 @@ flowchart LR
 
 ---
 
-### M0 — Engineering foundation
-- **Goal:** a repository where correct work is the easy path.
-- **Deliverables:**
-  - Workspace with a pinned toolchain and lint policy.
-  - CI (fmt, clippy, tests on 3 OSes, docs, deny, zizmor), release
-    workflow skeleton, Dependabot.
-  - Docs: goals, architecture, protocol, security, testing, debugging, ADRs.
-  - Agent instructions, rules and skills.
-- **Acceptance:** `scripts/check.sh` passes; CI is green on the first push.
-
-### M1 — Manifest + catalog vertical slice
-- **Prerequisites:** M0.
-- **Deliverables:**
-  - `cineo-core::addon`: `TransportUrl`, `Manifest` (lenient parse +
-    warnings), `ResourcePath` URL building, `Manifest::supports`,
-    `CatalogDef::check_extra`, catalog response parsing.
-  - `cineo-net`: `AddonClient` + `NetPolicy`.
-  - `cineo-cli`: `cineo addon inspect <url>` and
-    `cineo catalog <url> <type> <id> [--extra k=v]`.
-  - Fixtures: `basic/`, `quirks/`, `invalid/`.
-- **Tests:**
-  - Fixture tests for every rule in ADDON_PROTOCOL.md §Manifest/§Requests.
-  - IP classification tables.
-  - Mock-server tests: loopback blocked by default, redirect loop, size cap,
-    gzip bomb, timeout, no URL leakage.
-  - CLI E2E against a mock addon.
-- **Acceptance:**
-  - All of the above pass in CI on 3 OSes.
-  - A manual live check against a public addon (for example Cinemeta) is
-    recorded in COMPATIBILITY.md → Verified addons.
-  - The M1 rows in COMPATIBILITY.md move to Supported or Verified.
-
-### M2 — Meta, streams, aggregation
-- **Prerequisites:** M1.
-- **Deliverables:**
-  - `Meta`, `Video` and `Stream` models (all sources parsed; only `http(s)`
-    marked playable).
-  - The reducer/effect structure (ADR-0001) for aggregation: request
-    planning across addons, concurrent fetch, partial results, stale-response
-    dropping.
-  - The pure state machine `cineo_core::app` (board, discover paging,
-    search, detail with meta fallback, streams, library/progress).
-    (Changed 2026-10-06: the planned CLI `meta`/`streams` commands were
-    dropped. The state machine tests cover the same behavior, and the GUI
-    is the shell.)
-- **Tests:** reducer tests (effects, partial failure, ordering), stream-source
-  fixtures, mock-server aggregation E2E.
-- **Acceptance:** the CLI lists streams from two mock addons, with one failing
-  addon shown as failed and not hiding the other.
-
-### M3 — mpv player (external process)
-- **Prerequisites:** M2.
-- **Deliverables:**
-  - `PlayerCommand` / `PlayerEvent` in the core.
-  - `cineo-player-mpv`: spawn with safe options, IPC socket, typed commands,
-    event stream.
-  - `cineo play`.
-- **Tests:** a fake IPC peer asserting the exact JSON sent; event decoding;
-  rejection of non-http(s) URLs and of bad headers; an `#[ignore]`d
-  real-mpv smoke test.
-- **Acceptance:** play a public-domain test stream from a mock addon on Linux
-  and Windows; progress events are received.
-
-### M4 — Persistence + library
-- **Prerequisites:** M2 (M3 for progress).
-- **Deliverables:**
-  - `cineo-store` (SQLite, schema v1, migrations framework).
-  - Installed addons with their order.
-  - Library items and watch progress from player events.
-  - Continue-watching query.
-  - `cineo addon add/remove/list`, `cineo doctor`.
-- **Tests:** round-trip, migration tests, corrupted-DB handling.
-- **Acceptance:** state survives restarts; continue watching resumes at the
-  saved position.
+Finished milestones (M0–M4) are summarized in the table above; what they
+delivered is in [CHANGELOG.md](../CHANGELOG.md) and the git history.
 
 ### M5 — Desktop GUI
 - **Prerequisites:** M3, M4. UI technology: egui (ADR-0011).
