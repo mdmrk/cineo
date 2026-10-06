@@ -11,6 +11,12 @@ documented Stremio addon protocol** (HTTP transport). With it you can browse
 addon catalogs, view details, pick a stream, play it in a real media player
 (mpv), and keep a personal library with watch progress.
 
+**Product goal: the same user-facing behavior as Stremio** on the desktop.
+That covers addons, browsing, stream sources (including torrents), playback,
+library and deep links. The exceptions are cloud sync (not planned for now)
+and anything that would require Stremio's private services. Owner decision,
+2026-10-06 (ADR-0010).
+
 Cineo is its own product. It has its own name, code and design, and it is not
 affiliated with Stremio. "Stremio-like" describes the *functional model*, not
 the brand or the code (see [LEGAL.md](LEGAL.md)).
@@ -48,9 +54,10 @@ against real addons before it can be "Verified".
 Compatibility does **not** cover:
 - Stremio's private account API (`api.strem.io`).
 - Its streaming server.
-- Its UI.
-- Its deep-link scheme. Whether Cineo may handle `stremio://` links is an
-  open question.
+- Its UI. We match behavior, not look.
+
+Cineo **does** handle `stremio://` deep links (addon install and page links,
+as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
 
 ## Scope
 
@@ -72,28 +79,31 @@ Compatibility does **not** cover:
 - macOS builds; packaging (AppImage/Flatpak, MSI, DMG).
 - Binge-watching: next episode, with `bingeGroup` stream matching.
 - `addon_catalog` (discovering addons from addons), addon configuration pages.
-- Cineo's own deep links (`cineo://`), and opening addon install links.
+- Deep links: `stremio://` (addon install and page links) and `cineo://`.
+  Every link needs user confirmation before it changes state.
+- `ytId` (YouTube) stream sources.
 - Response caching that honors `Cache-Control`.
 - Per-addon trust for self-hosted (private-network) addons.
 
+- **Local streaming engine (ADR-0010)**: torrent sources (`infoHash`,
+  `fileIdx`, `sources`) first, then archive sources (`rarUrls`, `zipUrls`,
+  `7zipUrls`, `tgzUrls`, `tarUrls`), then `nzbUrl`.
+
 ### v1.0
 
-- A stable, documented MVP feature set on Linux, Windows and macOS.
+- Stremio-equivalent behavior for the supported surface, on Linux, Windows
+  and macOS, including torrent streams.
 - Compatibility verified against a published corpus of real addons.
 - Data export and import; schema migrations with tests.
 - Signed release artifacts.
 
 ### Future research (not committed)
 
-- **Account sync.** This would need our own backend or a self-hostable sync
-  server. Stremio's account API is out of scope.
-- **Torrent, archive and NZB stream sources.** These need a local streaming
-  engine (for example a Rust BitTorrent library). That carries legal and
-  safety implications.
 - **Embedded video.** libmpv rendering inside the app window instead of a
   separate mpv window.
 - Casting (Chromecast, DLNA), and Android, iOS, TV and web/WASM targets.
-- Live TV EPG (`epgProvider`, scheduled videos).
+- Live TV EPG (`epgProvider`, scheduled videos). This is needed for full
+  parity, so it is scheduled after v1.0.
 
 ### Explicitly out of scope
 
@@ -101,6 +111,9 @@ Compatibility does **not** cover:
 - Stremio's private APIs, streaming server, branding or assets.
 - The legacy (`/stremio/v1`) and IPFS addon transports.
 - Analytics and telemetry.
+- **Cloud or account sync, for now** (owner decision 2026-10-06). Cineo is
+  local-only. Data export and import cover moving between machines.
+  Revisit with a new ADR if this changes.
 
 ## Platforms
 
@@ -117,11 +130,10 @@ Compatibility does **not** cover:
 |-----------|:--:|:--:|:--:|:--:|:--:|:--:|
 | Catalogs, meta, streams, subtitles lists | ✔ | | | | | |
 | Installed addons, library, progress | | | ✔ | | | |
-| Multi-device library | | ✔ | | ✔ | | |
 | Playback, tracks, subtitle rendering | | | ✔ | | ✔ | |
 | Deep links, file associations | | | ✔ | | | ✔ |
 | Casting | | | | | ✔ | ✔ |
-| Torrent sources | | | ✔ | | | streaming engine |
+| Torrent / archive / NZB sources | | | ✔ | | ✔ | local streaming engine (ADR-0010) |
 
 ## Success looks like
 

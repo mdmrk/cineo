@@ -17,13 +17,15 @@ flowchart LR
   M6 --> MVP((MVP))
   M7 --> MVP
   MVP --> M8[M8 Compatibility expansion]
+  MVP --> M9[M9 Streaming engine: torrents]
+  M9 --> M10[M10 Archives + NZB]
 ```
 
 | Milestone | Status |
 |-----------|--------|
 | M0 Engineering foundation | **Done** (2026-10-06) |
 | M1 Manifest + catalog vertical slice | Next |
-| M2 – M8 | Planned |
+| M2 – M10 | Planned |
 
 ---
 
@@ -134,10 +136,37 @@ flowchart LR
 
 ### M8 — Compatibility expansion (v0.x)
 - `addon_catalog`, addon configuration pages, response caching, binge
-  groups, `cineo://` deep links, macOS packaging.
+  groups, deep links (`stremio://` addon install and page links, and
+  `cineo://`), `ytId` sources, macOS packaging.
 - A compatibility corpus in CI.
 - Each item is an independent PR with its own COMPATIBILITY.md row.
 
+### M9 — Local streaming engine: torrents (ADR-0010)
+- **Prerequisites:** the MVP (M3 player, M5 GUI).
+- **Deliverables:**
+  - A library spike (`librqbit` is the candidate), recorded in the ADR.
+  - The `cineo-stream` crate serving `infoHash`/`fileIdx`/`sources` as a
+    loopback HTTP URL with range support.
+  - Bounded disk cache.
+  - P2P disclosure and a disable setting.
+  - Stream status (peers, speed, buffer) in the UI.
+- **Tests:**
+  - Engine against a local test swarm or fixture torrent with
+    public-domain content.
+  - Loopback-only binding and path-token tests.
+  - Cache limit tests.
+- **Acceptance:** a torrent stream from a mock addon plays and seeks in mpv
+  on Linux and Windows. Disabling P2P hides and blocks torrent sources.
+
+### M10 — Archive and NZB sources (ADR-0010)
+- **Prerequisites:** M9.
+- **Deliverables:** archive member streaming (rar, zip, 7z, tar, tgz,
+  honoring `fileIdx`/`fileMustInclude`), then `nzbUrl` with user-configured
+  Usenet servers. Each source type is its own PR with its own COMPATIBILITY
+  row.
+- **Acceptance:** per source type, the limitations documented in the SDK's
+  `stream.md` (seeking support, multi-volume) are matched and tested.
+
 ### Later / research
-See [GOALS.md](GOALS.md#future-research-not-committed): sync, torrent
-sources, embedded playback, casting, mobile.
+See [GOALS.md](GOALS.md#future-research-not-committed): embedded playback,
+casting, mobile, EPG. Cloud sync is not planned (owner decision 2026-10-06).

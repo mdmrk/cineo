@@ -48,10 +48,13 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   name, logo or domain, and never implied as an endorsement.
 - No Stremio logos, icons, colors, fonts, screenshots or other assets are
   used.
-- "Cineo" is a working name. A trademark search has **not** been done (open
-  question).
-- Handling the `stremio://` URL scheme could confuse users or conflict with
-  the official app. It is undecided (GOALS.md).
+- "Cineo" is the project's name (confirmed 2026-10-06). A trademark search
+  has **not** been done.
+- Cineo handles the `stremio://` URL scheme for interoperability with
+  addon install links and page links that addon sites publish. It does not
+  present itself as Stremio. If the official app is also installed, the OS
+  decides which handler runs (per-platform behavior is UNKNOWN). Cineo never
+  silently takes over the scheme from another installed handler.
 
 ## User-provided media and external addons
 - Cineo ships no content and no content addons. Users choose which addons to
@@ -62,6 +65,16 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 - Cineo will not ship, recommend or default-install addons that provide
   infringing streams. Default or suggested addons, if any, will be
   metadata-only and are reviewed per release.
+
+## Peer-to-peer streaming (ADR-0010)
+- Torrent sources make the user's device join BitTorrent swarms. Their IP
+  address becomes visible to peers, and they upload data while streaming.
+  The legality of the content is the user's and the addon's responsibility.
+- Cineo must disclose this before the first P2P stream and offer a setting
+  that disables P2P sources entirely. Addons flagged `behaviorHints.p2p` are
+  labelled at install time.
+- Archive and NZB sources fetch from servers the addon names (for NZB, Usenet
+  servers with user credentials). The same disclosure principle applies.
 
 ## Metadata providers
 Metadata (titles, posters, descriptions) comes from addons, which source it

@@ -15,6 +15,9 @@ milestone table) and `docs/COMPATIBILITY.md`.
   `docs/ADDON_PROTOCOL.md`.
 - All HTTP goes through `cineo-net` and its `NetPolicy` (ADR-0006). The
   player only receives typed commands (ADR-0004).
+- The goal is Stremio-equivalent behavior, with no cloud sync for now.
+  Non-URL stream sources go through our own `cineo-stream` engine, never
+  Stremio's server (ADR-0010).
 - Changing any of these requires a new or updated ADR **before** the code.
 
 ## Workflow

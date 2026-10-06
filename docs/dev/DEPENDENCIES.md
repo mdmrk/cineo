@@ -27,7 +27,8 @@ Re-check them when adding.
 | HTTP mocking (dev) | `wiremock` | 0.6.5 | MIT/Apache | — | M1 | Async, per-test servers, request recording. `httpmock` (1.88 MSRV) is an alternative |
 | Database | `rusqlite` (`bundled`) | 0.40.2 | MIT | — | M4 | Library queries (continue watching) want SQL. `sqlx` (async, compile-time checks, heavier) and `redb` (KV, no queries) considered |
 | Platform dirs | `directories` | 6.0.0 | MIT/Apache | — | M4 | Config, data and log paths per OS |
-| Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | Sync (future) | OS keychains. Not needed until there are credentials |
+| Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | M10 (NZB server credentials) | OS keychains. Not needed until there are credentials; cloud sync is not planned |
+| Torrent engine | `librqbit` | 9.0.1 | Apache-2.0 | — | M9 (spike first, ADR-0010) | Maintained Rust BitTorrent library with streaming. `cratetorrent` is unmaintained (2020) |
 | Desktop UI | `tauri` | 2.12.1 | Apache/MIT | 1.95 | M5 (ADR-0005, proposed) | See the ADR for egui, iced and Slint |
 | Property tests (dev) | `proptest` | 1.11.0 | MIT/Apache | 1.85 | When first useful | URL round-trips, parser robustness |
 | Snapshots (dev) | `insta` | 1.49.0 | Apache | 1.66 | Only if needed | Large CLI outputs |

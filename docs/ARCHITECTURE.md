@@ -63,6 +63,7 @@ crate is created by the milestone that needs it ([ROADMAP.md](ROADMAP.md)).
 | `cineo-player-mpv` | Spawn and control mpv over JSON IPC; typed commands and events | M3 |
 | `cineo-store` | Persistence (installed addons, library, progress) with migrations | M4 |
 | `cineo-desktop` | GUI shell | M5 |
+| `cineo-stream` | Local streaming engine: torrent/archive/NZB sources → loopback HTTP URL (ADR-0010) | M9 |
 
 **When to add a crate:** only when the new code has a different dependency
 set or a different IO boundary from an existing crate. A new *concept* is a
@@ -196,7 +197,10 @@ See [TESTING.md](TESTING.md):
   transport is ever accepted. That is currently rejected (ADR-0007).
 - **Embedded player.** A second implementation of the player boundary using
   the libmpv render API.
-- **Sync.** A `cineo-sync` crate behind the persistence boundary, built on
-  our own protocol.
-- **Stream sources.** A pluggable "stream resolver" turning non-URL sources
-  (torrent and others) into playable URLs, in a separate, opt-in crate.
+- **Sync.** Not planned for now (owner decision 2026-10-06). If that
+  changes, it would be a crate behind the persistence boundary, with a new
+  ADR.
+- **Stream sources.** The "stream resolver" turns non-URL sources into
+  playable URLs: `cineo-stream`, M9/M10 (ADR-0010).
+- **Deep links.** `stremio://` and `cineo://` URLs parse into typed routes
+  in the core (pure). Shells register the schemes per platform.

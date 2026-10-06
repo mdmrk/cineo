@@ -4,6 +4,7 @@ paths:
   - "crates/cineo-player-mpv/**"
   - "crates/cineo-store/**"
   - "crates/cineo-desktop/**"
+  - "crates/cineo-stream/**"
   - "crates/cineo-core/src/addon/**"
   - "docs/SECURITY.md"
   - ".github/workflows/**"
@@ -24,7 +25,8 @@ paths:
 - Player:
   - Typed commands only.
   - Media is loaded via IPC `loadfile` with JSON arguments.
-  - Only `http(s)` URLs from addons.
+  - Only `http(s)` URLs from addons, plus loopback URLs issued by
+    `cineo-stream` (ADR-0010).
   - Never pass addon strings as mpv options or command-line arguments.
   - Header names must be tokens; values must have no CR/LF/NUL.
 - Filesystem: no paths derived from addon data. SQL uses bound parameters

@@ -35,10 +35,11 @@ or a decision._
 | Catalog response (`metas`) | Planned | M1 |
 | Meta response, videos/episodes | Planned | M2 |
 | Stream response: `url` (http/https) | Planned | M2 |
-| Stream response: `ytId` | Unknown | Needs a YouTube resolution strategy |
+| Stream response: `ytId` | Planned | v0.x; resolution strategy UNKNOWN (ADR-0010) |
 | Stream response: `externalUrl` | Planned | M2; opened in the system browser after confirmation |
-| Stream response: `infoHash` (torrent) | Unsupported | Needs a streaming engine; future research (GOALS.md) |
-| Stream response: archives, `nzbUrl` | Unsupported | Needs a streaming engine |
+| Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Planned | M9, own streaming engine (ADR-0010) |
+| Stream response: archives (`rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls`, `tarUrls`) | Planned | M10 (ADR-0010) |
+| Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
 | Stream `behaviorHints.proxyHeaders` | Planned | M3; validated headers only |
 | Stream `behaviorHints.bingeGroup` | Planned | v0.x binge-watching |
 | Subtitles resource | Planned | M6 |
@@ -48,7 +49,7 @@ or a decision._
 | `behaviorHints.adult` / `p2p` warnings | Planned | M1 parses, M5 shows |
 | Response caching (`Cache-Control`) | Planned | v0.x |
 | Meta `links`, `trailers` | Planned | v0.x |
-| Native EPG (`epgProvider`, scheduled videos) | Unsupported | Future research |
+| Native EPG (`epgProvider`, scheduled videos) | Planned | After v1.0 (parity goal) |
 
 ## Application features
 
@@ -66,9 +67,11 @@ or a decision._
 | Library | Planned | M4 |
 | Watch progress / continue watching | Planned | M4 |
 | Deep links (`cineo://`) | Planned | v0.x |
-| `stremio://` addon install links | Unknown | Legal and UX question (GOALS.md) |
+| `stremio://` addon install links | Planned | v0.x; user confirmation required |
+| `stremio://` page links (board, discover, library, search, detail) | Planned | v0.x |
 | Casting | Planned | Future research |
-| Account sync | Planned | Future research; own protocol |
+| Account / cloud sync | Unsupported | Not planned for now (owner decision 2026-10-06) |
+| Data export / import | Planned | v1.0 |
 
 ## Platforms
 

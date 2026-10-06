@@ -26,6 +26,7 @@ old one *Superseded by NNNN*.
 | [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
 | [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Accepted |
 | [0009](ADR/0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
+| [0010](ADR/0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: Proposed) |
 
 ## What we took from the reference projects
 
@@ -43,7 +44,7 @@ old one *Superseded by NNNN*.
 | Manifest filtering semantics | **Keep exactly** | Compatibility (ADDON_PROTOCOL.md) |
 | Legacy / IPFS transports | **Reject** | ADR-0007 |
 | Analytics module | **Reject** | No telemetry |
-| Private account API + library sync | **Reject** | Not public; own sync is future research |
+| Private account API + library sync | **Reject** | Not public; cloud sync not planned for now (owner decision 2026-10-06) |
 | 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
 | Watched bitfield encoding | **Defer** | Revisit with series progress (M4) |
 | MSRV CI job | **Modify** | We are an application: MSRV = pinned toolchain (ADR-0009) |

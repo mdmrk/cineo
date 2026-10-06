@@ -57,9 +57,9 @@ These are all treated as hostile:
 | Risk | Control |
 |------|---------|
 | Option injection via the URL (`--script=…`) | Load media through the IPC `loadfile` command with a JSON array argument. Never build command lines from addon data. Never use `mpv_command_string`-style string commands. |
-| Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv. Local files are allowed only when the **user** picked them. |
+| Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv, plus loopback URLs issued by `cineo-stream` (ADR-0010). Local files are allowed only when the **user** picked them. |
 | Untrusted playlists | Do not enable `--load-unsafe-playlists`. |
-| `ytdl` hook running an external program on addon URLs | Start mpv with `--ytdl=no` unless a later ADR decides otherwise. |
+| `ytdl` hook running an external program on addon URLs | Start mpv with `--ytdl=no`. `ytId` support (v0.x) may enable it only for URLs Cineo builds from a validated YouTube id (`[A-Za-z0-9_-]{11}`), decided by its own ADR. |
 | User mpv config/scripts changing behavior | Start mpv with `--no-config` plus an explicit option set (INFERRED: gives reproducible behavior; revisit if users want their config). |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
 | IPC socket hijack | The mpv manual states that IPC is not secure. Put the socket in a per-user runtime directory with `0700` permissions (Unix) and give it a random name. Windows named pipes get a random name. |
@@ -73,6 +73,29 @@ rely on mpv updates). Subtitle URLs follow the same network policy and are
 fetched by mpv. Whether mpv applies our policy to them is **UNKNOWN**; this
 must be resolved in M6. One option is fetching them through `cineo-net` into
 a temp file.
+
+### Deep links (v0.x)
+
+- `stremio://` and `cineo://` links come from web pages and other apps, so
+  they are untrusted. They are parsed into an allowlist of typed routes;
+  anything else is rejected.
+- A link never installs an addon, plays media or changes settings without an
+  explicit user confirmation that shows the full target (for example, the
+  addon's origin and name).
+- An addon install link maps only to `https://` and then goes through the
+  normal network policy.
+
+### Streaming engine (M9/M10, ADR-0010)
+
+| Risk | Control |
+|------|---------|
+| Other local users or web pages reach the engine's HTTP server (as with any localhost service) | Bind `127.0.0.1`/`::1` only. Use a random per-session path token, and reject requests without it. No CORS. Check the `Host` header against loopback names (DNS-rebinding defense) |
+| Disk exhaustion | Bounded cache in the app cache directory, with eviction. Size is shown in settings |
+| Path traversal via torrent or archive file names | File names from torrents and archives never become filesystem paths. Storage uses engine-controlled names |
+| P2P exposure (IP visible to peers, uploads) | Disclosure before the first P2P stream, a global disable switch, and `behaviorHints.p2p` labels at install |
+| Malicious archives (bombs, huge member counts) | Member count, path length and decompressed-size limits. `fileMustInclude` patterns run with a size-limited regex engine (no backtracking) |
+| NZB server credentials | Stored in the OS keyring only. Addon-supplied `servers` entries are shown to the user before use |
+| Trackers and DHT contacting private networks | The same non-public address policy as `NetPolicy` for peers and trackers sourced from addon data (INFERRED necessity; confirm feasibility in the M9 spike) |
 
 ### Filesystem and persistence (M4)
 

@@ -150,8 +150,10 @@ These are listed in COMPATIBILITY.md.
 
 A stream source is one of `url`, `ytId`, `infoHash`(+`fileIdx`), `externalUrl`,
 `nzbUrl` or the archive sources (`rarUrls`, …) (VERIFIED-DOC). Cineo plays
-**`url` with `http(s)`** only. Other sources are parsed, shown as
-"unsupported source" and never fetched (see GOALS.md for torrent research).
+**`url` with `http(s)`** first (M3). Other sources are parsed from M2 on and
+shown as "not yet supported" until the local streaming engine supports them
+(ADR-0010: torrents in M9, archives and NZB in M10). They are never fetched
+before then.
 `behaviorHints.proxyHeaders.request` become player HTTP headers only after
 validation (no CR/LF; header names restricted to tokens).
 
@@ -165,6 +167,21 @@ validation (no CR/LF; header names restricted to tokens).
 | Full-form resource without `types` | `types` required | matches nothing | reference (+ warning) |
 | Duplicate catalogs | unspecified | first wins | reference (+ warning) |
 | The minimal example in `protocol.md` | uses `/subtitle/` in one place | `/subtitles/` | `subtitles` |
+
+## Deep links (planned, v0.x)
+
+From the SDK's `deep-links.md` (VERIFIED-DOC):
+- **Addon install:** `stremio://<host>/<path>/manifest.json`. This is the
+  manifest URL with `https://` replaced by `stremio://`. Cineo maps it back
+  to `https://` and always shows the install confirmation. Mapping to
+  `http://` is never assumed.
+- **Pages:** `stremio:///board`, `stremio:///discover[/{encodedAddonUrl}/{type}/{catalogId}?genre=…]`,
+  `stremio:///library`, `stremio:///search?search=…`,
+  `stremio:///detail/{type}/{id}[/{videoId}]?autoPlay=…`.
+- Deep links are untrusted input. They are parsed into typed routes, unknown
+  links are rejected with a message, and nothing is installed or played
+  without user action. `autoPlay` is documented as Android-TV-only;
+  Cineo's handling of it is UNKNOWN until M8.
 
 ## Caching (planned, v0.x)
 
