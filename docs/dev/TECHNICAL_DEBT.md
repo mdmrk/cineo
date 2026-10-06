@@ -31,6 +31,32 @@ Format:
   away and Cineo starts fresh.
 - Exit: a GUI prompt (M5) that renames the file aside and starts fresh.
 
+### Desktop: no log file or diagnostics view
+- Where: [main.rs](../../crates/cineo-desktop/src/main.rs)
+- Gap: logs go to stderr only; DEBUGGING.md planned a rotating file and an
+  About/Diagnostics view.
+- Why: it would add a dependency (`tracing-appender`) and a page outside
+  M5's acceptance.
+- Instead: start `cineo-desktop -v` from a terminal; `cineo doctor` covers
+  the database.
+- Exit: a log file in the platform state directory, plus a diagnostics page.
+
+### Desktop: image cache is unbounded for a session
+- Where: [images.rs](../../crates/cineo-desktop/src/images.rs)
+- Gap: fetched image bytes (≤ 4 MiB each) stay in memory until exit.
+- Why: egui decides when to forget images; a size-bounded cache was not
+  needed for normal browsing.
+- Instead: memory grows with the number of distinct posters viewed.
+- Exit: an LRU cap on `NetImageLoader` bytes.
+
+### Desktop: private networks are a launch flag only
+- Where: [main.rs](../../crates/cineo-desktop/src/main.rs)
+- Gap: self-hosted addons need `--allow-private-network`; there is no
+  setting, and no per-addon trust (GOALS.md v0.x).
+- Why: a settings page was not in M5's scope.
+- Instead: blocked addons fail to install with "blocked by network policy".
+- Exit: a settings page, then per-addon trust.
+
 ### Store: manifests are not cached
 - Where: [migrate.rs](../../crates/cineo-store/src/migrate.rs) (only
   transport URLs are stored)

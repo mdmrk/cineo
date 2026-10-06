@@ -37,7 +37,10 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   (`deny.toml`). Extending the license allowlist requires a note here.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
-  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
+  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls),
+  BSL-1.0 (added 2026-10-06 for `clipboard-win` and `error-code`, the
+  Windows clipboard behind egui's copy and paste; permissive, and it
+  requires no notice in binary distributions).
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.
 - Copyleft libraries (for example LGPL libmpv) are **not linked**. mpv runs as

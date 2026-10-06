@@ -12,8 +12,9 @@ that arrive with that milestone.
   everything. `RUST_LOG` overrides both, for example
   `RUST_LOG=cineo_net=trace`. Logs go to **stderr**, so stdout stays
   machine-readable.
-- GUI (M5): a rotating log file in the platform log directory. The path is
-  shown in an "About / Diagnostics" view.
+- GUI (M5): `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
+  `RUST_LOG` rules. A log file and a diagnostics view are not implemented
+  yet ([TECHNICAL_DEBT.md](dev/TECHNICAL_DEBT.md)).
 
 ### Span conventions
 

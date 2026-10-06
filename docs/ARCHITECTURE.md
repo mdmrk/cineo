@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **partly implemented** (M1–M4, see [ROADMAP.md](ROADMAP.md)).
+Status: **partly implemented** (M1–M5, see [ROADMAP.md](ROADMAP.md)).
 Decisions are recorded in [DECISIONS.md](DECISIONS.md) and [ADR/](ADR/). This
 document describes the target; each section says what exists today.
 
@@ -39,8 +39,8 @@ flowchart TB
   PLAYER -. IPC socket .-> MPV[[mpv process]]
 ```
 
-Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv` and
-`cineo-store` exist. The other crates are created by the milestone that
+Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv`,
+`cineo-store` and `cineo-desktop` exist. The other crates are created by the milestone that
 needs them ([ROADMAP.md](ROADMAP.md)).
 
 ## Dependency direction
@@ -124,6 +124,17 @@ Secrets (future account tokens) go to the OS keyring, never to SQLite.
 The UI renders **state snapshots** and sends **actions**. It holds no business
 logic. That keeps the GUI technology replaceable and lets the CLI exercise
 exactly the same core paths.
+
+Implemented in M5 (`cineo-desktop`):
+- `view::show(ui, &State, &mut ViewState) -> Vec<Action>` is pure rendering.
+  `ViewState` holds presentation only (open page, text being typed). The UI
+  tests drive this function headlessly with `egui_kittest`.
+- `app::CineoApp` is the shell. Before each frame it drains a channel of IO
+  results and dispatches them. Fetches and playback run on a tokio runtime.
+  Store writes go, in order, to one thread, which is joined on exit so the
+  last progress write lands. mpv events become `PlaybackProgress` actions.
+- Images: `images::NetImageLoader` (an egui `BytesLoader`) fetches through
+  `cineo-net`; `egui_extras` only decodes.
 
 ### Platform abstraction
 

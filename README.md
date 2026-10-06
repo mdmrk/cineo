@@ -6,9 +6,11 @@ Stremio-protocol addons.**
 Install addons by URL, browse their catalogs, open details, pick a stream and
 play it in [mpv]. Your library and watch progress stay on your machine.
 
-> **Status: pre-alpha. Engineering foundation only (Milestone 0). Nothing is
-> usable yet.** See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for what
-> works. Every feature there is marked with an evidence-based status.
+> **Status: pre-alpha.** The desktop app browses addon catalogs, shows
+> details and streams, and plays direct `http(s)` streams in mpv, with a
+> local library. No installers yet. See
+> [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for what works. Every
+> feature there is marked with an evidence-based status.
 
 ## Why
 
@@ -27,6 +29,7 @@ Details: [docs/GOALS.md](docs/GOALS.md).
 ```sh
 git clone <this repo> && cd cineo
 scripts/check.sh        # format, lint, test, docs, dependency policy
+cargo run -p cineo-desktop --release   # the desktop app (needs mpv on PATH to play)
 ```
 
 The toolchain is pinned in `rust-toolchain.toml`. More in
@@ -36,7 +39,7 @@ The toolchain is pinned in `rust-toolchain.toml`. More in
 
 A pure Rust core (protocol, domain, state; no IO), IO crates (HTTP with an
 SSRF-safe network policy, an mpv player process, SQLite), and thin shells (a
-CLI first, then a desktop GUI). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+CLI and an egui desktop GUI). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 and the [decision records](docs/DECISIONS.md).
 
 ## Documentation

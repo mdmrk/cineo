@@ -1,0 +1,214 @@
+//! UI smoke tests: the real view over core states built from fixtures,
+//! rendered headlessly. They check what is shown and which actions clicks
+//! produce; behavior itself is tested in `cineo-core`.
+
+// Test helpers panic on purpose: a panic is a failed assertion.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use cineo_core::addon::{
+    ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
+    parse_stream_response,
+};
+use cineo_core::app::{Action, Effect, State, update};
+use cineo_desktop::view::{Page, ViewState, show};
+use egui_kittest::Harness;
+use egui_kittest::kittest::{NodeT, Queryable};
+
+fn fixture(rel: &str) -> Vec<u8> {
+    let full = format!(
+        "{}/../../tests/fixtures/addons/{rel}",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    std::fs::read(&full).unwrap_or_else(|err| panic!("reading {full}: {err}"))
+}
+
+const BASIC: &str = "https://basic.example/manifest.json";
+
+/// The basic fixture addon installed, with every board row answered.
+fn board_state() -> State {
+    let mut state = State::default();
+    let addon = TransportUrl::parse(BASIC).unwrap();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![addon.clone()],
+            library: Vec::new(),
+        },
+    );
+    let manifest = parse_manifest(&fixture("basic/manifest.json"))
+        .unwrap()
+        .value;
+    let effects = update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: addon,
+            result: Ok(Box::new(manifest)),
+            install: false,
+        },
+    );
+    for effect in effects {
+        if let Effect::FetchCatalog { addon, path } = effect {
+            // The movie row loads; the series row fails.
+            let result = if path.id == "top" {
+                Ok(
+                    parse_catalog_response(&fixture("basic/catalog-movie-top.json"))
+                        .unwrap()
+                        .value
+                        .metas,
+                )
+            } else {
+                Err("HTTP status 500".to_owned())
+            };
+            update(
+                &mut state,
+                Action::CatalogLoaded {
+                    addon,
+                    path,
+                    result,
+                },
+            );
+        }
+    }
+    state
+}
+
+/// The movie's detail page with its streams loaded.
+fn detail_state() -> State {
+    let mut state = board_state();
+    let effects = update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ContentType::new("movie").unwrap(),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
+        panic!("{effects:?}")
+    };
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json")).unwrap();
+    let effects = update(
+        &mut state,
+        Action::MetaLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(Box::new(meta.value)),
+        },
+    );
+    for effect in effects {
+        if let Effect::FetchStreams { addon, path } = effect {
+            let streams = parse_stream_response(&fixture("basic/streams-movie.json")).unwrap();
+            update(
+                &mut state,
+                Action::StreamsLoaded {
+                    addon,
+                    path,
+                    result: Ok(streams.value),
+                },
+            );
+        }
+    }
+    state
+}
+
+type Ui = (State, ViewState, Vec<Action>);
+
+fn harness(state: State, view: ViewState) -> Harness<'static, Ui> {
+    Harness::builder()
+        .with_size([1280.0, 900.0])
+        .build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (state, view, Vec::new()),
+        )
+}
+
+#[test]
+fn empty_board_explains_how_to_add_addons() {
+    let harness = harness(State::default(), ViewState::default());
+    harness.get_by_label_contains("No addons installed");
+}
+
+#[test]
+fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
+    let mut harness = harness(board_state(), ViewState::default());
+    harness.get_by_label("Top Movies Movies");
+    harness.get_by_label("Multi-genre Series");
+    harness.get_by_label("HTTP status 500");
+    harness.get_by_label("Second Example Film");
+    harness.get_by_label("First Example Film").click();
+    harness.run();
+    let actions = &harness.state().2;
+    assert!(
+        matches!(
+            actions.as_slice(),
+            [Action::OpenDetail { id, preview: Some(_), .. }] if id == "tt0000001"
+        ),
+        "{actions:?}"
+    );
+}
+
+#[test]
+fn detail_lists_streams_and_only_playable_ones_can_be_played() {
+    let mut harness = harness(detail_state(), ViewState::default());
+    harness.get_by_label("First Example Film");
+    harness.get_by_label("Example HTTP stream");
+    harness.get_by_label("Basic Fixture");
+    let play: Vec<_> = harness.get_all_by_label("Play").collect();
+    assert_eq!(play.len(), 6, "one button per stream");
+    let enabled: Vec<bool> = play
+        .iter()
+        .map(|b| !b.accesskit_node().is_disabled())
+        .collect();
+    assert_eq!(enabled, vec![true, false, false, false, false, false]);
+
+    play[0].click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::Play {
+            group: 0,
+            stream: 0
+        }]
+    );
+}
+
+#[test]
+fn addons_page_installs_from_the_typed_url_and_lists_installed_addons() {
+    let view = ViewState {
+        page: Page::Addons,
+        ..ViewState::default()
+    };
+    let mut harness = harness(board_state(), view);
+    harness.get_by_label_contains("Basic Fixture 1.2.0");
+    harness.get_by_label("basic.example");
+    harness
+        .get_by_role(eframe::egui::accesskit::Role::TextInput)
+        .focus();
+    harness.run();
+    harness
+        .get_by_role(eframe::egui::accesskit::Role::TextInput)
+        .type_text("https://new.example/manifest.json");
+    harness.run();
+    harness.get_by_label("Install").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::InstallAddon(
+            "https://new.example/manifest.json".into()
+        )]
+    );
+}
+
+#[test]
+fn notices_are_shown_and_can_be_dismissed() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::PlaybackFailed("mpv was not found".into()),
+    );
+    let mut harness = harness(state, ViewState::default());
+    harness.get_by_label("mpv was not found");
+    harness.get_by_label("Dismiss").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::DismissNotice]);
+}

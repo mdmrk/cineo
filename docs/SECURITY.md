@@ -120,9 +120,14 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 ### Desktop UI (M5, ADR-0011)
 
 - Images are fetched through `cineo-net` with the same network policy and a
-  smaller size cap. The webview-style `http`/`file` loaders are disabled.
-- Decoders are limited to jpeg, png and webp, with a pixel-dimension limit
-  that guards against decompression-bomb images.
+  4 MiB size cap. The `egui_extras` `http`/`file` loaders are not compiled
+  in; only `http(s)` image URIs are loaded.
+- Decoders are limited to jpeg, png and webp. The image header must declare
+  at most 4096 pixels per side, checked before decoding
+  (`oversized_images_are_rejected_before_decoding`,
+  `non_images_and_disabled_formats_are_rejected`).
+- The addon list shows only the addon's host, because the full URL can
+  carry configuration (`addons_page_installs_from_the_typed_url_and_lists_installed_addons`).
 - Addon strings are rendered as plain text, never interpreted as markup or
   links without a scheme check.
 

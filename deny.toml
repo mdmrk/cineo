@@ -28,6 +28,8 @@ allow = [
     "CC0-1.0",
     # webpki-root-certs: Mozilla's CA bundle data.
     "CDLA-Permissive-2.0",
+    # clipboard-win, error-code (Windows clipboard via egui-winit/arboard).
+    "BSL-1.0",
 ]
 unused-allowed-license = "allow"
 confidence-threshold = 0.9

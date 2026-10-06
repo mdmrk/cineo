@@ -21,6 +21,10 @@ Re-check them when adding.
 | `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
 | `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
 | `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
+| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
+| `egui_extras` (`image` only) | 0.36.2 | Image decoding for egui (desktop) | MIT/Apache |
+| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Header checks before decoding; shared with `egui_extras` (desktop) | MIT/Apache |
+| `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 
 `tokio` features `process`, `io-util` and `sync` were added for the mpv
 player (M3). `serde_json` is also used there for IPC messages.
@@ -28,6 +32,13 @@ player (M3). `serde_json` is also used there for IPC messages.
 `rusqlite` drops its default features (`cache`, and an FFI backend used only
 on wasm). `bundled` compiles SQLite from source, so no system library is
 needed on any OS. `etcetera` MSRV: 1.87 (M4).
+
+M5 (2026-10-06): the egui crates have MSRV 1.95. Through `eframe`, the
+tree gains `arboard`/`clipboard-win` (BSL-1.0, allowlisted, see LEGAL.md)
+for copy and paste. Wayland and X11 libraries are loaded at run time
+(`dlopen`), so no system development packages are needed to build.
+`egui_kittest` was not in the plan; it is egui's own test harness and
+replaces a hand-written AccessKit walker.
 
 ## Planned (researched, not added)
 
@@ -46,8 +57,6 @@ needed on any OS. `etcetera` MSRV: 1.87 (M4).
 | HTTP mocking (dev) | `wiremock` | 0.6.5 | MIT/Apache | — | M1 | Async, per-test servers, request recording. `httpmock` (1.88 MSRV) is an alternative |
 | Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | M10 (NZB server credentials) | OS keychains. Not needed until there are credentials; cloud sync is not planned |
 | Torrent engine | `librqbit` | 9.0.1 | Apache-2.0 | — | M9 (spike first, ADR-0010) | Maintained Rust BitTorrent library with streaming. `cratetorrent` is unmaintained (2020) |
-| Desktop UI | `eframe` + `egui_extras` (`image`) | 0.36.2 | MIT/Apache | 1.95 | M5 (ADR-0011) | glow backend, no default features. Tauri superseded (ADR-0005), iced (churn), Slint (license) |
-| Image decoding | `image` (jpeg, png, webp only) | 0.25.10 | MIT/Apache | 1.88 | M5 | Used by the egui_extras image loader; minimal formats |
 | Property tests (dev) | `proptest` | 1.11.0 | MIT/Apache | 1.85 | When first useful | URL round-trips, parser robustness |
 | Snapshots (dev) | `insta` | 1.49.0 | Apache | 1.66 | Only if needed | Large CLI outputs |
 | Fuzzing | `cargo-fuzz` / `libfuzzer-sys` | 0.13.2 / 0.4.13 | MIT/Apache (+NCSA) | — | After M2 | Parser fuzz targets |

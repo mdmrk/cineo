@@ -28,8 +28,9 @@ flowchart LR
 | M2 Meta, streams, aggregation | **Done** (2026-10-06) |
 | M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
 | M4 Persistence + library | **Done** (2026-10-06) |
-| M5 Desktop GUI | Next |
-| M6 – M10 | Planned |
+| M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](dev/GUI_MANUAL_TEST.md) on Linux and Windows |
+| M6 Subtitles, M7 Packaging | Next |
+| M8 – M10 | Planned |
 
 ---
 

@@ -45,7 +45,7 @@ _Last reviewed: 2026-10-06._
 | Subtitles in stream objects | Partial | Parsed (`stream_sources_*`); loaded into the player in M6 |
 | `addon_catalog` resource | Planned | v0.x |
 | Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |
-| `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown in UI in M5 |
+| `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown as badges on the GUI Addons page (no UI test yet) |
 | Response caching (`Cache-Control`) | Planned | v0.x |
 | Meta `links`, `trailers` | Planned | v0.x |
 | Native EPG (`epgProvider`, scheduled videos) | Planned | After v1.0 (parity goal) |
@@ -54,17 +54,17 @@ _Last reviewed: 2026-10-06._
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Install/remove/order addons | Supported | Persisted in order (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon add/remove/list` (`addons_are_added_listed_and_removed_across_runs`). Reordering UI in M5 |
-| Board (browsable catalogs) | Planned | M5 (egui, ADR-0011) |
-| Discover with filters | Planned | M5 |
-| Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; UI in M5 |
-| Detail page | Planned | M5 |
+| Install/remove/order addons | Supported | Persisted in order (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon add/remove/list` (`addons_are_added_listed_and_removed_across_runs`); GUI Addons page with install, move up/down and remove |
+| Board (browsable catalogs) | Supported | Rows fail independently (`board_shows_rows_with_independent_failures_and_a_card_opens_the_detail`); live Cinemeta board rendered on Linux, 2026-10-06 |
+| Discover with filters | Supported | Genre and `skip` paging in the core (`discover_pages_with_skip_and_deduplicates`); catalog and genre pickers in the GUI. No dedicated UI test |
+| Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; GUI search page |
+| Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`) |
 | Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
 | Playback via external mpv | Supported | `cineo-player-mpv` tests (fake IPC peer); IPC commands verified against real mpv 0.41 on Linux, headless, 2026-10-06. Windows named pipe: untested |
 | Embedded playback in the window | Planned | Future (libmpv render API) |
 | Audio and subtitle track selection | Partial | mpv's own on-screen controls (embedded tracks). Addon subtitles: M6 |
-| Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`. Explicit "add to library" without playing: not yet. UI in M5 |
-| Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`. Feeding live mpv progress into the store happens in the GUI shell (M5) |
+| Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`; GUI Library page. Explicit "add to library" without playing: not yet |
+| Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`; GUI "Continue watching" row. The GUI turns mpv progress events into saved progress (INFERRED from code; covered by the manual test script, not yet run) |
 | Deep links (`cineo://`) | Planned | v0.x |
 | `stremio://` addon install links | Planned | v0.x; user confirmation required |
 | `stremio://` page links (board, discover, library, search, detail) | Planned | v0.x |
@@ -76,7 +76,7 @@ _Last reviewed: 2026-10-06._
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Linux x86_64 | Planned | Primary target |
+| Linux x86_64 | Partial | CLI and GUI run (KDE Wayland, 2026-10-06); no package yet (M7) |
 | Windows x86_64 | Planned | CI from M0 |
 | macOS aarch64 | Planned | CI from M0; best-effort until v1.0 |
 | Android / iOS / TV / Web | Unsupported | Postponed (GOALS.md) |

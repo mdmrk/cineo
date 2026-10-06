@@ -22,7 +22,10 @@ cineo-store = { path = "crates/cineo-store" }
 # Every dependency is recorded in docs/dev/DEPENDENCIES.md with its justification.
 anyhow = "1.0.104"
 clap = { version = "4.6.7", features = ["derive"] }
+eframe = { version = "0.36.2", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit"] }
+egui_extras = { version = "0.36.2", default-features = false, features = ["image"] }
 etcetera = "0.11.0"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 percent-encoding = "2.3.2"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "gzip", "brotli", "http2"] }
 rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"] }
@@ -35,6 +38,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 url = "2.5.8"
 
 # Dev-only
+egui_kittest = { version = "0.36.2", default-features = false }
 wiremock = "0.6.5"
 
 [workspace.lints.rust]
