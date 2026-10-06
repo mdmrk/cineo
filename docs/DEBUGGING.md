@@ -79,8 +79,11 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 - `cineo doctor` prints the database path, schema version, row counts and an
   integrity-check result.
-- Migrations log `from → to` at `info`. A failed migration leaves the old
-  database untouched (backup first).
+- Migrations log `from → to` at `info`. All pending migrations run in one
+  transaction, so a failed migration leaves the database at its previous
+  version.
+- A corrupt database or one from a newer Cineo is reported and never
+  modified. To start over, move `cineo.db` away (keep it for the report).
 
 ### UI / core synchronization (M5)
 

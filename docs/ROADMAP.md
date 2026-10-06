@@ -27,7 +27,8 @@ flowchart LR
 | M1 Manifest + catalog vertical slice | **Done** (2026-10-06) |
 | M2 Meta, streams, aggregation | **Done** (2026-10-06) |
 | M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
-| M4 – M5 | Next |
+| M4 Persistence + library | **Done** (2026-10-06) |
+| M5 Desktop GUI | Next |
 | M6 – M10 | Planned |
 
 ---

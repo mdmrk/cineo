@@ -19,9 +19,15 @@ Re-check them when adding.
 | `anyhow` | 1.0.104 | Shell errors (cli) | MIT/Apache |
 | `clap` | 4.6.7 | CLI arguments (cli) | MIT/Apache |
 | `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
+| `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
+| `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
 
 `tokio` features `process`, `io-util` and `sync` were added for the mpv
 player (M3). `serde_json` is also used there for IPC messages.
+
+`rusqlite` drops its default features (`cache`, and an FFI backend used only
+on wasm). `bundled` compiles SQLite from source, so no system library is
+needed on any OS. `etcetera` MSRV: 1.87 (M4).
 
 ## Planned (researched, not added)
 
@@ -38,8 +44,6 @@ player (M3). `serde_json` is also used there for IPC messages.
 | Logging | `tracing`, `tracing-subscriber` (`env-filter`, `fmt`) | 0.1.44 / 0.3.23 | MIT | 1.65 | M1 | Spans per request; the standard choice |
 | CLI | `clap` (`derive`) | 4.6.7 | MIT/Apache | 1.85 | M1 | Standard. `argh` and `lexopt` are lighter but less ergonomic |
 | HTTP mocking (dev) | `wiremock` | 0.6.5 | MIT/Apache | — | M1 | Async, per-test servers, request recording. `httpmock` (1.88 MSRV) is an alternative |
-| Database | `rusqlite` (`bundled`) | 0.40.2 | MIT | — | M4 | Library queries (continue watching) want SQL. `sqlx` (async, compile-time checks, heavier) and `redb` (KV, no queries) considered |
-| Platform dirs | `directories` | 6.0.0 | MIT/Apache | — | M4 | Config, data and log paths per OS |
 | Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | M10 (NZB server credentials) | OS keychains. Not needed until there are credentials; cloud sync is not planned |
 | Torrent engine | `librqbit` | 9.0.1 | Apache-2.0 | — | M9 (spike first, ADR-0010) | Maintained Rust BitTorrent library with streaming. `cratetorrent` is unmaintained (2020) |
 | Desktop UI | `eframe` + `egui_extras` (`image`) | 0.36.2 | MIT/Apache | 1.95 | M5 (ADR-0011) | glow backend, no default features. Tauri superseded (ADR-0005), iced (churn), Slint (license) |
@@ -56,6 +60,8 @@ player (M3). `serde_json` is also used there for IPC messages.
 | `slint` | GPL or proprietary licensing |
 | `serde_with` | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit |
 | `chrono` / `jiff` / `time` | Not needed until dates are modelled (M2 `released`). Decide then; `jiff` is the current front-runner |
+| `directories` 6.0.0 | Pulls in `option-ext` (MPL-2.0, not in the `deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths with only `cfg-if`/`windows-sys` (2026-10-06) |
+| `sqlx` / `redb` | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen in M4 |
 | `async-trait` | Native async fn in traits is enough; effects are data (ADR-0001) |
 | `figment` / config crates | No configuration file yet |
 | OpenSSL (`native-tls`) | rustls only; banned in `deny.toml` |

@@ -16,6 +16,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 cineo-core.workspace = true
 cineo-net.workspace = true
+cineo-store.workspace = true
 clap.workspace = true
 tokio.workspace = true
 tracing.workspace = true

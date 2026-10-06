@@ -1,8 +1,8 @@
 # Architecture
 
-Status: **design**. Only the workspace skeleton exists. Decisions are recorded
-in [DECISIONS.md](DECISIONS.md) and [ADR/](ADR/). This document describes the
-target; each section says what exists today.
+Status: **partly implemented** (M1–M4, see [ROADMAP.md](ROADMAP.md)).
+Decisions are recorded in [DECISIONS.md](DECISIONS.md) and [ADR/](ADR/). This
+document describes the target; each section says what exists today.
 
 ## System overview
 
@@ -39,8 +39,9 @@ flowchart TB
   PLAYER -. IPC socket .-> MPV[[mpv process]]
 ```
 
-Today only `cineo-core` exists, and it is an empty placeholder. Every other
-crate is created by the milestone that needs it ([ROADMAP.md](ROADMAP.md)).
+Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv` and
+`cineo-store` exist. The other crates are created by the milestone that
+needs them ([ROADMAP.md](ROADMAP.md)).
 
 ## Dependency direction
 
@@ -109,8 +110,13 @@ commands or options. Untrusted strings never become mpv options.
 ### Persistence boundary
 
 `cineo-store` stores domain values (installed addons with their order,
-library items, progress). The core defines what is stored. The store defines
-how: SQLite, a schema version, migrations tested against fixture databases.
+library items, progress). The core defines what is stored: the
+`SaveAddons`, `SaveLibraryItem` and `DeleteLibraryItem` effects, which
+`Store::apply` executes. The store defines how: one SQLite file, the schema
+version in `PRAGMA user_version`, append-only migrations run in one
+transaction, and a fixture per released schema (`tests/fixtures/store/`).
+The API is blocking; async shells call it off the runtime's worker threads.
+Implemented in M4.
 Secrets (future account tokens) go to the OS keyring, never to SQLite.
 
 ### UI boundary (ADR-0011)

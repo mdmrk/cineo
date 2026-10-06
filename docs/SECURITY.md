@@ -101,7 +101,14 @@ a temp file.
 
 - All paths are derived from platform data directories. Addon data never
   forms a path; ids are stored as data, never used as file names.
-- SQLite queries use bound parameters only.
+- SQLite queries use bound parameters only (`hostile_ids_are_stored_as_data`).
+- On Unix the data directory is created with mode `0700`, because the
+  library and the addon URLs are private (`data_directory_is_private_to_the_user`).
+  On Windows the per-user profile ACLs apply.
+- A database that is corrupt or has a newer schema is never written to or
+  replaced; the user is told (`corrupt_file_is_reported_and_left_untouched`,
+  `newer_schema_is_refused_and_left_untouched`). `cineo doctor` opens it
+  read-only.
 - Secrets (future account tokens) go to the OS keyring. They are never
   written to SQLite, logs or exports.
 

@@ -23,4 +23,20 @@ Format:
 
 ## Entries
 
-_None yet. The repository contains no product code (M0)._
+### Store: no in-app recovery from a corrupt database
+- Where: [store.rs](../../crates/cineo-store/src/store.rs)
+- Gap: a corrupt `cineo.db` makes every persistence command fail.
+- Why: silently replacing it would lose the user's library.
+- Instead: the error and `cineo doctor` explain it; the user moves the file
+  away and Cineo starts fresh.
+- Exit: a GUI prompt (M5) that renames the file aside and starts fresh.
+
+### Store: manifests are not cached
+- Where: [migrate.rs](../../crates/cineo-store/src/migrate.rs) (only
+  transport URLs are stored)
+- Gap: at startup every installed addon's manifest is fetched again; an
+  addon that is offline is reported and missing until the next start.
+- Why: the core's `Restore` action takes URLs only (M2); caching was not in
+  M4's scope.
+- Instead: `State.notice` reports the addon that failed to load.
+- Exit: store the last good manifest and restore from it (v0.x caching).

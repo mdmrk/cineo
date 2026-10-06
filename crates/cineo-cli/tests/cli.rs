@@ -116,3 +116,113 @@ fn private_network_is_refused_by_default() {
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains("blocked by network policy"), "{stderr}");
 }
+
+/// A fresh data directory per test.
+fn data_dir(name: &str) -> String {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("cli")
+        .join(name);
+    let _ = std::fs::remove_dir_all(&dir);
+    dir.to_str().unwrap().to_owned()
+}
+
+fn stdout_of(out: &std::process::Output) -> String {
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8(out.stdout.clone()).unwrap()
+}
+
+#[tokio::test]
+async fn addons_are_added_listed_and_removed_across_runs() {
+    let server = mock_addon().await;
+    let manifest = format!("{}/manifest.json", server.uri());
+    let dir = data_dir("addons");
+    let run = |args: &[&str]| {
+        let mut all = vec!["--allow-private-network", "--data-dir", &dir];
+        all.extend_from_slice(args);
+        cineo(&all)
+    };
+
+    let added = stdout_of(&run(&["addon", "add", &manifest]));
+    assert_eq!(
+        added,
+        "installed Basic Fixture 1.2.0 (org.cineo.fixture.basic)\n"
+    );
+    assert_eq!(
+        stdout_of(&run(&["addon", "list"])),
+        format!("1\t{manifest}\n")
+    );
+
+    let again = run(&["addon", "add", &manifest]);
+    assert!(!again.status.success());
+    let stderr = String::from_utf8(again.stderr).unwrap();
+    assert!(stderr.contains("already installed"), "{stderr}");
+    assert_eq!(
+        server.received_requests().await.unwrap().len(),
+        1,
+        "a duplicate is refused before any request"
+    );
+
+    assert_eq!(
+        stdout_of(&run(&["addon", "remove", &manifest])),
+        "removed\n"
+    );
+    assert_eq!(stdout_of(&run(&["addon", "list"])), "");
+}
+
+#[tokio::test]
+async fn an_addon_with_an_invalid_manifest_is_not_installed() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/manifest.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(
+            fixture("addons/invalid/manifest-empty-id.json"),
+            "application/json",
+        ))
+        .mount(&server)
+        .await;
+    let manifest = format!("{}/manifest.json", server.uri());
+    let dir = data_dir("invalid");
+    let base = ["--allow-private-network", "--data-dir", &dir];
+
+    let out = cineo(&[&base[..], &["addon", "add", &manifest]].concat());
+    assert!(!out.status.success());
+    assert_eq!(
+        stdout_of(&cineo(&[&base[..], &["addon", "list"]].concat())),
+        ""
+    );
+}
+
+#[test]
+fn doctor_reports_on_the_database() {
+    let dir = data_dir("doctor");
+    let missing = stdout_of(&cineo(&["--data-dir", &dir, "doctor"]));
+    assert!(
+        missing.ends_with("status: not created yet (created on first use)\n"),
+        "{missing}"
+    );
+
+    assert_eq!(stdout_of(&cineo(&["--data-dir", &dir, "library"])), "");
+    let healthy = stdout_of(&cineo(&["--data-dir", &dir, "doctor"]));
+    assert!(
+        healthy.contains(
+            "schema version: 1 (supported: 1)\naddons: 0\nlibrary items: 0\nintegrity: ok\n"
+        ),
+        "{healthy}"
+    );
+
+    std::fs::write(format!("{dir}/cineo.db"), vec![b'x'; 4096]).unwrap();
+    let corrupt = cineo(&["--data-dir", &dir, "doctor"]);
+    assert!(!corrupt.status.success());
+    let out = String::from_utf8(corrupt.stdout).unwrap();
+    assert!(out.contains("error: "), "{out}");
+    let library = cineo(&["--data-dir", &dir, "library"]);
+    let stderr = String::from_utf8(library.stderr).unwrap();
+    assert!(
+        stderr.contains("corrupt or not a SQLite database"),
+        "{stderr}"
+    );
+}

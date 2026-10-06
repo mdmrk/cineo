@@ -54,7 +54,7 @@ _Last reviewed: 2026-10-06._
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Install/remove/order addons | Planned | M4 (persisted) |
+| Install/remove/order addons | Supported | Persisted in order (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon add/remove/list` (`addons_are_added_listed_and_removed_across_runs`). Reordering UI in M5 |
 | Board (browsable catalogs) | Planned | M5 (egui, ADR-0011) |
 | Discover with filters | Planned | M5 |
 | Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; UI in M5 |
@@ -63,8 +63,8 @@ _Last reviewed: 2026-10-06._
 | Playback via external mpv | Supported | `cineo-player-mpv` tests (fake IPC peer); IPC commands verified against real mpv 0.41 on Linux, headless, 2026-10-06. Windows named pipe: untested |
 | Embedded playback in the window | Planned | Future (libmpv render API) |
 | Audio and subtitle track selection | Partial | mpv's own on-screen controls (embedded tracks). Addon subtitles: M6 |
-| Library | Planned | M4 |
-| Watch progress / continue watching | Planned | M4 |
+| Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`. Explicit "add to library" without playing: not yet. UI in M5 |
+| Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`. Feeding live mpv progress into the store happens in the GUI shell (M5) |
 | Deep links (`cineo://`) | Planned | v0.x |
 | `stremio://` addon install links | Planned | v0.x; user confirmation required |
 | `stremio://` page links (board, discover, library, search, detail) | Planned | v0.x |
