@@ -56,7 +56,7 @@ or a decision._
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Install/remove/order addons | Planned | M4 (persisted) |
-| Board (browsable catalogs) | Planned | M5 |
+| Board (browsable catalogs) | Planned | M5 (egui, ADR-0011) |
 | Discover with filters | Planned | M5 |
 | Search across addons | Planned | M2 (aggregation), M5 (UI) |
 | Detail page | Planned | M5 |

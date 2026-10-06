@@ -110,12 +110,14 @@ a temp file.
 No shell is ever invoked with addon-controlled input. Opening `externalUrl`
 in the browser requires a user confirmation and an `http(s)` scheme.
 
-### Web UI (M5, if Tauri is confirmed)
+### Desktop UI (M5, ADR-0011)
 
-- Strict CSP.
-- No remote scripts.
-- IPC commands are an allowlist of typed actions.
-- Addon-provided strings are rendered as text, never as HTML.
+- Images are fetched through `cineo-net` with the same network policy and a
+  smaller size cap. The webview-style `http`/`file` loaders are disabled.
+- Decoders are limited to jpeg, png and webp, with a pixel-dimension limit
+  that guards against decompression-bomb images.
+- Addon strings are rendered as plain text, never interpreted as markup or
+  links without a scheme check.
 
 ## Defaults summary
 

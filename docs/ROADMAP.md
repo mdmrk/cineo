@@ -102,8 +102,7 @@ flowchart LR
   saved position.
 
 ### M5 — Desktop GUI
-- **Prerequisites:** M3, M4. ADR-0005 confirmed by a spike (risks: WebKitGTK
-  performance on Linux; layering the mpv window).
+- **Prerequisites:** M3, M4. UI technology: egui (ADR-0011).
 - **Deliverables:**
   - Board, Discover, Detail, Streams.
   - Play in mpv.

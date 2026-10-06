@@ -21,12 +21,13 @@ old one *Superseded by NNNN*.
 | [0002](ADR/0002-workspace-and-crate-boundaries.md) | Minimal workspace; crates by IO boundary | Accepted |
 | [0003](ADR/0003-lenient-wire-strict-domain.md) | Lenient wire parsing, strict domain types | Accepted |
 | [0004](ADR/0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Accepted |
-| [0005](ADR/0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | **Proposed** (spike in M5) |
+| [0005](ADR/0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
 | [0006](ADR/0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
 | [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
 | [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Accepted |
 | [0009](ADR/0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
 | [0010](ADR/0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: Proposed) |
+| [0011](ADR/0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 
 ## What we took from the reference projects
 

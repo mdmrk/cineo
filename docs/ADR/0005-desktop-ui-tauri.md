@@ -1,6 +1,6 @@
 # 0005. Desktop UI: Tauri 2 + web frontend
 
-- Status: **Proposed** — to be confirmed or replaced by a spike at the start of M5
+- Status: Superseded by [0011](0011-desktop-ui-egui.md)
 - Date: 2026-10-06
 
 ## Context

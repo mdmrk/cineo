@@ -20,7 +20,7 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
 flowchart TB
   subgraph Shells
     CLI[cineo-cli<br/>M1]
-    GUI[cineo-desktop<br/>M5, Tauri - proposed]
+    GUI[cineo-desktop<br/>M5, egui]
   end
   subgraph IO
     NET[cineo-net<br/>HTTP + net policy]
@@ -62,7 +62,7 @@ crate is created by the milestone that needs it ([ROADMAP.md](ROADMAP.md)).
 | `cineo-cli` | Headless shell; first end-to-end slice; debugging tool | M1 |
 | `cineo-player-mpv` | Spawn and control mpv over JSON IPC; typed commands and events | M3 |
 | `cineo-store` | Persistence (installed addons, library, progress) with migrations | M4 |
-| `cineo-desktop` | GUI shell | M5 |
+| `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` | M5 |
 | `cineo-stream` | Local streaming engine: torrent/archive/NZB sources → loopback HTTP URL (ADR-0010) | M9 |
 
 **When to add a crate:** only when the new code has a different dependency
@@ -113,7 +113,7 @@ library items, progress). The core defines what is stored. The store defines
 how: SQLite, a schema version, migrations tested against fixture databases.
 Secrets (future account tokens) go to the OS keyring, never to SQLite.
 
-### UI boundary (ADR-0005, proposed)
+### UI boundary (ADR-0011)
 
 The UI renders **state snapshots** and sends **actions**. It holds no business
 logic. That keeps the GUI technology replaceable and lets the CLI exercise
