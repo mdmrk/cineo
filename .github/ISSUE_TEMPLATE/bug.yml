@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps. Include the exact `cineo` command if applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Re-run with `-v` (or `RUST_LOG=debug`) and paste stderr. Remove any personal data; addon URLs can contain your configuration or API keys.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version and OS
+      placeholder: cineo 0.1.0, Linux x86_64
+    validations:
+      required: true
