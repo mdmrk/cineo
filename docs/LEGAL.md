@@ -35,6 +35,9 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 - Dependencies are permissively licensed and MIT-compatible (Apache-2.0
   dependencies are fine to use; their notices must ship with binaries), and checked by `cargo deny`
   (`deny.toml`). Extending the license allowlist requires a note here.
+  Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
+  exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
+  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
 - Copyleft libraries (for example LGPL libmpv) are **not linked**. mpv runs as
   a separate program (ADR-0004). Bundling an mpv binary in installers (M7)
   must comply with mpv's license (GPL-2.0+ or LGPL-2.1+ depending on the

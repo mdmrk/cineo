@@ -18,21 +18,20 @@ Rules:
 - A downgrade, for example when a real addon reveals a gap, is welcome. Do
   it immediately.
 
-_Last reviewed: 2026-10-06. No product code exists yet; everything is Planned
-or a decision._
+_Last reviewed: 2026-10-06._
 
 ## Addon protocol
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| HTTP transport (`…/manifest.json`) | Planned | M1 |
+| HTTP transport (`…/manifest.json`) | Verified | `request::tests::*`, `addon_client::fetches_manifest_and_catalog_page`; live: Cinemeta 2026-10-06 |
 | Legacy transport (`/stremio/v1`) | Unsupported | ADR-0007; excluded from the parity goal (owner decision 2026-10-06) |
 | IPFS/IPNS transport | Unsupported | ADR-0007 |
-| Manifest parsing and validation | Planned | M1 |
-| Catalog `extra` (full and short form) | Planned | M1 |
-| Resource filtering (`types`, `idPrefixes`) | Planned | M1; reference semantics in ADDON_PROTOCOL.md |
-| Catalog requests: `genre`, `skip`, `search` | Planned | M1 |
-| Catalog response (`metas`) | Planned | M1 |
+| Manifest parsing and validation | Verified | `protocol_fixtures::{basic_manifest_*, quirky_manifest_*, invalid_manifests_*}`; live: Cinemeta, OpenSubtitles v3 |
+| Catalog `extra` (full and short form) | Supported | `quirky_manifest_parses_with_expected_warnings`, `options_limit_bounds_repeated_extra_values` |
+| Resource filtering (`types`, `idPrefixes`) | Supported | `short_resource_inherits_*`, `full_resource_uses_only_its_own_filters`, `catalog_support_checks_*` |
+| Catalog requests: `genre`, `skip`, `search` | Verified | `encodes_extra_like_encode_uri_component`; live: Cinemeta `genre`, `search` |
+| Catalog response (`metas`) | Verified | `basic_catalog_parses`, `quirky_catalog_*`, `null_metas_*`; live: Cinemeta |
 | Meta response, videos/episodes | Planned | M2 |
 | Stream response: `url` (http/https) | Planned | M2 |
 | Stream response: `ytId` | Planned | v0.x; resolution strategy UNKNOWN (ADR-0010) |
@@ -46,7 +45,7 @@ or a decision._
 | Subtitles in stream objects | Planned | M6 |
 | `addon_catalog` resource | Planned | v0.x |
 | Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |
-| `behaviorHints.adult` / `p2p` warnings | Planned | M1 parses, M5 shows |
+| `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown in UI in M5 |
 | Response caching (`Cache-Control`) | Planned | v0.x |
 | Meta `links`, `trailers` | Planned | v0.x |
 | Native EPG (`epgProvider`, scheduled videos) | Planned | After v1.0 (parity goal) |
@@ -89,4 +88,5 @@ Only list public addons, never configured URLs.
 
 | Addon | Manifest URL | Checked | Result |
 |-------|-------------|---------|--------|
-| — | — | — | — |
+| Cinemeta | https://v3-cinemeta.strem.io/manifest.json | 2026-10-06 | Manifest: 0 warnings. Catalogs `movie/top` with `genre`, `series/top` with `search` OK (`cineo` CLI) |
+| OpenSubtitles v3 | https://opensubtitles-v3.strem.io/manifest.json | 2026-10-06 | Manifest: 0 warnings (subtitles resource not exercised yet) |

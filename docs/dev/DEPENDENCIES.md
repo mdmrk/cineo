@@ -8,7 +8,17 @@ Re-check them when adding.
 
 | Crate | Version | Purpose | License |
 |-------|---------|---------|---------|
-| — | — | No dependencies yet (M0) | — |
+| `percent-encoding` | 2.3.2 | `encodeURIComponent` path encoding (core) | MIT/Apache |
+| `semver` | 1.0.28 | Manifest `version` (core) | MIT/Apache |
+| `serde_json` | 1.0.151 | JSON documents (core) | MIT/Apache |
+| `thiserror` | 2.0.21 | Library errors | MIT/Apache |
+| `url` | 2.5.8 | URLs (core, net) | MIT/Apache |
+| `reqwest` | 0.13.5 | Addon HTTP client (net) | MIT/Apache |
+| `tokio` | 1.53.2 | Async runtime (net, shells) | MIT |
+| `tracing` / `tracing-subscriber` | 0.1.44 / 0.3.23 | Logging | MIT |
+| `anyhow` | 1.0.104 | Shell errors (cli) | MIT/Apache |
+| `clap` | 4.6.7 | CLI arguments (cli) | MIT/Apache |
+| `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
 
 ## Planned (researched, not added)
 

@@ -24,8 +24,9 @@ flowchart LR
 | Milestone | Status |
 |-----------|--------|
 | M0 Engineering foundation | **Done** (2026-10-06) |
-| M1 Manifest + catalog vertical slice | Next |
-| M2 – M10 | Planned |
+| M1 Manifest + catalog vertical slice | **Done** (2026-10-06) |
+| M2 | Next |
+| M3 – M10 | Planned |
 
 ---
 
