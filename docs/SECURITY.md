@@ -2,8 +2,7 @@
 
 Cineo is a media client that **consumes untrusted remote data by design**:
 addons are arbitrary third-party servers. This document defines the threat
-model and the mandatory controls. Agent rules in `.claude/rules/security.md`
-enforce it during development.
+model and the mandatory controls.
 
 Sources consulted (2026-10-06):
 - OWASP SSRF Prevention Cheat Sheet.
@@ -130,6 +129,20 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   carry configuration (`addons_page_installs_from_the_typed_url_and_lists_installed_addons`).
 - Addon strings are rendered as plain text, never interpreted as markup or
   links without a scheme check.
+
+### Code and CI rules
+
+- Addon HTTP goes only through `cineo-net`'s `AddonClient`/`NetPolicy`. Never
+  build a second `reqwest::Client`, enable system proxies, or relax a default
+  except through an explicit user-facing option.
+- Never put full addon/transport URLs, stream URLs with tokens or
+  `proxyHeaders` values into logs or error messages; use origin + path.
+- Never pass addon strings as mpv options or command-line arguments.
+- GitHub workflows: pin actions by full commit SHA (with a version comment);
+  default `permissions: contents: read`; `persist-credentials: false`; pass
+  inputs through `env:`, never by interpolating them into `run:`.
+- Any change to a security default updates this document and adds a test
+  that pins the new behavior.
 
 ## Defaults summary
 

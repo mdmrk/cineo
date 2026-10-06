@@ -1,6 +1,6 @@
 /target
 **/*.rs.bk
 *.profraw
-/.claude/settings.local.json
+/.claude/
 CLAUDE.local.md
 .env

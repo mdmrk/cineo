@@ -1,8 +1,8 @@
 # Decisions
 
 This file indexes the Architecture Decision Records in [ADR/](ADR/) and
-summarizes what we took from the reference projects. To add an ADR, run the
-`/adr` skill or copy [ADR/TEMPLATE.md](ADR/TEMPLATE.md).
+summarizes what we took from the reference projects. To add an ADR, copy
+[ADR/TEMPLATE.md](ADR/TEMPLATE.md).
 
 An ADR is needed for:
 - A new crate or a changed dependency direction.
@@ -24,11 +24,12 @@ old one *Superseded by NNNN*.
 | [0005](ADR/0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
 | [0006](ADR/0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
 | [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
-| [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Accepted |
+| [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Superseded by 0013 |
 | [0009](ADR/0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
 | [0010](ADR/0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012) |
 | [0011](ADR/0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 | [0012](ADR/0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted |
+| [0013](ADR/0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
 
 ## What we took from the reference projects
 

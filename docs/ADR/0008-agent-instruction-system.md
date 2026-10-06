@@ -1,6 +1,6 @@
 # 0008. AGENTS.md canonical; layered Claude rules and skills
 
-- Status: Accepted
+- Status: Superseded by 0013
 - Date: 2026-10-06
 
 ## Context

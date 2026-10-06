@@ -58,7 +58,7 @@ rust_2024_compatibility = { level = "warn", priority = -1 }
 
 [workspace.lints.clippy]
 # Default clippy groups (correctness, suspicious, style, complexity, perf) stay on.
-# Additions below are deliberate; see .claude/rules/rust.md before adding more.
+# Additions below are deliberate; see CONTRIBUTING.md (Lint policy) before adding more.
 dbg_macro = "warn"
 todo = "warn"
 unimplemented = "warn"

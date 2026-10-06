@@ -15,7 +15,6 @@ alike. This page covers setup, commands and the conventions AGENTS.md links to.
    cargo install --locked cargo-nextest cargo-deny
    ```
 3. `mpv` on `PATH` to play anything.
-4. For Claude Code hooks: `jq`.
 
 If you build with a distro-packaged Rust instead of rustup, make sure the
 version matches the pin. Some distro builds expect a cross linker name; if
@@ -47,13 +46,41 @@ updated `Cargo.lock`.
   `agents`).
 - **Branches:** `feat/<topic>`, `fix/<topic>`, `docs/<topic>`. One topic
   per branch or PR; rebase on `main`. Check for overlapping PRs first.
-- **Code style:** rustfmt (edition 2024) and the workspace lint set in
-  `Cargo.toml`. Rust-specific conventions are in `.claude/rules/rust.md`
-  (they apply to humans too).
+- **Code style:** rustfmt (edition 2024), the workspace lint set in
+  `Cargo.toml`, and the Rust conventions below.
 - **Fail loudly.** No silent stubs. Unsupported input produces an error or a
   logged warning.
 - Investigation notes and logs belong in the PR discussion, not the
   repository.
+
+## Rust conventions
+
+- Errors: libraries use a `thiserror` enum per failure domain, marked
+  `#[non_exhaustive]`, with messages that say what failed. Binaries use
+  `anyhow` + `.context()` at layer boundaries. No `unwrap`/`expect`/`panic!`
+  on input-dependent paths outside tests.
+- Logging: `tracing` only. Libraries never print. Spans carry ids, not
+  secrets.
+- Ownership: borrow by default; clone only when ownership is needed, never
+  just to silence the borrow checker.
+- Public API: keep items `pub(crate)` unless another crate needs them. Each
+  public type gets a doc comment stating its invariants.
+- Domain types enforce invariants in constructors (`new`/`parse` returning
+  `Option`/`Result`). Do not pass raw `String`s for ids, types or URLs
+  across modules.
+- Async only in IO crates and shells (tokio). `cineo-core` stays sync and
+  pure.
+- Tests: behavior-named, fixtures from `tests/fixtures/`, no network, no
+  sleeps ([TESTING.md](docs/TESTING.md)).
+
+## Documentation conventions
+
+- One home per fact. Link instead of duplicating; `AGENTS.md` links, it does
+  not explain. Keep `AGENTS.md` under about 100 lines.
+- Date research snapshots (versions, external behavior): "as of YYYY-MM-DD".
+- Never rewrite an accepted ADR's decision. Supersede it with a new ADR and
+  update the index in [DECISIONS.md](docs/DECISIONS.md).
+- Do not add documents without a clear reader and purpose.
 
 ## Lint policy
 
