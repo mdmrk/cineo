@@ -12,9 +12,23 @@ ignore = []
 [licenses]
 # Permissive licenses compatible with distributing Cineo under MIT.
 # Extend this list only when a new dependency needs it, and record why in
-# docs/LEGAL.md. Expected additions with the HTTP/TLS stack (Milestone 1):
-# BSD-3-Clause, ISC, Zlib, Unicode-3.0, CDLA-Permissive-2.0 (CA bundle data).
-allow = ["MIT", "Apache-2.0"]
+# docs/LEGAL.md.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "0BSD",
+    "Unicode-3.0",
+    "Unlicense",
+    "CC0-1.0",
+    # webpki-root-certs: Mozilla's CA bundle data.
+    "CDLA-Permissive-2.0",
+]
 unused-allowed-license = "allow"
 confidence-threshold = 0.9
 

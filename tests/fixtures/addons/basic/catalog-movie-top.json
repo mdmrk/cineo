@@ -1,0 +1,21 @@
+{
+  "metas": [
+    {
+      "id": "tt0000001",
+      "type": "movie",
+      "name": "First Example Film",
+      "poster": "https://images.example/p/1.jpg",
+      "releaseInfo": "1999",
+      "imdbRating": "7.9",
+      "genres": ["Action"]
+    },
+    {
+      "id": "tt0000002",
+      "type": "movie",
+      "name": "Second Example Film",
+      "poster": "https://images.example/p/2.jpg",
+      "posterShape": "landscape",
+      "description": "Two lines\nof description."
+    }
+  ]
+}

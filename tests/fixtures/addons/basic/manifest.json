@@ -1,0 +1,39 @@
+{
+  "id": "org.cineo.fixture.basic",
+  "version": "1.2.0",
+  "name": "Basic Fixture",
+  "description": "A well-formed addon serving movies and series.",
+  "logo": "https://addon.example/logo.png",
+  "types": ["movie", "series"],
+  "idPrefixes": ["tt"],
+  "resources": [
+    "catalog",
+    "meta",
+    { "name": "stream", "types": ["movie", "series"], "idPrefixes": ["tt", "kitsu:"] },
+    { "name": "subtitles", "types": ["movie"] }
+  ],
+  "catalogs": [
+    {
+      "type": "movie",
+      "id": "top",
+      "name": "Top Movies",
+      "extra": [
+        { "name": "genre", "options": ["Action", "Comedy", "Drama"] },
+        { "name": "skip" }
+      ]
+    },
+    {
+      "type": "movie",
+      "id": "search",
+      "name": "Search",
+      "extra": [{ "name": "search", "isRequired": true }]
+    },
+    {
+      "type": "series",
+      "id": "multi",
+      "name": "Multi-genre",
+      "extra": [{ "name": "genre", "options": ["A", "B", "C"], "optionsLimit": 2 }]
+    }
+  ],
+  "behaviorHints": { "configurable": true }
+}

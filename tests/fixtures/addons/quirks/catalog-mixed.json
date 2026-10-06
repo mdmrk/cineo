@@ -1,0 +1,11 @@
+{
+  "metas": [
+    { "id": "tt1", "type": "movie", "name": "Numbers as numbers", "releaseInfo": 2010, "imdbRating": 6.5 },
+    { "id": "tt2", "type": "movie", "name": null, "poster": "", "posterShape": "circle", "genres": null },
+    { "id": "tt3", "type": "movie", "name": "Unsafe poster", "poster": "file:///etc/passwd" },
+    { "id": "", "type": "movie", "name": "Empty id, skipped" },
+    { "id": "tt4", "name": "No type, skipped" },
+    "not an object",
+    { "id": "tt5", "type": "series", "name": "Kept", "genres": ["Drama", 3] }
+  ]
+}

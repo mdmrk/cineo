@@ -1,0 +1,1 @@
+{ "id": "org.cineo.fixture.badversion", "version": "1.0", "name": "Bad Version", "types": ["movie"], "resources": ["catalog"] }

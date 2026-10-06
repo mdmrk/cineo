@@ -1,0 +1,37 @@
+{
+  "id": "org.cineo.fixture.quirks",
+  "version": "0.0.1",
+  "name": "Quirks Fixture",
+  "logo": "",
+  "background": "not a url",
+  "types": ["movie", "", 42],
+  "resources": [
+    "catalog",
+    { "name": "stream" },
+    { "name": "meta", "types": ["movie"], "idPrefixes": [] },
+    "catalog",
+    7
+  ],
+  "catalogs": [
+    {
+      "type": "movie",
+      "id": "legacy",
+      "extraSupported": ["search", "genre"],
+      "extraRequired": ["search", "year"]
+    },
+    { "type": "movie", "id": "legacy", "name": "Duplicate, dropped" },
+    { "type": "movie", "name": "No id, skipped" },
+    {
+      "type": "movie",
+      "id": "dupes",
+      "extra": [
+        { "name": "genre" },
+        { "name": "genre", "isRequired": true },
+        { "name": "skip", "isRequired": true, "options": ["0"] },
+        { "name": "limit", "optionsLimit": 0 },
+        { "isRequired": true }
+      ]
+    }
+  ],
+  "behaviorHints": { "adult": "yes", "p2p": true }
+}
