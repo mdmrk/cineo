@@ -131,8 +131,8 @@ fn empty_board_explains_how_to_add_addons() {
 #[test]
 fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
     let mut harness = harness(board_state(), ViewState::default());
-    harness.get_by_label("Top Movies Movies");
-    harness.get_by_label("Multi-genre Series");
+    harness.get_by_label("TOP MOVIES MOVIES");
+    harness.get_by_label("MULTI-GENRE SERIES");
     harness.get_by_label("HTTP status 500");
     harness.get_by_label("Second Example Film");
     harness.get_by_label("First Example Film").click();

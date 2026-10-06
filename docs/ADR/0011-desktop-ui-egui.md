@@ -31,7 +31,7 @@ Research, crates.io 2026-10-06:
   webp only) decode the bytes. The `http` and `file` loaders are not
   enabled.
 - **Look.** A custom dark theme lives in one `theme` module: palette,
-  spacing, rounding, typography scale. It has a sidebar navigation, poster
+  spacing, rounding, typography scale. It has a top navigation bar, poster
   cards with hover states, and a backdrop hero on the detail page. Widgets
   read the theme; they never hardcode colors.
 - **State flow (ADR-0001).** The egui app owns the state. Each frame it
