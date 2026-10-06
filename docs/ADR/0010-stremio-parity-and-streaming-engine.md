@@ -1,6 +1,6 @@
 # 0010. Stremio behavioral parity; own local streaming engine
 
-- Status: Accepted (goal and approach); engine library choice **Proposed** until the M9 spike
+- Status: Accepted (goal and approach); engine library settled by 0012
 - Date: 2026-10-06
 
 ## Context

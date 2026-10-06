@@ -12,12 +12,12 @@ flowchart LR
   M2 --> M4[M4 Persistence + library]
   M3 --> M5[M5 Desktop GUI]
   M4 --> M5
-  M5 --> M6[M6 Subtitles]
-  M5 --> M7[M7 Packaging + releases]
+  M5 --> M9[M9 Streaming engine: torrents]
+  M9 --> M6[M6 Subtitles]
+  M9 --> M7[M7 Packaging + releases]
   M6 --> MVP((MVP))
   M7 --> MVP
   MVP --> M8[M8 Compatibility expansion]
-  MVP --> M9[M9 Streaming engine: torrents]
   M9 --> M10[M10 Archives + NZB]
 ```
 
@@ -29,8 +29,9 @@ flowchart LR
 | M3 mpv player | **Done on Linux** (2026-10-06); Windows untested |
 | M4 Persistence + library | **Done** (2026-10-06) |
 | M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](dev/GUI_MANUAL_TEST.md) on Linux and Windows |
-| M6 Subtitles, M7 Packaging | Next |
-| M8 – M10 | Planned |
+| M9 Streaming engine: torrents | **In progress**; moved ahead of M6/M7 (owner decision 2026-10-06) |
+| M6 Subtitles, M7 Packaging | Next after M9 |
+| M8, M10 | Planned |
 
 ---
 
@@ -148,10 +149,11 @@ flowchart LR
 - A compatibility corpus in CI.
 - Each item is an independent PR with its own COMPATIBILITY.md row.
 
-### M9 — Local streaming engine: torrents (ADR-0010)
-- **Prerequisites:** the MVP (M3 player, M5 GUI).
+### M9 — Local streaming engine: torrents (ADR-0010, ADR-0012)
+- **Prerequisites:** M3 player, M5 GUI. Moved ahead of M6/M7 (owner
+  decision 2026-10-06).
 - **Deliverables:**
-  - A library spike (`librqbit` is the candidate), recorded in the ADR.
+  - A library spike: done, `librqbit` 9.0.1 (ADR-0012).
   - The `cineo-stream` crate serving `infoHash`/`fileIdx`/`sources` as a
     loopback HTTP URL with range support.
   - Bounded disk cache.

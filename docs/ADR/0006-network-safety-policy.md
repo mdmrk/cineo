@@ -1,6 +1,6 @@
 # 0006. Network safety policy
 
-- Status: Accepted
+- Status: Accepted (BitTorrent traffic: exception in 0012)
 - Date: 2026-10-06
 
 ## Context

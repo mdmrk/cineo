@@ -26,8 +26,9 @@ old one *Superseded by NNNN*.
 | [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
 | [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Accepted |
 | [0009](ADR/0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
-| [0010](ADR/0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: Proposed) |
+| [0010](ADR/0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012) |
 | [0011](ADR/0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
+| [0012](ADR/0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted |
 
 ## What we took from the reference projects
 

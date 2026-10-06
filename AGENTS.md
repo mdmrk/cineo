@@ -13,7 +13,8 @@ milestone table) and `docs/COMPATIBILITY.md`.
 - Addon data is untrusted. Lenient field parsing with recorded warnings →
   strict domain types (ADR-0003). Follow the reference-client semantics in
   `docs/ADDON_PROTOCOL.md`.
-- All HTTP goes through `cineo-net` and its `NetPolicy` (ADR-0006). The
+- All HTTP goes through `cineo-net` and its `NetPolicy` (ADR-0006). The one
+  exception is BitTorrent traffic inside `cineo-stream` (ADR-0012). The
   player only receives typed commands (ADR-0004).
 - The goal is Stremio-equivalent behavior, with no cloud sync for now.
   Non-URL stream sources go through our own `cineo-stream` engine, never
