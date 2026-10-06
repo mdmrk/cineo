@@ -1,0 +1,68 @@
+# Decisions
+
+This file indexes the Architecture Decision Records in [ADR/](ADR/) and
+summarizes what we took from the reference projects. To add an ADR, run the
+`/adr` skill or copy [ADR/TEMPLATE.md](ADR/TEMPLATE.md).
+
+An ADR is needed for:
+- A new crate or a changed dependency direction.
+- New core concepts or state flow.
+- A new external dependency with an architectural impact (UI framework,
+  database, player).
+- Security policy changes.
+- Dropping or adding protocol surface.
+
+ADRs are never deleted. To change a decision, write a new ADR and mark the
+old one *Superseded by NNNN*.
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](ADR/0001-functional-core-effects-as-data.md) | Functional core with effects as data | Accepted |
+| [0002](ADR/0002-workspace-and-crate-boundaries.md) | Minimal workspace; crates by IO boundary | Accepted |
+| [0003](ADR/0003-lenient-wire-strict-domain.md) | Lenient wire parsing, strict domain types | Accepted |
+| [0004](ADR/0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Accepted |
+| [0005](ADR/0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | **Proposed** (spike in M5) |
+| [0006](ADR/0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
+| [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
+| [0008](ADR/0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Accepted |
+| [0009](ADR/0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
+
+## What we took from the reference projects
+
+### stremio-core (MIT): keep / modify / reject
+
+| Concept | Verdict | Why |
+|---------|---------|-----|
+| Unidirectional state (Elm-like update → effects) | **Keep** | Testable without IO; the UI only renders state |
+| Effects executed by an environment | **Modify** | Effects are a data enum interpreted by the shell, not boxed futures; easier to assert in tests (ADR-0001) |
+| `Env` trait with static methods, generic over everything | **Modify** | Inject concrete IO clients into shells; the core does not need an environment at all |
+| `ConditionalSend` / WASM-first futures | **Reject** | WASM is not a target; `Send` everywhere |
+| `derive(Model)` macro, field-diff runtime | **Reject** | Premature; reconsider if UI change tracking becomes a bottleneck |
+| `Ctx` god-object (profile, library, notifications, streams, …) | **Reject** | Separate state per feature; composed by the shell |
+| Lenient serde (`DefaultOnError`, `VecSkipError`, …) | **Keep (concept)** | Real addon data needs it; we add warnings so the leniency is observable (ADR-0003) |
+| Manifest filtering semantics | **Keep exactly** | Compatibility (ADDON_PROTOCOL.md) |
+| Legacy / IPFS transports | **Reject** | ADR-0007 |
+| Analytics module | **Reject** | No telemetry |
+| Private account API + library sync | **Reject** | Not public; own sync is future research |
+| 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
+| Watched bitfield encoding | **Defer** | Revisit with series progress (M4) |
+| MSRV CI job | **Modify** | We are an application: MSRV = pinned toolchain (ADR-0009) |
+
+### stremio-web (GPL-2.0): ideas only, no code
+- The core runs separately from the UI (in a worker) and the UI renders state
+  snapshots. This confirms the UI boundary.
+- Licensing: we do not reuse code, assets or styles.
+
+### stremio-shell-ng (no license file: all rights reserved): ideas only
+- mpv renders directly to a native surface, which avoids compositor overhead
+  and keeps hardware decoding. This informs ADR-0004/0005.
+- Anti-pattern rejected: the UI can send arbitrary `mpv-command`s.
+
+### AnyPS5 (GPL-2.0): process ideas only
+- Kept: the small `docs/user` and `docs/dev` split; a compatibility table that
+  marks unknowns explicitly; a technical-debt log whose entries say what
+  fails, why and what happens instead; fail loudly with no silent stubs;
+  Conventional Commits; AI-assistance disclosure in PRs; least-privilege
+  workflows with concurrency cancellation.
+- Rejected: many bot workflows (labels, progress comments); tag-pinned
+  actions; releases without checksums.
