@@ -36,7 +36,7 @@ _Last reviewed: 2026-10-06._
 | Stream response: `url` (http/https) | Supported | `stream_sources_are_recognized_in_reference_order`; playback in M3 |
 | Stream response: `ytId` | Planned | v0.x; resolution strategy UNKNOWN (ADR-0010) |
 | Stream response: `externalUrl` | Planned | M2; opened in the system browser after confirmation |
-| Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Partial | M9 in progress: P2P consent, file choice and tracker handling in the core (`the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine`, `choose_file` tests); the engine (`cineo-stream`) is not wired in yet, so Play stays disabled |
+| Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Partial | M9 in progress: P2P consent, file choice and tracker handling in the core (`the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine`, `choose_file` tests); the engine (`cineo-stream`) serves a file from a local seeder with ranges (`serves_the_chosen_file_with_ranges_from_a_local_peer`) but is not wired into the desktop yet, so Play stays disabled |
 | Stream response: archives (`rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls`, `tarUrls`) | Planned | M10 (ADR-0010) |
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
 | Stream `behaviorHints.proxyHeaders` | Supported | Validated in the core and again by the player; sent via `http-header-fields` (`sends_typed_commands_and_reports_events`; real mpv delivered them to an HTTP server, 2026-10-06) |

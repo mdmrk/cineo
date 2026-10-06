@@ -1,0 +1,29 @@
+[package]
+name = "cineo-stream"
+description = "Cineo local streaming engine: torrents served to the player over loopback HTTP."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+# librqbit's storage traits return anyhow errors.
+anyhow.workspace = true
+bytes.workspace = true
+cineo-core.workspace = true
+futures-util.workspace = true
+getrandom.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+librqbit.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

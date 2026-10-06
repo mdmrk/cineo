@@ -25,6 +25,12 @@ Re-check them when adding.
 | `egui_extras` (`image` only) | 0.36.2 | Image decoding for egui (desktop) | MIT/Apache |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Header checks before decoding; shared with `egui_extras` (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
+| `librqbit` (`rust-tls`, no default features) | 9.0.1 | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
+| `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.11.1 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
+| `bytes` | 1.12.1 | Response bodies (stream) | MIT |
+| `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
+| `tokio-util` (`io`) | 0.7.19 | `ReaderStream` from a torrent file reader (stream) | MIT |
+| `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
 
 `tokio` features `process`, `io-util` and `sync` were added for the mpv
 player (M3). `serde_json` is also used there for IPC messages.
@@ -39,6 +45,14 @@ for copy and paste. Wayland and X11 libraries are loaded at run time
 (`dlopen`), so no system development packages are needed to build.
 `egui_kittest` was not in the plan; it is egui's own test harness and
 replaces a hand-written AccessKit walker.
+
+M9 (2026-10-06): `librqbit` (chosen in ADR-0012; `cratetorrent` is
+unmaintained) brings its own `axum` and `reqwest`. Its default features
+are off; `rust-tls` keeps TLS on rustls. The server uses `hyper` directly
+because it serves one route and needs exact control of range responses;
+`axum` would add routing we do not use. Through `librqbit-core` the tree
+gains `directories` 6.0.0 and with it `option-ext` (MPL-2.0), which has a
+crate-scoped exception in `deny.toml` (LEGAL.md).
 
 ## Planned (researched, not added)
 
@@ -56,7 +70,6 @@ replaces a hand-written AccessKit walker.
 | CLI | `clap` (`derive`) | 4.6.7 | MIT/Apache | 1.85 | M1 | Standard. `argh` and `lexopt` are lighter but less ergonomic |
 | HTTP mocking (dev) | `wiremock` | 0.6.5 | MIT/Apache | — | M1 | Async, per-test servers, request recording. `httpmock` (1.88 MSRV) is an alternative |
 | Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | M10 (NZB server credentials) | OS keychains. Not needed until there are credentials; cloud sync is not planned |
-| Torrent engine | `librqbit` | 9.0.1 | Apache-2.0 | — | M9 (spike first, ADR-0010) | Maintained Rust BitTorrent library with streaming. `cratetorrent` is unmaintained (2020) |
 | Property tests (dev) | `proptest` | 1.11.0 | MIT/Apache | 1.85 | When first useful | URL round-trips, parser robustness |
 | Snapshots (dev) | `insta` | 1.49.0 | Apache | 1.66 | Only if needed | Large CLI outputs |
 | Fuzzing | `cargo-fuzz` / `libfuzzer-sys` | 0.13.2 / 0.4.13 | MIT/Apache (+NCSA) | — | After M2 | Parser fuzz targets |

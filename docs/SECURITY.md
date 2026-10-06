@@ -89,13 +89,13 @@ a temp file.
 
 | Risk | Control |
 |------|---------|
-| Other local users or web pages reach the engine's HTTP server (as with any localhost service) | Bind `127.0.0.1`/`::1` only. Use a random per-session path token, and reject requests without it. No CORS. Check the `Host` header against loopback names (DNS-rebinding defense) |
-| Disk exhaustion | Bounded cache in the app cache directory, with eviction. Size is shown in settings |
-| Path traversal via torrent or archive file names | File names from torrents and archives never become filesystem paths. Storage uses engine-controlled names |
+| Other local users or web pages reach the engine's HTTP server (as with any localhost service) | Implemented (M9): binds `127.0.0.1` only; a random 128-bit per-session path token, compared in constant time; `GET`/`HEAD` only; no CORS headers; the `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defense). Test: `requests_without_the_token_or_from_a_foreign_host_are_refused` |
+| Disk exhaustion | Implemented (M9): a bounded cache (default 5 GiB) with least-recently-used eviction of whole torrents when one opens; the torrent being played may exceed the limit (TECHNICAL_DEBT.md). Tests: `the_least_recently_used_torrents_go_first_until_the_cache_fits`, `the_torrent_in_use_is_kept_even_over_the_limit`. Showing the size in settings is not done yet |
+| Path traversal via torrent or archive file names | File names from torrents and archives never become filesystem paths. Torrent storage is `<cache>/<info hash>/<file index>` (`downloaded_data_is_stored_by_hash_and_file_index_only`); the cache directory is `0700` on Unix |
 | P2P exposure (IP visible to peers, uploads) | Disclosure before the first P2P stream, a global disable switch, and `behaviorHints.p2p` labels at install |
 | Malicious archives (bombs, huge member counts) | Member count, path length and decompressed-size limits. `fileMustInclude` patterns run with a size-limited regex engine (no backtracking) |
 | NZB server credentials | Stored in the OS keyring only. Addon-supplied `servers` entries are shown to the user before use |
-| Trackers and DHT contacting private networks | The same non-public address policy as `NetPolicy` for peers and trackers sourced from addon data (INFERRED necessity; confirm feasibility in the M9 spike) |
+| Trackers and DHT contacting private networks | Peer TCP connections and HTTP trackers go through a loopback SOCKS5 proxy with a random per-session password that refuses non-public addresses unless private networks are allowed (`loopback_peers_are_blocked_unless_private_networks_are_allowed`, `non_public_targets_are_refused_by_default`). Tracker URLs on a literal non-public IP are dropped (`trackers_on_non_public_addresses_are_dropped_by_default`). No incoming connections, UPnP or local service discovery. **Gap:** UDP trackers by host name and the DHT do not go through the proxy (TECHNICAL_DEBT.md) |
 
 ### Filesystem and persistence (M4)
 

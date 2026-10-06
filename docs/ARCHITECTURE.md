@@ -26,6 +26,7 @@ flowchart TB
     NET[cineo-net<br/>HTTP + net policy]
     PLAYER[cineo-player-mpv<br/>mpv JSON IPC]
     STORE[cineo-store<br/>SQLite]
+    STREAM[cineo-stream<br/>torrents → loopback HTTP]
   end
   CORE[cineo-core<br/>pure domain + protocol]
   CLI --> CORE
@@ -35,12 +36,16 @@ flowchart TB
   NET --> CORE
   PLAYER --> CORE
   STORE --> CORE
+  STREAM --> CORE
   NET -. HTTPS .-> ADDONS[(Addons)]
   PLAYER -. IPC socket .-> MPV[[mpv process]]
+  STREAM -. BitTorrent .-> PEERS[(Peers, trackers, DHT)]
+  MPV -. loopback HTTP .-> STREAM
 ```
 
 Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv`,
-`cineo-store` and `cineo-desktop` exist. The other crates are created by the milestone that
+`cineo-store`, `cineo-desktop` and `cineo-stream` exist (`cineo-stream` is
+not used by a shell yet). The other crates are created by the milestone that
 needs them ([ROADMAP.md](ROADMAP.md)).
 
 ## Dependency direction

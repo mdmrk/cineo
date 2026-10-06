@@ -23,6 +23,28 @@ Format:
 
 ## Entries
 
+### Streaming engine: UDP trackers and the DHT bypass the address filter
+- Where: [engine.rs](../../crates/cineo-stream/src/engine.rs)
+- Gap: a UDP tracker given by host name may resolve to a private address
+  and still be contacted; DHT traffic (UDP) is not filtered either.
+- Why: SOCKS5 `CONNECT` covers TCP only, and librqbit 9.0.1 sends UDP
+  tracker and DHT packets from its own sockets (INFERRED from its source:
+  `librqbit-tracker-comms` `tracker_comms_udp.rs`).
+- Instead: peer TCP connections and HTTP trackers are filtered by the
+  proxy; trackers on a literal non-public IP are dropped from the magnet.
+- Exit: resolve UDP tracker host names ourselves and drop non-public ones,
+  or an upstream hook for UDP destinations; for the DHT, an upstream
+  address filter.
+
+### Streaming engine: the torrent being played can exceed the cache limit
+- Where: [cache.rs](../../crates/cineo-stream/src/cache.rs)
+- Gap: eviction runs when a torrent opens and never removes the current
+  one, so a file larger than the limit fills the disk past it.
+- Why: deleting data under the player would break playback.
+- Instead: other torrents are evicted first; the current one keeps growing.
+- Exit: refuse files larger than the limit up front, or evict pieces
+  already played (needs piece-level storage).
+
 ### Store: no in-app recovery from a corrupt database
 - Where: [store.rs](../../crates/cineo-store/src/store.rs)
 - Gap: a corrupt `cineo.db` makes every persistence command fail.

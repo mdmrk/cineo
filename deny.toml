@@ -31,6 +31,9 @@ allow = [
     # clipboard-win, error-code (Windows clipboard via egui-winit/arboard).
     "BSL-1.0",
 ]
+# option-ext (MPL-2.0, file-level copyleft), used unmodified via
+# librqbit-core → directories → dirs-sys. Scoped to that crate (docs/LEGAL.md).
+exceptions = [{ crate = "option-ext", allow = ["MPL-2.0"] }]
 unused-allowed-license = "allow"
 confidence-threshold = 0.9
 

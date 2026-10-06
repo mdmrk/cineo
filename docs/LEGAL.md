@@ -41,6 +41,13 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   BSL-1.0 (added 2026-10-06 for `clipboard-win` and `error-code`, the
   Windows clipboard behind egui's copy and paste; permissive, and it
   requires no notice in binary distributions).
+- One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
+  MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
+  `dirs-sys` (M9, ADR-0012) and cannot be removed without forking
+  librqbit. MPL-2.0 is copyleft per file: we use it unmodified, so the
+  obligation is to ship its notice and point to its source. The exception
+  in `deny.toml` covers only this crate; MPL-2.0 is not on the general
+  allowlist.
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.
 - Copyleft libraries (for example LGPL libmpv) are **not linked**. mpv runs as
