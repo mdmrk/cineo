@@ -10,7 +10,7 @@ yanked = "deny"
 ignore = []
 
 [licenses]
-# Permissive licenses compatible with distributing Cineo under MIT OR Apache-2.0.
+# Permissive licenses compatible with distributing Cineo under MIT.
 # Extend this list only when a new dependency needs it, and record why in
 # docs/LEGAL.md. Expected additions with the HTTP/TLS stack (Milestone 1):
 # BSD-3-Clause, ISC, Zlib, Unicode-3.0, CDLA-Permissive-2.0 (CA bundle data).

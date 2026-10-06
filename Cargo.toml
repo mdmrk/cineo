@@ -8,7 +8,7 @@ edition = "2024"
 # Cineo is an application, not a library: MSRV == the pinned toolchain.
 # Bump together with rust-toolchain.toml (see docs/DEVELOPMENT.md).
 rust-version = "1.99"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/OWNER/cineo"
 publish = false
 

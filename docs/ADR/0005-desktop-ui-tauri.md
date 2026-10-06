@@ -13,7 +13,7 @@ The UI is a 10-foot-friendly media browser: poster grids, images, smooth scrolli
 | D. Raw wry/tao | Fewer layers | Rebuilds what Tauri provides (IPC, packaging, CSP) |
 | E. egui | Single language, simple, agent-friendly | Immediate-mode look, weaker accessibility, 10-foot polish is hard |
 | E. iced | Elm architecture matches ADR-0001 | API churn, slower releases |
-| E. Slint | Polished, declarative | Licensing (GPL or proprietary) conflicts with MIT/Apache distribution |
+| E. Slint | Polished, declarative | Licensing (GPL or proprietary) conflicts with MIT distribution |
 | G. Local web server + browser | Zero GUI deps | Poor desktop integration; localhost attack surface |
 | H. Native shell + embedded web + mpv in-window (shell-ng model) | Best playback integration | Per-OS windowing work; shell-ng is Windows-only |
 

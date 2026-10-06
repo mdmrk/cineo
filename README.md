@@ -52,8 +52,7 @@ and the [decision records](docs/DECISIONS.md).
 
 ## License
 
-Licensed under either the [MIT](LICENSE-MIT) or the [Apache-2.0](LICENSE-APACHE)
-license, at your option.
+Licensed under the [MIT license](LICENSE).
 
 ## Legal
 

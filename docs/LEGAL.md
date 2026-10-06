@@ -5,8 +5,7 @@ and provenance risks. Where a question matters, consult a qualified lawyer.
 Statements below reflect the maintainers' understanding as of 2026-10-06.
 
 ## Our code
-- Cineo's own code is licensed **MIT OR Apache-2.0** (`LICENSE-MIT`,
-  `LICENSE-APACHE`).
+- Cineo's own code is licensed under the **MIT license** (`LICENSE`).
 - Contributions are accepted under the same terms (inbound = outbound;
   CONTRIBUTING.md).
 - Cineo is an **independent implementation**. No code is copied from Stremio
@@ -33,7 +32,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 | boykopovar/AnyPS5 | GPL-2.0 | Repository/process ideas only |
 
 ## Third-party crates
-- Dependencies are permissively licensed and checked by `cargo deny`
+- Dependencies are permissively licensed and MIT-compatible (Apache-2.0
+  dependencies are fine to use; their notices must ship with binaries), and checked by `cargo deny`
   (`deny.toml`). Extending the license allowlist requires a note here.
 - Copyleft libraries (for example LGPL libmpv) are **not linked**. mpv runs as
   a separate program (ADR-0004). Bundling an mpv binary in installers (M7)

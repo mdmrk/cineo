@@ -35,4 +35,4 @@ scripts/check.sh
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org).
 
 By contributing, you agree that your contributions are licensed under the
-project's dual MIT OR Apache-2.0 license.
+project's MIT license.
