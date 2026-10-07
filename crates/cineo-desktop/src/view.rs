@@ -91,6 +91,42 @@ pub struct ViewState {
     pub focus_search: bool,
     pub settings_jump: Option<Section>,
     pub confirm: Option<Confirm>,
+    pub streams: StreamFilter,
+}
+
+impl ViewState {
+    fn leave_detail(&mut self) {
+        self.season = None;
+        self.streams = StreamFilter::default();
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct StreamFilter {
+    pub query: String,
+    pub quality: Option<&'static str>,
+    pub addon: Option<usize>,
+}
+
+impl StreamFilter {
+    fn is_active(&self) -> bool {
+        !self.query.trim().is_empty() || self.quality.is_some() || self.addon.is_some()
+    }
+
+    fn matches(&self, stream: &Stream) -> bool {
+        if self.quality.is_some() && Quality::of(stream).map(|q| q.label) != self.quality {
+            return false;
+        }
+        let text = [stream.name.as_deref(), stream.description.as_deref()]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase();
+        self.query
+            .split_whitespace()
+            .all(|word| text.contains(&word.to_lowercase()))
+    }
 }
 
 const SEARCH_DEBOUNCE: f64 = 0.45;
@@ -156,7 +192,7 @@ fn apply_scale(ctx: &egui::Context, scale: InterfaceScale) {
 fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     if state.detail.is_some() {
         out.push(Action::CloseDetail);
-        view.season = None;
+        view.leave_detail();
     }
     if page == Page::Discover
         && state.discover.target.is_none()
@@ -208,7 +244,7 @@ fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>
         go(page, state, view, out);
     } else if back {
         out.push(Action::CloseDetail);
-        view.season = None;
+        view.leave_detail();
     }
 }
 
@@ -825,7 +861,7 @@ fn detail_page(
     let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(76.0, 30.0));
     if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
         out.push(Action::CloseDetail);
-        view.season = None;
+        view.leave_detail();
     }
     if background.is_some() {
         ui.add_space(-theme::BACKDROP_HEIGHT * 0.6);
@@ -875,8 +911,11 @@ fn detail_page(
                     if detail.streams.is_empty() {
                         empty(ui, "No installed addon provides streams for this item.");
                     }
+                    stream_filters(ui, &detail.streams, p2p_enabled, &mut view.streams);
                     for (index, group) in detail.streams.iter().enumerate() {
-                        stream_group(ui, index, group, p2p_enabled, out);
+                        if view.streams.addon.is_none_or(|addon| addon == index) {
+                            stream_group(ui, index, group, p2p_enabled, &view.streams, out);
+                        }
                     }
                 }
             });
@@ -1065,11 +1104,92 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+const QUALITIES: [&str; 6] = ["4K", "1440p", "1080p", "720p", "SD", "CAM"];
+
+fn stream_filters(
+    ui: &mut Ui,
+    groups: &[StreamGroup],
+    p2p_enabled: bool,
+    filter: &mut StreamFilter,
+) {
+    let streams: Vec<Vec<&Stream>> = groups
+        .iter()
+        .map(|group| match &group.streams {
+            Loadable::Ready(streams) => streams
+                .iter()
+                .filter(|s| p2p_enabled || !s.source.is_p2p())
+                .collect(),
+            _ => Vec::new(),
+        })
+        .collect();
+    if streams.iter().map(Vec::len).sum::<usize>() < 2 {
+        return;
+    }
+    let field = ui.add(
+        TextEdit::singleline(&mut filter.query)
+            .id_salt("stream-search")
+            .hint_text("Search streams")
+            .margin(Margin {
+                left: 30,
+                right: 10,
+                top: 6,
+                bottom: 6,
+            })
+            .desired_width(ui.available_width().min(360.0)),
+    );
+    paint_icon(
+        ui.painter(),
+        Icon::Search,
+        pos2(field.rect.min.x + 15.0, field.rect.center().y),
+        14.0,
+        theme::TEXT_DIM,
+    );
+    ui.add_space(theme::GAP);
+    let found: Vec<&'static str> = streams
+        .iter()
+        .flatten()
+        .filter_map(|s| Quality::of(s).map(|q| q.label))
+        .collect();
+    let present = QUALITIES.into_iter().filter(|label| found.contains(label));
+    let addons: Vec<usize> = (0..groups.len())
+        .filter(|i| !streams[*i].is_empty())
+        .collect();
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        if chip(
+            ui,
+            "All",
+            filter.quality.is_none() && filter.addon.is_none(),
+        )
+        .clicked()
+        {
+            filter.quality = None;
+            filter.addon = None;
+        }
+        for label in present {
+            let selected = filter.quality == Some(label);
+            if chip(ui, label, selected).clicked() {
+                filter.quality = (!selected).then_some(label);
+            }
+        }
+        if addons.len() > 1 {
+            for index in addons {
+                let selected = filter.addon == Some(index);
+                if chip(ui, &groups[index].addon_name, selected).clicked() {
+                    filter.addon = (!selected).then_some(index);
+                }
+            }
+        }
+    });
+    ui.add_space(theme::GAP);
+}
+
 fn stream_group(
     ui: &mut Ui,
     index: usize,
     group: &StreamGroup,
     p2p_enabled: bool,
+    filter: &StreamFilter,
     out: &mut Vec<Action>,
 ) {
     ui.add_space(2.0);
@@ -1098,11 +1218,16 @@ fn stream_group(
         Loadable::Ready(streams) => {
             ui.spacing_mut().item_spacing.y = 4.0;
             let mut hidden = 0;
+            let mut shown = 0;
             for (stream_index, stream) in streams.iter().enumerate() {
                 if stream.source.is_p2p() && !p2p_enabled {
                     hidden += 1;
                     continue;
                 }
+                if !filter.matches(stream) {
+                    continue;
+                }
+                shown += 1;
                 let id = ui.id().with(("stream", index, stream_index));
                 let width = ui.available_width();
                 let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
@@ -1120,6 +1245,9 @@ fn stream_group(
                         stream: stream_index,
                     });
                 }
+            }
+            if shown == 0 && filter.is_active() {
+                ui.label(faint("No matching streams"));
             }
             if hidden > 0 {
                 ui.label(faint(&format!(
@@ -2323,6 +2451,22 @@ mod tests {
         assert!(q.flags.is_empty());
         let q = Quality::of(&stream(Some("HDCAM"), None)).unwrap();
         assert_eq!(q.tier, Tier::Cam);
+    }
+
+    #[test]
+    fn stream_filter_needs_every_word_and_the_quality() {
+        let s = stream(Some("Torrentio\n1080p"), Some("Film.2024.WEB-DL 👤 12"));
+        let filter = |query: &str, quality| StreamFilter {
+            query: query.into(),
+            quality,
+            addon: None,
+        };
+        assert!(filter("", None).matches(&s));
+        assert!(filter("web-dl  TORRENTIO", None).matches(&s));
+        assert!(!filter("web-dl hevc", None).matches(&s));
+        assert!(filter("film", Some("1080p")).matches(&s));
+        assert!(!filter("", Some("4K")).matches(&s));
+        assert!(!filter("   ", None).is_active());
     }
 
     #[test]

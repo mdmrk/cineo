@@ -179,6 +179,38 @@ fn detail_lists_streams_and_only_playable_ones_can_be_played() {
 }
 
 #[test]
+fn stream_search_and_quality_filter_narrow_the_list_and_keep_stream_indexes() {
+    let mut harness = harness(detail_state(), ViewState::default());
+    assert_eq!(harness.get_all_by_label("Play").count(), 6);
+
+    harness.get_by_role(Role::TextInput).focus();
+    harness
+        .get_by_role(Role::TextInput)
+        .type_text("DEPRECATED field");
+    harness.run();
+    assert_eq!(harness.get_all_by_label("Play").count(), 1);
+    harness.get_by_label("Deprecated title field");
+
+    harness.get_by_role(Role::TextInput).focus();
+    harness.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    harness.key_press(Key::Backspace);
+    harness.run();
+    harness.get_by_role_and_label(Role::Button, "1080p").click();
+    harness.run();
+    let play: Vec<_> = harness.get_all_by_label("Play").collect();
+    assert_eq!(play.len(), 1);
+    play[0].click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::Play {
+            group: 0,
+            stream: 0
+        }]
+    );
+}
+
+#[test]
 fn addons_page_installs_from_the_typed_url_and_lists_installed_addons() {
     let view = ViewState {
         page: Page::Addons,
