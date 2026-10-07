@@ -335,7 +335,10 @@ fn play_movie(state: &mut State, store: &mut Store) -> u64 {
             stream: 0,
         },
     );
-    let Some(Effect::Play(play)) = effects.last() else {
+    let Some(play) = effects.iter().find_map(|e| match e {
+        Effect::Play(play) => Some(play),
+        _ => None,
+    }) else {
         panic!("{effects:?}")
     };
     play.start_ms
