@@ -191,3 +191,14 @@ Format:
   rows directly.
 - Exit: none planned; this is the intended behavior unless users ask
   otherwise.
+
+### Desktop UI: image textures are never evicted
+- Where: [images.rs](../crates/cineo-desktop/src/images.rs)
+- Gap: every poster and backdrop shown stays on the GPU until the app
+  quits; egui's texture cache only drops unused sizes of SVGs.
+- Why: eviction needs to know which images were drawn recently, which
+  egui does not expose to image loaders.
+- Instead: GPU memory grows with the number of distinct images seen in a
+  session (the RAM copy is dropped after upload).
+- Exit: track the image URIs painted each frame and `forget_image` those
+  unused for a while.

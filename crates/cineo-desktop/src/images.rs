@@ -40,6 +40,11 @@ impl NetImageLoader {
     }
 }
 
+pub(crate) fn install(ctx: &egui::Context, loader: NetImageLoader) {
+    ctx.options_mut(|o| o.reduce_texture_memory = true);
+    ctx.add_image_loader(Arc::new(loader));
+}
+
 impl ImageLoader for NetImageLoader {
     fn id(&self) -> &str {
         Self::ID
@@ -180,6 +185,28 @@ mod tests {
             .write_to(&mut out, image::ImageFormat::Png)
             .unwrap();
         out.into_inner()
+    }
+
+    #[test]
+    fn decoded_images_are_dropped_once_uploaded() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let client = Arc::new(AddonClient::new(cineo_net::NetPolicy::default()).unwrap());
+        let loader = NetImageLoader::new(client, runtime.handle().clone());
+        let cache = Arc::clone(&loader.cache);
+        let uri = "https://img.example/poster.png";
+        let image = ColorImage::filled([2, 2], egui::Color32::WHITE);
+        cache
+            .lock()
+            .insert(uri.to_owned(), Poll::Ready(Ok(Arc::new(image))));
+        let ctx = egui::Context::default();
+        install(&ctx, loader);
+        let poll = ctx
+            .try_load_texture(uri, egui::TextureOptions::LINEAR, SizeHint::default())
+            .unwrap();
+        assert!(matches!(poll, egui::load::TexturePoll::Ready { .. }));
+        assert!(cache.lock().is_empty());
     }
 
     #[test]

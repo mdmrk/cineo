@@ -18,7 +18,7 @@ use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
 use tracing::{debug, error, warn};
 
-use crate::images::NetImageLoader;
+use crate::images::{self, NetImageLoader};
 use crate::player::{self, Controls};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
@@ -79,8 +79,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         native,
         Box::new(move |cc| {
             theme::apply(&cc.egui_ctx);
-            cc.egui_ctx
-                .add_image_loader(Arc::new(NetImageLoader::new(client, handle)));
+            images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
             let mut io = io;
             io.gl = cc.get_proc_address.clone();
             Ok(Box::new(CineoApp::new(
