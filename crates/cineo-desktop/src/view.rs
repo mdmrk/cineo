@@ -261,7 +261,7 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
     let window = ui.ctx().content_rect();
     let size = vec2(theme::LOGO_WIDTH, theme::LOGO_WIDTH * theme::LOGO_ASPECT);
     let left = if sidebar_width < theme::SIDEBAR_WIDTH {
-        (sidebar_width - size.x) / 2.0
+        sidebar_width / 2.0 - size.x * theme::LOGO_MOUSTACHE_X
     } else {
         theme::LOGO_BLEED.x
     };

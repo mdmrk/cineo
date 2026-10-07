@@ -39,6 +39,7 @@ pub(crate) const COMPACT_BELOW: f32 = 1000.0;
 
 pub(crate) const LOGO_WIDTH: f32 = 144.0;
 pub(crate) const LOGO_ASPECT: f32 = 360.0 / 304.0;
+pub(crate) const LOGO_MOUSTACHE_X: f32 = 110.5 / 304.0;
 pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-12.0, -10.0);
 pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
 pub(crate) const GRAIN_FADE: f32 = 40.0;

@@ -152,7 +152,7 @@ fn the_compact_sidebar_keeps_every_item_in_place() {
 }
 
 #[test]
-fn the_logo_keeps_its_size_and_height_and_is_cut_evenly_by_the_compact_sidebar() {
+fn the_logo_keeps_its_size_and_height_with_the_moustache_centered_in_the_compact_sidebar() {
     let logo = |width: f32| {
         let mut harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
             |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
@@ -176,8 +176,9 @@ fn the_logo_keeps_its_size_and_height_and_is_cut_evenly_by_the_compact_sidebar()
     assert_eq!(wide.size(), compact.size());
     assert_eq!(wide.y_range(), compact.y_range());
     let compact_sidebar = 56.0;
+    let moustache = compact.left() + compact.width() * 110.5 / 304.0;
     assert!(
-        (compact.center().x - compact_sidebar / 2.0).abs() < 0.5,
+        (moustache - compact_sidebar / 2.0).abs() < 0.5,
         "{compact:?}"
     );
     assert!(clip.right() <= compact_sidebar, "{clip:?}");
