@@ -31,12 +31,13 @@ fn status() -> Status {
         duration_s: 600.0,
         paused: true,
         volume: 80.0,
-        tracks: vec![
+        tracks: [
             track(1, TrackKind::Video, "", true),
             track(1, TrackKind::Audio, "eng", true),
             track(2, TrackKind::Audio, "spa", false),
             track(1, TrackKind::Subtitle, "fra", false),
-        ],
+        ]
+        .into(),
         ..Status::default()
     }
 }
@@ -174,9 +175,12 @@ fn before_the_file_loads_back_is_available_and_stops() {
 #[test]
 fn long_track_menu_stays_on_screen() {
     let mut status = status();
-    status
+    status.tracks = status
         .tracks
-        .extend((2..60).map(|id| track(id, TrackKind::Subtitle, &format!("sub{id}"), false)));
+        .iter()
+        .cloned()
+        .chain((2..60).map(|id| track(id, TrackKind::Subtitle, &format!("sub{id}"), false)))
+        .collect();
     let mut harness = harness(status);
     harness.get_by_label("Subtitles").click();
     harness.run();
@@ -190,10 +194,15 @@ fn long_track_menu_stays_on_screen() {
 #[test]
 fn addon_subtitles_are_listed_and_requested() {
     let mut status = status();
-    status.tracks.push(Track {
-        external_file: Some("/cache/subtitles/1".into()),
-        ..track(2, TrackKind::Subtitle, "spa", false)
-    });
+    status.tracks = status
+        .tracks
+        .iter()
+        .cloned()
+        .chain([Track {
+            external_file: Some("/cache/subtitles/1".into()),
+            ..track(2, TrackKind::Subtitle, "spa", false)
+        }])
+        .collect();
     let addon = vec![
         AddonSubtitle {
             url: "https://subs.example/en.srt".parse().unwrap(),

@@ -83,7 +83,7 @@ pub struct Status {
     /// Percent, 0–100.
     pub volume: f64,
     pub muted: bool,
-    pub tracks: Vec<Track>,
+    pub tracks: Arc<[Track]>,
 }
 
 const TIME_POS: u64 = 1;
@@ -454,7 +454,7 @@ impl EventLoop {
                     Value::Text(json) => parse_tracks(json),
                     _ => Vec::new(),
                 };
-                self.update(|s| s.tracks = tracks);
+                self.update(|s| s.tracks = tracks.into());
             }
             _ => {}
         }

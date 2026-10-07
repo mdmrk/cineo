@@ -113,6 +113,16 @@ fn track_list_is_parsed_leniently() {
 }
 
 #[test]
+fn status_snapshots_share_the_track_list() {
+    let status = Status {
+        tracks: parse_tracks(r#"[{"id":1,"type":"audio","selected":true}]"#).into(),
+        ..Status::default()
+    };
+    let snapshot = status.clone();
+    assert!(Arc::ptr_eq(&status.tracks, &snapshot.tracks));
+}
+
+#[test]
 fn non_http_urls_are_refused_before_loading_libmpv() {
     let err =
         Player::start_with(&request("file:///etc/passwd"), Arc::new(|| {}), None, &[]).unwrap_err();
@@ -329,9 +339,16 @@ fn real_libmpv_loads_a_subtitle_file_without_an_extension() {
     player.add_subtitle(&file, "Addon English", "eng").unwrap();
     let path = file.to_str().unwrap();
     let selected = loop {
-        let found = player.status().tracks.into_iter().find(|t| {
-            t.kind == TrackKind::Subtitle && t.selected && t.external_file.as_deref() == Some(path)
-        });
+        let found = player
+            .status()
+            .tracks
+            .iter()
+            .find(|t| {
+                t.kind == TrackKind::Subtitle
+                    && t.selected
+                    && t.external_file.as_deref() == Some(path)
+            })
+            .cloned();
         if found.is_some() || std::time::Instant::now() > deadline {
             break found;
         }
