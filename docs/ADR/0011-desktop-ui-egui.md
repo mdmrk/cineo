@@ -31,9 +31,13 @@ Research, crates.io 2026-10-06:
   webp only) decode the bytes. The `http` and `file` loaders are not
   enabled.
 - **Look.** A custom dark theme lives in one `theme` module: palette,
-  spacing, rounding, typography scale. It has a top navigation bar, poster
-  cards with hover states, and a backdrop hero on the detail page. Widgets
-  read the theme; they never hardcode colors.
+  spacing, rounding, typography scale. Widgets read the theme; they never
+  hardcode colors.
+  - Amended 2026-10-07: a film-journal look with amber actions and
+    bundled type (DM Serif Display for titles, Inter for the UI).
+    Navigation is a left sidebar instead of a top bar; the home page is
+    catalog rows only; the detail page keeps the backdrop hero. Bundled
+    fonts are assets, not dependencies (LEGAL.md *Bundled assets*).
 - **State flow (ADR-0001).** The egui app owns the state. Each frame it
   drains a channel of IO results, applies them, and renders. User actions
   spawn IO on a tokio runtime owned by the app. Results come back through

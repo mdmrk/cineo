@@ -2,21 +2,24 @@
 //! [`Action`]s the user triggered; it performs no IO and holds no business
 //! rules (ADR-0001, ADR-0011). Addon strings are shown as plain text only.
 
+use std::time::Duration;
+
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
 use cineo_core::app::{
     Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, TorrentStatus,
     board_targets, continue_watching,
 };
 use eframe::egui::{
-    self, Align, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Label, Layout,
-    Margin, Mesh, Modal, Rect, RichText, ScrollArea, Sense, Stroke, StrokeKind, TextEdit,
-    TextFormat, Ui, UiBuilder, Vec2, text::LayoutJob,
+    self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
+    Layout, Margin, Mesh, Modal, Modifiers, Pos2, Rect, Response, RichText, ScrollArea, Sense,
+    Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, WidgetType, pos2,
+    scroll_area::ScrollBarVisibility, style::ScrollAnimation, text::LayoutJob, vec2,
 };
 use url::Url;
 
 use crate::theme;
 
-/// The top-level pages in the top bar.
+/// The top-level pages in the sidebar.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Page {
     #[default]
@@ -40,12 +43,23 @@ impl Page {
 
     fn label(self) -> &'static str {
         match self {
-            Self::Board => "Board",
+            Self::Board => "Home",
             Self::Discover => "Discover",
             Self::Search => "Search",
             Self::Library => "Library",
             Self::Addons => "Addons",
             Self::Settings => "Settings",
+        }
+    }
+
+    fn icon(self) -> Icon {
+        match self {
+            Self::Board => Icon::Home,
+            Self::Discover => Icon::Compass,
+            Self::Search => Icon::Search,
+            Self::Library => Icon::Library,
+            Self::Addons => Icon::Addons,
+            Self::Settings => Icon::Settings,
         }
     }
 }
@@ -58,51 +72,30 @@ pub struct ViewState {
     pub search_input: String,
     /// Season shown on a series detail page; `None` means the first one.
     pub season: Option<u32>,
+    /// When the search text last changed (egui time, seconds); a search
+    /// runs once typing pauses.
+    pub search_edited_at: Option<f64>,
+    /// Focus the search field on the next frame.
+    pub focus_search: bool,
 }
 
+/// Seconds of no typing before a search runs.
+const SEARCH_DEBOUNCE: f64 = 0.45;
 /// Draws the whole window and returns the actions to dispatch.
 pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     let mut out = Vec::new();
-    top_bar(ui, state, view, &mut out);
+    if theme::ensure(ui.ctx()) {
+        // Text laid out now would not find the theme's fonts yet.
+        ui.ctx().request_discard("theme applied");
+        return out;
+    }
+    shortcuts(ui, state, view, &mut out);
+    sidebar(ui, state, view, &mut out);
     if let Some(notice) = &state.notice {
-        egui::Panel::top("notice")
-            .show_separator_line(false)
-            .frame(
-                Frame::new()
-                    .fill(theme::PANEL)
-                    .inner_margin(Margin::symmetric(0, 8)),
-            )
-            .show(ui, |ui| {
-                column(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new(notice).color(theme::WARNING));
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if ui.button("Dismiss").clicked() {
-                                out.push(Action::DismissNotice);
-                            }
-                        });
-                    });
-                });
-            });
+        notice_bar(ui, notice, &mut out);
     }
     if let Some(torrent) = &state.torrent {
-        egui::Panel::bottom("torrent")
-            .show_separator_line(false)
-            .frame(
-                Frame::new()
-                    .fill(theme::PANEL)
-                    .inner_margin(Margin::symmetric(0, 8)),
-            )
-            .show(ui, |ui| {
-                column(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        if torrent.status == TorrentStatus::Starting {
-                            ui.spinner();
-                        }
-                        ui.label(dim(&torrent_status_text(&torrent.status)));
-                    });
-                });
-            });
+        torrent_bar(ui, &torrent.status);
     }
     if state.p2p_prompt.is_some() {
         p2p_prompt(ui, &mut out);
@@ -122,9 +115,9 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                     if let Some(detail) = &state.detail {
                         detail_page(ui, detail, state.settings.p2p_enabled, view, &mut out);
                     } else {
-                        ui.add_space(f32::from(theme::PAGE_MARGIN));
+                        ui.add_space(page_margin(ui));
                         column(ui, |ui| match view.page {
-                            Page::Board => board_page(ui, state, &mut out),
+                            Page::Board => board_page(ui, state, view, &mut out),
                             Page::Discover => discover_page(ui, state, &mut out),
                             Page::Search => search_page(ui, state, view, &mut out),
                             Page::Library => library_page(ui, state, &mut out),
@@ -132,53 +125,228 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                             Page::Settings => settings_page(ui, state, &mut out),
                         });
                     }
-                    ui.add_space(f32::from(theme::PAGE_MARGIN));
+                    ui.add_space(page_margin(ui));
                 });
         });
     out
 }
 
-fn top_bar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    egui::Panel::top("nav")
+/// Opens `page`, leaving the detail page if one is open.
+fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+    if state.detail.is_some() {
+        out.push(Action::CloseDetail);
+        view.season = None;
+    }
+    if page == Page::Discover
+        && state.discover.target.is_none()
+        && let Some(first) = board_targets(&state.addons).into_iter().next()
+    {
+        out.push(Action::OpenDiscover {
+            addon: first.addon,
+            path: first.path,
+        });
+    }
+    if page == Page::Search {
+        view.focus_search = true;
+    }
+    view.page = page;
+}
+
+/// Keyboard and mouse shortcuts: Ctrl+F or `/` searches, Ctrl+1…6 switch
+/// pages, Escape, Alt+Left or the mouse back button leave a detail page.
+fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+    let typing = ui.ctx().egui_wants_keyboard_input();
+    let modal = state.p2p_prompt.is_some();
+    let in_detail = state.detail.is_some();
+    let (search, page, back) = ui.input_mut(|i| {
+        let search = i.consume_key(Modifiers::COMMAND, Key::F)
+            || (!typing && i.consume_key(Modifiers::NONE, Key::Slash));
+        let keys = [
+            Key::Num1,
+            Key::Num2,
+            Key::Num3,
+            Key::Num4,
+            Key::Num5,
+            Key::Num6,
+        ];
+        let page = keys
+            .iter()
+            .position(|key| i.consume_key(Modifiers::COMMAND, *key))
+            .map(|index| Page::ALL[index]);
+        let back = in_detail
+            && !modal
+            && (i.consume_key(Modifiers::ALT, Key::ArrowLeft)
+                || i.pointer.button_pressed(egui::PointerButton::Extra1)
+                || (!typing && i.consume_key(Modifiers::NONE, Key::Escape)));
+        (search, page, back)
+    });
+    if modal {
+        return;
+    }
+    if search {
+        go(Page::Search, state, view, out);
+    } else if let Some(page) = page {
+        go(page, state, view, out);
+    } else if back {
+        out.push(Action::CloseDetail);
+        view.season = None;
+    }
+}
+
+// --- chrome ---
+
+fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+    let compact = ui.ctx().content_rect().width() < theme::SIDEBAR_COMPACT_BELOW;
+    let width = if compact {
+        theme::SIDEBAR_COMPACT_WIDTH
+    } else {
+        theme::SIDEBAR_WIDTH
+    };
+    egui::Panel::left("nav")
         .resizable(false)
-        .exact_size(theme::TOP_BAR_HEIGHT)
+        .exact_size(width)
         .show_separator_line(false)
-        .frame(Frame::new().fill(theme::PANEL))
+        .frame(
+            Frame::new()
+                .fill(theme::SIDEBAR)
+                .inner_margin(Margin::symmetric(12, 22)),
+        )
         .show(ui, |ui| {
-            let bottom = ui.max_rect().bottom() - 0.5;
-            ui.painter().hline(
-                ui.max_rect().x_range(),
-                bottom,
+            let edge = ui.max_rect().right() + 11.5;
+            ui.painter().vline(
+                edge,
+                ui.max_rect().y_range().expand(22.0),
                 Stroke::new(1.0, theme::RULE),
             );
+            logo(ui, compact);
+            ui.add_space(32.0);
+            ui.spacing_mut().item_spacing.y = 2.0;
+            for page in Page::ALL {
+                let selected = view.page == page && state.detail.is_none();
+                if nav_item(ui, page, selected, compact).clicked() {
+                    go(page, state, view, out);
+                }
+            }
+            if !state.addons_loading.is_empty() {
+                ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                    ui.horizontal(|ui| {
+                        ui.add_space(8.0);
+                        spinner(ui);
+                        if !compact {
+                            ui.label(faint("Loading addons…"));
+                        }
+                    });
+                });
+            }
+        });
+}
+
+/// The mark (an amber crescent "C", a lens catching light) and the serif
+/// wordmark.
+fn logo(ui: &mut Ui, compact: bool) {
+    ui.horizontal(|ui| {
+        if !compact {
+            ui.add_space(8.0);
+        }
+        let size = 22.0;
+        let slot = if compact {
+            vec2(ui.available_width(), 34.0)
+        } else {
+            vec2(size, 34.0)
+        };
+        let (slot, _) = ui.allocate_exact_size(slot, Sense::hover());
+        let c = slot.center();
+        let painter = ui.painter();
+        painter.circle_filled(c, size / 2.0, theme::ACCENT);
+        painter.circle_filled(c + vec2(4.5, 0.0), size * 0.3, theme::SIDEBAR);
+        painter.circle_filled(c + vec2(4.5, 0.0), 2.0, theme::ACCENT);
+        if !compact {
+            ui.add_space(2.0);
+            ui.label(
+                RichText::new("Cineo")
+                    .font(theme::logo())
+                    .color(theme::TEXT_BRIGHT),
+            );
+        }
+    });
+}
+
+/// A sidebar entry: icon and small-caps label, or the icon alone when
+/// `compact`. Accessible as a button labelled with the page name.
+fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
+    let label = page.label();
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 38.0), Sense::click());
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
+    if ui.is_rect_visible(rect) {
+        let hover = ui
+            .ctx()
+            .animate_bool_with_time(response.id, response.hovered(), theme::ANIM);
+        let painter = ui.painter();
+        if selected {
+            painter.rect_filled(
+                Rect::from_min_size(pos2(rect.min.x - 12.0, rect.min.y + 8.0), vec2(3.0, 22.0)),
+                0.0,
+                theme::ACCENT,
+            );
+        }
+        let color = if selected {
+            theme::TEXT_BRIGHT
+        } else {
+            lerp_color(theme::TEXT_DIM, theme::TEXT_BRIGHT, hover)
+        };
+        let icon_color = if selected { theme::ACCENT } else { color };
+        let icon_center = if compact {
+            rect.center()
+        } else {
+            pos2(rect.min.x + 18.0, rect.center().y)
+        };
+        paint_icon(painter, page.icon(), icon_center, 19.0, icon_color);
+        if !compact {
+            let galley = painter.layout_job(caps(label, theme::nav(), color));
+            painter.galley(
+                pos2(rect.min.x + 40.0, rect.center().y - galley.size().y / 2.0),
+                galley,
+                color,
+            );
+        }
+    }
+    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+    if compact {
+        response.on_hover_text(label)
+    } else {
+        response
+    }
+}
+
+fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
+    egui::Panel::top("notice")
+        .show_separator_line(false)
+        .frame(
+            Frame::new()
+                .fill(theme::PANEL)
+                .inner_margin(Margin::symmetric(0, 10)),
+        )
+        .show(ui, |ui| {
+            let full = ui.max_rect();
+            ui.painter().hline(
+                full.x_range(),
+                full.bottom() + 9.5,
+                Stroke::new(1.0, theme::WARNING),
+            );
             column(ui, |ui| {
-                ui.horizontal_centered(|ui| {
-                    logo(ui);
-                    if !state.addons_loading.is_empty() {
-                        ui.add_space(theme::GAP);
-                        ui.spinner();
-                        ui.label(faint("Loading addons…"));
-                    }
+                ui.horizontal(|ui| {
+                    let (slot, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
+                    paint_icon(
+                        ui.painter(),
+                        Icon::Alert,
+                        slot.center(),
+                        18.0,
+                        theme::WARNING,
+                    );
+                    ui.label(RichText::new(notice).color(theme::TEXT_BRIGHT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.spacing_mut().item_spacing.x = 20.0;
-                        for page in Page::ALL.into_iter().rev() {
-                            let selected = view.page == page && state.detail.is_none();
-                            if nav_link(ui, page.label(), selected).clicked() {
-                                if state.detail.is_some() {
-                                    out.push(Action::CloseDetail);
-                                }
-                                if page == Page::Discover
-                                    && state.discover.target.is_none()
-                                    && let Some(first) =
-                                        board_targets(&state.addons).into_iter().next()
-                                {
-                                    out.push(Action::OpenDiscover {
-                                        addon: first.addon,
-                                        path: first.path,
-                                    });
-                                }
-                                view.page = page;
-                            }
+                        if ui.button("Dismiss").clicked() {
+                            out.push(Action::DismissNotice);
                         }
                     });
                 });
@@ -186,110 +354,154 @@ fn top_bar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
         });
 }
 
-/// Three dots and the name.
-fn logo(ui: &mut Ui) {
-    let radius = 6.0;
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(radius * 5.6, radius * 2.0), Sense::hover());
-    for (i, color) in theme::LOGO.into_iter().enumerate() {
-        #[expect(clippy::cast_precision_loss, reason = "i is at most 2")]
-        let x = rect.min.x + radius + i as f32 * radius * 1.8;
-        ui.painter()
-            .circle_filled(egui::pos2(x, rect.center().y), radius, color);
-    }
-    ui.label(
-        RichText::new("Cineo")
-            .font(theme::logo())
-            .color(theme::TEXT_BRIGHT),
-    );
+fn torrent_bar(ui: &mut Ui, status: &TorrentStatus) {
+    egui::Panel::bottom("torrent")
+        .show_separator_line(false)
+        .frame(
+            Frame::new()
+                .fill(theme::PANEL)
+                .inner_margin(Margin::symmetric(0, 10)),
+        )
+        .show(ui, |ui| {
+            let full = ui.max_rect();
+            let track = Rect::from_min_size(full.min - vec2(0.0, 10.0), vec2(full.width(), 2.0));
+            let painter = ui.painter();
+            painter.rect_filled(track, 0.0, theme::SURFACE);
+            if let TorrentStatus::Streaming {
+                downloaded, size, ..
+            } = status
+            {
+                #[expect(clippy::cast_precision_loss, reason = "display only")]
+                let done = if *size == 0 {
+                    1.0
+                } else {
+                    *downloaded as f32 / *size as f32
+                };
+                let mut bar = track;
+                bar.set_width(track.width() * done.clamp(0.0, 1.0));
+                painter.rect_filled(bar, 0.0, theme::ACCENT);
+            }
+            column(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if *status == TorrentStatus::Starting {
+                        spinner(ui);
+                    }
+                    ui.label(dim(&torrent_status_text(status)));
+                });
+            });
+        });
 }
 
-fn nav_link(ui: &mut Ui, label: &str, selected: bool) -> egui::Response {
-    let color = if selected {
-        theme::TEXT_BRIGHT
-    } else {
-        theme::TEXT_DIM
-    };
-    let response = ui
-        .add(Button::new(caps(label, theme::nav(), color)).frame(false))
-        .on_hover_cursor(egui::CursorIcon::PointingHand);
-    if selected || response.hovered() {
-        let rect = response.rect;
-        let underline = if selected {
-            theme::ACCENT
-        } else {
-            theme::TEXT_FAINT
-        };
-        ui.painter().hline(
-            rect.x_range(),
-            rect.bottom() + 3.0,
-            Stroke::new(2.0, underline),
-        );
+/// The notice shown before the first torrent plays (ADR-0012).
+fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
+    let modal = Modal::new(egui::Id::new("p2p_prompt"))
+        .frame(
+            Frame::new()
+                .fill(theme::PANEL)
+                .stroke(Stroke::new(1.0, theme::RULE))
+                .corner_radius(CornerRadius::same(theme::RADIUS))
+                .inner_margin(Margin::same(28)),
+        )
+        .show(ui.ctx(), |ui| {
+            ui.set_max_width(480.0);
+            ui.label(RichText::new("Peer-to-peer streaming").font(theme::heading()));
+            ui.add_space(theme::GAP);
+            ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+            ui.add_space(theme::GAP * 1.5);
+            ui.horizontal(|ui| {
+                if primary(ui, true, "Accept and play").clicked() {
+                    out.push(Action::AcceptP2p);
+                }
+                if ui.button("Cancel").clicked() {
+                    out.push(Action::DeclineP2p);
+                }
+            });
+        });
+    if modal.should_close() && out.is_empty() {
+        out.push(Action::DeclineP2p);
     }
-    response
 }
+
+const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
+plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
+uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
+a local cache. You can turn peer-to-peer streaming off in Settings.";
 
 // --- pages ---
 
-fn board_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
+fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let resume = continue_watching(&state.library);
     if !resume.is_empty() {
         section(ui, "Continue watching", |_| {});
-        ScrollArea::horizontal().id_salt("continue").show(ui, |ui| {
-            poster_row(ui, |ui| {
-                for item in resume {
-                    library_card(ui, item, out);
-                }
-            });
+        poster_strip(ui, "continue", |ui| {
+            for item in resume {
+                library_card(ui, theme::CARD_WIDTH, item, out);
+            }
         });
         ui.add_space(theme::SECTION_GAP);
     }
     if state.addons.is_empty() && state.addons_loading.is_empty() {
+        page_title(ui, "The projector is warm.", Some("The reels are missing."));
         empty(
             ui,
             "No addons installed. Open Addons and paste an addon's manifest URL.",
         );
+        if primary(ui, true, "Open Addons").clicked() {
+            go(Page::Addons, state, view, out);
+        }
     }
     for (index, row) in state.board.iter().enumerate() {
-        catalog_row(ui, ("board", index), row, true, out);
+        catalog_row(ui, ("board", index), row, Some(&mut *view), out);
     }
 }
 
 fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     let targets = board_targets(&state.addons);
     let discover = &state.discover;
-    section(ui, "Discover", |_| {});
+    page_title(
+        ui,
+        "Discover",
+        Some("Browse a catalog, narrow it by genre."),
+    );
     if targets.is_empty() {
         empty(ui, "No installed addon has a browsable catalog.");
         return;
     }
-    ui.horizontal(|ui| {
-        let current = discover
-            .target
-            .as_ref()
-            .map_or_else(|| "Choose a catalog".to_owned(), target_label);
-        ComboBox::from_id_salt("catalog")
-            .selected_text(current)
-            .width(280.0)
-            .show_ui(ui, |ui| {
-                for target in &targets {
-                    let selected = discover.target.as_ref() == Some(target);
-                    if ui
-                        .selectable_label(selected, target_label(target))
-                        .clicked()
-                        && !selected
-                    {
-                        out.push(Action::OpenDiscover {
-                            addon: target.addon.clone(),
-                            path: target.path.clone(),
-                        });
-                    }
-                }
-            });
-        if let Some((options, required)) = genre_options(state) {
+    let several_addons = targets.iter().any(|t| t.addon != targets[0].addon);
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        for target in &targets {
+            let selected = discover.target.as_ref() == Some(target);
+            let label = if several_addons {
+                target_label(target)
+            } else {
+                target.title.clone()
+            };
+            if chip(ui, &label, selected).clicked() && !selected {
+                out.push(Action::OpenDiscover {
+                    addon: target.addon.clone(),
+                    path: target.path.clone(),
+                });
+            }
+        }
+    });
+    if let Some((options, required)) = genre_options(state) {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
             let current = discover.genre.as_deref().unwrap_or("All genres");
             ComboBox::from_id_salt("genre")
+                .icon(|ui, rect, visuals, _open| {
+                    paint_icon(
+                        ui.painter(),
+                        Icon::ChevronDown,
+                        rect.center(),
+                        16.0,
+                        visuals.fg_stroke.color,
+                    );
+                })
                 .selected_text(current)
-                .width(180.0)
+                .width(200.0)
+                .height(420.0)
                 .show_ui(ui, |ui| {
                     if !required
                         && ui
@@ -305,75 +517,139 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                         }
                     }
                 });
-        }
-    });
-    ui.add_space(theme::GAP);
+        });
+    }
+    ui.add_space(theme::GAP * 2.0);
     if let Some(error) = &discover.error {
         ui.label(RichText::new(error).color(theme::DANGER));
     }
+    let width = grid_card_width(ui.available_width());
     poster_grid(ui, |ui| {
         for item in &discover.items {
-            if preview_card(ui, item).clicked() {
+            if preview_card(ui, width, item).clicked() {
                 out.push(open_detail(item));
             }
         }
     });
     ui.add_space(theme::GAP);
+    // Infinite scroll: the next page loads as soon as the end comes into view.
+    let (end, _) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::hover());
     if discover.pending.is_some() {
-        ui.spinner();
-    } else if discover.next_skip.is_some() && ui.button("Load more").clicked() {
+        paint_spinner(ui, end.center(), 22.0);
+    } else if discover.next_skip.is_some() && ui.is_rect_visible(end) {
         out.push(Action::LoadMoreDiscover);
     }
 }
 
 fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    section(ui, "Search", |_| {});
-    ui.horizontal(|ui| {
-        let field = ui.add(
-            TextEdit::singleline(&mut view.search_input)
-                .hint_text("Movie or series title")
-                .margin(Vec2::new(10.0, 6.0))
-                .desired_width(360.0),
+    page_title(ui, "Search", None);
+    let width = ui.available_width().min(640.0);
+    let field = ui.add(
+        TextEdit::singleline(&mut view.search_input)
+            .id_salt("search")
+            .hint_text("A film, a series, a guilty pleasure…")
+            .font(FontId::new(17.0, egui::FontFamily::Proportional))
+            .margin(Margin {
+                left: 40,
+                right: 12,
+                top: 11,
+                bottom: 11,
+            })
+            .desired_width(width),
+    );
+    paint_icon(
+        ui.painter(),
+        Icon::Search,
+        pos2(field.rect.min.x + 20.0, field.rect.center().y),
+        18.0,
+        if field.has_focus() {
+            theme::ACCENT
+        } else {
+            theme::TEXT_DIM
+        },
+    );
+    if field.has_focus() {
+        ui.painter().rect_stroke(
+            field.rect,
+            CornerRadius::same(theme::RADIUS),
+            Stroke::new(1.0, theme::ACCENT),
+            StrokeKind::Inside,
         );
-        let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if ui.add(primary_button("Search")).clicked() || submitted {
-            out.push(Action::Search(view.search_input.clone()));
-        }
-    });
+    }
+    if view.focus_search {
+        field.request_focus();
+        view.focus_search = false;
+    }
+    // Search as you type, once typing pauses; Enter searches right away.
+    let now = ui.input(|i| i.time);
+    if field.changed() {
+        view.search_edited_at = Some(now);
+    }
+    let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+    let due = view
+        .search_edited_at
+        .is_some_and(|edited| now - edited >= SEARCH_DEBOUNCE);
+    if submitted || (due && view.search_input.trim() != state.search_query) {
+        view.search_edited_at = None;
+        out.push(Action::Search(view.search_input.clone()));
+    } else if due {
+        view.search_edited_at = None;
+    } else if let Some(edited) = view.search_edited_at {
+        ui.ctx()
+            .request_repaint_after(Duration::from_secs_f64(SEARCH_DEBOUNCE - (now - edited)));
+    }
     ui.add_space(theme::SECTION_GAP);
     if state.search_query.is_empty() {
+        empty(
+            ui,
+            "Type a title. Every installed addon that supports search is asked.",
+        );
         return;
     }
     if state.search.is_empty() {
         empty(ui, "No installed addon supports search.");
     }
     for (index, row) in state.search.iter().enumerate() {
-        catalog_row(ui, ("search", index), row, false, out);
+        catalog_row(ui, ("search", index), row, None, out);
     }
 }
 
 fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
-    section(ui, "Library", |ui| {
+    page_title(
+        ui,
+        "Library",
+        Some("Everything you've pressed play on, most recent first."),
+    );
+    section(ui, "Your films", |ui| {
         if !state.library.is_empty() {
-            ui.label(faint(&count_label(state.library.len(), "item", "items")));
+            ui.label(caps_text(
+                &count_label(state.library.len(), "film", "films"),
+                theme::TEXT_FAINT,
+            ));
         }
     });
     if state.library.is_empty() {
-        empty(ui, "Items you play appear here.");
+        empty(
+            ui,
+            "Items you play appear here. Every collection starts with a single film.",
+        );
         return;
     }
     let mut items: Vec<&LibraryItem> = state.library.iter().collect();
     items.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
+    let width = grid_card_width(ui.available_width());
     poster_grid(ui, |ui| {
         for item in items {
             ui.vertical(|ui| {
-                ui.spacing_mut().item_spacing.y = 4.0;
-                library_card(ui, item, out);
+                ui.set_width(width);
+                ui.spacing_mut().item_spacing.y = 0.0;
+                library_card(ui, width, item, out);
                 if ui
                     .add(
-                        Button::new(RichText::new("Remove").small().color(theme::TEXT_FAINT))
+                        Button::new(caps("Remove", theme::caption(), theme::TEXT_FAINT))
                             .frame(false),
                     )
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
                     .clicked()
                 {
                     out.push(Action::RemoveFromLibrary(item.id.clone()));
@@ -384,29 +660,35 @@ fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
 }
 
 fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+    page_title(
+        ui,
+        "Addons",
+        Some("Where the films come from. Order matters: earlier addons win ties."),
+    );
     section(ui, "Install an addon", |_| {});
     ui.horizontal(|ui| {
+        let busy = state.install.as_ref().is_some_and(Loadable::is_loading);
+        let field_width = (ui.available_width() - 110.0).clamp(160.0, 560.0);
         let field = ui.add(
             TextEdit::singleline(&mut view.addon_input)
                 .hint_text("https://…/manifest.json")
-                .margin(Vec2::new(10.0, 6.0))
-                .desired_width(420.0),
+                .margin(Margin::symmetric(10, 8))
+                .desired_width(field_width),
         );
-        let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        let busy = state.install.as_ref().is_some_and(Loadable::is_loading);
-        if ui.add_enabled(!busy, primary_button("Install")).clicked() || (submitted && !busy) {
+        let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+        if primary(ui, !busy, "Install").clicked() || (submitted && !busy) {
             out.push(Action::InstallAddon(view.addon_input.clone()));
         }
     });
     match &state.install {
         Some(Loadable::Loading) => {
             ui.horizontal(|ui| {
-                ui.spinner();
+                spinner(ui);
                 ui.label(dim("Installing…"));
             });
         }
         Some(Loadable::Ready(name)) => {
-            ui.label(RichText::new(format!("Installed {name}")).color(theme::ACCENT));
+            ui.label(RichText::new(format!("Installed {name}")).color(theme::SUCCESS));
         }
         Some(Loadable::Failed(err)) => {
             ui.label(RichText::new(err).color(theme::DANGER));
@@ -417,7 +699,10 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     let count = state.addons.len();
     section(ui, "Installed", |ui| {
         if count > 0 {
-            ui.label(faint(&count_label(count, "addon", "addons")));
+            ui.label(caps_text(
+                &count_label(count, "addon", "addons"),
+                theme::TEXT_FAINT,
+            ));
         }
     });
     if count == 0 {
@@ -425,12 +710,16 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     }
     for (index, addon) in state.addons.iter().enumerate() {
         let manifest = &addon.manifest;
+        ui.add_space(6.0);
         ui.horizontal(|ui| {
+            let actions_width = 250.0;
             ui.vertical(|ui| {
+                ui.set_max_width((ui.available_width() - actions_width).max(200.0));
                 ui.spacing_mut().item_spacing.y = 4.0;
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new(format!("{} {}", manifest.name, manifest.version))
+                            .font(theme::strong())
                             .color(theme::TEXT_BRIGHT),
                     );
                     // The full URL can carry configuration; show the host only.
@@ -439,7 +728,9 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                     }
                 });
                 if let Some(description) = &manifest.description {
-                    ui.add(Label::new(dim(description)).wrap());
+                    ui.add(
+                        Label::new(addon_text(description, &theme::body(), theme::TEXT_DIM)).wrap(),
+                    );
                 }
                 let hints = &manifest.behavior_hints;
                 if hints.adult || hints.p2p || hints.configuration_required {
@@ -480,54 +771,51 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                 }
             });
         });
+        ui.add_space(6.0);
         rule(ui);
     }
 }
 
-/// The notice shown before the first torrent plays (ADR-0012).
-fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
-    let modal = Modal::new(egui::Id::new("p2p_prompt"))
-        .frame(
-            Frame::new()
-                .fill(theme::PANEL)
-                .corner_radius(CornerRadius::same(theme::RADIUS))
-                .inner_margin(Margin::same(24)),
-        )
-        .show(ui.ctx(), |ui| {
-            ui.set_max_width(460.0);
-            ui.label(RichText::new("Peer-to-peer streaming").font(theme::heading()));
-            ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(P2P_NOTICE)).wrap());
-            ui.add_space(theme::GAP);
-            ui.horizontal(|ui| {
-                if ui.add(primary_button("Accept and play")).clicked() {
-                    out.push(Action::AcceptP2p);
-                }
-                if ui.button("Cancel").clicked() {
-                    out.push(Action::DeclineP2p);
-                }
-            });
-        });
-    if modal.should_close() && out.is_empty() {
-        out.push(Action::DeclineP2p);
-    }
-}
-
-const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
-plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
-uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
-a local cache. You can turn peer-to-peer streaming off in Settings.";
-
 fn settings_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
+    page_title(ui, "Settings", None);
     section(ui, "Peer-to-peer", |_| {});
-    let mut enabled = state.settings.p2p_enabled;
-    if ui
-        .checkbox(&mut enabled, "Show and play torrent streams")
-        .changed()
-    {
-        out.push(Action::SetP2pEnabled(enabled));
+    let enabled = state.settings.p2p_enabled;
+    if toggle_row(ui, enabled, "Show and play torrent streams").clicked() {
+        out.push(Action::SetP2pEnabled(!enabled));
     }
-    ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+    ui.scope(|ui| {
+        ui.set_max_width(ui.available_width().min(720.0));
+        ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+    });
+    ui.add_space(theme::SECTION_GAP);
+    section(ui, "Keyboard", |_| {});
+    egui::Grid::new("shortcuts")
+        .num_columns(2)
+        .spacing(vec2(32.0, 10.0))
+        .show(ui, |ui| {
+            let key = TextFormat::simple(theme::body(), theme::TEXT_BRIGHT);
+            let plain = |text: &str| LayoutJob::single_section(text.to_owned(), key.clone());
+            let mut back = plain("Esc  ·  Alt+");
+            append_icon(&mut back, Icon::ArrowLeft, 15.0, theme::TEXT_BRIGHT);
+            back.append("  ·  mouse back", 0.0, key.clone());
+            let rows = [
+                (plain("Ctrl+F  or  /"), "Search"),
+                (plain("Ctrl+1 … Ctrl+6"), "Switch page"),
+                (back, "Leave a detail page"),
+                (plain("Shift+wheel"), "Scroll a row sideways"),
+            ];
+            for (keys, what) in rows {
+                ui.label(keys);
+                ui.label(dim(what));
+                ui.end_row();
+            }
+        });
+    ui.add_space(theme::SECTION_GAP);
+    section(ui, "About", |_| {});
+    ui.label(dim(&format!(
+        "Cineo {}. Made by people who stay for the credits.",
+        env!("CARGO_PKG_VERSION")
+    )));
 }
 
 fn torrent_status_text(status: &TorrentStatus) -> String {
@@ -591,10 +879,9 @@ fn detail_page(
     let height = if background.is_some() {
         theme::BACKDROP_HEIGHT
     } else {
-        64.0
+        72.0
     };
-    let (backdrop, _) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), height), Sense::hover());
+    let (backdrop, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     if let Some(background) = background {
         paint_cover(
             ui,
@@ -602,55 +889,49 @@ fn detail_page(
             backdrop,
             CornerRadius::ZERO,
             theme::BACKDROP_TINT,
-            0.3,
+            0.25,
         );
-        let fade_start = backdrop.min.y + backdrop.height() * 0.3;
-        fade(
+        let fade_start = backdrop.min.y + backdrop.height() * 0.25;
+        gradient(
             ui,
-            Rect::from_min_max(egui::pos2(backdrop.min.x, fade_start), backdrop.max),
+            Rect::from_min_max(pos2(backdrop.min.x, fade_start), backdrop.max),
+            Color32::TRANSPARENT,
+            theme::BG,
             false,
         );
-        let edge = (backdrop.width() * 0.12).min(160.0);
-        fade(
+        gradient(
             ui,
-            Rect::from_min_size(backdrop.min, Vec2::new(edge, backdrop.height())),
+            Rect::from_min_size(
+                backdrop.min,
+                vec2(backdrop.width() * 0.6, backdrop.height()),
+            ),
+            theme::BG.gamma_multiply(0.85),
+            Color32::TRANSPARENT,
             true,
         );
-        let mut right = Rect::from_min_size(
-            egui::pos2(backdrop.max.x - edge, backdrop.min.y),
-            Vec2::new(edge, backdrop.height()),
-        );
-        // Mirror the left fade: swap the edges so the dark side is outside.
-        std::mem::swap(&mut right.min.x, &mut right.max.x);
-        fade(ui, right, true);
     }
-    let back = Rect::from_min_size(
-        backdrop.min + Vec2::splat(f32::from(theme::PAGE_MARGIN) / 2.0),
-        Vec2::new(90.0, 28.0),
-    );
-    if ui
-        .put(
-            back,
-            Button::new(RichText::new("← Back").color(theme::TEXT_BRIGHT)).fill(theme::SCRIM),
-        )
-        .clicked()
-    {
+    let back = Rect::from_min_size(backdrop.min + Vec2::splat(20.0), vec2(92.0, 32.0));
+    if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
         out.push(Action::CloseDetail);
         view.season = None;
     }
     if background.is_some() {
-        ui.add_space(-theme::BACKDROP_HEIGHT * 0.4);
+        ui.add_space(-theme::BACKDROP_HEIGHT * 0.6);
     }
 
     column(ui, |ui| {
+        let narrow = ui.available_width() < 760.0;
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = 32.0;
-            let poster_size = Vec2::new(
-                theme::DETAIL_POSTER_WIDTH,
-                theme::DETAIL_POSTER_WIDTH / 0.675,
-            );
+            ui.spacing_mut().item_spacing.x = if narrow { 20.0 } else { 40.0 };
+            let poster_width = if narrow {
+                150.0
+            } else {
+                theme::DETAIL_POSTER_WIDTH
+            };
+            let poster_size = vec2(poster_width, poster_width * 1.5);
             let (poster_rect, _) = ui.allocate_exact_size(poster_size, Sense::hover());
             let name = preview.map_or(detail.id.as_str(), |p| p.name.as_str());
+            shadow(ui, poster_rect, 1.0);
             poster(
                 ui,
                 poster_rect,
@@ -658,13 +939,14 @@ fn detail_page(
                 preview.and_then(|p| p.poster.as_ref()),
             );
 
-            let width = ui.available_width();
+            let width = ui.available_width() - ui.spacing().item_spacing.x;
             ui.vertical(|ui| {
                 ui.set_width(width);
+                ui.add_space(if background.is_some() { 24.0 } else { 0.0 });
                 about(ui, name, preview, meta);
                 match &detail.meta {
                     Loadable::Loading => {
-                        ui.spinner();
+                        spinner(ui);
                     }
                     Loadable::Failed(err) => {
                         ui.label(RichText::new(err).color(theme::DANGER));
@@ -677,7 +959,7 @@ fn detail_page(
                 }
                 if detail.selected_video.is_some() {
                     ui.add_space(theme::SECTION_GAP);
-                    section(ui, "Streams", |_| {});
+                    section(ui, "Where to watch", |_| {});
                     if detail.streams.is_empty() {
                         empty(ui, "No installed addon provides streams for this item.");
                     }
@@ -690,56 +972,96 @@ fn detail_page(
     });
 }
 
-/// Title, year, credits, facts and description.
+/// The journal header: title and year, credits, facts, synopsis, genres
+/// and cast.
 fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&Meta>) {
-    ui.horizontal_wrapped(|ui| {
-        ui.label(
-            RichText::new(name)
-                .font(theme::title())
-                .color(theme::TEXT_BRIGHT),
+    let mut job = LayoutJob::default();
+    job.append(
+        name,
+        0.0,
+        TextFormat::simple(theme::title(), theme::TEXT_BRIGHT),
+    );
+    if let Some(year) = preview.and_then(|p| p.release_info.as_deref()) {
+        job.append(
+            year,
+            14.0,
+            TextFormat::simple(theme::title_year(), theme::TEXT_DIM),
         );
-        if let Some(year) = preview.and_then(|p| p.release_info.as_ref()) {
-            ui.label(
-                RichText::new(year)
-                    .font(theme::heading())
-                    .color(theme::TEXT_DIM),
-            );
-        }
-    });
+    }
+    ui.add(Label::new(job).wrap());
     if let Some(m) = meta
         && !m.director.is_empty()
     {
         ui.horizontal_wrapped(|ui| {
-            ui.spacing_mut().item_spacing.x = 4.0;
+            ui.spacing_mut().item_spacing.x = 5.0;
             ui.label(dim("Directed by"));
-            ui.label(RichText::new(m.director.join(", ")).color(theme::TEXT_BRIGHT));
+            ui.label(
+                RichText::new(m.director.join(", "))
+                    .font(theme::strong())
+                    .color(theme::TEXT_BRIGHT),
+            );
         });
     }
-    let mut facts = Vec::new();
-    facts.extend(meta.and_then(|m| m.runtime.clone()));
-    if let Some(rating) = preview.and_then(|p| p.imdb_rating.as_ref()) {
-        facts.push(format!("IMDb {rating}"));
-    }
-    if !facts.is_empty() {
-        ui.label(faint(&facts.join("   ·   ")));
+    if let Some(facts) = facts(preview, meta) {
+        ui.add_space(2.0);
+        ui.label(facts);
     }
     if let Some(description) = preview.and_then(|p| p.description.as_ref()) {
         ui.add_space(theme::GAP);
-        ui.add(Label::new(RichText::new(description).color(theme::TEXT)).wrap());
+        ui.scope(|ui| {
+            ui.set_max_width(ui.available_width().min(720.0));
+            ui.add(
+                Label::new(
+                    RichText::new(description)
+                        .font(theme::reading())
+                        .color(theme::TEXT),
+                )
+                .wrap(),
+            );
+        });
     }
     if let Some(p) = preview
         && !p.genres.is_empty()
     {
-        ui.add_space(theme::GAP);
-        pills(ui, &p.genres);
+        ui.add_space(theme::SECTION_GAP);
+        section(ui, "Genres", |_| {});
+        tags(ui, &p.genres);
     }
     if let Some(m) = meta
         && !m.cast.is_empty()
     {
         ui.add_space(theme::SECTION_GAP);
         section(ui, "Cast", |_| {});
-        pills(ui, &m.cast);
+        tags(ui, &m.cast);
     }
+}
+
+/// Runtime and rating (with a star), from what the addon provided.
+fn facts(preview: Option<&MetaPreview>, meta: Option<&Meta>) -> Option<LayoutJob> {
+    let runtime = meta.and_then(|m| m.runtime.as_deref());
+    let rating = preview.and_then(|p| p.imdb_rating.as_deref());
+    if runtime.is_none() && rating.is_none() {
+        return None;
+    }
+    let mut job = LayoutJob::default();
+    let caps_format = TextFormat {
+        font_id: theme::caption(),
+        color: theme::TEXT_FAINT,
+        extra_letter_spacing: theme::CAPS_SPACING,
+        valign: Align::Center,
+        ..TextFormat::default()
+    };
+    if let Some(runtime) = runtime {
+        job.append(&runtime.to_uppercase(), 0.0, caps_format.clone());
+    }
+    if let Some(rating) = rating {
+        if runtime.is_some() {
+            job.append("  ·  ", 0.0, caps_format.clone());
+        }
+        append_icon(&mut job, Icon::Star, 13.0, theme::ACCENT);
+        job.append(&format!(" {rating} IMDB"), 0.0, caps_format);
+    }
+    Some(job)
 }
 
 fn episodes(
@@ -754,22 +1076,19 @@ fn episodes(
         .season
         .filter(|s| seasons.contains(s))
         .or_else(|| seasons.first().copied());
-    section(ui, "Episodes", |ui| {
-        if !seasons.is_empty() {
-            ComboBox::from_id_salt("season")
-                .selected_text(season_label(season.unwrap_or_default()))
-                .show_ui(ui, |ui| {
-                    for s in &seasons {
-                        if ui
-                            .selectable_label(season == Some(*s), season_label(*s))
-                            .clicked()
-                        {
-                            view.season = Some(*s);
-                        }
-                    }
-                });
-        }
-    });
+    section(ui, "Episodes", |_| {});
+    if seasons.len() > 1 {
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+            for s in &seasons {
+                if chip(ui, &season_label(*s), season == Some(*s)).clicked() {
+                    view.season = Some(*s);
+                }
+            }
+        });
+        ui.add_space(theme::GAP);
+    }
+    ui.spacing_mut().item_spacing.y = 0.0;
     for video in meta
         .videos
         .iter()
@@ -788,47 +1107,53 @@ fn episodes(
 
 /// A full-width clickable row with an optional leading number, separated by
 /// a rule. Accessible as a button labelled with `text`.
-fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> egui::Response {
-    let height = 36.0;
+fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Response {
+    let height = 40.0;
     let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), height), Sense::click());
-    response.widget_info(|| {
-        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), selected, text)
-    });
+        ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click());
+    response
+        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
+        let hover = ui
+            .ctx()
+            .animate_bool_with_time(response.id, response.hovered(), theme::ANIM);
         let painter = ui.painter();
-        if response.hovered() {
-            painter.rect_filled(rect, 0.0, theme::PANEL);
+        if hover > 0.0 {
+            painter.rect_filled(rect, 0.0, theme::PANEL.gamma_multiply(hover));
         }
         if selected {
             painter.rect_filled(
-                Rect::from_min_size(rect.min, Vec2::new(3.0, rect.height())),
+                Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
                 0.0,
                 theme::ACCENT,
             );
         }
-        let color = if selected || response.hovered() {
+        let color = if selected {
             theme::TEXT_BRIGHT
         } else {
-            theme::TEXT
+            lerp_color(theme::TEXT, theme::TEXT_BRIGHT, hover)
         };
         let mut x = rect.min.x + 12.0;
         if let Some(number) = number {
             painter.text(
-                egui::pos2(x, rect.center().y),
-                egui::Align2::LEFT_CENTER,
+                pos2(x, rect.center().y),
+                Align2::LEFT_CENTER,
                 number,
-                theme::nav(),
-                theme::TEXT_FAINT,
+                theme::strong(),
+                if selected {
+                    theme::ACCENT
+                } else {
+                    theme::TEXT_FAINT
+                },
             );
             x += 36.0;
         }
         let mut job = LayoutJob::simple_singleline(text.to_owned(), theme::body(), color);
-        job.wrap.max_width = rect.max.x - x - 8.0;
+        job.wrap.max_width = rect.max.x - x - 12.0;
         job.wrap.max_rows = 1;
         let galley = painter.layout_job(job);
         let y = rect.center().y - galley.size().y / 2.0;
-        painter.galley(egui::pos2(x, y), galley, color);
+        painter.galley(pos2(x, y), galley, color);
         painter.hline(
             rect.x_range(),
             rect.bottom() - 0.5,
@@ -847,10 +1172,14 @@ fn stream_group(
     out: &mut Vec<Action>,
 ) {
     ui.add_space(6.0);
-    ui.label(RichText::new(&group.addon_name).color(theme::TEXT_BRIGHT));
+    ui.label(
+        RichText::new(&group.addon_name)
+            .font(theme::strong())
+            .color(theme::TEXT_DIM),
+    );
     match &group.streams {
         Loadable::Loading => {
-            ui.spinner();
+            spinner(ui);
         }
         Loadable::Failed(err) => {
             ui.label(RichText::new(err).color(theme::DANGER));
@@ -883,11 +1212,11 @@ fn stream_group(
     ui.add_space(theme::GAP);
 }
 
-/// One stream; returns true if Play was clicked.
+/// One stream between rules; returns true if Play was clicked.
 fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
     let mut clicked = false;
     Frame::new()
-        .inner_margin(Margin::symmetric(0, 8))
+        .inner_margin(Margin::symmetric(0, 10))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
@@ -898,23 +1227,32 @@ fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
                     Button::new(RichText::new("Play").color(theme::TEXT_FAINT))
                 };
                 let play = ui
-                    .add_enabled(playable, play.min_size(Vec2::new(64.0, 30.0)))
+                    .add_enabled(playable, play.min_size(vec2(64.0, 30.0)))
                     .on_disabled_hover_text(format!(
                         "{} streams are not supported yet",
                         stream.source.kind_label()
                     ));
+                if playable {
+                    hover_glow(ui, &play);
+                }
                 clicked = play.clicked();
-                ui.add_space(4.0);
+                ui.add_space(6.0);
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 4.0;
                     ui.horizontal(|ui| {
                         if let Some(name) = &stream.name {
-                            ui.label(RichText::new(name).color(theme::TEXT_BRIGHT));
+                            ui.label(addon_text(name, &theme::strong(), theme::TEXT_BRIGHT));
                         }
-                        badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
+                        // Torrent rows carry no kind tag; other kinds do.
+                        if !stream.source.is_p2p() {
+                            badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
+                        }
                     });
                     if let Some(description) = &stream.description {
-                        ui.add(Label::new(dim(description)).wrap());
+                        ui.add(
+                            Label::new(addon_text(description, &theme::body(), theme::TEXT_DIM))
+                                .wrap(),
+                        );
                     }
                 });
             });
@@ -925,16 +1263,25 @@ fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
 
 // --- building blocks ---
 
+/// The side margin of pages: smaller on narrow windows.
+fn page_margin(ui: &Ui) -> f32 {
+    if ui.available_width() < 900.0 {
+        24.0
+    } else {
+        f32::from(theme::PAGE_MARGIN)
+    }
+}
+
 /// Lays `add` out in a centered column at most
 /// [`theme::CONTENT_MAX_WIDTH`] wide, with the page margin on narrow windows.
 fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     let available = ui.available_rect_before_wrap();
-    let margin = f32::from(theme::PAGE_MARGIN);
+    let margin = page_margin(ui);
     let width = (available.width() - 2.0 * margin).clamp(0.0, theme::CONTENT_MAX_WIDTH);
     let left = available.min.x + (available.width() - width) / 2.0;
     let rect = Rect::from_min_max(
-        egui::pos2(left, available.min.y),
-        egui::pos2(left + width, available.max.y),
+        pos2(left, available.min.y),
+        pos2(left + width, available.max.y),
     );
     ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
         ui.set_width(width);
@@ -943,7 +1290,20 @@ fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     .inner
 }
 
-/// A small uppercase heading over a thin rule, with `right` laid out at its
+/// A page's serif heading, with an optional dek under it.
+fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
+    ui.label(
+        RichText::new(text)
+            .font(theme::heading())
+            .color(theme::TEXT_BRIGHT),
+    );
+    if let Some(dek) = dek {
+        ui.label(dim(dek));
+    }
+    ui.add_space(theme::GAP * 1.5);
+}
+
+/// A small-caps section head over a thin rule, with `right` laid out at its
 /// right end.
 fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
@@ -952,11 +1312,11 @@ fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     });
     ui.add_space(-4.0);
     rule(ui);
-    ui.add_space(4.0);
+    ui.add_space(6.0);
 }
 
 fn rule(ui: &mut Ui) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
     ui.painter().hline(
         rect.x_range(),
         rect.center().y,
@@ -964,11 +1324,19 @@ fn rule(ui: &mut Ui) {
     );
 }
 
-fn catalog_row(ui: &mut Ui, salt: (&str, usize), row: &Row, see_all: bool, out: &mut Vec<Action>) {
+/// A catalog row. With `see_all`, its header links to the whole catalog
+/// on the Discover page.
+fn catalog_row(
+    ui: &mut Ui,
+    salt: (&str, usize),
+    row: &Row,
+    see_all: Option<&mut ViewState>,
+    out: &mut Vec<Action>,
+) {
     section(ui, &row.target.title, |ui| {
-        if see_all
+        if let Some(view) = see_all
             && ui
-                .add(Button::new(caps("See all", theme::caption(), theme::TEXT_DIM)).frame(false))
+                .add(Button::new(caps("See all", theme::caption(), theme::ACCENT)).frame(false))
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
                 .clicked()
         {
@@ -976,63 +1344,166 @@ fn catalog_row(ui: &mut Ui, salt: (&str, usize), row: &Row, see_all: bool, out: 
                 addon: row.target.addon.clone(),
                 path: row.target.path.clone(),
             });
+            view.page = Page::Discover;
         }
         ui.label(faint(&row.target.addon_name));
     });
     match &row.items {
         Loadable::Loading => {
-            ui.spinner();
+            skeleton_row(ui);
         }
         Loadable::Failed(err) => {
-            ui.label(RichText::new(err).color(theme::DANGER));
+            ui.horizontal(|ui| {
+                ui.label(faint("This reel jammed:"));
+                ui.label(RichText::new(err).color(theme::DANGER));
+            });
         }
         Loadable::Ready(items) if items.is_empty() => {
-            ui.label(faint("Nothing here"));
+            ui.label(faint("This reel is empty."));
         }
         Loadable::Ready(items) => {
-            ScrollArea::horizontal().id_salt(salt).show(ui, |ui| {
-                poster_row(ui, |ui| {
-                    for item in items {
-                        if preview_card(ui, item).clicked() {
-                            out.push(open_detail(item));
-                        }
+            poster_strip(ui, salt, |ui| {
+                for item in items {
+                    if preview_card(ui, theme::CARD_WIDTH, item).clicked() {
+                        out.push(open_detail(item));
                     }
-                });
+                }
             });
         }
     }
     ui.add_space(theme::SECTION_GAP);
 }
 
-fn poster_row(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = theme::CARD_GAP;
-        add(ui);
-    });
+/// Placeholder posters while a row loads, so the page does not jump.
+fn skeleton_row(ui: &mut Ui) {
+    let size = card_size(theme::CARD_WIDTH, PosterShape::Poster);
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), size.y), Sense::hover());
+    let time = ui.input(|i| i.time);
+    #[expect(clippy::cast_possible_truncation, reason = "a small periodic value")]
+    let pulse = (((time * 2.0).sin() * 0.5 + 0.5) as f32).mul_add(0.5, 0.5);
+    let mut x = rect.min.x;
+    while x + size.x <= rect.max.x {
+        ui.painter().rect_filled(
+            Rect::from_min_size(pos2(x, rect.min.y), size),
+            CornerRadius::same(theme::POSTER_RADIUS),
+            theme::PANEL.gamma_multiply(pulse),
+        );
+        x += size.x + theme::CARD_GAP;
+    }
+    ui.ctx().request_repaint_after(Duration::from_millis(50));
+}
+
+/// A horizontally scrolling row of posters with page arrows that show on
+/// hover. The mouse wheel keeps scrolling the page; Shift+wheel, a
+/// touchpad or the arrows scroll the row.
+fn poster_strip(
+    ui: &mut Ui,
+    salt: impl std::hash::Hash + std::fmt::Debug,
+    add: impl FnOnce(&mut Ui),
+) {
+    let id = ui.make_persistent_id(salt);
+    let pending: Option<f32> = ui.data_mut(|d| d.remove_temp(id));
+    let output = ScrollArea::horizontal()
+        .id_salt(id)
+        .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+        .show(ui, |ui| {
+            if let Some(delta) = pending {
+                ui.scroll_with_delta_animation(vec2(delta, 0.0), ScrollAnimation::duration(0.35));
+            }
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = theme::CARD_GAP;
+                add(ui);
+            });
+        });
+    let inner = output.inner_rect;
+    let max_offset = (output.content_size.x - inner.width()).max(0.0);
+    let offset = output.state.offset.x;
+    let hovered = ui.rect_contains_pointer(inner);
+    let shown = ui
+        .ctx()
+        .animate_bool_with_time(id.with("arrows"), hovered, theme::ANIM);
+    if shown <= 0.0 {
+        return;
+    }
+    let page = inner.width() * 0.85;
+    let y = inner.center().y;
+    if offset > 1.0 && pager(ui, pos2(inner.min.x + 22.0, y), false, shown).clicked() {
+        ui.data_mut(|d| d.insert_temp(id, page));
+    }
+    if offset < max_offset - 1.0 && pager(ui, pos2(inner.max.x - 22.0, y), true, shown).clicked() {
+        ui.data_mut(|d| d.insert_temp(id, -page));
+    }
+}
+
+/// A tall arrow button over a row's edge.
+fn pager(ui: &mut Ui, center: Pos2, right: bool, opacity: f32) -> Response {
+    let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
+    let label = if right { "Scroll right" } else { "Scroll left" };
+    let response = ui.interact(rect, ui.id().with(label), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let fill = if response.hovered() {
+        theme::ACCENT
+    } else {
+        Color32::from_black_alpha(210)
+    };
+    let ink = if response.hovered() {
+        theme::ON_ACCENT
+    } else {
+        theme::TEXT_BRIGHT
+    };
+    let painter = ui.painter();
+    painter.rect_filled(
+        rect,
+        CornerRadius::same(theme::RADIUS),
+        fill.gamma_multiply(opacity),
+    );
+    let icon = if right {
+        Icon::ChevronRight
+    } else {
+        Icon::ChevronLeft
+    };
+    paint_icon(painter, icon, center, 22.0, ink.gamma_multiply(opacity));
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 fn poster_grid(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(theme::CARD_GAP);
+        ui.spacing_mut().item_spacing = vec2(theme::CARD_GAP, theme::CARD_GAP);
         add(ui);
     });
 }
 
-fn preview_card(ui: &mut Ui, item: &MetaPreview) -> egui::Response {
+/// The card width that fills `available` exactly with as many columns as
+/// fit between the theme's min and max card widths.
+fn grid_card_width(available: f32) -> f32 {
+    let gap = theme::CARD_GAP;
+    let columns = ((available + gap) / (theme::GRID_CARD_MIN + gap))
+        .floor()
+        .max(1.0);
+    let width = (available - gap * (columns - 1.0)) / columns;
+    // Rounding down keeps the last column from wrapping.
+    width.min(theme::GRID_CARD_MAX).floor()
+}
+
+fn preview_card(ui: &mut Ui, width: f32, item: &MetaPreview) -> Response {
     card(
         ui,
+        width,
         &item.name,
+        item.release_info.as_deref(),
         item.poster.as_ref(),
         item.poster_shape,
         None,
     )
 }
 
-fn library_card(ui: &mut Ui, item: &LibraryItem, out: &mut Vec<Action>) {
+fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Action>) {
     let progress = (item.time_offset_ms > 0).then(|| item.progress());
     if card(
         ui,
+        width,
         &item.name,
+        None,
         item.poster.as_ref(),
         PosterShape::Poster,
         progress,
@@ -1047,49 +1518,87 @@ fn library_card(ui: &mut Ui, item: &LibraryItem, out: &mut Vec<Action>) {
     }
 }
 
-/// A clickable poster with an optional progress bar. The title shows on
-/// hover. Accessible as a button labelled with the title.
+/// A clickable poster like a printed card, with an optional progress bar.
+/// On hover it gets an amber outline and a band with the title and year.
+/// Accessible as a button labelled with the title.
 fn card(
     ui: &mut Ui,
+    width: f32,
     name: &str,
+    year: Option<&str>,
     poster_url: Option<&Url>,
     shape: PosterShape,
     progress: Option<f32>,
-) -> egui::Response {
-    let size = card_image_size(shape);
+) -> Response {
+    let size = card_size(width, shape);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response
-        .widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), name));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), name));
     if !ui.is_rect_visible(rect) {
         return response;
     }
+    let hover = ui.ctx().animate_bool_with_time(
+        response.id,
+        response.hovered() || response.has_focus(),
+        theme::ANIM,
+    );
     poster(ui, rect, name, poster_url);
     let painter = ui.painter();
     if let Some(progress) = progress {
-        let bar = Rect::from_min_max(egui::pos2(rect.min.x, rect.max.y - 4.0), rect.max);
-        painter.rect_filled(bar, 0.0, theme::SCRIM);
-        let mut done = bar;
-        done.set_width(bar.width() * progress.clamp(0.0, 1.0));
+        let track = Rect::from_min_max(pos2(rect.min.x, rect.max.y - 3.0), rect.max);
+        painter.rect_filled(track, 0.0, theme::SCRIM);
+        let mut done = track;
+        done.set_width(track.width() * progress.clamp(0.0, 1.0));
         painter.rect_filled(done, 0.0, theme::ACCENT);
     }
-    if response.hovered() {
+    if hover > 0.0 && poster_url.is_some() {
+        // Title band over the lower part of the poster.
+        let band = Rect::from_min_max(pos2(rect.min.x, rect.max.y - 72.0), rect.max);
+        gradient(
+            ui,
+            band,
+            Color32::TRANSPARENT,
+            Color32::from_black_alpha(235).gamma_multiply(hover),
+            false,
+        );
+        let text = theme::TEXT_BRIGHT.gamma_multiply(hover);
+        let mut job = LayoutJob::simple(name.to_owned(), theme::strong(), text, width - 14.0);
+        job.wrap.max_rows = 2;
+        if let Some(year) = year {
+            job.append(
+                &format!("  {year}"),
+                0.0,
+                TextFormat::simple(theme::caption(), theme::TEXT_DIM.gamma_multiply(hover)),
+            );
+        }
+        let galley = painter.layout_job(job);
+        let pos = pos2(rect.min.x + 7.0, rect.max.y - 8.0 - galley.size().y);
+        painter.galley(pos, galley, text);
+    }
+    if hover > 0.0 {
         painter.rect_stroke(
             rect,
             CornerRadius::same(theme::POSTER_RADIUS),
-            Stroke::new(3.0, theme::ACCENT),
+            Stroke::new(2.0, theme::ACCENT.gamma_multiply(hover)),
             StrokeKind::Inside,
         );
     }
-    let response = if poster_url.is_some() {
-        response.on_hover_text(name)
-    } else {
-        response
-    };
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// A poster image cropped to `rect`, or the title on a plain card when
-/// there is none, with the faint poster outline.
+/// A soft drop shadow under `rect`, at `strength` (0–1).
+fn shadow(ui: &Ui, rect: Rect, strength: f32) {
+    let shadow = egui::Shadow {
+        offset: [0, 8],
+        blur: 20,
+        spread: 0,
+        color: Color32::from_black_alpha(150).gamma_multiply(strength),
+    };
+    ui.painter()
+        .add(shadow.as_shape(rect, CornerRadius::same(theme::POSTER_RADIUS)));
+}
+
+/// A poster image cropped to `rect`, or the title in serif on a plain card
+/// when there is none, with the printed-card edge.
 fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
     let radius = CornerRadius::same(theme::POSTER_RADIUS);
     let painter = ui.painter();
@@ -1097,49 +1606,64 @@ fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
     if let Some(url) = url {
         paint_cover(ui, url.as_str(), rect, radius, Color32::WHITE, 0.5);
     } else {
-        let mut job = LayoutJob::simple(
-            name.to_owned(),
-            theme::caption(),
-            theme::TEXT_DIM,
-            rect.width() - 16.0,
+        let font = FontId::new(
+            (rect.width() / 7.0).clamp(14.0, 26.0),
+            theme::heading().family,
         );
+        let mut job =
+            LayoutJob::simple(name.to_owned(), font, theme::TEXT_DIM, rect.width() - 20.0);
         job.halign = Align::Center;
         job.wrap.max_rows = 4;
         let galley = painter.layout_job(job);
-        let pos = egui::pos2(rect.center().x, rect.center().y - galley.size().y / 2.0);
+        let pos = pos2(rect.center().x, rect.center().y - galley.size().y / 2.0);
         painter.galley(pos, galley, theme::TEXT_DIM);
     }
     painter.rect_stroke(
         rect,
         radius,
-        Stroke::new(1.0, theme::POSTER_OUTLINE),
+        Stroke::new(1.0, theme::POSTER_EDGE),
         StrokeKind::Inside,
     );
 }
 
+/// Smooth downscaling for posters and backdrops shown smaller than their
+/// source.
+const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
+    mipmap_mode: Some(egui::TextureFilter::Linear),
+    ..egui::TextureOptions::LINEAR
+};
+
 /// Paints the image at `src` filling `rect`, cropping instead of
 /// stretching. `focus_y` (0 = top, 1 = bottom) picks which part of a tall
-/// image stays visible.
+/// image stays visible. It fades in once loaded.
 fn paint_cover(ui: &Ui, src: &str, rect: Rect, radius: CornerRadius, tint: Color32, focus_y: f32) {
     let image = Image::new(src)
         .corner_radius(radius)
-        .tint(tint)
+        .texture_options(IMAGE_FILTER)
         .show_loading_spinner(false);
-    let uv = image
+    let size = image
         .load_for_size(ui.ctx(), rect.size())
         .ok()
-        .and_then(|poll| poll.size())
-        .map_or(
-            Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-            |size| cover_uv(size, rect.size(), focus_y),
-        );
-    image.uv(uv).paint_at(ui, rect);
+        .and_then(|poll| poll.size());
+    let loaded = ui
+        .ctx()
+        .animate_bool_with_time(egui::Id::new(src), size.is_some(), 0.2);
+    if loaded <= 0.0 {
+        return;
+    }
+    let uv = size.map_or(Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), |size| {
+        cover_uv(size, rect.size(), focus_y)
+    });
+    image
+        .uv(uv)
+        .tint(tint.gamma_multiply(loaded))
+        .paint_at(ui, rect);
 }
 
 /// The part of an image of `image` size to show in `target` so it covers
 /// the target without distortion.
 fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
-    let full = Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+    let full = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     if image.x <= 0.0 || image.y <= 0.0 || target.x <= 0.0 || target.y <= 0.0 {
         return full;
     }
@@ -1148,24 +1672,21 @@ fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
     if image_aspect > target_aspect {
         let visible = target_aspect / image_aspect;
         let left = (1.0 - visible) / 2.0;
-        Rect::from_min_max(egui::pos2(left, 0.0), egui::pos2(left + visible, 1.0))
+        Rect::from_min_max(pos2(left, 0.0), pos2(left + visible, 1.0))
     } else {
         let visible = image_aspect / target_aspect;
         let top = (1.0 - visible) * focus_y.clamp(0.0, 1.0);
-        Rect::from_min_max(egui::pos2(0.0, top), egui::pos2(1.0, top + visible))
+        Rect::from_min_max(pos2(0.0, top), pos2(1.0, top + visible))
     }
 }
 
-/// Paints a gradient over `rect` from transparent to the page background:
-/// top to bottom, or (if `horizontal`) right to left, so the min edge is
-/// fully covered. A rect with swapped x edges mirrors a horizontal fade.
-fn fade(ui: &Ui, rect: Rect, horizontal: bool) {
-    let clear = Color32::TRANSPARENT;
-    let solid = theme::BG;
+/// Paints a gradient over `rect` from `from` at its min edge to `to` at its
+/// max edge: left to right if `horizontal`, else top to bottom.
+fn gradient(ui: &Ui, rect: Rect, from: Color32, to: Color32, horizontal: bool) {
     let (tl, tr, br, bl) = if horizontal {
-        (solid, clear, clear, solid)
+        (from, to, to, from)
     } else {
-        (clear, clear, solid, solid)
+        (from, from, to, to)
     };
     let mut mesh = Mesh::default();
     mesh.colored_vertex(rect.left_top(), tl);
@@ -1177,47 +1698,403 @@ fn fade(ui: &Ui, rect: Rect, horizontal: bool) {
     ui.painter().add(mesh);
 }
 
-fn card_image_size(shape: PosterShape) -> Vec2 {
-    let w = theme::CARD_WIDTH;
-    match shape {
-        PosterShape::Poster => Vec2::new(w, w / 0.675),
-        PosterShape::Square => Vec2::new(w, w),
-        PosterShape::Landscape => Vec2::new(w * 1.77, w),
+/// A card's size: `width` wide, in the poster's shape.
+fn card_size(width: f32, shape: PosterShape) -> Vec2 {
+    let height = match shape {
+        PosterShape::Poster => width * 1.5,
+        PosterShape::Square => width,
+        PosterShape::Landscape => width / 1.77,
+    };
+    vec2(width, height)
+}
+
+/// The primary action button: amber with dark text.
+fn primary_button(text: &str) -> Button<'_> {
+    Button::new(
+        RichText::new(text)
+            .font(theme::strong())
+            .color(theme::ON_ACCENT),
+    )
+    .fill(theme::ACCENT)
+}
+
+/// Adds a primary button, brightened on hover.
+fn primary(ui: &mut Ui, enabled: bool, text: &str) -> Response {
+    let response = ui.add_enabled(enabled, primary_button(text));
+    hover_glow(ui, &response);
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Brightens a filled button under the pointer.
+fn hover_glow(ui: &Ui, response: &Response) {
+    if response.hovered() && response.enabled() {
+        ui.painter().rect_filled(
+            response.rect,
+            CornerRadius::same(theme::RADIUS),
+            theme::ACCENT_HOVER.gamma_multiply(0.25),
+        );
     }
 }
 
-/// The primary action button: green with dark text.
-fn primary_button(text: &str) -> Button<'_> {
-    Button::new(RichText::new(text).color(theme::ON_ACCENT)).fill(theme::ACCENT)
+/// A selectable small-caps tab. Accessible as a button labelled `text`.
+fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
+    let ink = if selected {
+        theme::ON_ACCENT
+    } else {
+        theme::TEXT
+    };
+    let galley = ui.painter().layout_job(caps(text, theme::caption(), ink));
+    let size = galley.size() + vec2(22.0, 14.0);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    response
+        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
+    if ui.is_rect_visible(rect) {
+        let fill = if selected {
+            theme::ACCENT
+        } else if response.hovered() {
+            theme::SURFACE_HOVER
+        } else {
+            theme::SURFACE
+        };
+        let painter = ui.painter();
+        painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+        painter.galley(rect.center() - galley.size() / 2.0, galley, ink);
+    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// A settings row: `label` with an on/off switch at its right end.
+/// Accessible as a checkbox labelled `label`.
+fn toggle_row(ui: &mut Ui, on: bool, label: &str) -> Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
+    if ui.is_rect_visible(rect) {
+        let t = ui
+            .ctx()
+            .animate_bool_with_time(response.id, on, theme::ANIM);
+        let painter = ui.painter();
+        painter.text(
+            pos2(rect.min.x, rect.center().y),
+            Align2::LEFT_CENTER,
+            label,
+            theme::strong(),
+            theme::TEXT_BRIGHT,
+        );
+        let track =
+            Rect::from_center_size(pos2(rect.max.x - 22.0, rect.center().y), vec2(40.0, 20.0));
+        painter.rect_filled(
+            track,
+            CornerRadius::same(10),
+            lerp_color(theme::SURFACE_HOVER, theme::ACCENT, t),
+        );
+        let knob_x = egui::lerp(track.min.x + 10.0..=track.max.x - 10.0, t);
+        painter.circle_filled(
+            pos2(knob_x, track.center().y),
+            7.0,
+            lerp_color(theme::TEXT_DIM, theme::ON_ACCENT, t),
+        );
+    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 fn badge(ui: &mut Ui, text: &str, color: Color32) {
     Frame::new()
-        .fill(theme::SURFACE)
+        .stroke(Stroke::new(1.0, theme::RULE))
         .corner_radius(CornerRadius::same(theme::RADIUS))
         .inner_margin(Margin::symmetric(6, 1))
         .show(ui, |ui| {
-            ui.label(RichText::new(text).small().color(color));
+            ui.label(caps(
+                text,
+                FontId::new(10.5, theme::section().family),
+                color,
+            ));
         });
 }
 
-/// Tag-like boxes, as genres and cast are shown.
-fn pills(ui: &mut Ui, items: &[String]) {
+/// Small boxed tags, as genres and cast are shown.
+fn tags(ui: &mut Ui, items: &[String]) {
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        ui.spacing_mut().item_spacing = Vec2::splat(5.0);
         for item in items {
             Frame::new()
                 .fill(theme::SURFACE)
                 .corner_radius(CornerRadius::same(theme::RADIUS))
                 .inner_margin(Margin::symmetric(8, 3))
                 .show(ui, |ui| {
-                    ui.label(RichText::new(item).small().color(theme::TEXT_DIM));
+                    ui.label(RichText::new(item).small().color(theme::TEXT));
                 });
         }
     });
 }
 
-/// Uppercase letter-spaced text.
+/// The icons in use, drawn from the Tabler set (via `iconflow`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Icon {
+    Home,
+    Compass,
+    Search,
+    Library,
+    Addons,
+    Settings,
+    ChevronLeft,
+    ChevronRight,
+    ChevronDown,
+    ArrowLeft,
+    Loader,
+    Star,
+    Alert,
+    /// Any other Tabler icon, by name (the emoji stand-ins).
+    Named(&'static str),
+}
+
+impl Icon {
+    #[cfg(test)]
+    const ALL: [Self; 13] = [
+        Self::Home,
+        Self::Compass,
+        Self::Search,
+        Self::Library,
+        Self::Addons,
+        Self::Settings,
+        Self::ChevronLeft,
+        Self::ChevronRight,
+        Self::ChevronDown,
+        Self::ArrowLeft,
+        Self::Loader,
+        Self::Star,
+        Self::Alert,
+    ];
+
+    /// The Tabler icon name.
+    fn name(self) -> &'static str {
+        match self {
+            Self::Home => "home",
+            Self::Compass => "compass",
+            Self::Search => "search",
+            Self::Library => "books",
+            Self::Addons => "puzzle",
+            Self::Settings => "adjustments-horizontal",
+            Self::ChevronLeft => "chevron-left",
+            Self::ChevronRight => "chevron-right",
+            Self::ChevronDown => "chevron-down",
+            Self::ArrowLeft => "arrow-left",
+            Self::Loader => "loader-2",
+            Self::Star => "star",
+            Self::Alert => "alert-circle",
+            Self::Named(name) => name,
+        }
+    }
+
+    /// The glyph and the font family that draws it.
+    fn glyph(self) -> Option<(char, egui::FontFamily)> {
+        let icon = iconflow::try_icon(
+            iconflow::Pack::Tabler,
+            self.name(),
+            if self == Self::Star {
+                iconflow::Style::Filled
+            } else {
+                iconflow::Style::Regular
+            },
+            iconflow::Size::Regular,
+        )
+        .ok()?;
+        let glyph = char::from_u32(icon.codepoint)?;
+        Some((glyph, egui::FontFamily::Name(icon.family.into())))
+    }
+}
+
+/// Paints `icon` centered at `c`, `size` points tall.
+fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
+    if let Some((glyph, family)) = icon.glyph() {
+        painter.text(
+            c,
+            Align2::CENTER_CENTER,
+            glyph,
+            FontId::new(size, family),
+            color,
+        );
+    }
+}
+
+/// Emoji that addons put in stream and addon text (seeders, size, source,
+/// quality …) and the Tabler icon drawn in their place.
+const EMOJI_ICONS: &[(char, &str)] = &[
+    ('👤', "user"),
+    ('👥', "users"),
+    ('💾', "device-floppy"),
+    ('📦', "package"),
+    ('⚙', "settings"),
+    ('🔗', "link"),
+    ('🌐', "world"),
+    ('🌍', "world"),
+    ('📁', "folder"),
+    ('📂', "folder"),
+    ('📄', "file"),
+    ('🗄', "database"),
+    ('🖥', "server"),
+    ('📺', "device-tv"),
+    ('🎞', "movie"),
+    ('🎬', "movie"),
+    ('🎥', "video"),
+    ('📹', "video"),
+    ('🔊', "volume"),
+    ('🎧', "headphones"),
+    ('🗣', "language"),
+    ('💬', "message"),
+    ('⏱', "clock"),
+    ('🕒', "clock"),
+    ('⌛', "clock"),
+    ('🔥', "flame"),
+    ('⬇', "download"),
+    ('⬆', "upload"),
+    ('🧲', "magnet"),
+    ('💿', "disc"),
+    ('📀', "disc"),
+    ('⚡', "bolt"),
+    ('✅', "check"),
+    ('✔', "check"),
+    ('❌', "x"),
+    ('ℹ', "info-circle"),
+    ('🏷', "tag"),
+    ('🔍', "search"),
+    ('⭐', "star"),
+    ('🌟', "star"),
+    ('★', "star"),
+];
+
+/// The regional-indicator letter (`🇦` … `🇿` → `A` … `Z`), if `c` is one.
+fn regional_letter(c: char) -> Option<char> {
+    let offset = u32::from(c).checked_sub(0x1F1E6)?;
+    (offset < 26).then(|| char::from(b'A' + u8::try_from(offset).unwrap_or(0)))
+}
+
+/// Emoji blocks (misc. technical, symbols, dingbats, pictographs) and
+/// emoji joiners/variation selectors: what only egui's emoji fonts would
+/// draw. Arrows and geometric shapes are left alone; Inter has them.
+fn is_emoji(c: char) -> bool {
+    matches!(
+        u32::from(c),
+        0x200D | 0xFE0E | 0xFE0F | 0x20E3
+            | 0x2300..=0x23FF
+            | 0x2600..=0x27BF
+            | 0x2B00..=0x2BFF
+            | 0x1F000..=0x1FAFF
+            | 0xE0020..=0xE007F
+    )
+}
+
+/// Addon text laid out with its emoji drawn as Tabler icons. Flags become
+/// their two-letter region code; other emoji are left out, so nothing
+/// falls back to egui's emoji fonts. The text is otherwise shown as is.
+fn addon_text(text: &str, font: &FontId, color: Color32) -> LayoutJob {
+    let format = TextFormat {
+        font_id: font.clone(),
+        color,
+        valign: Align::Center,
+        ..TextFormat::default()
+    };
+    let mut job = LayoutJob::default();
+    let mut plain = String::new();
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if let Some(first) = regional_letter(c) {
+            if let Some(second) = chars.peek().copied().and_then(regional_letter) {
+                chars.next();
+                plain.push(first);
+                plain.push(second);
+            }
+            continue;
+        }
+        if let Some(&(_, name)) = EMOJI_ICONS.iter().find(|(emoji, _)| *emoji == c) {
+            job.append(&std::mem::take(&mut plain), 0.0, format.clone());
+            append_icon(&mut job, Icon::Named(name), font.size, color);
+            continue;
+        }
+        if !is_emoji(c) {
+            plain.push(c);
+        }
+    }
+    job.append(&plain, 0.0, format);
+    job
+}
+
+/// Appends `icon` to `job` as a glyph `size` points tall.
+fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Color32) {
+    if let Some((glyph, family)) = icon.glyph() {
+        job.append(
+            &glyph.to_string(),
+            0.0,
+            TextFormat {
+                font_id: FontId::new(size, family),
+                color,
+                valign: Align::Center,
+                ..TextFormat::default()
+            },
+        );
+    }
+}
+
+/// A rotating Tabler loader in its own slot.
+fn spinner(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::hover());
+    paint_spinner(ui, rect.center(), 18.0);
+}
+
+/// Paints a rotating Tabler loader centered at `center`, one turn per
+/// second, and keeps repainting while it is visible.
+fn paint_spinner(ui: &Ui, center: Pos2, size: f32) {
+    if !ui.is_rect_visible(Rect::from_center_size(center, Vec2::splat(size))) {
+        return;
+    }
+    let Some((glyph, family)) = Icon::Loader.glyph() else {
+        return;
+    };
+    let turns = ui.input(|i| i.time).fract();
+    #[expect(clippy::cast_possible_truncation, reason = "an angle in 0..2π")]
+    let angle = (turns * std::f64::consts::TAU) as f32;
+    let galley = ui.painter().layout_no_wrap(
+        glyph.to_string(),
+        FontId::new(size, family),
+        theme::TEXT_DIM,
+    );
+    ui.painter().add(
+        egui::epaint::TextShape::new(center, galley, theme::TEXT_DIM)
+            .with_angle_and_anchor(angle, Align2::CENTER_CENTER),
+    );
+    ui.ctx().request_repaint();
+}
+
+/// A framed button with an icon before its small-caps label. Accessible
+/// as a button labelled `label`.
+fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
+    let response = ui.interact(rect, ui.id().with(label), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let painter = ui.painter();
+    let fill = if response.hovered() {
+        theme::SURFACE_HOVER
+    } else {
+        theme::SCRIM
+    };
+    painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+    let galley = painter.layout_job(caps(label, theme::caption(), theme::TEXT_BRIGHT));
+    let content = 16.0 + 6.0 + galley.size().x;
+    let left = rect.center().x - content / 2.0;
+    paint_icon(
+        painter,
+        icon,
+        pos2(left + 8.0, rect.center().y),
+        16.0,
+        theme::TEXT_BRIGHT,
+    );
+    painter.galley(
+        pos2(left + 22.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        theme::TEXT_BRIGHT,
+    );
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Uppercase, letter-spaced text for section heads, nav and labels.
 fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.append(
@@ -1231,6 +2108,31 @@ fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
         },
     );
     job
+}
+
+/// [`caps`] in the caption size.
+fn caps_text(text: &str, color: Color32) -> LayoutJob {
+    caps(text, theme::caption(), color)
+}
+
+fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        lerp_u8(from.r(), to.r(), t),
+        lerp_u8(from.g(), to.g(), t),
+        lerp_u8(from.b(), to.b(), t),
+        lerp_u8(from.a(), to.a(), t),
+    )
+}
+
+fn lerp_u8(from: u8, to: u8, t: f32) -> u8 {
+    let value = egui::lerp(f32::from(from)..=f32::from(to), t.clamp(0.0, 1.0));
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "clamped to 0–255"
+    )]
+    let value = value.round().clamp(0.0, 255.0) as u8;
+    value
 }
 
 fn empty(ui: &mut Ui, text: &str) {
@@ -1329,5 +2231,67 @@ mod tests {
             uv,
             Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0))
         );
+    }
+
+    #[test]
+    fn every_icon_exists_in_the_tabler_set() {
+        for icon in Icon::ALL {
+            assert!(icon.glyph().is_some(), "{icon:?} ({})", icon.name());
+        }
+    }
+
+    #[test]
+    fn every_emoji_stand_in_exists_in_the_tabler_set() {
+        for (emoji, name) in EMOJI_ICONS {
+            assert!(Icon::Named(name).glyph().is_some(), "{emoji} → {name}");
+        }
+    }
+
+    #[test]
+    fn addon_emoji_become_tabler_icons_flags_and_nothing_else() {
+        let job = addon_text(
+            "👤 12 💾 1.2 GB ⚙️ YTS\nMulti / 🇬🇧 / 🇮🇹 😀✨",
+            &theme::body(),
+            theme::TEXT,
+        );
+        let text = &job.text;
+        assert!(!text.chars().any(is_emoji), "{text:?}");
+        assert!(
+            !text.chars().any(|c| regional_letter(c).is_some()),
+            "{text:?}"
+        );
+        for kept in ["12", "1.2 GB", "YTS", "Multi / GB / IT"] {
+            assert!(text.contains(kept), "{kept} in {text:?}");
+        }
+        let tabler_sections = job
+            .sections
+            .iter()
+            .filter(|s| matches!(&s.format.font_id.family, egui::FontFamily::Name(f) if f.starts_with("Tabler")))
+            .count();
+        assert_eq!(tabler_sections, 3, "user, floppy and gear");
+    }
+
+    #[test]
+    fn plain_addon_text_is_unchanged() {
+        let text = "Example HTTP stream — 1080p → 720p ▲";
+        let job = addon_text(text, &theme::body(), theme::TEXT);
+        assert_eq!(job.text, text);
+    }
+
+    #[test]
+    fn grid_cards_fill_the_width_within_the_size_limits() {
+        for available in [300.0, 777.0, 1000.0, 1440.0] {
+            let width = grid_card_width(available);
+            assert!(
+                width >= theme::GRID_CARD_MIN.min(available),
+                "{available}: {width}"
+            );
+            assert!(width <= theme::GRID_CARD_MAX, "{available}: {width}");
+            let columns = ((available + theme::CARD_GAP) / (width + theme::CARD_GAP)).floor();
+            let used = columns * width + (columns - 1.0) * theme::CARD_GAP;
+            assert!(used <= available, "{available}: {used}");
+        }
+        // A window narrower than one card still gets one column.
+        assert_eq!(grid_card_width(100.0), 100.0);
     }
 }

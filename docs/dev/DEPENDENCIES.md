@@ -23,6 +23,7 @@ Re-check them when adding.
 | `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
 | `egui_extras` (`image` only) | 0.36.2 | Image decoding for egui (desktop) | MIT/Apache |
+| `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Header checks before decoding; shared with `egui_extras` (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, no default features) | 9.0.1 | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
@@ -53,6 +54,14 @@ because it serves one route and needs exact control of range responses;
 `axum` would add routing we do not use. Through `librqbit-core` the tree
 gains `directories` 6.0.0 and with it `option-ext` (MPL-2.0), which has a
 crate-scoped exception in `deny.toml` (LEGAL.md).
+
+UI polish (2026-10-07): not crates, but bundled assets. `cineo-desktop`
+embeds Inter 4.1 (Regular and SemiBold) and DM Serif Display (Regular),
+about 910 KB together, all OFL-1.1 (LEGAL.md *Bundled assets*), with
+`include_bytes!`. Icons come from `iconflow` 2.1.0 (crates.io,
+2026-10-07: MIT, MSRV 1.92, no runtime dependencies) with only the Tabler
+pack enabled, which embeds Tabler's regular and filled icon fonts (about
+1.5 MB). The other 13 packs stay off. egui's `default_fonts` stay enabled as the fallback for symbols and emoji.
 
 ## Planned (researched, not added)
 

@@ -11,6 +11,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{Action, Effect, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
+use eframe::egui::{Key, Modifiers};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -289,4 +290,143 @@ fn settings_switch_p2p_off() {
         .click();
     harness.run();
     assert_eq!(harness.state().2, vec![Action::SetP2pEnabled(false)]);
+}
+
+#[test]
+fn search_runs_once_typing_pauses() {
+    let view = ViewState {
+        page: Page::Search,
+        ..ViewState::default()
+    };
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 900.0])
+        .with_step_dt(0.1)
+        .build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (board_state(), view, Vec::new()),
+        );
+    harness
+        .get_by_role(eframe::egui::accesskit::Role::TextInput)
+        .focus();
+    harness.step();
+    harness
+        .get_by_role(eframe::egui::accesskit::Role::TextInput)
+        .type_text("example");
+    harness.step();
+    assert!(harness.state().2.is_empty(), "no search while typing");
+    for _ in 0..10 {
+        harness.step();
+    }
+    assert_eq!(harness.state().2, vec![Action::Search("example".into())]);
+}
+
+#[test]
+fn ctrl_f_opens_search_from_anywhere() {
+    let mut harness = harness(board_state(), ViewState::default());
+    harness.key_press_modifiers(Modifiers::COMMAND, Key::F);
+    harness.run();
+    assert_eq!(harness.state().1.page, Page::Search);
+    assert!(harness.state().2.is_empty(), "{:?}", harness.state().2);
+}
+
+#[test]
+fn escape_leaves_the_detail_page() {
+    let mut harness = harness(detail_state(), ViewState::default());
+    harness.key_press(Key::Escape);
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::CloseDetail]);
+}
+
+#[test]
+fn sidebar_switches_pages_and_leaves_the_detail_page() {
+    let mut harness = harness(detail_state(), ViewState::default());
+    harness.get_by_label("Library").click();
+    harness.run();
+    assert_eq!(harness.state().1.page, Page::Library);
+    assert_eq!(harness.state().2, vec![Action::CloseDetail]);
+}
+
+#[test]
+fn discover_lists_catalogs_as_choices() {
+    let mut state = board_state();
+    let target = cineo_core::app::board_targets(&state.addons)
+        .into_iter()
+        .next()
+        .unwrap();
+    update(
+        &mut state,
+        Action::OpenDiscover {
+            addon: target.addon,
+            path: target.path,
+        },
+    );
+    let view = ViewState {
+        page: Page::Discover,
+        ..ViewState::default()
+    };
+    let mut harness = harness(state, view);
+    harness.get_by_label("Multi-genre Series").click();
+    // The next page's spinner keeps repainting.
+    harness.run_steps(2);
+    let actions = &harness.state().2;
+    assert!(
+        matches!(actions.as_slice(), [Action::OpenDiscover { path, .. }] if path.id == "multi"),
+        "{actions:?}"
+    );
+}
+
+#[test]
+fn narrow_windows_keep_an_icon_sidebar() {
+    let mut harness = Harness::builder().with_size([820.0, 600.0]).build_ui_state(
+        |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+        (board_state(), ViewState::default(), Vec::new()),
+    );
+    harness.get_by_label("Home");
+    harness.get_by_label("Addons").click();
+    harness.run();
+    assert_eq!(harness.state().1.page, Page::Addons);
+}
+
+#[test]
+fn see_all_opens_the_row_in_discover() {
+    let mut harness = harness(board_state(), ViewState::default());
+    harness.get_all_by_label("SEE ALL").next().unwrap().click();
+    harness.run();
+    assert_eq!(harness.state().1.page, Page::Discover);
+    let actions = &harness.state().2;
+    assert!(
+        matches!(actions.as_slice(), [Action::OpenDiscover { path, .. }] if path.id == "top"),
+        "{actions:?}"
+    );
+}
+
+#[test]
+fn home_has_no_spotlight_banner_even_with_backdrops() {
+    let mut state = board_state();
+    for row in &mut state.board {
+        if let cineo_core::app::Loadable::Ready(items) = &mut row.items {
+            for item in items {
+                item.background = Some("https://img.example/backdrop.jpg".parse().unwrap());
+            }
+        }
+    }
+    let harness = harness(state, ViewState::default());
+    assert!(harness.query_by_label_contains("Spotlight").is_none());
+    assert!(harness.query_by_label("More info").is_none());
+    harness.get_by_label("First Example Film");
+}
+
+#[test]
+fn a_wheel_notch_scrolls_about_as_far_as_in_a_browser() {
+    let harness = harness(State::default(), ViewState::default());
+    let speed = harness.ctx.options(|o| o.input_options.line_scroll_speed);
+    assert!(speed >= 100.0, "{speed} points per wheel notch");
+}
+
+#[test]
+fn torrent_streams_carry_no_kind_tag() {
+    let harness = harness(detail_state(), ViewState::default());
+    assert!(harness.query_by_label("TORRENT").is_none());
+    // Other kinds keep theirs.
+    assert!(harness.query_all_by_label("HTTP").count() > 0);
 }

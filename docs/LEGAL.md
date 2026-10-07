@@ -55,6 +55,18 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   must comply with mpv's license (GPL-2.0+ or LGPL-2.1+ depending on the
   build). This needs a review before the first installer.
 
+## Bundled assets
+Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),
+unmodified and not sold on their own, as the OFL requires. Each license
+text ships next to its files and must accompany binary distributions.
+Added 2026-10-07.
+
+| Font | Files | Source | License |
+|------|-------|--------|---------|
+| Inter 4.1 (The Inter Project Authors) | `Inter-Regular.ttf`, `Inter-SemiBold.ttf` | <https://github.com/rsms/inter/releases/tag/v4.1> | SIL OFL 1.1 (`Inter-OFL.txt`) |
+| Tabler Icons (Paweł Kuna), via the `iconflow` crate | `tabler-regular.ttf`, `tabler-filled.ttf` (inside the crate) | <https://github.com/tabler/tabler-icons> | MIT (notice in iconflow's `THIRD_PARTY_LICENSES_FONTS.md`) |
+| DM Serif Display (Colophon Foundry; Adobe Source heritage) | `DMSerifDisplay-Regular.ttf` | <https://github.com/google/fonts/tree/main/ofl/dmserifdisplay> | SIL OFL 1.1 (`DMSerifDisplay-OFL.txt`) |
+
 ## Trademarks and branding
 - "Stremio" is a name of its respective owner. Cineo is **not affiliated
   with, endorsed by, or sponsored by** Stremio or Smart Code OOD.

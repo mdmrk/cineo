@@ -101,3 +101,25 @@ Format:
   M4's scope.
 - Instead: `State.notice` reports the addon that failed to load.
 - Exit: store the last good manifest and restore from it (v0.x caching).
+
+### Desktop UI: the font licenses are not packaged yet
+- Where: [release.yml](../../.github/workflows/release.yml),
+  [assets/fonts](../../crates/cineo-desktop/assets/fonts)
+- Gap: the OFL-1.1 texts of the bundled fonts must ship with any
+  `cineo-desktop` binary; no release packages the desktop app yet, so
+  nothing copies `Inter-OFL.txt` and `DMSerifDisplay-OFL.txt`, nor the
+  Tabler MIT notice that comes with `iconflow`.
+- Why: releases currently ship only the `cineo` CLI.
+- Instead: the licenses sit next to the font files in the source tree.
+- Exit: when desktop packaging lands (M7), copy both `*-OFL.txt` files
+  into every desktop archive or installer.
+
+### Desktop UI: rows scroll sideways only with Shift, a touchpad or arrows
+- Where: [view.rs](../../crates/cineo-desktop/src/view.rs) (`poster_strip`)
+- Gap: a plain mouse wheel over a poster row scrolls the page, not the row.
+- Why: egui gives the wheel to one scroll area; the page wins so vertical
+  browsing never gets stuck on a row.
+- Instead: arrow buttons appear on hover; Shift+wheel and touchpads scroll
+  rows directly.
+- Exit: none planned; this is the intended behavior unless users ask
+  otherwise.
