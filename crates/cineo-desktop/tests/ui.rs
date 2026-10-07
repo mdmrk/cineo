@@ -11,7 +11,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{Action, Effect, Language, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
-use eframe::egui::{Key, Modifiers};
+use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -72,6 +72,10 @@ fn board_state() -> State {
 }
 
 fn detail_state() -> State {
+    detail_with_streams(&fixture("basic/streams-movie.json"))
+}
+
+fn detail_with_streams(body: &[u8]) -> State {
     let mut state = board_state();
     let effects = update(
         &mut state,
@@ -95,7 +99,7 @@ fn detail_state() -> State {
     );
     for effect in effects {
         if let Effect::FetchStreams { addon, path } = effect {
-            let streams = parse_stream_response(&fixture("basic/streams-movie.json")).unwrap();
+            let streams = parse_stream_response(body).unwrap();
             update(
                 &mut state,
                 Action::StreamsLoaded {
@@ -475,4 +479,29 @@ fn torrent_streams_carry_no_kind_tag() {
     let harness = harness(detail_state(), ViewState::default());
     assert!(harness.query_by_label("TORRENT").is_none());
     assert!(harness.query_all_by_label("HTTP").count() > 0);
+}
+
+#[test]
+fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
+    let streams: Vec<String> = (0..300)
+        .map(|i| {
+            format!(r#"{{"name":"1080p","description":"Release {i}","url":"https://media.example/{i}.mp4"}}"#)
+        })
+        .collect();
+    let body = format!(r#"{{"streams":[{}]}}"#, streams.join(","));
+    let mut harness = harness(detail_with_streams(body.as_bytes()), ViewState::default());
+    harness.run();
+    assert!(harness.query_all_by_label("Play").count() < 50);
+    assert!(harness.query_by_label("Release 299").is_none());
+
+    harness.hover_at(pos2(640.0, 450.0));
+    harness.event(Event::MouseWheel {
+        unit: MouseWheelUnit::Point,
+        delta: vec2(0.0, -1.0e6),
+        phase: TouchPhase::Move,
+        modifiers: Modifiers::NONE,
+    });
+    harness.run_steps(60);
+    harness.run();
+    harness.get_by_label("Release 299");
 }

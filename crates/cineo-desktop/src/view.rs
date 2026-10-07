@@ -1160,7 +1160,18 @@ fn stream_group(
                     hidden += 1;
                     continue;
                 }
-                if stream_card(ui, stream) {
+                let id = ui.id().with(("stream", index, stream_index));
+                let width = ui.available_width();
+                let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
+                if let Some(size) = known
+                    && !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, size))
+                {
+                    ui.allocate_space(size);
+                    continue;
+                }
+                let (clicked, rect) = stream_card(ui, stream);
+                ui.data_mut(|d| d.insert_temp(id, vec2(width, rect.height())));
+                if clicked {
                     out.push(Action::Play {
                         group: index,
                         stream: stream_index,
@@ -1178,7 +1189,7 @@ fn stream_group(
     ui.add_space(theme::GAP);
 }
 
-fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
+fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
     let playable = stream.source.is_playable();
     let mut lines = stream
         .description
@@ -1286,7 +1297,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     } else {
         response
     };
-    play.clicked() || response.clicked()
+    (play.clicked() || response.clicked(), rect)
 }
 
 fn play_button(ui: &mut Ui, playable: bool) -> Response {

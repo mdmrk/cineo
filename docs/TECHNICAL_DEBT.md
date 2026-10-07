@@ -202,3 +202,12 @@ Format:
   session (the RAM copy is dropped after upload).
 - Exit: track the image URIs painted each frame and `forget_image` those
   unused for a while.
+
+### Desktop UI: off-screen stream cards are not in the accessibility tree
+- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`stream_group`)
+- Gap: stream cards outside the scrolled view are skipped, so screen readers
+  see only the cards on screen.
+- Why: laying out every card made each frame of a 300-stream list take
+  3.2 ms instead of 0.15 ms.
+- Instead: scrolling brings the other cards into the tree.
+- Exit: report skipped cards to AccessKit with their remembered rect.
