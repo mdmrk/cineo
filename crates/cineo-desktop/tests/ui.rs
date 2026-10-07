@@ -824,3 +824,18 @@ fn only_the_hovered_row_shows_its_arrows() {
         "{arrows:?}"
     );
 }
+
+#[test]
+fn the_compact_settings_page_keeps_its_right_margin() {
+    let harness = Harness::builder().with_size([900.0, 800.0]).build_ui_state(
+        |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+        (State::default(), settings_page(), Vec::new()),
+    );
+    let left = harness
+        .get_by_role_and_label(Role::Label, "Settings")
+        .rect()
+        .left()
+        - 56.0;
+    let right = 900.0 - harness.get_by_label("Interface size").rect().right();
+    assert!(right >= left, "left {left}, right {right}");
+}

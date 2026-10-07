@@ -90,7 +90,8 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
             .show(ui, |ui| {
                 let (visible_top, visible_height) = (ui.clip_rect().top(), ui.clip_rect().height());
                 ui.add_space(margin);
-                let width = (ui.available_width() - margin).clamp(0.0, theme::CONTENT_MAX_WIDTH);
+                let margins = if show_nav { margin } else { 2.0 * margin };
+                let width = (ui.available_width() - margins).clamp(0.0, theme::CONTENT_MAX_WIDTH);
                 ui.scope_builder(
                     UiBuilder::new().max_rect(Rect::from_min_size(
                         ui.cursor().min + vec2(if show_nav { 0.0 } else { margin }, 0.0),
