@@ -24,7 +24,7 @@ Format:
 ## Entries
 
 ### Embedded player: no hardware-decoding interop display, subtitles under the controls
-- Where: [render.rs](../../crates/cineo-player-mpv/src/embedded/render.rs),
+- Where: [render.rs](../../crates/cineo-player/src/embedded/render.rs),
   [player.rs](../../crates/cineo-desktop/src/player.rs)
 - Gap: the render context gets no `X11_DISPLAY`/`WL_DISPLAY` parameter, so
   mpv may not use zero-copy hardware decoding (VA-API interop). Subtitles
@@ -48,7 +48,6 @@ Format:
   exercised. Windows and macOS have never run embedded playback.
 - Why: no Windows or macOS machine in the loop yet.
 - Instead: on Linux it works; elsewhere behavior is UNKNOWN.
-  `--external-player` is the escape hatch.
 - Exit: run the manual test on Windows and macOS (M7).
 
 ### Streaming engine: UDP trackers and the DHT bypass the address filter

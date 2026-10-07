@@ -23,12 +23,6 @@ struct Cli {
     /// Directory for torrent data (default: the platform cache directory).
     #[arg(long, value_name = "DIR")]
     cache_dir: Option<PathBuf>,
-    /// Path to the mpv executable (default: `mpv` on PATH).
-    #[arg(long, value_name = "PATH")]
-    mpv: Option<PathBuf>,
-    /// Play in a separate mpv window instead of inside Cineo's window.
-    #[arg(long)]
-    external_player: bool,
 }
 
 fn main() -> ExitCode {
@@ -36,7 +30,7 @@ fn main() -> ExitCode {
     let default = match cli.verbose {
         0 => "warn",
         1 => {
-            "cineo_desktop=debug,cineo_core=debug,cineo_net=debug,cineo_player_mpv=debug,cineo_store=debug,cineo_stream=debug,info"
+            "cineo_desktop=debug,cineo_core=debug,cineo_net=debug,cineo_player=debug,cineo_store=debug,cineo_stream=debug,info"
         }
         _ => "trace",
     };
@@ -67,7 +61,5 @@ fn start(cli: Cli) -> anyhow::Result<()> {
         data_dir,
         cache_dir,
         allow_private_network: cli.allow_private_network,
-        mpv: cli.mpv,
-        external_player: cli.external_player,
     })
 }

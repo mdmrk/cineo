@@ -16,12 +16,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
 use cineo_core::app::{Action, Effect, PlayRequest, State, TorrentRequest, update};
 use cineo_net::{AddonClient, NetPolicy};
-use cineo_player_mpv::PlayerEvent;
-use cineo_player_mpv::embedded::{self, Player, ProcAddress, Renderer, Video};
+use cineo_player::PlayerError;
+use cineo_player::PlayerEvent;
+use cineo_player::embedded::{Player, ProcAddress, Renderer, Video};
 use cineo_store::Store;
 use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error};
 
 use crate::images::NetImageLoader;
 use crate::player::{self, Controls};
@@ -38,10 +39,6 @@ pub struct Options {
     /// Allow addons, images and torrent peers on loopback/LAN addresses
     /// (docs/SECURITY.md).
     pub allow_private_network: bool,
-    /// The mpv executable; `None` means `mpv` on `PATH`.
-    pub mpv: Option<PathBuf>,
-    /// Play in an external mpv window even when libmpv is available.
-    pub external_player: bool,
 }
 
 /// Opens the store, restores state and runs the window until it is closed.
@@ -67,8 +64,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     let io = Io {
         runtime: runtime.handle().clone(),
         client: Arc::clone(&client),
-        mpv: options.mpv,
-        external_player: options.external_player,
         gl: None,
         engine: EngineOptions {
             allow_private_network: options.allow_private_network,
@@ -122,8 +117,6 @@ pub(crate) enum Msg {
 pub(crate) struct Io {
     pub(crate) runtime: tokio::runtime::Handle,
     pub(crate) client: Arc<AddonClient>,
-    pub(crate) mpv: Option<PathBuf>,
-    pub(crate) external_player: bool,
     /// Resolves OpenGL functions in the window's context, for the embedded
     /// player (set once the window exists).
     pub(crate) gl: Option<ProcAddress>,
@@ -133,14 +126,7 @@ pub(crate) struct Io {
 /// How often the status of a streaming torrent is reported.
 const TORRENT_STATUS_INTERVAL: Duration = Duration::from_secs(1);
 
-/// The running playback.
-enum Playback {
-    /// mpv in its own window; aborting the task closes it.
-    External(tokio::task::AbortHandle),
-    /// mpv drawing into this window (ADR-0014).
-    Embedded(Box<Embedded>),
-}
-
+/// The running playback: mpv drawing into this window (ADR-0014).
 struct Embedded {
     player: Player,
     /// Shared with the paint callback. Dropped on the UI thread, where the
@@ -165,14 +151,6 @@ impl Drop for Embedded {
     }
 }
 
-impl Drop for Playback {
-    fn drop(&mut self) {
-        if let Self::External(task) = self {
-            task.abort(); // drops the handle, which closes that mpv
-        }
-    }
-}
-
 pub(crate) struct CineoApp {
     state: State,
     view: ViewState,
@@ -182,7 +160,7 @@ pub(crate) struct CineoApp {
     results_rx: Receiver<Msg>,
     /// Taken on exit so the store thread can finish its last writes.
     store_tx: Option<Sender<Effect>>,
-    playback: Option<Playback>,
+    playback: Option<Box<Embedded>>,
     /// The engine, once a torrent has been played.
     engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
     /// Bumped by every start or stop, so stale torrent work gives up.
@@ -302,7 +280,7 @@ impl CineoApp {
                     self.state.notice = Some("Changes can no longer be saved".into());
                 }
             }
-            Effect::Play(request) => self.play(request),
+            Effect::Play(request) => self.play(&request),
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
         }
@@ -394,44 +372,25 @@ impl CineoApp {
         });
     }
 
-    /// Plays `request`, replacing any running playback, and reports its
-    /// progress: inside the window when libmpv and OpenGL are available,
-    /// otherwise in an external mpv.
-    fn play(&mut self, request: PlayRequest) {
+    /// Plays `request` in the window, replacing any running playback, and
+    /// reports its progress.
+    fn play(&mut self, request: &PlayRequest) {
         self.playback = None;
-        if let Some(gl) = self.embedded_gl() {
-            match self.play_embedded(&request, gl) {
-                Ok(embedded) => {
-                    self.playback = Some(Playback::Embedded(Box::new(embedded)));
-                    return;
-                }
-                Err(err) => warn!(%err, "embedded playback failed; using an external mpv"),
+        match self.start_player(request) {
+            Ok(embedded) => self.playback = Some(Box::new(embedded)),
+            Err(err) => {
+                error!(%err, "playback could not start");
+                self.sender()(Action::PlaybackFailed(err.to_string()));
             }
         }
-        self.play_external(request);
     }
 
-    /// The window's OpenGL loader if embedded playback can be used.
-    fn embedded_gl(&self) -> Option<ProcAddress> {
-        if self.io.external_player {
-            return None;
-        }
-        let Some(gl) = self.io.gl.clone() else {
-            info!("no OpenGL context; using an external mpv");
-            return None;
-        };
-        if let Err(reason) = embedded::available() {
-            info!(%reason, "using an external mpv");
-            return None;
-        }
-        Some(gl)
-    }
-
-    fn play_embedded(
-        &self,
-        request: &PlayRequest,
-        gl: ProcAddress,
-    ) -> Result<Embedded, cineo_player_mpv::PlayerError> {
+    fn start_player(&self, request: &PlayRequest) -> Result<Embedded, PlayerError> {
+        let gl = self
+            .io
+            .gl
+            .clone()
+            .ok_or_else(|| PlayerError::Render("the window has no OpenGL context".into()))?;
         let (repaint, on_frame) = (self.ctx.clone(), self.ctx.clone());
         let video = Video {
             get_proc_address: gl,
@@ -454,21 +413,6 @@ impl CineoApp {
         })
     }
 
-    fn play_external(&mut self, request: PlayRequest) {
-        let send = self.sender();
-        let mpv = self.io.mpv.clone();
-        let task = self.io.runtime.spawn(async move {
-            let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
-            match cineo_player_mpv::launch(mpv, request).await {
-                Ok(mut handle) => {
-                    forward_events(&mut handle.events, meta_id, video_id, send).await;
-                }
-                Err(err) => send(Action::PlaybackFailed(err.to_string())),
-            }
-        });
-        self.playback = Some(Playback::External(task.abort_handle()));
-    }
-
     /// Sends an action to the UI thread and wakes it.
     fn sender(&self) -> impl Fn(Action) + Send + Sync + 'static {
         let tx = self.results_tx.clone();
@@ -482,7 +426,7 @@ impl CineoApp {
     /// Draws the embedded player over the whole window. Returns `false`
     /// when there is none (or it just ended).
     fn show_player(&mut self, ui: &mut egui::Ui) -> bool {
-        let Some(Playback::Embedded(embedded)) = &mut self.playback else {
+        let Some(embedded) = &mut self.playback else {
             return false;
         };
         if embedded.player.is_finished() {

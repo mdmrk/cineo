@@ -66,10 +66,10 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 ### Playback failures
 
-- With debug logging (`RUST_LOG=cineo_player_mpv=debug`), every IPC command
-  sent is logged, and so is every `end-file` reason.
-- mpv's own log is not captured yet (mpv runs with `--terminal=no`). To
-  debug mpv itself, reproduce by running `mpv <url>` directly.
+- With debug logging (`RUST_LOG=cineo_player=debug`), every command sent
+  to mpv is logged, and so is which libmpv was loaded.
+- mpv's own warnings and errors are logged under the `libmpv` target. To
+  debug mpv further, reproduce by running `mpv <url>` directly.
 - Common causes: an unsupported codec (check `hwdec` fallback in the mpv log),
   an HTTP 403 (check `proxyHeaders`), an expired stream URL.
 

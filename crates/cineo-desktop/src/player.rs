@@ -4,7 +4,7 @@
 //! performs no IO. Track names come from the media file and are shown as
 //! plain text only.
 
-use cineo_player_mpv::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
     Response, RichText, Sense, Ui, UiBuilder, ViewportCommand, WidgetInfo, WidgetType, pos2, vec2,

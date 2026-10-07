@@ -90,6 +90,13 @@ Option 4.
   external mpv process from ADR-0004, which is kept as is. The reason is
   logged once.
 
+- **Amended 2026-10-07 (owner decision): no fallback.** The external
+  mpv backend (ADR-0004) is removed rather than kept: without libmpv,
+  playback fails with a message naming it. The crate is renamed
+  `cineo-player-mpv` → `cineo-player`, and `--mpv` and
+  `--external-player` are gone. The consequences below that mention two
+  backends describe the original decision.
+
 ## Consequences
 - Video plays inside the Cineo window, under our own controls.
 - `unsafe` code exists for the first time, limited to two modules of one

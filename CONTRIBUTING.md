@@ -27,7 +27,7 @@ that setting.
 | Task | Command |
 |------|---------|
 | Everything CI checks | `scripts/check.sh` (`--quick` skips docs and deny) |
-| Run the desktop app | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`, `--mpv`) |
+| Run the desktop app | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
 | Format | `cargo fmt --all` |
 | Lint | `cargo clippy --workspace --all-targets --locked -- -D warnings` |
 | Test | `cargo nextest run --workspace` or `cargo test --workspace` |

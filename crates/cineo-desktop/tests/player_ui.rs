@@ -1,12 +1,12 @@
 //! The playback screen's controls, rendered headlessly: which commands
 //! clicks and keys produce. Playback itself is tested in
-//! `cineo-player-mpv`.
+//! `cineo-player`.
 
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use cineo_desktop::player::{Controls, show};
-use cineo_player_mpv::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::Key;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;

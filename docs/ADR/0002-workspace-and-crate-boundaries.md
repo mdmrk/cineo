@@ -12,7 +12,7 @@ Micro-crates (`catalog`, `metadata`, `library`, …) add build and navigation ov
 3. Crate per **dependency/IO boundary**: pure core; one crate per IO technology; one per shell.
 
 ## Decision
-Option 3, created lazily: `cineo-core` now (placeholder); `cineo-net`, `cineo-cli` in M1; `cineo-player-mpv` in M3; `cineo-store` in M4; `cineo-desktop` in M5. Dependency direction: shells → IO crates → core. IO crates do not depend on each other. Concepts are modules, not crates. Workspace dependencies and lints are centralized in the root `Cargo.toml`.
+Option 3, created lazily: `cineo-core` now (placeholder); `cineo-net`, `cineo-cli` in M1; `cineo-player-mpv` in M3 (renamed `cineo-player` 2026-10-07, ADR-0014); `cineo-store` in M4; `cineo-desktop` in M5. Dependency direction: shells → IO crates → core. IO crates do not depend on each other. Concepts are modules, not crates. Workspace dependencies and lints are centralized in the root `Cargo.toml`.
 
 ## Consequences
 - The compiler enforces "core has no IO": it simply has no IO dependencies. Adding one to `cineo-core` is an architecture change requiring an ADR.

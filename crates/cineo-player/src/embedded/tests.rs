@@ -147,7 +147,7 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
     (url, rx)
 }
 
-/// Needs libmpv installed. Run with `cargo test -p cineo-player-mpv -- --ignored`.
+/// Needs libmpv installed. Run with `cargo test -p cineo-player -- --ignored`.
 #[test]
 #[ignore = "needs libmpv"]
 fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {

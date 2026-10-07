@@ -21,14 +21,9 @@ use tracing::{debug, error, info, warn};
 pub use render::{OnFrame, ProcAddress, Renderer};
 
 use self::ffi::{Core, Event, Value};
-use crate::ipc::is_header_safe;
+use crate::is_header_safe;
 use crate::tracker::{EndReason, Input, Tracker};
 use crate::{PlayerError, PlayerEvent};
-
-/// Whether libmpv can be loaded; the error is user-facing text.
-pub fn available() -> Result<(), String> {
-    ffi::lib().map(|_| ())
-}
 
 /// The host window's OpenGL access, for drawing the video.
 pub struct Video {

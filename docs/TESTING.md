@@ -18,7 +18,7 @@ first test needs it.
 | Protocol fixtures | `crates/cineo-core/tests/` + `tests/fixtures/addons/` | JSON fixtures | always |
 | Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`, chosen in M1) | always |
 | Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always (M4+) |
-| Player | `crates/cineo-player-mpv/tests/`, `src/embedded/tests.rs` | fake IPC server for unit tests; real mpv and libmpv tests marked `#[ignore]` (`cargo test -p cineo-player-mpv -- --ignored`) | fake: always; real: nightly/manual |
+| Player | `crates/cineo-player/src/` (unit tests) | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
 | E2E | `crates/cineo-cli/tests/` | built binary (`CARGO_BIN_EXE_cineo`) + mock addon | always |
 | Live addons | `scripts/` (manual) | real public addons | never in CI (flaky, external) |
 
@@ -45,7 +45,7 @@ first test needs it.
 
 Added only with a concrete first use: property tests (`proptest`, e.g. URL
 encoding round-trips), fuzzing (`cargo-fuzz`; targets: the manifest, catalog,
-meta and stream parsers and mpv IPC decoding; nightly, not per PR), snapshot
+meta and stream parsers and mpv's track-list JSON; nightly, not per PR), snapshot
 tests (`insta`, only for large structured output), benchmarks (only for a
 measured problem), and a replayed compatibility corpus (v1.0 goal).
 
@@ -60,6 +60,6 @@ Commands are in [CONTRIBUTING.md](../CONTRIBUTING.md#everyday-commands).
 | Filtering/planning | Fixture manifests × request matrix |
 | Network policy | Pure IP/URL classification tables + mock-server tests (blocked loopback, redirects, size, gzip bomb, timeout, no URL leak in errors) |
 | Aggregation (M2) | Reducer tests: effects emitted, partial failure, stale responses dropped |
-| Player (M3) | Fake IPC peer asserting exact JSON sent; event decoding tables; real-mpv smoke `#[ignore]` |
+| Player (M3, ADR-0014) | Commands built from typed values; event mapping tables; real-libmpv playback `#[ignore]`; controls via kittest |
 | Persistence (M4) | Round-trip; migration from each historical schema fixture; corruption handling |
 | GUI (M5) | Core-level tests carry the logic; UI smoke test only |

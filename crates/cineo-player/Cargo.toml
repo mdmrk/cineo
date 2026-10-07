@@ -1,6 +1,6 @@
 [package]
-name = "cineo-player-mpv"
-description = "Cineo player backend: libmpv embedded in the window, or an external mpv process."
+name = "cineo-player"
+description = "Cineo player backend: libmpv, loaded at runtime, drawing into the window."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

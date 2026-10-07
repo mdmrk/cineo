@@ -964,7 +964,7 @@ dependencies = [
  "anyhow",
  "cineo-core",
  "cineo-net",
- "cineo-player-mpv",
+ "cineo-player",
  "cineo-store",
  "cineo-stream",
  "clap",
@@ -992,7 +992,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cineo-player-mpv"
+name = "cineo-player"
 version = "0.0.0"
 dependencies = [
  "cineo-core",
@@ -5222,7 +5222,6 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",

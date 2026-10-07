@@ -12,7 +12,7 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
   validation, request planning, and state reducers. It does no IO, has no
   async and no clock, so it can be tested exhaustively and quickly.
 - **IO crates** perform effects described by the core. These are HTTP, the
-  player process and storage, and each has its own safety policy.
+  the player (libmpv) and storage, and each has its own safety policy.
 - **Shells** wire everything together and present state. The CLI comes first;
   the desktop GUI follows.
 
@@ -24,7 +24,7 @@ flowchart TB
   end
   subgraph IO
     NET[cineo-net<br/>HTTP + net policy]
-    PLAYER[cineo-player-mpv<br/>mpv JSON IPC]
+    PLAYER[cineo-player<br/>libmpv, in-window]
     STORE[cineo-store<br/>SQLite]
     STREAM[cineo-stream<br/>torrents → loopback HTTP]
   end
@@ -38,12 +38,12 @@ flowchart TB
   STORE --> CORE
   STREAM --> CORE
   NET -. HTTPS .-> ADDONS[(Addons)]
-  PLAYER -. IPC socket .-> MPV[[mpv process]]
+  PLAYER -. loaded at runtime .-> MPV[[libmpv]]
   STREAM -. BitTorrent .-> PEERS[(Peers, trackers, DHT)]
   MPV -. loopback HTTP .-> STREAM
 ```
 
-Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player-mpv`,
+Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player`,
 `cineo-store`, `cineo-desktop` and `cineo-stream` exist. The other crates are created by the milestone that
 needs them ([ROADMAP.md](ROADMAP.md)).
 
@@ -65,7 +65,7 @@ needs them ([ROADMAP.md](ROADMAP.md)).
 | `cineo-core` | Protocol model (wire → domain), validation, filtering, URL building, aggregation, library/progress model, reducers | M0 (placeholder) |
 | `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy; later caching | M1 |
 | `cineo-cli` | Headless shell; first end-to-end slice; debugging tool | M1 |
-| `cineo-player-mpv` | Spawn and control mpv over JSON IPC; typed commands and events | M3 |
+| `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events | M3 (embedded since ADR-0014) |
 | `cineo-store` | Persistence (installed addons, library, progress) with migrations | M4 |
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` | M5 |
 | `cineo-stream` | Local streaming engine: torrent/archive/NZB sources → loopback HTTP URL (ADR-0010) | M9 |
@@ -101,21 +101,17 @@ All HTTP goes through `cineo-net`'s `AddonClient`, which enforces `NetPolicy`
 
 ### Player boundary (ADR-0014)
 
-The core's `Effect::Play(PlayRequest)` starts playback. `cineo-player-mpv`
-plays it one of two ways:
+The core's `Effect::Play(PlayRequest)` starts playback. `cineo-player`
+(`embedded::Player`) loads libmpv at runtime, and libmpv draws into the
+desktop window through the OpenGL render API. The desktop shell draws the
+video in an egui paint callback over the whole window and its own controls
+on top (`cineo-desktop/src/player.rs`). The controls send typed
+`PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
+feeds them. Without libmpv, playback fails with a message saying so.
 
-- **Embedded** (`embedded::Player`): libmpv, loaded at runtime, draws into
-  the desktop window through the OpenGL render API. The desktop shell draws
-  the video in an egui paint callback over the whole window and its own
-  controls on top (`cineo-desktop/src/player.rs`). The controls send typed
-  `PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
-  feeds them.
-- **External** (ADR-0004): a separate mpv process over JSON IPC. It is used
-  when libmpv or OpenGL is unavailable, or with `--external-player`.
-
-Both report the same `PlayerEvent`s (`Progress`, `Ended`, `Failed`,
-`Closed`) through one shared state machine (`tracker`), which the shell
-turns into core actions. Shells never send raw mpv commands or options.
+mpv's events become `PlayerEvent`s (`Progress`, `Ended`, `Failed`,
+`Closed`) through a small state machine (`tracker`), which the shell turns
+into core actions. Shells never send raw mpv commands or options.
 Untrusted strings never become mpv options.
 
 ### Persistence boundary
@@ -149,7 +145,7 @@ Implemented in M5 (`cineo-desktop`):
 
 ### Platform abstraction
 
-Platform differences (paths, IPC socket vs named pipe, keyring, URL scheme
+Platform differences (paths, libmpv library names, keyring, URL scheme
 registration) live in IO crates and shells behind small functions or traits.
 They are introduced only when a second platform actually differs.
 
@@ -191,8 +187,8 @@ sequenceDiagram
 - Addon requests for one aggregation run concurrently, each with its own
   timeout. One addon failing or timing out never blocks the others: results
   arrive as partial updates.
-- The player runs as its own process. Its IPC reader is a single task that
-  turns mpv events into `PlayerEvent`s on a channel.
+- The player has one thread blocked in `mpv_wait_event`. It updates the
+  `Status` snapshot and sends `PlayerEvent`s on a channel.
 
 ## Error model
 

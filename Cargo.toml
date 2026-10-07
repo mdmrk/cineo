@@ -16,7 +16,7 @@ publish = false
 # Internal
 cineo-core = { path = "crates/cineo-core" }
 cineo-net = { path = "crates/cineo-net" }
-cineo-player-mpv = { path = "crates/cineo-player-mpv" }
+cineo-player = { path = "crates/cineo-player" }
 cineo-store = { path = "crates/cineo-store" }
 cineo-stream = { path = "crates/cineo-stream" }
 
@@ -41,7 +41,7 @@ rusqlite = { version = "0.40.2", default-features = false, features = ["bundled"
 semver = "1.0.28"
 serde_json = "1.0.151"
 thiserror = "2.0.21"
-tokio = { version = "1.53.2", features = ["macros", "rt-multi-thread", "net", "time", "process", "io-util", "sync"] }
+tokio = { version = "1.53.2", features = ["macros", "rt-multi-thread", "net", "time", "io-util", "sync"] }
 tokio-util = { version = "0.7.19", default-features = false, features = ["io"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }

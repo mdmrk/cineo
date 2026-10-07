@@ -33,8 +33,9 @@ Re-check them when adding.
 | `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
 | `libloading` | 0.8.9 | Loads libmpv at runtime for embedded playback (player, ADR-0014). 0.9.0 exists (as of 2026-10-07); 0.8.9 is already in the tree via glutin, so we avoid a second copy | ISC |
 
-`tokio` features `process`, `io-util` and `sync` were added for the mpv
-player (M3). `serde_json` is also used there for IPC messages.
+`tokio` features `io-util` and `sync` were added for the mpv player (M3);
+`process` was dropped with the external mpv player (2026-10-07). The player
+uses `serde_json` for mpv's track list.
 
 `rusqlite` drops its default features (`cache`, and an FFI backend used only
 on wasm). `bundled` compiles SQLite from source, so no system library is
@@ -87,7 +88,7 @@ pack enabled, which embeds Tabler's regular and filled icon fonts (about
 
 | Crate | Reason |
 |-------|--------|
-| `libmpv2` (LGPL-2.1) | External mpv process instead (ADR-0004) |
+| `libmpv2` (LGPL-2.1) | Would compile LGPL code into the binary and link libmpv at build time; own bindings loaded at runtime instead (ADR-0014) |
 | `slint` | GPL or proprietary licensing |
 | `serde_with` | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit |
 | `chrono` / `jiff` / `time` | Not needed until dates are modelled (M2 `released`). Decide then; `jiff` is the current front-runner |
