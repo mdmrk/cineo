@@ -137,8 +137,8 @@ Implemented in M5 (`cineo-desktop`):
   results and dispatches them. Fetches and playback run on a tokio runtime.
   Store writes go, in order, to one thread, which is joined on exit so the
   last progress write lands. mpv events become `PlaybackProgress` actions.
-- Images: `images::NetImageLoader` (an egui `BytesLoader`) fetches through
-  `cineo-net`; `egui_extras` only decodes.
+- Images: `images::NetImageLoader` (an egui `ImageLoader`) fetches through
+  `cineo-net`, then decodes and downscales on the tokio blocking pool.
 
 ### Platform abstraction
 

@@ -119,8 +119,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 ### Desktop UI (M5, ADR-0011)
 
 - Images are fetched through `cineo-net` with the same network policy and a
-  4 MiB size cap. The `egui_extras` `http`/`file` loaders are not compiled
-  in; only `http(s)` image URIs are loaded.
+  4 MiB size cap. No other image loader (egui's `http` or `file`) is
+  compiled in; only `http(s)` image URIs are loaded.
 - Decoders are limited to jpeg, png and webp. The image header must declare
   at most 4096 pixels per side, checked before decoding
   (`oversized_images_are_rejected_before_decoding`,

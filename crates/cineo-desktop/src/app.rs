@@ -83,10 +83,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         native,
         Box::new(move |cc| {
             theme::apply(&cc.egui_ctx);
-            // Decoders only (`image` feature); bytes come from `NetImageLoader`.
-            egui_extras::install_image_loaders(&cc.egui_ctx);
             cc.egui_ctx
-                .add_bytes_loader(Arc::new(NetImageLoader::new(client, handle)));
+                .add_image_loader(Arc::new(NetImageLoader::new(client, handle)));
             Ok(Box::new(CineoApp::new(
                 cc.egui_ctx.clone(),
                 io,

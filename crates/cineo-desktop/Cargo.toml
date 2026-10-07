@@ -21,7 +21,6 @@ cineo-store.workspace = true
 cineo-stream.workspace = true
 clap.workspace = true
 eframe.workspace = true
-egui_extras.workspace = true
 iconflow.workspace = true
 image.workspace = true
 tokio.workspace = true

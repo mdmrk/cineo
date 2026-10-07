@@ -78,11 +78,12 @@ Format:
 
 ### Desktop: image cache is unbounded for a session
 - Where: [images.rs](../../crates/cineo-desktop/src/images.rs)
-- Gap: fetched image bytes (≤ 4 MiB each) stay in memory until exit.
+- Gap: decoded images (downscaled to about twice their display size) stay
+  in memory until exit.
 - Why: egui decides when to forget images; a size-bounded cache was not
   needed for normal browsing.
 - Instead: memory grows with the number of distinct posters viewed.
-- Exit: an LRU cap on `NetImageLoader` bytes.
+- Exit: an LRU cap on `NetImageLoader` images.
 
 ### Desktop: private networks are a launch flag only
 - Where: [main.rs](../../crates/cineo-desktop/src/main.rs)

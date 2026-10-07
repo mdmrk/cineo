@@ -30,6 +30,12 @@ Research, crates.io 2026-10-06:
   limit. `egui_extras` (`image` feature only) and `image` (jpeg, png and
   webp only) decode the bytes. The `http` and `file` loaders are not
   enabled.
+  - Amended 2026-10-07: `egui_extras` is dropped. Its decoder starts one
+    OS thread per image and keeps every image at full resolution. A custom
+    egui `ImageLoader` now fetches through `cineo-net` and decodes with
+    `image` on the tokio blocking pool. It downscales each image to cover
+    twice the size first requested, never enlarging it. Same limits and
+    formats as before.
 - **Look.** A custom dark theme lives in one `theme` module: palette,
   spacing, rounding, typography scale. Widgets read the theme; they never
   hardcode colors.

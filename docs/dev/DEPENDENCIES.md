@@ -22,9 +22,8 @@ Re-check them when adding.
 | `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
 | `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
-| `egui_extras` (`image` only) | 0.36.2 | Image decoding for egui (desktop) | MIT/Apache |
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
-| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Header checks before decoding; shared with `egui_extras` (desktop) | MIT/Apache |
+| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks, decoding and downscaling (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, no default features) | 9.0.1 | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.11.1 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
