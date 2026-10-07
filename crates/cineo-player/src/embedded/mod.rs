@@ -300,7 +300,9 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],
         PlayerCommand::SetAudio(id) => vec!["set".into(), "aid".into(), track(id)],
         PlayerCommand::SetSubtitle(id) => vec!["set".into(), "sid".into(), track(id)],
-        PlayerCommand::Stop => vec!["stop".into()],
+        // `quit`, not `stop`: before the file loads, mpv's end of a stopped
+        // file looks like leaving its idle state and would be ignored.
+        PlayerCommand::Stop => vec!["quit".into()],
     };
     Some(args)
 }

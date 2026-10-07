@@ -58,7 +58,7 @@ fn commands_are_built_from_typed_values() {
         args(PlayerCommand::SetSubtitle(None)).as_deref(),
         Some("set sid no")
     );
-    assert_eq!(args(PlayerCommand::Stop).as_deref(), Some("stop"));
+    assert_eq!(args(PlayerCommand::Stop).as_deref(), Some("quit"));
     assert_eq!(
         args(PlayerCommand::SeekTo(f64::NAN)),
         None,
@@ -236,4 +236,50 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
         std::thread::sleep(Duration::from_millis(5));
     }
     assert!(player.is_finished(), "mpv shut down after the stop");
+}
+
+/// Accepts connections and reports each request head, but never answers:
+/// a stream that is still connecting (a torrent without peers yet).
+fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/film.wav", listener.local_addr().unwrap());
+    let (tx, rx) = std_mpsc::channel();
+    std::thread::spawn(move || {
+        let mut open = Vec::new();
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { continue };
+            let mut head = Vec::new();
+            let mut byte = [0_u8];
+            while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                head.push(byte[0]);
+            }
+            let _ = tx.send(String::from_utf8_lossy(&head).into_owned());
+            open.push(stream);
+        }
+    });
+    (url, rx)
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_stop_before_the_file_loads_closes_the_player() {
+    let (url, heads) = serve_nothing();
+    let (player, _, mut events) =
+        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+    heads.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert!(!player.status().loaded);
+
+    player.send(PlayerCommand::Stop);
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !player.is_finished() && std::time::Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert!(player.is_finished(), "Back while loading closes the player");
+    assert_eq!(
+        events.try_recv().ok(),
+        Some(PlayerEvent::Closed {
+            time_ms: 0,
+            duration_ms: 0,
+        })
+    );
 }
