@@ -83,6 +83,8 @@ pub struct Stream {
     pub binge_group: Option<String>,
     pub filename: Option<String>,
     pub video_size: Option<u64>,
+    /// OpenSubtitles hash of the file (`behaviorHints.videoHash`).
+    pub video_hash: Option<String>,
     /// Validated `behaviorHints.proxyHeaders.request` entries.
     pub request_headers: Vec<(String, String)>,
 }
@@ -168,6 +170,7 @@ fn parse_stream(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<Stre
         binge_group: json::opt_string(hints_obj, "bingeGroup", &hloc, warnings),
         filename: json::opt_string(hints_obj, "filename", &hloc, warnings),
         video_size: hints_obj.get("videoSize").and_then(Value::as_u64),
+        video_hash: json::opt_string(hints_obj, "videoHash", &hloc, warnings),
         request_headers: parse_request_headers(hints_obj, &hloc, warnings),
     })
 }

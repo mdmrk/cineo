@@ -9,7 +9,7 @@ edition = "2024"
 # Bump together with rust-toolchain.toml (see docs/DEVELOPMENT.md).
 rust-version = "1.99"
 license = "MIT"
-repository = "https://github.com/OWNER/cineo"
+repository = "https://github.com/mdmrk/cineo"
 publish = false
 
 [workspace.dependencies]

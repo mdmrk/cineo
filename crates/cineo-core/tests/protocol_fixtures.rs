@@ -321,6 +321,7 @@ fn stream_sources_are_recognized_in_reference_order() {
     let http = &streams[0];
     assert_eq!(http.binge_group.as_deref(), Some("example-1080p"));
     assert_eq!(http.video_size, Some(1_234_567));
+    assert_eq!(http.video_hash.as_deref(), Some("8e245d9679d31e12"));
     assert_eq!(http.subtitles.len(), 1);
     assert_eq!(http.request_headers.len(), 2);
 

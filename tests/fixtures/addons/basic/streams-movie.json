@@ -9,6 +9,7 @@
         "bingeGroup": "example-1080p",
         "filename": "film.mp4",
         "videoSize": 1234567,
+        "videoHash": "8e245d9679d31e12",
         "notWebReady": true,
         "proxyHeaders": { "request": { "User-Agent": "Cineo-Test", "Referer": "https://media.example/" } }
       }
