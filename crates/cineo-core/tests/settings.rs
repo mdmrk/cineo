@@ -3,13 +3,40 @@
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used)]
 
-use cineo_core::app::{Language, Setting, SettingError, Settings};
+use cineo_core::app::{
+    HideControls, Language, Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep,
+};
 
 #[test]
 fn every_setting_reads_back_what_it_saves() {
+    let por = Language::from_code("por");
     let mut settings = Settings::default();
-    settings.set(Setting::P2pEnabled(false));
-    settings.set(Setting::SubtitleLanguage(Language::from_code("por")));
+    for setting in [
+        Setting::P2pEnabled(false),
+        Setting::P2pAcknowledged(true),
+        Setting::SubtitleLanguage(por),
+        Setting::SecondarySubtitleLanguage(por),
+        Setting::AudioLanguage(por),
+        Setting::SecondaryAudioLanguage(por),
+        Setting::HardwareDecoding(false),
+        Setting::SeekStep(SeekStep::S30),
+        Setting::ShortSeekStep(ShortSeekStep::S1),
+        Setting::EscapeLeavesFullscreen(false),
+        Setting::PauseOnMinimize(true),
+        Setting::HideControls(HideControls::Long),
+        Setting::RememberVolume(false),
+        Setting::Volume(Percent::new(35)),
+    ] {
+        settings.set(setting);
+    }
+    assert!(
+        settings
+            .all()
+            .iter()
+            .zip(Settings::default().all())
+            .all(|(changed, default)| *changed != default),
+        "every setting differs from its default"
+    );
     for setting in Settings::default().all().into_iter().chain(settings.all()) {
         assert_eq!(
             Setting::parse(setting.key(), &setting.value()),
@@ -29,7 +56,22 @@ fn saved_keys_never_change() {
         .collect();
     assert_eq!(
         keys,
-        ["p2p_enabled", "p2p_acknowledged", "subtitle_language"]
+        [
+            "p2p_enabled",
+            "p2p_acknowledged",
+            "subtitle_language",
+            "secondary_subtitle_language",
+            "audio_language",
+            "secondary_audio_language",
+            "hardware_decoding",
+            "seek_step",
+            "short_seek_step",
+            "escape_leaves_fullscreen",
+            "pause_on_minimize",
+            "hide_controls",
+            "remember_volume",
+            "volume",
+        ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");
 }
@@ -48,4 +90,36 @@ fn unknown_keys_and_unreadable_values_are_told_apart() {
         Setting::parse("subtitle_language", "klingon"),
         Err(SettingError::Unreadable)
     );
+}
+
+#[test]
+fn numbers_are_kept_in_range() {
+    assert_eq!(Percent::new(250).get(), 100);
+    assert_eq!(
+        Setting::parse("volume", "250"),
+        Ok(Setting::Volume(Percent::new(100)))
+    );
+    assert_eq!(
+        Setting::parse("volume", "-3"),
+        Err(SettingError::Unreadable)
+    );
+    assert_eq!(
+        Setting::parse("seek_step", "7"),
+        Err(SettingError::Unreadable)
+    );
+}
+
+#[test]
+fn preferred_languages_come_first_choice_first() {
+    let (spa, eng) = (Language::from_code("spa"), Language::from_code("eng"));
+    let settings = Settings {
+        subtitle_language: None,
+        secondary_subtitle_language: eng,
+        audio_language: spa,
+        secondary_audio_language: eng,
+        ..Settings::default()
+    };
+    let codes = |l: Vec<Language>| l.iter().map(|l| l.code()).collect::<Vec<_>>();
+    assert_eq!(codes(settings.subtitle_languages().collect()), ["eng"]);
+    assert_eq!(codes(settings.audio_languages().collect()), ["spa", "eng"]);
 }

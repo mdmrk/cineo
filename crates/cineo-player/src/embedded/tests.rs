@@ -20,7 +20,7 @@ fn request(url: &str) -> PlayRequest {
             ("Bad Name".into(), "x".into()),
             ("X-Inject".into(), "a\r\nHost: evil".into()),
         ],
-        subtitle_language: None,
+        settings: Settings::default(),
         start_ms: 0,
         meta_id: "tt1".into(),
         video_id: "tt1".into(),
@@ -363,8 +363,29 @@ fn real_libmpv_loads_a_subtitle_file_without_an_extension() {
 
 #[test]
 fn preferred_subtitle_language_covers_every_tag() {
-    let french = Language::from_code("fre").unwrap();
-    assert_eq!(slang(french), "fre,fra,fr");
+    let settings = Settings {
+        subtitle_language: Language::from_code("fre"),
+        secondary_subtitle_language: Language::from_code("eng"),
+        ..Settings::default()
+    };
+    let options = settings_options(&settings);
+    assert!(options.contains(&("slang", "fre,fra,fr,eng,en".to_owned())));
+}
+
+#[test]
+fn settings_become_mpv_options() {
+    let defaults = settings_options(&Settings::default());
+    assert_eq!(defaults, [("volume", "100".to_owned())]);
+    let settings = Settings {
+        audio_language: Language::from_code("spa"),
+        hardware_decoding: false,
+        remember_volume: false,
+        ..Settings::default()
+    };
+    assert_eq!(
+        settings_options(&settings),
+        [("hwdec", "no".to_owned()), ("alang", "spa,es".to_owned())]
+    );
 }
 
 #[test]
@@ -372,9 +393,14 @@ fn preferred_subtitle_language_covers_every_tag() {
 fn real_libmpv_accepts_the_subtitle_language() {
     let (url, _heads) = serve(wav(1));
     let request = PlayRequest {
-        subtitle_language: Language::from_code("fre"),
+        settings: Settings {
+            subtitle_language: Language::from_code("fre"),
+            audio_language: Language::from_code("spa"),
+            hardware_decoding: false,
+            ..Settings::default()
+        },
         ..request(&url)
     };
     let started = Player::start_with(&request, Arc::new(|| {}), None, AUDIO_ONLY);
-    assert!(started.is_ok(), "mpv rejects a bad slang value at start");
+    assert!(started.is_ok(), "mpv accepts the options from settings");
 }

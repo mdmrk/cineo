@@ -4,6 +4,7 @@
 //! performs no IO. Track names come from the media file and are shown as
 //! plain text only.
 
+use cineo_core::app::{SeekStep, Settings};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
@@ -15,8 +16,6 @@ use url::Url;
 use crate::theme;
 use crate::view::{IMAGE_FILTER, Icon, gradient, paint_icon, paint_spinner};
 
-const HIDE_AFTER: f64 = 2.5;
-const SEEK_STEP: f64 = 10.0;
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
@@ -60,17 +59,31 @@ enum Entry {
     Empty,
 }
 
+/// What the playback screen shows.
+#[derive(Debug, Clone, Copy)]
+pub struct Playback<'a> {
+    pub status: &'a Status,
+    pub title: &'a str,
+    pub logo: Option<&'a str>,
+    pub addon_subtitles: &'a [AddonSubtitle],
+    pub settings: &'a Settings,
+}
+
 /// Draws the controls over `rect` (the video) and returns the commands to
 /// send to the player.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
-    status: &Status,
-    title: &str,
-    logo: Option<&str>,
-    addon_subtitles: &[AddonSubtitle],
+    playback: &Playback<'_>,
     controls: &mut Controls,
 ) -> Vec<PlayerCommand> {
+    let &Playback {
+        status,
+        title,
+        logo,
+        settings,
+        ..
+    } = playback;
     let mut out = Vec::new();
     if theme::ensure(ui.ctx()) {
         ui.ctx().request_discard("theme applied");
@@ -78,7 +91,7 @@ pub fn show(
     }
     let now = ui.input(|i| i.time);
     track_activity(ui, controls, now);
-    shortcuts(ui, status, &mut out);
+    shortcuts(ui, status, settings, &mut out);
 
     let video = ui.interact(rect, ui.id().with("video"), Sense::click());
     if video.double_clicked() {
@@ -99,7 +112,7 @@ pub fn show(
         || controls.menu.is_some()
         || controls.seek_drag.is_some()
         || controls.volume_drag.is_some()
-        || idle < HIDE_AFTER;
+        || idle < settings.hide_controls.seconds();
     if !visible {
         ui.ctx().set_cursor_icon(CursorIcon::None);
         return out;
@@ -107,13 +120,13 @@ pub fn show(
     if !status.paused {
         ui.ctx()
             .request_repaint_after(std::time::Duration::from_secs_f64(
-                (HIDE_AFTER - idle).max(0.05),
+                (settings.hide_controls.seconds() - idle).max(0.05),
             ));
     }
 
     top_bar(ui, rect, title, &mut out);
     if status.loaded {
-        bottom_bar(ui, rect, status, addon_subtitles, controls, &mut out);
+        bottom_bar(ui, rect, playback, controls, &mut out);
     }
     out
 }
@@ -136,19 +149,30 @@ fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
     }
 }
 
-fn shortcuts(ui: &Ui, status: &Status, out: &mut Vec<PlayerCommand>) {
+fn shortcuts(ui: &Ui, status: &Status, settings: &Settings, out: &mut Vec<PlayerCommand>) {
     let fullscreen = is_fullscreen(ui);
     let mut toggle_full = false;
+    let (step, short) = (
+        settings.seek_step.seconds(),
+        settings.short_seek_step.seconds(),
+    );
     ui.input_mut(|i| {
+        // Shift first: a plain-key match also accepts Shift.
+        if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowLeft) {
+            out.push(PlayerCommand::SeekBy(-short));
+        }
+        if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowRight) {
+            out.push(PlayerCommand::SeekBy(short));
+        }
         let mut key = |k| i.consume_key(egui::Modifiers::NONE, k);
         if key(Key::Space) || key(Key::K) {
             out.push(PlayerCommand::TogglePause);
         }
         if key(Key::ArrowLeft) || key(Key::J) {
-            out.push(PlayerCommand::SeekBy(-SEEK_STEP));
+            out.push(PlayerCommand::SeekBy(-step));
         }
         if key(Key::ArrowRight) || key(Key::L) {
-            out.push(PlayerCommand::SeekBy(SEEK_STEP));
+            out.push(PlayerCommand::SeekBy(step));
         }
         if key(Key::ArrowUp) {
             out.push(PlayerCommand::SetVolume(status.volume + VOLUME_STEP));
@@ -163,7 +187,7 @@ fn shortcuts(ui: &Ui, status: &Status, out: &mut Vec<PlayerCommand>) {
             toggle_full = true;
         }
         if key(Key::Escape) {
-            if fullscreen {
+            if fullscreen && settings.escape_leaves_fullscreen {
                 toggle_full = true;
             } else {
                 out.push(PlayerCommand::Stop);
@@ -188,6 +212,15 @@ fn toggle_fullscreen(ui: &Ui) {
 pub fn leave_fullscreen(ctx: &egui::Context) {
     if ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
+    }
+}
+
+fn seek_icons(step: SeekStep) -> (&'static str, &'static str) {
+    match step {
+        SeekStep::S5 => ("rewind-backward-5", "rewind-forward-5"),
+        SeekStep::S10 => ("rewind-backward-10", "rewind-forward-10"),
+        SeekStep::S15 => ("rewind-backward-15", "rewind-forward-15"),
+        SeekStep::S30 => ("rewind-backward-30", "rewind-forward-30"),
     }
 }
 
@@ -269,11 +302,14 @@ fn top_bar(ui: &mut Ui, rect: Rect, title: &str, out: &mut Vec<PlayerCommand>) {
 fn bottom_bar(
     ui: &mut Ui,
     rect: Rect,
-    status: &Status,
-    addon_subtitles: &[AddonSubtitle],
+    playback: &Playback<'_>,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
+    let (status, addon_subtitles) = (playback.status, playback.addon_subtitles);
+    let step = playback.settings.seek_step;
+    let (back_icon, forward_icon) = seek_icons(step);
+    let seconds = step.seconds();
     let bar = Rect::from_min_max(pos2(rect.left(), rect.bottom() - BAR_HEIGHT), rect.max);
     gradient(
         ui,
@@ -309,22 +345,22 @@ fn bottom_bar(
     if icon_button(
         ui,
         slot(BUTTON + 4.0),
-        Icon::Named("rewind-backward-10"),
-        "Seek back 10 seconds",
+        Icon::Named(back_icon),
+        &format!("Seek back {seconds} seconds"),
     )
     .clicked()
     {
-        out.push(PlayerCommand::SeekBy(-SEEK_STEP));
+        out.push(PlayerCommand::SeekBy(-seconds));
     }
     if icon_button(
         ui,
         slot(BUTTON + 12.0),
-        Icon::Named("rewind-forward-10"),
-        "Seek forward 10 seconds",
+        Icon::Named(forward_icon),
+        &format!("Seek forward {seconds} seconds"),
     )
     .clicked()
     {
-        out.push(PlayerCommand::SeekBy(SEEK_STEP));
+        out.push(PlayerCommand::SeekBy(seconds));
     }
     let shown = controls
         .seek_drag

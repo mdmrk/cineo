@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
-use cineo_core::app::{Language, PlayRequest};
+use cineo_core::app::{Language, PlayRequest, Settings};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -180,13 +180,18 @@ impl Player {
         let lib = ffi::lib().map_err(PlayerError::LibmpvUnavailable)?;
         let fail = |err: ffi::MpvError| PlayerError::Libmpv(err.0);
         let core = Arc::new(Core::create(lib).map_err(fail)?);
-        for (name, value) in OPTIONS.iter().chain(extra_options) {
+        let preferences = settings_options(&request.settings);
+        let preferences = preferences
+            .iter()
+            .map(|(name, value)| (*name, value.as_str()));
+        for (name, value) in OPTIONS
+            .iter()
+            .copied()
+            .chain(preferences)
+            .chain(extra_options.iter().copied())
+        {
             core.set_option(name, value)
                 .map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
-        }
-        if let Some(language) = request.subtitle_language {
-            core.set_option("slang", &slang(language))
-                .map_err(|err| PlayerError::Libmpv(format!("option slang: {err}")))?;
         }
         core.initialize().map_err(fail)?;
         core.request_log_messages("warn").map_err(fail)?;
@@ -281,8 +286,32 @@ impl Player {
 }
 
 /// mpv's preferred subtitle languages: every tag the language goes by.
-fn slang(language: Language) -> String {
-    language.codes().collect::<Vec<_>>().join(",")
+/// mpv options from the user's settings; they come after [`OPTIONS`].
+fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
+    let mut options = Vec::new();
+    if !settings.hardware_decoding {
+        options.push(("hwdec", "no".to_owned()));
+    }
+    let alang = language_list(settings.audio_languages());
+    if !alang.is_empty() {
+        options.push(("alang", alang));
+    }
+    let slang = language_list(settings.subtitle_languages());
+    if !slang.is_empty() {
+        options.push(("slang", slang));
+    }
+    if settings.remember_volume {
+        options.push(("volume", settings.volume.get().to_string()));
+    }
+    options
+}
+
+/// Every tag of every language, in order of preference.
+fn language_list(languages: impl Iterator<Item = Language>) -> String {
+    languages
+        .flat_map(|l| l.codes())
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 /// `sub-add` with `cached`: adding the same file again selects the loaded

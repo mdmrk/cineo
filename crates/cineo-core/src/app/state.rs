@@ -2,7 +2,6 @@
 
 use url::Url;
 
-use super::language::Language;
 use super::library::LibraryItem;
 use super::plan::{self, CatalogTarget};
 use super::settings::{Setting, Settings};
@@ -95,8 +94,8 @@ pub struct PlayRequest {
     /// The item's logo art (meta `logo`), shown while the file loads.
     pub logo: Option<Url>,
     pub headers: Vec<(String, String)>,
-    /// The preferred subtitle language from Settings.
-    pub subtitle_language: Option<Language>,
+    /// The settings when playback was asked for.
+    pub settings: Settings,
     pub start_ms: u64,
     pub meta_id: String,
     pub video_id: String,
@@ -929,7 +928,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         title,
         logo: preview.as_ref().and_then(|p| p.logo.clone()),
         headers,
-        subtitle_language: state.settings.subtitle_language,
+        settings: state.settings,
         start_ms: 0,
         meta_id: detail.id.clone(),
         video_id: video_id.clone(),

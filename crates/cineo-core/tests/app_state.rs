@@ -932,7 +932,7 @@ fn the_subtitle_language_is_saved_and_sent_with_the_play_request() {
         Effect::Play(play) => Some(play),
         _ => None,
     });
-    assert_eq!(play.and_then(|p| p.subtitle_language), spanish);
+    assert_eq!(play.and_then(|p| p.settings.subtitle_language), spanish);
 }
 
 #[test]

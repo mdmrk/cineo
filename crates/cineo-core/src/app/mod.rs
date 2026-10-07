@@ -8,12 +8,14 @@ mod settings;
 mod state;
 mod torrent;
 
-pub use language::{LANGUAGES, Language};
+pub use language::Language;
 pub use library::{LibraryItem, continue_watching};
 pub use plan::{
     CatalogTarget, board_targets, meta_candidates, search_targets, stream_targets, subtitle_targets,
 };
-pub use settings::{Setting, SettingError, Settings};
+pub use settings::{
+    HideControls, Percent, Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep,
+};
 pub use state::{
     Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Row, State,
     StreamGroup, SubtitleGroup, update,

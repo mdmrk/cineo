@@ -211,3 +211,14 @@ Format:
   3.2 ms instead of 0.15 ms.
 - Instead: scrolling brings the other cards into the tree.
 - Exit: report skipped cards to AccessKit with their remembered rect.
+
+### Player settings: pause on minimize depends on frames while minimized
+- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`pause_on_minimize`)
+- Gap: the check runs in eframe's `logic`, once per frame. Whether frames
+  still run while the window is minimized is UNKNOWN on each platform
+  (Wayland compositors may stop them).
+- Why: eframe reports `minimized` through viewport info only.
+- Instead: if no frame runs after minimizing, the video keeps playing until
+  the window is shown again, and then it pauses.
+- Exit: verify per platform; otherwise react to the window event directly.
+

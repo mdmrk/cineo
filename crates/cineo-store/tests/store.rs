@@ -9,7 +9,8 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_manifest, parse_meta_response, parse_stream_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Settings, State, continue_watching, update,
+    Action, Effect, Language, LibraryItem, Percent, SeekStep, Settings, State, continue_watching,
+    update,
 };
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
@@ -177,6 +178,9 @@ fn settings_default_until_saved_and_survive_a_reopen() {
         p2p_enabled: false,
         p2p_acknowledged: true,
         subtitle_language: Language::from_code("spa"),
+        seek_step: SeekStep::S30,
+        volume: Percent::new(40),
+        ..Settings::default()
     };
     assert!(store.apply(&Effect::SaveSettings(changed)).unwrap());
     drop(store);
@@ -201,9 +205,8 @@ fn unknown_or_unreadable_settings_are_ignored() {
     assert_eq!(
         settings,
         Settings {
-            p2p_enabled: true,
             p2p_acknowledged: true,
-            subtitle_language: None,
+            ..Settings::default()
         }
     );
 }

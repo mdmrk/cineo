@@ -8,7 +8,10 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
-use cineo_core::app::{Action, Effect, Language, PlayRequest, State, TorrentRequest, update};
+use cineo_core::app::{
+    Action, Effect, Language, Percent, PlayRequest, Setting, Settings, State, TorrentRequest,
+    update,
+};
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
@@ -19,7 +22,7 @@ use eframe::egui;
 use tracing::{debug, error, warn};
 
 use crate::images::{self, NetImageLoader};
-use crate::player::{self, Controls};
+use crate::player::{self, Controls, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
 use crate::view::{self, ViewState};
@@ -126,9 +129,12 @@ struct Embedded {
     controls: Controls,
     forward: Option<tokio::task::AbortHandle>,
     subtitle_files: SubtitleFiles,
-    /// The preferred language, until a subtitle in it is on or the user
+    /// The preferred languages, until a subtitle in one is on or the user
     /// picks one.
-    auto_subtitle: Option<Language>,
+    auto_subtitle: Vec<Language>,
+    /// The volume the playback is at, once loaded.
+    volume: Option<f64>,
+    minimized: bool,
 }
 
 impl Drop for Embedded {
@@ -368,7 +374,7 @@ impl CineoApp {
     }
 
     fn play(&mut self, request: &PlayRequest) {
-        self.playback = None;
+        self.end_playback();
         match self.start_player(request) {
             Ok(embedded) => self.playback = Some(Box::new(embedded)),
             Err(err) => {
@@ -405,7 +411,9 @@ impl CineoApp {
             controls: Controls::default(),
             forward: Some(forward.abort_handle()),
             subtitle_files: SubtitleFiles::new(self.subtitle_dir()),
-            auto_subtitle: request.subtitle_language,
+            auto_subtitle: request.settings.subtitle_languages().collect(),
+            volume: None,
+            minimized: false,
         })
     }
 
@@ -482,6 +490,29 @@ impl CineoApp {
         }
     }
 
+    /// Drops the playback, keeping its volume for the next one.
+    fn end_playback(&mut self) {
+        let volume = self.playback.take().and_then(|p| p.volume);
+        if let Some(volume) = volume_to_save(&self.state.settings, volume) {
+            self.dispatch(Action::ChangeSetting(Setting::Volume(volume)));
+        }
+    }
+
+    /// Pauses when the window is minimized, if the user asked for it.
+    fn pause_on_minimize(&mut self, ctx: &egui::Context) {
+        let Some(embedded) = &mut self.playback else {
+            return;
+        };
+        let minimized = ctx.input(|i| i.viewport().minimized.unwrap_or(false));
+        if minimized
+            && !embedded.minimized
+            && should_pause_on_minimize(&self.state.settings, &embedded.player.status())
+        {
+            embedded.player.send(PlayerCommand::TogglePause);
+        }
+        embedded.minimized = minimized;
+    }
+
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
         let Some((title, logo)) = self
             .state
@@ -497,15 +528,14 @@ impl CineoApp {
             .frame(egui::Frame::new().fill(egui::Color32::BLACK))
             .show(ui, |ui| {
                 let rect = ui.max_rect();
-                commands = player::show(
-                    ui,
-                    rect,
-                    &Status::default(),
-                    &title,
-                    logo.as_ref().map(url::Url::as_str),
-                    &[],
-                    &mut self.connecting_controls,
-                );
+                let playback = Playback {
+                    status: &Status::default(),
+                    title: &title,
+                    logo: logo.as_ref().map(url::Url::as_str),
+                    addon_subtitles: &[],
+                    settings: &self.state.settings,
+                };
+                commands = player::show(ui, rect, &playback, &mut self.connecting_controls);
             });
         if commands.contains(&PlayerCommand::Stop) {
             self.connecting_controls = Controls::default();
@@ -521,11 +551,14 @@ impl CineoApp {
         };
         if embedded.player.is_finished() {
             embedded.forward = None;
-            self.playback = None;
+            self.end_playback();
             player::leave_fullscreen(&self.ctx);
             return false;
         }
         let status = embedded.player.status();
+        if status.loaded {
+            embedded.volume = Some(status.volume);
+        }
         let addon_subtitles = embedded
             .subtitle_files
             .entries(&self.state.subtitles, &status.tracks);
@@ -548,15 +581,14 @@ impl CineoApp {
                         }
                     })),
                 });
-                commands = player::show(
-                    ui,
-                    rect,
-                    &status,
-                    &embedded.title,
-                    embedded.logo.as_deref(),
-                    &addon_subtitles,
-                    &mut embedded.controls,
-                );
+                let playback = Playback {
+                    status: &status,
+                    title: &embedded.title,
+                    logo: embedded.logo.as_deref(),
+                    addon_subtitles: &addon_subtitles,
+                    settings: &self.state.settings,
+                };
+                commands = player::show(ui, rect, &playback, &mut embedded.controls);
             });
         let mut picked = embedded.controls.take_addon_subtitle();
         if picked.is_some()
@@ -564,19 +596,16 @@ impl CineoApp {
                 .iter()
                 .any(|c| matches!(c, PlayerCommand::SetSubtitle(_)))
         {
-            embedded.auto_subtitle = None;
+            embedded.auto_subtitle.clear();
         }
         for command in commands {
             embedded.player.send(command);
         }
-        if let Some(language) = embedded.auto_subtitle
-            && status.loaded
-            && !status.tracks.is_empty()
-        {
-            match subtitles::auto_pick(language, &status.tracks, &addon_subtitles) {
-                AutoPick::Done => embedded.auto_subtitle = None,
+        if !embedded.auto_subtitle.is_empty() && status.loaded && !status.tracks.is_empty() {
+            match subtitles::auto_pick(&embedded.auto_subtitle, &status.tracks, &addon_subtitles) {
+                AutoPick::Done => embedded.auto_subtitle.clear(),
                 AutoPick::Load(url) => {
-                    embedded.auto_subtitle = None;
+                    embedded.auto_subtitle.clear();
                     picked = Some(url);
                 }
                 AutoPick::Wait => {}
@@ -631,7 +660,8 @@ async fn forward_events(
 }
 
 impl eframe::App for CineoApp {
-    fn logic(&mut self, _ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.pause_on_minimize(ctx);
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
@@ -651,8 +681,8 @@ impl eframe::App for CineoApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.end_playback();
         self.store_tx = None;
-        self.playback = None;
         self.next_torrent_generation();
         let engine = Arc::clone(&self.engine);
         let shutdown = async move {
@@ -682,6 +712,21 @@ async fn open_torrent(
     })
 }
 
+/// The volume a finished playback leaves for the next one, if it changed.
+fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "mpv volume, rounded and clamped by Percent"
+    )]
+    let volume = Percent::new(volume?.round().max(0.0) as u32);
+    (settings.remember_volume && settings.volume != volume).then_some(volume)
+}
+
+fn should_pause_on_minimize(settings: &Settings, status: &Status) -> bool {
+    settings.pause_on_minimize && status.loaded && !status.paused
+}
+
 fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -704,4 +749,44 @@ pub(crate) fn spawn_store_writer(
             }
         })?;
     Ok((tx, thread))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_last_volume_is_kept_only_when_remembering() {
+        let settings = Settings::default();
+        assert_eq!(
+            volume_to_save(&settings, Some(42.4)),
+            Some(Percent::new(42))
+        );
+        assert_eq!(volume_to_save(&settings, Some(100.0)), None, "unchanged");
+        assert_eq!(volume_to_save(&settings, None), None, "never loaded");
+        let off = Settings {
+            remember_volume: false,
+            ..settings
+        };
+        assert_eq!(volume_to_save(&off, Some(42.0)), None);
+    }
+
+    #[test]
+    fn minimizing_pauses_only_a_playing_video_when_asked() {
+        let on = Settings {
+            pause_on_minimize: true,
+            ..Settings::default()
+        };
+        let playing = Status {
+            loaded: true,
+            ..Status::default()
+        };
+        assert!(should_pause_on_minimize(&on, &playing));
+        assert!(!should_pause_on_minimize(&Settings::default(), &playing));
+        let paused = Status {
+            paused: true,
+            ..playing
+        };
+        assert!(!should_pause_on_minimize(&on, &paused));
+    }
 }

@@ -85,28 +85,32 @@ pub(crate) enum AutoPick {
     Wait,
 }
 
+/// Goes through `languages` in order of preference: the first one with a
+/// subtitle on or offered by an addon decides.
 pub(crate) fn auto_pick(
-    language: Language,
+    languages: &[Language],
     tracks: &[Track],
     entries: &[AddonSubtitle],
 ) -> AutoPick {
-    let file_track_on = tracks.iter().any(|t| {
-        t.kind == TrackKind::Subtitle
-            && t.selected
-            && t.external_file.is_none()
-            && t.lang.as_deref().is_some_and(|l| language.matches(l))
-    });
-    if file_track_on
-        || entries
-            .iter()
-            .any(|e| e.selected && language.matches(&e.lang))
-    {
-        return AutoPick::Done;
+    for language in languages {
+        let file_track_on = tracks.iter().any(|t| {
+            t.kind == TrackKind::Subtitle
+                && t.selected
+                && t.external_file.is_none()
+                && t.lang.as_deref().is_some_and(|l| language.matches(l))
+        });
+        if file_track_on
+            || entries
+                .iter()
+                .any(|e| e.selected && language.matches(&e.lang))
+        {
+            return AutoPick::Done;
+        }
+        if let Some(entry) = entries.iter().find(|e| language.matches(&e.lang)) {
+            return AutoPick::Load(entry.url.clone());
+        }
     }
-    entries
-        .iter()
-        .find(|e| language.matches(&e.lang))
-        .map_or(AutoPick::Wait, |e| AutoPick::Load(e.url.clone()))
+    AutoPick::Wait
 }
 
 impl Drop for SubtitleFiles {
@@ -244,14 +248,32 @@ mod tests {
             entry("https://s.example/es", "es"),
         ];
         assert_eq!(
-            auto_pick(spanish, &[track("spa", true)], &addon),
+            auto_pick(&[spanish], &[track("spa", true)], &addon),
             AutoPick::Done
         );
         assert_eq!(
-            auto_pick(spanish, &[track("eng", true)], &addon),
+            auto_pick(&[spanish], &[track("eng", true)], &addon),
             AutoPick::Load(url("https://s.example/es")),
             "the preference beats the file's default track"
         );
-        assert_eq!(auto_pick(spanish, &[], &addon[..1]), AutoPick::Wait);
+        assert_eq!(auto_pick(&[spanish], &[], &addon[..1]), AutoPick::Wait);
+    }
+
+    #[test]
+    fn auto_pick_falls_back_to_the_secondary_language() {
+        let [french, english] =
+            ["fre", "eng"].map(|c| Language::from_code(c).unwrap_or_else(|| panic!("listed")));
+        let entry = AddonSubtitle {
+            url: url("https://s.example/en"),
+            lang: "en".into(),
+            label: None,
+            addon_name: "Subs".into(),
+            selected: false,
+        };
+        assert_eq!(
+            auto_pick(&[french, english], &[], std::slice::from_ref(&entry)),
+            AutoPick::Load(url("https://s.example/en"))
+        );
+        assert_eq!(auto_pick(&[french], &[], &[entry]), AutoPick::Wait);
     }
 }

@@ -1,6 +1,6 @@
 //! The Settings page: a section index beside one scrolling list of settings.
 
-use cineo_core::app::{Action, LANGUAGES, Language, Setting, State};
+use cineo_core::app::{Action, HideControls, Language, SeekStep, Setting, ShortSeekStep, State};
 use eframe::egui::{
     self, Align, Align2, CornerRadius, Frame, Label, Layout, Margin, Modal, Popup,
     PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, Stroke, TextFormat, Ui,
@@ -16,6 +16,7 @@ use crate::view::{
 /// The parts of the Settings page, in page order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
+    Player,
     Languages,
     Torrents,
     Data,
@@ -24,7 +25,8 @@ pub enum Section {
 }
 
 impl Section {
-    const ALL: [Self; 5] = [
+    const ALL: [Self; 6] = [
+        Self::Player,
         Self::Languages,
         Self::Torrents,
         Self::Data,
@@ -34,6 +36,7 @@ impl Section {
 
     fn label(self) -> &'static str {
         match self {
+            Self::Player => "Player",
             Self::Languages => "Languages",
             Self::Torrents => "Torrents",
             Self::Data => "Data",
@@ -123,34 +126,118 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
 }
 
 fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    let settings = &state.settings;
+    let s = &state.settings;
     match section {
-        Section::Languages => {
-            row(
+        Section::Player => {
+            switch(
                 ui,
+                out,
+                "Hardware decoding",
+                HWDEC_HELP,
+                s.hardware_decoding,
+                Setting::HardwareDecoding,
+            );
+            pick(
+                ui,
+                out,
+                "Seek step",
+                "How far ←/→ and the seek buttons jump.",
+                s.seek_step,
+                SeekStep::ALL,
+                seek_name,
+                Setting::SeekStep,
+            );
+            pick(
+                ui,
+                out,
+                "Short seek step",
+                "How far Shift+←/→ jump.",
+                s.short_seek_step,
+                ShortSeekStep::ALL,
+                short_seek_name,
+                Setting::ShortSeekStep,
+            );
+            pick(
+                ui,
+                out,
+                "Hide controls after",
+                "Without mouse or key input while playing.",
+                s.hide_controls,
+                HideControls::ALL,
+                hide_name,
+                Setting::HideControls,
+            );
+            switch(
+                ui,
+                out,
+                "Esc leaves fullscreen first",
+                "When off, Esc leaves the player at once.",
+                s.escape_leaves_fullscreen,
+                Setting::EscapeLeavesFullscreen,
+            );
+            switch(
+                ui,
+                out,
+                "Pause when minimized",
+                "",
+                s.pause_on_minimize,
+                Setting::PauseOnMinimize,
+            );
+            switch(
+                ui,
+                out,
+                "Remember volume",
+                "Each video starts at the volume the last one ended with.",
+                s.remember_volume,
+                Setting::RememberVolume,
+            );
+        }
+        Section::Languages => {
+            language(
+                ui,
+                out,
+                "Audio language",
+                AUDIO_HELP,
+                s.audio_language,
+                Setting::AudioLanguage,
+            );
+            language(
+                ui,
+                out,
+                "Second audio language",
+                "Used when the file has no audio in the first.",
+                s.secondary_audio_language,
+                Setting::SecondaryAudioLanguage,
+            );
+            language(
+                ui,
+                out,
                 "Subtitle language",
                 SUBTITLE_HELP,
-                |ui| {
-                    language(ui, "Subtitle language", settings.subtitle_language)
-                        .map(Setting::SubtitleLanguage)
-                },
+                s.subtitle_language,
+                Setting::SubtitleLanguage,
+            );
+            language(
+                ui,
                 out,
+                "Second subtitle language",
+                "Used when no subtitle is in the first.",
+                s.secondary_subtitle_language,
+                Setting::SecondarySubtitleLanguage,
             );
         }
         Section::Torrents => {
-            row(
+            switch(
                 ui,
+                out,
                 "Show and play torrent streams",
                 P2P_NOTICE,
-                |ui| {
-                    toggle(ui, "Show and play torrent streams", settings.p2p_enabled)
-                        .then_some(Setting::P2pEnabled(!settings.p2p_enabled))
-                },
-                out,
+                s.p2p_enabled,
+                Setting::P2pEnabled,
             );
         }
         Section::Data => {
-            row_with(
+            row(
                 ui,
                 "Reset all settings",
                 "Every setting on this page goes back to its default.",
@@ -171,25 +258,93 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
     }
 }
 
+const HWDEC_HELP: &str = "Lets the graphics card decode video, which saves power. \
+Turn it off if videos show artifacts or a black picture.";
+const AUDIO_HELP: &str = "The file's track in this language plays; otherwise its default track.";
 const SUBTITLE_HELP: &str = "Turned on when a video starts: from the file if it has \
 them, otherwise from a subtitles addon.";
 
-/// A setting: its title and help on the left, its control on the right.
-fn row(
-    ui: &mut Ui,
-    title: &str,
-    help: &str,
-    control: impl FnOnce(&mut Ui) -> Option<Setting>,
-    out: &mut Vec<Action>,
-) {
-    let mut changed = None;
-    row_with(ui, title, help, |ui| changed = control(ui));
-    if let Some(setting) = changed {
-        out.push(Action::ChangeSetting(setting));
+fn seek_name(step: SeekStep) -> &'static str {
+    match step {
+        SeekStep::S5 => "5 seconds",
+        SeekStep::S10 => "10 seconds",
+        SeekStep::S15 => "15 seconds",
+        SeekStep::S30 => "30 seconds",
     }
 }
 
-fn row_with(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
+fn short_seek_name(step: ShortSeekStep) -> &'static str {
+    match step {
+        ShortSeekStep::S1 => "1 second",
+        ShortSeekStep::S3 => "3 seconds",
+        ShortSeekStep::S5 => "5 seconds",
+    }
+}
+
+fn hide_name(after: HideControls) -> &'static str {
+    match after {
+        HideControls::Short => "1.5 seconds",
+        HideControls::Normal => "2.5 seconds",
+        HideControls::Long => "5 seconds",
+    }
+}
+
+fn switch(
+    ui: &mut Ui,
+    out: &mut Vec<Action>,
+    title: &str,
+    help: &str,
+    on: bool,
+    setting: fn(bool) -> Setting,
+) {
+    row(ui, title, help, |ui| {
+        if toggle(ui, title, on) {
+            out.push(Action::ChangeSetting(setting(!on)));
+        }
+    });
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one call per setting reads best flat"
+)]
+fn pick<T: Copy + PartialEq>(
+    ui: &mut Ui,
+    out: &mut Vec<Action>,
+    title: &str,
+    help: &str,
+    current: T,
+    options: &[T],
+    name: fn(T) -> &'static str,
+    setting: fn(T) -> Setting,
+) {
+    row(ui, title, help, |ui| {
+        if let Some(value) = select(ui, title, current, options.iter().copied(), name) {
+            out.push(Action::ChangeSetting(setting(value)));
+        }
+    });
+}
+
+fn language(
+    ui: &mut Ui,
+    out: &mut Vec<Action>,
+    title: &str,
+    help: &str,
+    current: Option<Language>,
+    setting: fn(Option<Language>) -> Setting,
+) {
+    row(ui, title, help, |ui| {
+        let options = std::iter::once(None).chain(Language::all().map(Some));
+        if let Some(value) = select(ui, title, current, options, |l| {
+            l.map_or("None", Language::name)
+        }) {
+            out.push(Action::ChangeSetting(setting(value)));
+        }
+    });
+}
+
+/// A setting: its title and help on the left, its control on the right.
+fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
     let width = ui.available_width();
     let control_width = CONTROL_WIDTH.min(width * 0.45);
     let text_width = (width - control_width - 24.0).max(0.0);
@@ -300,16 +455,6 @@ fn select<T: Copy + PartialEq>(
     picked
 }
 
-fn language(ui: &mut Ui, label: &str, current: Option<Language>) -> Option<Option<Language>> {
-    select(
-        ui,
-        label,
-        current,
-        std::iter::once(None).chain(LANGUAGES.iter().copied().map(Some)),
-        |l| l.map_or("None", |l| l.name),
-    )
-}
-
 fn nav_item(ui: &mut Ui, label: &str, selected: bool) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
@@ -352,6 +497,11 @@ fn keyboard(ui: &mut Ui) {
                 (plain("Ctrl+1 … Ctrl+6"), "Switch page"),
                 (back, "Leave a detail page"),
                 (plain("Shift+wheel"), "Scroll a row sideways"),
+                (plain("Space  or  K"), "Play or pause"),
+                (plain("←/→  or  J/L"), "Seek by the seek step"),
+                (plain("Shift+←/→"), "Seek by the short seek step"),
+                (plain("↑/↓  ·  M"), "Volume  ·  mute"),
+                (plain("F  or  F11"), "Fullscreen"),
             ];
             for (keys, what) in rows {
                 ui.label(keys);

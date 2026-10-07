@@ -5,13 +5,20 @@
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use cineo_desktop::player::{AddonSubtitle, Controls, show};
+use cineo_core::app::{HideControls, SeekStep, Settings, ShortSeekStep};
+use cineo_desktop::player::{AddonSubtitle, Controls, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
-use eframe::egui::Key;
+use eframe::egui::{Key, Modifiers, ViewportId};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
-type Screen = (Status, Controls, Vec<PlayerCommand>, Vec<AddonSubtitle>);
+type Screen = (
+    Status,
+    Controls,
+    Vec<PlayerCommand>,
+    Vec<AddonSubtitle>,
+    Settings,
+);
 
 fn track(id: i64, kind: TrackKind, lang: &str, selected: bool) -> Track {
     Track {
@@ -47,14 +54,29 @@ fn harness(status: Status) -> Harness<'static, Screen> {
 }
 
 fn harness_with(status: Status, addon: Vec<AddonSubtitle>) -> Harness<'static, Screen> {
+    harness_full(status, addon, Settings::default())
+}
+
+fn harness_full(
+    status: Status,
+    addon: Vec<AddonSubtitle>,
+    settings: Settings,
+) -> Harness<'static, Screen> {
     let mut harness = Harness::builder()
         .with_size([1280.0, 720.0])
         .build_ui_state(
-            |ui, (status, controls, out, addon): &mut Screen| {
+            |ui, (status, controls, out, addon, settings): &mut Screen| {
                 let rect = ui.max_rect();
-                out.extend(show(ui, rect, status, "A Film", None, addon, controls));
+                let playback = Playback {
+                    status,
+                    title: "A Film",
+                    logo: None,
+                    addon_subtitles: addon,
+                    settings,
+                };
+                out.extend(show(ui, rect, &playback, controls));
             },
-            (status, Controls::default(), Vec::new(), addon),
+            (status, Controls::default(), Vec::new(), addon, settings),
         );
     harness.run_steps(2);
     harness
@@ -243,4 +265,61 @@ fn addon_subtitles_are_listed_and_requested() {
         "no mpv command until the file is fetched"
     );
     assert!(harness.query_by_label("Off").is_none(), "the menu closes");
+}
+
+#[test]
+fn seek_steps_come_from_settings() {
+    let settings = Settings {
+        seek_step: SeekStep::S30,
+        short_seek_step: ShortSeekStep::S1,
+        ..Settings::default()
+    };
+    let mut harness = harness_full(status(), Vec::new(), settings);
+    harness.key_press(Key::ArrowRight);
+    harness.run();
+    harness.key_press_modifiers(Modifiers::SHIFT, Key::ArrowLeft);
+    harness.run();
+    harness.get_by_label("Seek back 30 seconds").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            PlayerCommand::SeekBy(30.0),
+            PlayerCommand::SeekBy(-1.0),
+            PlayerCommand::SeekBy(-30.0),
+        ]
+    );
+}
+
+#[test]
+fn escape_in_fullscreen_can_leave_the_player_at_once() {
+    for (leaves_fullscreen, expected) in [(true, vec![]), (false, vec![PlayerCommand::Stop])] {
+        let settings = Settings {
+            escape_leaves_fullscreen: leaves_fullscreen,
+            ..Settings::default()
+        };
+        let mut harness = harness_full(status(), Vec::new(), settings);
+        harness
+            .input_mut()
+            .viewports
+            .entry(ViewportId::ROOT)
+            .or_default()
+            .fullscreen = Some(true);
+        harness.key_press(Key::Escape);
+        harness.run();
+        assert_eq!(harness.state().2, expected, "{leaves_fullscreen}");
+    }
+}
+
+#[test]
+fn controls_stay_longer_with_a_longer_hide_delay() {
+    let mut playing = status();
+    playing.paused = false;
+    let settings = Settings {
+        hide_controls: HideControls::Long,
+        ..Settings::default()
+    };
+    let mut harness = harness_full(playing, Vec::new(), settings);
+    harness.run_steps(16);
+    harness.get_by_label("Pause");
 }

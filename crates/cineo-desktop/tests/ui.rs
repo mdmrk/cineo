@@ -9,7 +9,7 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, Language, Setting, State, TorrentStatus, update};
+use cineo_core::app::{Action, Effect, Language, SeekStep, Setting, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
@@ -524,6 +524,9 @@ fn settings_page() -> ViewState {
 #[test]
 fn resetting_settings_asks_first() {
     let mut harness = harness(State::default(), settings_page());
+    harness.get_by_label("Data").click();
+    harness.run_steps(30);
+    harness.run();
     harness.get_by_label("Reset…").click();
     harness.run();
     harness.get_by_label("Reset all settings?");
@@ -554,4 +557,29 @@ fn the_settings_index_jumps_to_a_section() {
     harness.run();
     let top = about(&harness);
     assert!(top < 360.0, "About is scrolled into view: {top}");
+}
+
+#[test]
+fn player_and_language_settings_change_from_the_page() {
+    let mut harness = harness(State::default(), settings_page());
+    harness.get_by_label("Hardware decoding").click();
+    harness.run();
+    harness.get_by_label("Seek step").click();
+    harness.run();
+    harness.get_by_label("30 seconds").click();
+    harness.run();
+    harness.get_by_label("Second audio language").click();
+    harness.run();
+    harness.get_by_label("Japanese").scroll_to_me();
+    harness.run();
+    harness.get_by_label("Japanese").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            Action::ChangeSetting(Setting::HardwareDecoding(false)),
+            Action::ChangeSetting(Setting::SeekStep(SeekStep::S30)),
+            Action::ChangeSetting(Setting::SecondaryAudioLanguage(Language::from_code("jpn"))),
+        ]
+    );
 }
