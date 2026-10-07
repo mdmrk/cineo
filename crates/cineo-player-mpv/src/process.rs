@@ -24,6 +24,12 @@ pub enum PlayerError {
     ExitedEarly,
     #[error("could not connect to mpv: {0}")]
     Connect(std::io::Error),
+    #[error("embedded playback is unavailable: {0}")]
+    LibmpvUnavailable(String),
+    #[error("libmpv failed: {0}")]
+    Libmpv(String),
+    #[error("cannot show video in the window: {0}")]
+    Render(String),
 }
 
 /// A running playback. Dropping it closes mpv.

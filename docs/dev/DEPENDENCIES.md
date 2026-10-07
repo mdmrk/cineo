@@ -31,6 +31,7 @@ Re-check them when adding.
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
 | `tokio-util` (`io`) | 0.7.19 | `ReaderStream` from a torrent file reader (stream) | MIT |
 | `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
+| `libloading` | 0.8.9 | Loads libmpv at runtime for embedded playback (player, ADR-0014). 0.9.0 exists (as of 2026-10-07); 0.8.9 is already in the tree via glutin, so we avoid a second copy | ISC |
 
 `tokio` features `process`, `io-util` and `sync` were added for the mpv
 player (M3). `serde_json` is also used there for IPC messages.

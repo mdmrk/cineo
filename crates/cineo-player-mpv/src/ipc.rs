@@ -51,7 +51,7 @@ pub(crate) fn start_commands(request: &PlayRequest) -> Vec<Value> {
     commands
 }
 
-fn is_header_safe(name: &str, value: &str) -> bool {
+pub(crate) fn is_header_safe(name: &str, value: &str) -> bool {
     !name.is_empty()
         && name
             .bytes()

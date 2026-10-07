@@ -996,6 +996,7 @@ name = "cineo-player-mpv"
 version = "0.0.0"
 dependencies = [
  "cineo-core",
+ "libloading",
  "serde_json",
  "thiserror 2.0.21",
  "tokio",

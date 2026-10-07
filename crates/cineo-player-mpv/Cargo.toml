@@ -1,6 +1,6 @@
 [package]
 name = "cineo-player-mpv"
-description = "Cineo player backend: an external mpv process controlled over JSON IPC."
+description = "Cineo player backend: libmpv embedded in the window, or an external mpv process."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,10 +10,36 @@ publish.workspace = true
 
 [dependencies]
 cineo-core.workspace = true
+libloading.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
-[lints]
-workspace = true
+# A copy of the workspace lints (Cargo cannot override one lint of
+# `workspace = true`); keep it in sync with the root Cargo.toml.
+[lints.rust]
+# The only crate allowed `unsafe`, in the libmpv FFI modules (ADR-0014).
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+rust_2024_compatibility = { level = "warn", priority = -1 }
+
+[lints.clippy]
+# Default clippy groups (correctness, suspicious, style, complexity, perf) stay on.
+# Additions below are deliberate; see CONTRIBUTING.md (Lint policy) before adding more.
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+large_futures = "warn"
+needless_pass_by_value = "warn"
+redundant_clone = "warn"
+semicolon_if_nothing_returned = "warn"
+cloned_instead_of_copied = "warn"
+implicit_clone = "warn"
+manual_let_else = "warn"
+match_same_arms = "warn"
