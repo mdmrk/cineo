@@ -178,10 +178,10 @@ pub struct TorrentPlayback {
 }
 
 impl TorrentPlayback {
-    /// The title of the playback while the engine is still preparing the
-    /// file; `None` once it has been handed to the player.
-    pub fn connecting_title(&self) -> Option<&str> {
-        self.pending.as_ref().map(|request| request.title.as_str())
+    /// The playback the engine is still preparing the file for; `None`
+    /// once it has been handed to the player.
+    pub fn connecting(&self) -> Option<&PlayRequest> {
+        self.pending.as_ref()
     }
 }
 

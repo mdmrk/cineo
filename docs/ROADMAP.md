@@ -236,7 +236,7 @@ delivered is in [CHANGELOG.md](../CHANGELOG.md) and the git history.
   - Bounded disk cache.
   - P2P disclosure and a disable setting.
   - Stream status (peers, speed, buffer) in the UI. Shown as a bottom bar
-    until 2026-10-07; the player now shows a spinner instead.
+    until 2026-10-07; the player now shows the pulsing logo instead.
 - **Tests:**
   - Engine against a local test swarm or fixture torrent with
     public-domain content.

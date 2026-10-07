@@ -137,6 +137,7 @@ struct Embedded {
     /// GL context is current, before `player`.
     renderer: Arc<Mutex<Option<Renderer>>>,
     title: String,
+    logo: Option<String>,
     controls: Controls,
     /// Forwards the player's events as actions. Aborted when the playback
     /// is replaced; `None` once it ended, so its last events still arrive.
@@ -415,6 +416,7 @@ impl CineoApp {
             player,
             renderer: Arc::new(Mutex::new(Some(renderer))),
             title: request.title.clone(),
+            logo: request.logo.as_ref().map(ToString::to_string),
             controls: Controls::default(),
             forward: Some(forward.abort_handle()),
         })
@@ -431,14 +433,14 @@ impl CineoApp {
     }
 
     /// While a torrent is prepared for playback, shows the player screen
-    /// with its spinner, so Play goes straight to the player. Back cancels.
+    /// with its pulsing logo, so Play goes straight to the player. Back cancels.
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
-        let Some(title) = self
+        let Some((title, logo)) = self
             .state
             .torrent
             .as_ref()
-            .and_then(|t| t.connecting_title())
-            .map(str::to_owned)
+            .and_then(|t| t.connecting())
+            .map(|request| (request.title.clone(), request.logo.clone()))
         else {
             return false;
         };
@@ -452,6 +454,7 @@ impl CineoApp {
                     rect,
                     &Status::default(),
                     &title,
+                    logo.as_ref().map(url::Url::as_str),
                     &mut self.connecting_controls,
                 );
             });
@@ -496,7 +499,14 @@ impl CineoApp {
                         }
                     })),
                 });
-                commands = player::show(ui, rect, &status, &embedded.title, &mut embedded.controls);
+                commands = player::show(
+                    ui,
+                    rect,
+                    &status,
+                    &embedded.title,
+                    embedded.logo.as_deref(),
+                    &mut embedded.controls,
+                );
             });
         for command in commands {
             embedded.player.send(command);

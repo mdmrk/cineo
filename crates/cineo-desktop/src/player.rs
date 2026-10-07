@@ -11,7 +11,7 @@ use eframe::egui::{
 };
 
 use crate::theme;
-use crate::view::{Icon, gradient, paint_icon, paint_spinner};
+use crate::view::{IMAGE_FILTER, Icon, gradient, paint_icon, paint_spinner};
 
 /// Seconds without input before the controls hide during playback.
 const HIDE_AFTER: f64 = 2.5;
@@ -21,6 +21,10 @@ const SEEK_STEP: f64 = 10.0;
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
+/// Largest size of the logo shown while the file loads.
+const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
+/// Seconds per fade in and out of the loading logo or title.
+const PULSE_PERIOD: f64 = 1.6;
 
 /// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
@@ -43,6 +47,7 @@ pub fn show(
     rect: Rect,
     status: &Status,
     title: &str,
+    logo: Option<&str>,
     controls: &mut Controls,
 ) -> Vec<PlayerCommand> {
     let mut out = Vec::new();
@@ -63,7 +68,9 @@ pub fn show(
         out.push(PlayerCommand::TogglePause);
     }
 
-    if !status.loaded || status.buffering {
+    if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {
+        loading_art(ui, rect, title, logo);
+    } else if !status.loaded || status.buffering {
         paint_spinner(ui, rect.center(), 44.0, theme::TEXT_BRIGHT);
     }
 
@@ -165,6 +172,55 @@ pub fn leave_fullscreen(ctx: &egui::Context) {
     if ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
     }
+}
+
+/// While the file loads, the item's logo art at the center of `rect`, its
+/// opacity pulsing as in Stremio. Without a logo, or if it fails to load,
+/// the title in the display serif pulses instead; nothing is drawn while
+/// the logo is still downloading.
+fn loading_art(ui: &Ui, rect: Rect, title: &str, logo: Option<&str>) {
+    let opacity = pulse_opacity(ui.input(|i| i.time));
+    ui.ctx().request_repaint();
+    if let Some(logo) = logo {
+        let image = egui::Image::new(logo)
+            .texture_options(IMAGE_FILTER)
+            .show_loading_spinner(false);
+        let max = vec2(
+            (rect.width() * 0.5).min(LOGO_MAX.x),
+            (rect.height() * 0.3).min(LOGO_MAX.y),
+        );
+        match image.load_for_size(ui.ctx(), max) {
+            Ok(poll) => {
+                if let Some(size) = poll.size() {
+                    let scale = (max.x / size.x).min(max.y / size.y);
+                    image
+                        .tint(Color32::WHITE.gamma_multiply(opacity))
+                        .paint_at(ui, Rect::from_center_size(rect.center(), size * scale));
+                }
+                return;
+            }
+            Err(_) if title.trim().is_empty() => return,
+            Err(_) => {}
+        }
+    }
+    let color = theme::TEXT_BRIGHT.gamma_multiply(opacity);
+    let font = egui::FontId::new(44.0, theme::heading().family);
+    let mut job =
+        egui::text::LayoutJob::simple(title.to_owned(), font, color, (rect.width() * 0.7).max(1.0));
+    job.halign = Align::Center;
+    job.wrap.max_rows = 3;
+    let galley = ui.painter().layout_job(job);
+    let pos = pos2(rect.center().x, rect.center().y - galley.size().y / 2.0);
+    ui.painter().galley(pos, galley, color);
+}
+
+/// The loading logo's or title's opacity at egui `time`: faint at the start of each
+/// [`PULSE_PERIOD`], fully opaque halfway through.
+fn pulse_opacity(time: f64) -> f32 {
+    let phase = 0.5 - 0.5 * (time * std::f64::consts::TAU / PULSE_PERIOD).cos();
+    #[expect(clippy::cast_possible_truncation, reason = "a factor in 0..=1")]
+    let phase = phase as f32;
+    0.25 + 0.75 * phase
 }
 
 fn top_bar(ui: &mut Ui, rect: Rect, title: &str, out: &mut Vec<PlayerCommand>) {
@@ -580,6 +636,17 @@ fn clock(seconds: f64, scale: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_loading_art_pulses_between_faint_and_opaque() {
+        assert!((pulse_opacity(0.0) - 0.25).abs() < 1e-6);
+        assert!((pulse_opacity(PULSE_PERIOD / 2.0) - 1.0).abs() < 1e-6);
+        assert!((pulse_opacity(PULSE_PERIOD) - 0.25).abs() < 1e-6);
+        for step in 0..100 {
+            let opacity = pulse_opacity(f64::from(step) * 0.037);
+            assert!((0.25..=1.0).contains(&opacity), "{opacity}");
+        }
+    }
 
     #[test]
     fn clock_shows_hours_only_for_long_media() {

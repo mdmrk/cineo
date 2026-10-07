@@ -459,6 +459,11 @@ fn playing_an_http_stream_records_library_and_resumes() {
     assert_eq!(play.url.as_str(), "https://media.example/v/1.mp4");
     assert_eq!(play.headers.len(), 2);
     assert_eq!(play.subtitles.len(), 1);
+    assert_eq!(
+        play.logo.as_ref().map(url::Url::as_str),
+        Some("https://img.example/logo/tt0000001.png"),
+        "the loading screen shows the item's logo"
+    );
 
     update(
         &mut state,
@@ -551,7 +556,7 @@ fn the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine()
     let torrent = state.torrent.as_ref().unwrap();
     assert_eq!(torrent.status, TorrentStatus::Starting);
     assert!(
-        torrent.connecting_title().is_some(),
+        torrent.connecting().is_some(),
         "the shell can show the player while the engine prepares the file"
     );
 }
@@ -597,7 +602,7 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
     assert!(play.headers.is_empty());
     assert_eq!(play.meta_id, "tt0000001");
     assert_eq!(
-        state.torrent.as_ref().unwrap().connecting_title(),
+        state.torrent.as_ref().unwrap().connecting(),
         None,
         "handed to the player"
     );

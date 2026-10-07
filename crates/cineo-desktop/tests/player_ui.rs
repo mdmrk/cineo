@@ -46,7 +46,7 @@ fn harness(status: Status) -> Harness<'static, Screen> {
         .build_ui_state(
             |ui, (status, controls, out): &mut Screen| {
                 let rect = ui.max_rect();
-                out.extend(show(ui, rect, status, "A Film", controls));
+                out.extend(show(ui, rect, status, "A Film", None, controls));
             },
             (status, Controls::default(), Vec::new()),
         );

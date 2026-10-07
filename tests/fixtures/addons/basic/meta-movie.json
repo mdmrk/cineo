@@ -1,1 +1,1 @@
-{ "meta": { "id": "tt0000001", "type": "movie", "name": "First Example Film", "runtime": 120, "behaviorHints": { "defaultVideoId": "tt0000001" } } }
+{ "meta": { "id": "tt0000001", "type": "movie", "name": "First Example Film", "logo": "https://img.example/logo/tt0000001.png", "runtime": 120, "behaviorHints": { "defaultVideoId": "tt0000001" } } }

@@ -96,6 +96,8 @@ pub struct PlayRequest {
     /// loopback URL.
     pub url: Url,
     pub title: String,
+    /// The item's logo art (meta `logo`), shown while the file loads.
+    pub logo: Option<Url>,
     pub headers: Vec<(String, String)>,
     pub subtitles: Vec<Subtitle>,
     pub start_ms: u64,
@@ -891,6 +893,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let request = PlayRequest {
         url,
         title,
+        logo: preview.as_ref().and_then(|p| p.logo.clone()),
         headers,
         subtitles,
         start_ms: 0,

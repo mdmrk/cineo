@@ -1776,7 +1776,7 @@ fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
 
 /// Smooth downscaling for posters and backdrops shown smaller than their
 /// source.
-const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
+pub(crate) const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
     mipmap_mode: Some(egui::TextureFilter::Linear),
     ..egui::TextureOptions::LINEAR
 };

@@ -349,7 +349,7 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 |---|----|--------|
 | T1 | Open the film; Play the torrent stream | The "Peer-to-peer streaming" notice; nothing appears in the cache directory yet |
 | T2 | Cancel | No playback, no engine log lines (`-v`) |
-| T3 | Play again → Accept and play | The player opens at once with a centered spinner, Back and the title; the video starts once the engine serves the file |
+| T3 | Play again → Accept and play | The player opens at once with Back and the film's logo (or, without one, its title) pulsing in the middle; the video starts once the engine serves the file |
 | T4 | Seek forward and back | Playback resumes within a few seconds |
 | T5 | Back (or Esc) | The detail page returns; the log shows the torrent stopped. Back while still connecting cancels the torrent too |
 | T6 | Play it again | No notice this time; starts faster (data in the cache) |
