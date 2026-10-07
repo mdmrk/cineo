@@ -64,7 +64,6 @@ impl std::fmt::Debug for Language {
 }
 
 impl Language {
-    /// Every language offered in Settings, by English name.
     pub fn all() -> impl Iterator<Item = Self> {
         (0..TABLE.len()).filter_map(|i| u8::try_from(i).ok().map(Self))
     }
@@ -74,7 +73,6 @@ impl Language {
         Self::all().find(|l| l.code() == code)
     }
 
-    /// ISO 639-2; what gets saved.
     pub fn code(self) -> &'static str {
         self.info().code
     }

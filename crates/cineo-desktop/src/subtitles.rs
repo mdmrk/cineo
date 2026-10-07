@@ -85,8 +85,6 @@ pub(crate) enum AutoPick {
     Wait,
 }
 
-/// Goes through `languages` in order of preference: the first one with a
-/// subtitle on or offered by an addon decides.
 pub(crate) fn auto_pick(
     languages: &[Language],
     tracks: &[Track],

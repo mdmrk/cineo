@@ -37,11 +37,9 @@ pub struct EngineOptions {
     pub allow_private_network: bool,
     /// Find peers through the DHT.
     pub dht: bool,
-    /// Share downloaded pieces with other peers.
     pub upload: bool,
     pub download_limit_bps: Option<NonZeroU32>,
     pub upload_limit_bps: Option<NonZeroU32>,
-    /// Most peers per torrent; `None` keeps librqbit's default (128).
     pub peer_limit: Option<usize>,
     /// Peers to contact for every torrent, e.g. a local seeder in tests.
     pub extra_peers: Vec<SocketAddr>,
@@ -195,7 +193,6 @@ impl Engine {
         })
     }
 
-    /// The options the engine was started with.
     pub fn options(&self) -> &EngineOptions {
         &self.options
     }

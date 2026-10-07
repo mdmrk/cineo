@@ -1,5 +1,3 @@
-//! Settings keys and the text they are saved as.
-
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used)]
 

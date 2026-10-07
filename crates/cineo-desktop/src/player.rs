@@ -59,7 +59,6 @@ enum Entry {
     Empty,
 }
 
-/// What the playback screen shows.
 #[derive(Debug, Clone, Copy)]
 pub struct Playback<'a> {
     pub status: &'a Status,
@@ -157,7 +156,6 @@ fn shortcuts(ui: &Ui, status: &Status, settings: &Settings, out: &mut Vec<Player
         settings.short_seek_step.seconds(),
     );
     ui.input_mut(|i| {
-        // Shift first: a plain-key match also accepts Shift.
         if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowLeft) {
             out.push(PlayerCommand::SeekBy(-short));
         }

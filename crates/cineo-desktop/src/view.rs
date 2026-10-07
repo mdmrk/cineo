@@ -88,7 +88,6 @@ pub struct ViewState {
     pub search_edited_at: Option<f64>,
     /// Focus the search field on the next frame.
     pub focus_search: bool,
-    /// Scroll the Settings page to this section on the next frame.
     pub settings_jump: Option<Section>,
     pub confirm: Option<Confirm>,
 }

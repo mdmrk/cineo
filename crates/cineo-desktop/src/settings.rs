@@ -1,5 +1,3 @@
-//! The Settings page: a section index beside one scrolling list of settings.
-
 use cineo_core::app::{
     Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit,
     SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
@@ -18,7 +16,6 @@ use crate::view::{
     paint_icon, primary, section,
 };
 
-/// The parts of the Settings page, in page order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
     Interface,
@@ -60,7 +57,6 @@ impl Section {
     }
 }
 
-/// A question asked before an action that cannot be undone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Confirm {
     ResetSettings,
@@ -124,7 +120,6 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                             body(ui, part, state, view, out);
                             ui.add_space(theme::SECTION_GAP);
                         }
-                        // Room for the last section to scroll to the top, so it can be marked.
                         let tail = ui.cursor().min.y - last_top;
                         ui.add_space((visible_height - tail - margin).max(0.0));
                     },
@@ -425,7 +420,6 @@ fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
 const STYLED_HELP: &str = "Styled (ASS) subtitles, common for anime, bring their own fonts, \
 colors and positions. When off, the settings above replace them.";
 
-/// An approximation of the subtitle look over a dark frame.
 fn preview(ui: &mut Ui, s: &Settings) {
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(vec2(width, 150.0), Sense::hover());
@@ -730,8 +724,6 @@ fn pick<T: Copy + PartialEq>(
     });
 }
 
-/// A whole number in `range` = (min, max, step), set by dragging or with
-/// the arrow keys.
 fn number(
     ui: &mut Ui,
     out: &mut Vec<Action>,
@@ -828,7 +820,6 @@ fn language(
     });
 }
 
-/// A setting: its title and help on the left, its control on the right.
 fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
     let width = ui.available_width();
     let control_width = CONTROL_WIDTH.min(width * 0.45);
@@ -882,7 +873,6 @@ fn toggle(ui: &mut Ui, label: &str, on: bool) -> bool {
         .clicked()
 }
 
-/// A dropdown; returns the option picked this frame.
 fn select<T: Copy + PartialEq>(
     ui: &mut Ui,
     label: &str,

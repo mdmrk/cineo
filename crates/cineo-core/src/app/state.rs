@@ -181,13 +181,11 @@ pub enum Action {
     PlaybackFailed(String),
     PlaybackStopped,
     RemoveFromLibrary(String),
-    /// Forget every library item and its progress.
     ClearLibrary,
     DismissNotice,
     AcceptP2p,
     DeclineP2p,
     ChangeSetting(Setting),
-    /// Back to the default settings.
     ResetSettings,
     ManifestLoaded {
         transport: TransportUrl,

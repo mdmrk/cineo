@@ -157,7 +157,6 @@ pub(crate) fn ensure(ctx: &egui::Context) -> bool {
 
 pub(crate) fn apply(ctx: &egui::Context) {
     ctx.data_mut(|d| d.insert_temp(applied_id(), ()));
-    // The size comes from the Interface scale setting only.
     ctx.options_mut(|o| o.zoom_with_keyboard = false);
     ctx.set_fonts(fonts());
 

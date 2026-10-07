@@ -135,7 +135,6 @@ struct Embedded {
     /// The preferred languages, until a subtitle in one is on or the user
     /// picks one.
     auto_subtitle: Vec<Language>,
-    /// The volume the playback is at, once loaded.
     volume: Option<f64>,
     minimized: bool,
 }
@@ -495,7 +494,6 @@ impl CineoApp {
         }
     }
 
-    /// Drops the playback, keeping its volume for the next one.
     fn end_playback(&mut self) {
         let volume = self.playback.take().and_then(|p| p.volume);
         if let Some(volume) = volume_to_save(&self.state.settings, volume) {
@@ -503,7 +501,6 @@ impl CineoApp {
         }
     }
 
-    /// Pauses when the window is minimized, if the user asked for it.
     fn pause_on_minimize(&mut self, ctx: &egui::Context) {
         let Some(embedded) = &mut self.playback else {
             return;
@@ -720,14 +717,10 @@ async fn open_torrent(
     })
 }
 
-/// Off unless the command line or the saved setting turns it on
-/// (docs/SECURITY.md); read once at startup.
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {
     command_line || settings.allow_private_network
 }
 
-/// The engine options for the next torrent: `base` (from startup) with the
-/// user's torrent settings.
 fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
     EngineOptions {
         dht: base.dht && settings.torrent_dht,
@@ -745,7 +738,6 @@ fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
     }
 }
 
-/// The volume a finished playback leaves for the next one, if it changed.
 fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     #[expect(
         clippy::cast_possible_truncation,

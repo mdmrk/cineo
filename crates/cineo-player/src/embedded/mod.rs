@@ -193,7 +193,6 @@ impl Player {
             core.set_option(name, value)
                 .map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
         }
-        // Older mpv may lack a style option; playback goes on without it.
         for (name, value) in style_options(&request.settings) {
             if let Err(err) = core.set_option(name, &value) {
                 warn!(option = name, %err, "subtitle style option not applied");
@@ -292,7 +291,6 @@ impl Player {
 }
 
 /// mpv's preferred subtitle languages: every tag the language goes by.
-/// mpv options from the user's settings; they come after [`OPTIONS`].
 fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
     let mut options = Vec::new();
     if !settings.hardware_decoding {
@@ -318,8 +316,6 @@ fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
     options
 }
 
-/// mpv subtitle style options, only for what differs from the defaults.
-/// The `sub-border-*` names work from mpv 0.35 on (aliases since 0.38).
 fn style_options(settings: &Settings) -> Vec<(&'static str, String)> {
     let default = Settings::default();
     let mut options = Vec::new();
@@ -349,7 +345,6 @@ fn style_options(settings: &Settings) -> Vec<(&'static str, String)> {
         options.push(("sub-color", argb(alpha, settings.subtitle_color.rgb())));
     }
     if let Some(rgb) = settings.subtitle_background.rgb() {
-        // An opaque box takes the border color: the outline gives way to it.
         options.push(("sub-border-style", "opaque-box".to_owned()));
         options.push(("sub-border-color", argb(0xCC, rgb)));
     } else if settings.subtitle_outline != default.subtitle_outline {
@@ -372,7 +367,6 @@ fn argb(alpha: u8, [r, g, b]: [u8; 3]) -> String {
     format!("#{alpha:02X}{r:02X}{g:02X}{b:02X}")
 }
 
-/// Every tag of every language, in order of preference.
 fn language_list(languages: impl Iterator<Item = Language>) -> String {
     languages
         .flat_map(|l| l.codes())
