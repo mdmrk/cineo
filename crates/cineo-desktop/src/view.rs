@@ -285,6 +285,16 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 }
             }
             ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                let version = faint(concat!("Cineo v", env!("CARGO_PKG_VERSION")));
+                if compact {
+                    ui.vertical_centered(|ui| ui.label(version));
+                } else {
+                    ui.horizontal(|ui| {
+                        ui.add_space(9.0);
+                        ui.label(version);
+                    });
+                }
+                ui.add_space(2.0);
                 item(ui, Page::Settings);
                 if !state.addons_loading.is_empty() {
                     ui.add_space(8.0);

@@ -320,10 +320,7 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
         }
         Section::Keyboard => keyboard(ui),
         Section::About => {
-            ui.label(dim(&format!(
-                "Cineo {}. Made by people who stay for the credits.",
-                env!("CARGO_PKG_VERSION")
-            )));
+            ui.label(dim(&format!("Cineo v{}", env!("CARGO_PKG_VERSION"))));
             ui.add_space(theme::GAP);
             let mut job = LayoutJob::default();
             append_icon(&mut job, Icon::Named("brand-github"), 18.0, theme::ACCENT);
