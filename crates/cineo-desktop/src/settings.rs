@@ -92,7 +92,7 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
             .id_salt("Settings")
             .auto_shrink(false)
             .show(ui, |ui| {
-                let visible_top = ui.clip_rect().top();
+                let (visible_top, visible_height) = (ui.clip_rect().top(), ui.clip_rect().height());
                 ui.add_space(margin);
                 let width = (ui.available_width() - margin).clamp(0.0, theme::CONTENT_MAX_WIDTH);
                 ui.scope_builder(
@@ -103,8 +103,10 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                     |ui| {
                         ui.set_width(width);
                         page_title(ui, "Settings", None);
+                        let mut last_top = 0.0;
                         for part in Section::ALL {
                             let top = ui.cursor().min.y;
+                            last_top = top;
                             section(ui, part.label(), |_| {});
                             ui.add_space(theme::GAP / 2.0);
                             if jump == Some(part) {
@@ -122,6 +124,9 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                             body(ui, part, state, view, out);
                             ui.add_space(theme::SECTION_GAP);
                         }
+                        // Room for the last section to scroll to the top, so it can be marked.
+                        let tail = ui.cursor().min.y - last_top;
+                        ui.add_space((visible_height - tail - margin).max(0.0));
                     },
                 );
                 ui.add_space(margin);

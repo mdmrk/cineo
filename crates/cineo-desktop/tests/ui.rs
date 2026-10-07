@@ -14,7 +14,7 @@ use cineo_core::app::{
     StartPage, State, SubtitleColor, SubtitleSize, TorrentStatus, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
-use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
+use eframe::egui::{self, Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -678,4 +678,27 @@ fn clearing_watch_history_asks_first() {
     harness.get_by_label("Clear").click();
     harness.run();
     assert_eq!(harness.state().2, vec![Action::ClearLibrary]);
+}
+
+#[test]
+fn the_index_marks_the_last_sections_when_scrolled_to_the_end() {
+    let mut harness = harness(State::default(), settings_page());
+    harness.hover_at(pos2(900.0, 450.0));
+    harness.event(Event::MouseWheel {
+        unit: MouseWheelUnit::Point,
+        delta: vec2(0.0, -1.0e6),
+        phase: TouchPhase::Move,
+        modifiers: Modifiers::NONE,
+    });
+    harness.run_steps(60);
+    harness.run();
+    let marked = |harness: &Harness<'_, Ui>, name: &str| {
+        harness.get_by_label(name).accesskit_node().toggled()
+            == Some(egui::accesskit::Toggled::True)
+    };
+    assert!(
+        marked(&harness, "About"),
+        "the last section is marked at the end"
+    );
+    assert!(!marked(&harness, "Torrents"));
 }
