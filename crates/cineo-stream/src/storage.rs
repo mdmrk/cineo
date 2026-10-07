@@ -118,14 +118,15 @@ impl TorrentStorage for CacheStorage {
         crate::cache::create_private_dir(&self.inner.dir).context("cannot create the cache")
     }
 
-    /// Bytes never written read as zeros, so their pieces fail the hash
-    /// check and are downloaded.
+    /// A file never written is an error, so librqbit's initial check skips
+    /// it instead of hashing its whole length. Holes and the tail of a
+    /// written file read as zeros, so their pieces fail the hash check and
+    /// are downloaded.
     fn pread_exact(&self, file_id: usize, offset: u64, buf: &mut [u8]) -> anyhow::Result<()> {
         let slot = self.slot(file_id)?;
         let mut guard = Self::open(slot, false)?;
         let Some(file) = guard.as_mut() else {
-            buf.fill(0);
-            return Ok(());
+            anyhow::bail!("file {file_id} has no data yet");
         };
         file.seek(SeekFrom::Start(offset))?;
         let mut read = 0;
@@ -206,16 +207,27 @@ mod tests {
         assert!(storage.pwrite_all(2, 0, b"x").is_err(), "no such file");
     }
 
+    /// Regression: a missing file read as zeros, so librqbit's initial
+    /// check hashed every byte of every file before a torrent could start.
+    /// An error makes it skip the file.
+    #[test]
+    fn reading_a_file_never_written_is_an_error() {
+        let root = dir("missing");
+        std::fs::create_dir_all(root.join("ef")).unwrap_or_else(|e| panic!("{e}"));
+        let storage = CacheStorage::new(torrent_dir(&root, "ef"), 1);
+        let mut buf = [7u8; 8];
+        assert!(storage.pread_exact(0, 0, &mut buf).is_err());
+        assert!(
+            !root.join("ef").join("0").exists(),
+            "reading creates nothing"
+        );
+    }
+
     #[test]
     fn unwritten_bytes_read_as_zeros() {
         let root = dir("zeros");
         std::fs::create_dir_all(root.join("cd")).unwrap_or_else(|e| panic!("{e}"));
         let storage = CacheStorage::new(torrent_dir(&root, "cd"), 2);
-        let mut buf = [7u8; 8];
-        storage
-            .pread_exact(0, 0, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
-        assert_eq!(buf, [0; 8], "missing file");
         storage
             .pwrite_all(0, 2, b"ab")
             .unwrap_or_else(|e| panic!("{e}"));
