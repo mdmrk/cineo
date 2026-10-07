@@ -1,9 +1,10 @@
 //! The Settings page: a section index beside one scrolling list of settings.
 
 use cineo_core::app::{
-    Action, AudioOutput, DownloadLimit, HideControls, Language, PeerLimit, SeekStep, Setting,
-    Settings, ShortSeekStep, State, SubtitleBackground, SubtitleColor, SubtitleFont,
-    SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, UploadLimit,
+    Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit,
+    SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
+    SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
+    UploadLimit, WatchedAt,
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Label, Layout, Margin,
@@ -20,6 +21,7 @@ use crate::view::{
 /// The parts of the Settings page, in page order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
+    Interface,
     Player,
     Languages,
     Subtitles,
@@ -31,7 +33,8 @@ pub enum Section {
 }
 
 impl Section {
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
+        Self::Interface,
         Self::Player,
         Self::Languages,
         Self::Subtitles,
@@ -44,6 +47,7 @@ impl Section {
 
     fn label(self) -> &'static str {
         match self {
+            Self::Interface => "Interface",
             Self::Player => "Player",
             Self::Languages => "Languages",
             Self::Subtitles => "Subtitles",
@@ -60,6 +64,7 @@ impl Section {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Confirm {
     ResetSettings,
+    ClearLibrary,
 }
 
 const NAV_WIDTH: f32 = 168.0;
@@ -138,6 +143,28 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
 fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let s = &state.settings;
     match section {
+        Section::Interface => {
+            pick(
+                ui,
+                out,
+                "Interface size",
+                "Makes text, posters and controls larger or smaller.",
+                s.interface_scale,
+                InterfaceScale::ALL,
+                scale_name,
+                Setting::InterfaceScale,
+            );
+            pick(
+                ui,
+                out,
+                "Start page",
+                "Shown when Cineo opens.",
+                s.start_page,
+                StartPage::ALL,
+                start_name,
+                Setting::StartPage,
+            );
+        }
         Section::Player => {
             switch(
                 ui,
@@ -259,6 +286,26 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
         }
         Section::Torrents => torrents(ui, s, out),
         Section::Data => {
+            pick(
+                ui,
+                out,
+                "Count as watched at",
+                "Watched videos start over and leave Continue Watching.",
+                s.watched_at,
+                WatchedAt::ALL,
+                watched_name,
+                Setting::WatchedAt,
+            );
+            row(
+                ui,
+                "Clear watch history",
+                "Empties the Library and Continue Watching.",
+                |ui| {
+                    if ui.button("Clear…").clicked() {
+                        view.confirm = Some(Confirm::ClearLibrary);
+                    }
+                },
+            );
             row(
                 ui,
                 "Reset all settings",
@@ -583,6 +630,37 @@ fn peer_name(limit: PeerLimit) -> &'static str {
         PeerLimit::P50 => "50",
         PeerLimit::P128 => "128",
         PeerLimit::P200 => "200",
+    }
+}
+
+fn scale_name(scale: InterfaceScale) -> &'static str {
+    match scale {
+        InterfaceScale::S75 => "75 %",
+        InterfaceScale::S90 => "90 %",
+        InterfaceScale::S100 => "100 %",
+        InterfaceScale::S110 => "110 %",
+        InterfaceScale::S125 => "125 %",
+        InterfaceScale::S150 => "150 %",
+        InterfaceScale::S175 => "175 %",
+        InterfaceScale::S200 => "200 %",
+    }
+}
+
+fn start_name(page: StartPage) -> &'static str {
+    match page {
+        StartPage::Home => "Home",
+        StartPage::Discover => "Discover",
+        StartPage::Library => "Library",
+    }
+}
+
+fn watched_name(at: WatchedAt) -> &'static str {
+    match at {
+        WatchedAt::P80 => "80 % played",
+        WatchedAt::P85 => "85 % played",
+        WatchedAt::P90 => "90 % played",
+        WatchedAt::P92 => "92 % played",
+        WatchedAt::P95 => "95 % played",
     }
 }
 
@@ -923,6 +1001,12 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
             "Every setting goes back to its default. Your addons and library are kept.",
             "Reset",
             Action::ResetSettings,
+        ),
+        Confirm::ClearLibrary => (
+            "Clear watch history?",
+            "Every item and its progress leaves the Library. This cannot be undone.",
+            "Clear",
+            Action::ClearLibrary,
         ),
     };
     let mut done = false;

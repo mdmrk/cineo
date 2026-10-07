@@ -4,9 +4,10 @@
 #![allow(clippy::unwrap_used)]
 
 use cineo_core::app::{
-    AudioOutput, DownloadLimit, HideControls, Language, PeerLimit, Percent, SeekStep, Setting,
-    SettingError, Settings, ShortSeekStep, SubtitleBackground, SubtitleColor, SubtitleFont,
-    SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, UploadLimit,
+    AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit, Percent,
+    SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage, SubtitleBackground,
+    SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
+    UploadLimit, WatchedAt,
 };
 
 #[test]
@@ -45,6 +46,9 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::PeerLimit(PeerLimit::P50),
         Setting::TorrentDht(false),
         Setting::AllowPrivateNetwork(true),
+        Setting::InterfaceScale(InterfaceScale::S125),
+        Setting::StartPage(StartPage::Library),
+        Setting::WatchedAt(WatchedAt::P80),
     ] {
         settings.set(setting);
     }
@@ -107,6 +111,9 @@ fn saved_keys_never_change() {
             "peer_limit",
             "torrent_dht",
             "allow_private_network",
+            "interface_scale",
+            "start_page",
+            "watched_at",
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");

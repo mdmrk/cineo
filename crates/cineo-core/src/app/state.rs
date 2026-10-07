@@ -181,6 +181,8 @@ pub enum Action {
     PlaybackFailed(String),
     PlaybackStopped,
     RemoveFromLibrary(String),
+    /// Forget every library item and its progress.
+    ClearLibrary,
     DismissNotice,
     AcceptP2p,
     DeclineP2p,
@@ -252,6 +254,7 @@ pub enum Effect {
     SaveAddons(Vec<TransportUrl>),
     SaveLibraryItem(LibraryItem),
     DeleteLibraryItem(String),
+    ClearLibrary,
     SaveSettings(Settings),
     Play(PlayRequest),
     StartTorrent(TorrentRequest),
@@ -471,6 +474,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::RemoveFromLibrary(id) => {
             state.library.retain(|i| i.id != id);
             vec![Effect::DeleteLibraryItem(id)]
+        }
+        Action::ClearLibrary => {
+            state.library.clear();
+            vec![Effect::ClearLibrary]
         }
         Action::DismissNotice => {
             state.notice = None;
@@ -938,7 +945,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
 
     let start_ms = match state.library.iter_mut().find(|i| i.id == meta_id) {
         Some(item) => {
-            let start = item.resume_ms(&video_id);
+            let start = item.resume_ms(&video_id, state.settings.watched_at);
             if item.video_id != video_id {
                 item.video_id.clone_from(&video_id);
                 item.time_offset_ms = 0;

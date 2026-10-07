@@ -10,8 +10,8 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, DownloadLimit, Effect, Language, SeekStep, Setting, State, SubtitleColor, SubtitleSize,
-    TorrentStatus, update,
+    Action, DownloadLimit, Effect, InterfaceScale, Language, SeekStep, Setting, Settings,
+    StartPage, State, SubtitleColor, SubtitleSize, TorrentStatus, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
@@ -553,18 +553,18 @@ fn resetting_settings_asks_first() {
 #[test]
 fn the_settings_index_jumps_to_a_section() {
     let mut harness = Harness::builder()
-        .with_size([1280.0, 360.0])
+        .with_size([1280.0, 500.0])
         .build_ui_state(
             |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
             (State::default(), settings_page(), Vec::new()),
         );
     let about = |h: &Harness<'_, Ui>| h.get_by_label_contains("Made by people").rect().top();
-    assert!(about(&harness) > 360.0, "About starts below the window");
+    assert!(about(&harness) > 500.0, "About starts below the window");
     harness.get_by_label("About").click();
     harness.run_steps(30);
     harness.run();
     let top = about(&harness);
-    assert!(top < 360.0, "About is scrolled into view: {top}");
+    assert!(top < 500.0, "About is scrolled into view: {top}");
 }
 
 #[test]
@@ -641,4 +641,41 @@ fn audio_and_torrent_settings_change_from_the_page() {
             Action::ChangeSetting(Setting::AllowPrivateNetwork(true)),
         ]
     );
+}
+
+#[test]
+fn the_interface_scale_sets_the_zoom_and_keys_do_not_change_it() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::RestoreSettings(Settings {
+            interface_scale: InterfaceScale::S125,
+            ..Settings::default()
+        }),
+    );
+    let mut harness = harness(state, ViewState::default());
+    harness.run();
+    assert!((harness.ctx.zoom_factor() - 1.25).abs() < 1e-6);
+    harness.key_press_modifiers(Modifiers::COMMAND, Key::Equals);
+    harness.run();
+    assert!((harness.ctx.zoom_factor() - 1.25).abs() < 1e-6);
+}
+
+#[test]
+fn the_start_page_setting_picks_the_first_page() {
+    assert_eq!(Page::from(StartPage::Home), Page::Board);
+    assert_eq!(Page::from(StartPage::Library), Page::Library);
+    assert_eq!(Page::from(StartPage::Discover), Page::Discover);
+}
+
+#[test]
+fn clearing_watch_history_asks_first() {
+    let mut harness = harness(State::default(), settings_page());
+    open_section(&mut harness, "Data");
+    harness.get_by_label("Clear…").click();
+    harness.run();
+    harness.get_by_label("Clear watch history?");
+    harness.get_by_label("Clear").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::ClearLibrary]);
 }

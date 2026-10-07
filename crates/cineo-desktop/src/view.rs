@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
 use cineo_core::app::{
-    Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, board_targets,
-    continue_watching,
+    Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Row, StartPage, State,
+    StreamGroup, board_targets, continue_watching,
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
@@ -65,6 +65,16 @@ impl Page {
     }
 }
 
+impl From<StartPage> for Page {
+    fn from(page: StartPage) -> Self {
+        match page {
+            StartPage::Home => Self::Board,
+            StartPage::Discover => Self::Discover,
+            StartPage::Library => Self::Library,
+        }
+    }
+}
+
 /// Presentation-only state: the open page and text being typed.
 #[derive(Debug, Clone, Default)]
 pub struct ViewState {
@@ -91,6 +101,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
         ui.ctx().request_discard("theme applied");
         return out;
     }
+    apply_scale(ui.ctx(), state.settings.interface_scale);
     shortcuts(ui, state, view, &mut out);
     sidebar(ui, state, view, &mut out);
     if let Some(notice) = &state.notice {
@@ -132,6 +143,14 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                 });
         });
     out
+}
+
+#[expect(clippy::cast_precision_loss, reason = "a percentage")]
+fn apply_scale(ctx: &egui::Context, scale: InterfaceScale) {
+    let zoom = scale.percent() as f32 / 100.0;
+    if (ctx.zoom_factor() - zoom).abs() > f32::EPSILON {
+        ctx.set_zoom_factor(zoom);
+    }
 }
 
 fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
@@ -383,7 +402,7 @@ uploads the parts it has already downloaded to those peers. Downloaded data is k
 a local cache. You can turn peer-to-peer streaming off in Settings.";
 
 fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    let resume = continue_watching(&state.library);
+    let resume = continue_watching(&state.library, state.settings.watched_at);
     if !resume.is_empty() {
         section(ui, "Continue watching", |_| {});
         poster_strip(ui, "continue", |ui| {

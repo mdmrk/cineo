@@ -194,6 +194,7 @@ impl CineoApp {
         for action in restore {
             app.dispatch(action);
         }
+        app.view.page = app.state.settings.start_page.into();
         app
     }
 
@@ -282,6 +283,7 @@ impl CineoApp {
             effect @ (Effect::SaveAddons(_)
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)
+            | Effect::ClearLibrary
             | Effect::SaveSettings(_)) => {
                 let sent = self
                     .store_tx

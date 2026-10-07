@@ -3,6 +3,7 @@
 
 use url::Url;
 
+use super::settings::WatchedAt;
 use crate::addon::ContentType;
 
 /// Progress for one meta item; the last watched video wins.
@@ -20,8 +21,6 @@ pub struct LibraryItem {
     pub updated_ms: u64,
 }
 
-const FINISHED: f64 = 0.92;
-
 impl LibraryItem {
     pub fn progress(&self) -> f32 {
         if self.duration_ms == 0 {
@@ -34,14 +33,14 @@ impl LibraryItem {
         p
     }
 
-    pub fn is_finished(&self) -> bool {
-        f64::from(self.progress()) >= FINISHED
+    pub fn is_finished(&self, watched_at: WatchedAt) -> bool {
+        f64::from(self.progress()) >= watched_at.fraction()
     }
 
     /// Where to resume `video_id`: the saved offset if it is the same,
     /// unfinished video; otherwise the start.
-    pub fn resume_ms(&self, video_id: &str) -> u64 {
-        if self.video_id == video_id && !self.is_finished() {
+    pub fn resume_ms(&self, video_id: &str, watched_at: WatchedAt) -> u64 {
+        if self.video_id == video_id && !self.is_finished(watched_at) {
             self.time_offset_ms
         } else {
             0
@@ -50,10 +49,10 @@ impl LibraryItem {
 }
 
 /// Unfinished items with progress, most recently watched first.
-pub fn continue_watching(items: &[LibraryItem]) -> Vec<&LibraryItem> {
+pub fn continue_watching(items: &[LibraryItem], watched_at: WatchedAt) -> Vec<&LibraryItem> {
     let mut list: Vec<&LibraryItem> = items
         .iter()
-        .filter(|i| i.time_offset_ms > 0 && !i.is_finished())
+        .filter(|i| i.time_offset_ms > 0 && !i.is_finished(watched_at))
         .collect();
     list.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
     list

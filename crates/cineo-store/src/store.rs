@@ -196,6 +196,11 @@ impl Store {
         Ok(())
     }
 
+    pub fn clear_library(&mut self) -> Result<(), StoreError> {
+        self.conn.execute("DELETE FROM library_items", [])?;
+        Ok(())
+    }
+
     /// The saved settings; defaults for anything never saved or unreadable.
     pub fn settings(&self) -> Result<Settings, StoreError> {
         let mut settings = Settings::default();
@@ -236,6 +241,7 @@ impl Store {
             Effect::SaveAddons(addons) => self.save_addons(addons)?,
             Effect::SaveLibraryItem(item) => self.save_library_item(item)?,
             Effect::DeleteLibraryItem(id) => self.delete_library_item(id)?,
+            Effect::ClearLibrary => self.clear_library()?,
             Effect::SaveSettings(settings) => self.save_settings(settings)?,
             _ => return Ok(false),
         }

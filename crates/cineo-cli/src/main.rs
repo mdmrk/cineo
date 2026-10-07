@@ -164,11 +164,12 @@ async fn run(cli: Cli) -> Result<()> {
             }
         }
         Command::Library { all } => {
-            let items = open_store(data_dir()?)?.library()?;
+            let store = open_store(data_dir()?)?;
+            let items = store.library()?;
             let shown = if all {
                 items.iter().collect()
             } else {
-                continue_watching(&items)
+                continue_watching(&items, store.settings()?.watched_at)
             };
             for item in shown {
                 println!("{}", render_library_item(item));

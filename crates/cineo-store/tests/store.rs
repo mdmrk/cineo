@@ -9,8 +9,8 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_manifest, parse_meta_response, parse_stream_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Percent, SeekStep, Settings, State, continue_watching,
-    update,
+    Action, Effect, Language, LibraryItem, Percent, SeekStep, Settings, State, WatchedAt,
+    continue_watching, update,
 };
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
@@ -87,6 +87,16 @@ fn addons_round_trip_in_order_and_replace_the_previous_list() {
         .save_addons(&[a.clone(), b.clone(), a.clone()])
         .unwrap();
     assert_eq!(store.addons().unwrap(), vec![a, b], "duplicates keep first");
+}
+
+#[test]
+fn clearing_the_library_deletes_every_item() {
+    let dir = temp_dir("clear-library");
+    let mut store = Store::open_in(&dir).unwrap();
+    store.save_library_item(&item("a", 1, 1)).unwrap();
+    store.save_library_item(&item("b", 1, 2)).unwrap();
+    assert!(store.apply(&Effect::ClearLibrary).unwrap());
+    assert!(store.library().unwrap().is_empty());
 }
 
 #[test]
@@ -380,7 +390,7 @@ fn continue_watching_resumes_at_the_saved_position_after_restart() {
     let mut store = Store::open_in(&dir).unwrap();
     let mut state = start_app(&store);
     assert_eq!(state.addons.len(), 1);
-    let resume: Vec<_> = continue_watching(&state.library)
+    let resume: Vec<_> = continue_watching(&state.library, WatchedAt::P92)
         .iter()
         .map(|i| (i.id.as_str(), i.time_offset_ms))
         .collect();

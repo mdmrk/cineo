@@ -259,6 +259,51 @@ impl PeerLimit {
     }
 }
 
+choice! {
+    /// The UI size, in percent.
+    InterfaceScale {
+        S75 = "75", S90 = "90", S100 = "100", S110 = "110", S125 = "125", S150 = "150",
+        S175 = "175", S200 = "200",
+    }
+}
+
+impl InterfaceScale {
+    pub const fn percent(self) -> u32 {
+        match self {
+            Self::S75 => 75,
+            Self::S90 => 90,
+            Self::S100 => 100,
+            Self::S110 => 110,
+            Self::S125 => 125,
+            Self::S150 => 150,
+            Self::S175 => 175,
+            Self::S200 => 200,
+        }
+    }
+}
+
+choice! {
+    /// The page shown when Cineo opens.
+    StartPage { Home = "home", Discover = "discover", Library = "library", }
+}
+
+choice! {
+    /// How much of a video must have played for it to count as watched.
+    WatchedAt { P80 = "80", P85 = "85", P90 = "90", P92 = "92", P95 = "95", }
+}
+
+impl WatchedAt {
+    pub const fn fraction(self) -> f64 {
+        match self {
+            Self::P80 => 0.80,
+            Self::P85 => 0.85,
+            Self::P90 => 0.90,
+            Self::P92 => 0.92,
+            Self::P95 => 0.95,
+        }
+    }
+}
+
 /// Subtitle size in percent of the player's default.
 pub type SubtitleSize = Ranged<50, 200>;
 /// How far above the bottom edge subtitles sit, in percent of the height.
@@ -384,6 +429,10 @@ settings! {
     /// Addons, images and torrent peers on loopback/LAN addresses are
     /// allowed (docs/SECURITY.md). Read at startup.
     allow_private_network: bool = false => AllowPrivateNetwork("allow_private_network"),
+    interface_scale: InterfaceScale = InterfaceScale::S100 => InterfaceScale("interface_scale"),
+    start_page: StartPage = StartPage::Home => StartPage("start_page"),
+    /// Watched videos restart from the beginning and leave Continue Watching.
+    watched_at: WatchedAt = WatchedAt::P92 => WatchedAt("watched_at"),
 }
 
 impl Settings {

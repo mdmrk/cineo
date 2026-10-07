@@ -10,7 +10,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Loadable, Setting, Settings, State, TorrentRequest,
-    TorrentStatus, continue_watching, update,
+    TorrentStatus, WatchedAt, continue_watching, update,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -470,7 +470,7 @@ fn playing_an_http_stream_records_library_and_resumes() {
             now_ms: 5,
         },
     );
-    assert_eq!(continue_watching(&state.library).len(), 1);
+    assert_eq!(continue_watching(&state.library, WatchedAt::P92).len(), 1);
     let effects = update(
         &mut state,
         Action::Play {
@@ -775,13 +775,66 @@ fn continue_watching_excludes_finished_and_sorts_by_recency() {
         item("c", 50, 100, 2),
         item("d", 0, 100, 4),
     ];
-    let ids: Vec<_> = continue_watching(&items)
-        .iter()
-        .map(|i| i.id.as_str())
-        .collect();
-    assert_eq!(ids, vec!["c", "a"]);
-    assert_eq!(items[1].resume_ms("b"), 0, "finished restarts");
-    assert_eq!(items[2].resume_ms("other"), 0);
+    let ids = |watched_at| -> Vec<_> {
+        continue_watching(&items, watched_at)
+            .iter()
+            .map(|i| i.id.as_str())
+            .collect()
+    };
+    assert_eq!(ids(WatchedAt::P92), vec!["c", "a"]);
+    assert_eq!(
+        items[1].resume_ms("b", WatchedAt::P92),
+        0,
+        "finished restarts"
+    );
+    assert_eq!(items[2].resume_ms("other", WatchedAt::P92), 0);
+}
+
+#[test]
+fn the_watched_threshold_decides_what_is_finished() {
+    let item = LibraryItem {
+        id: "a".into(),
+        content_type: ty("movie"),
+        name: "a".into(),
+        poster: None,
+        video_id: "a".into(),
+        time_offset_ms: 86,
+        duration_ms: 100,
+        updated_ms: 1,
+    };
+    assert!(item.is_finished(WatchedAt::P85));
+    assert!(!item.is_finished(WatchedAt::P90));
+    assert_eq!(item.resume_ms("a", WatchedAt::P85), 0);
+    assert_eq!(item.resume_ms("a", WatchedAt::P90), 86);
+    let items = [item];
+    assert!(continue_watching(&items, WatchedAt::P85).is_empty());
+}
+
+#[test]
+fn clearing_the_library_forgets_every_item() {
+    let mut state = State::default();
+    let item = LibraryItem {
+        id: "a".into(),
+        content_type: ty("movie"),
+        name: "a".into(),
+        poster: None,
+        video_id: "a".into(),
+        time_offset_ms: 1,
+        duration_ms: 100,
+        updated_ms: 1,
+    };
+    update(
+        &mut state,
+        Action::Restore {
+            addons: Vec::new(),
+            library: vec![item],
+        },
+    );
+    assert_eq!(
+        update(&mut state, Action::ClearLibrary),
+        vec![Effect::ClearLibrary]
+    );
+    assert!(state.library.is_empty());
 }
 
 #[test]
