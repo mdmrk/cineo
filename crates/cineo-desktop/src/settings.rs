@@ -332,7 +332,7 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 6.0,
                 TextFormat::simple(theme::body(), theme::ACCENT),
             );
-            ui.hyperlink_to(job, env!("CARGO_PKG_REPOSITORY"));
+            ui.hyperlink_to(job, "https://github.com/mdmrk/cineo");
         }
     }
 }
