@@ -47,31 +47,31 @@ pub(crate) const SUCCESS: Color32 = Color32::from_rgb(0x8e, 0xd8, 0xa4);
 /// Buttons, inputs, tags and panels.
 pub(crate) const RADIUS: u8 = 3;
 pub(crate) const POSTER_RADIUS: u8 = 3;
-pub(crate) const GAP: f32 = 12.0;
-pub(crate) const SECTION_GAP: f32 = 36.0;
-pub(crate) const PAGE_MARGIN: i8 = 40;
+pub(crate) const GAP: f32 = 8.0;
+pub(crate) const SECTION_GAP: f32 = 22.0;
+pub(crate) const PAGE_MARGIN: i8 = 24;
 /// The widest the page content grows; wider windows get side margins.
-pub(crate) const CONTENT_MAX_WIDTH: f32 = 1280.0;
+pub(crate) const CONTENT_MAX_WIDTH: f32 = 1440.0;
 
 /// Sidebar width with labels, and icons-only on narrow windows.
-pub(crate) const SIDEBAR_WIDTH: f32 = 208.0;
-pub(crate) const SIDEBAR_COMPACT_WIDTH: f32 = 68.0;
+pub(crate) const SIDEBAR_WIDTH: f32 = 176.0;
+pub(crate) const SIDEBAR_COMPACT_WIDTH: f32 = 56.0;
 /// Below this window width the sidebar shows icons only.
 pub(crate) const SIDEBAR_COMPACT_BELOW: f32 = 1000.0;
 
 /// Poster width in rows; grids stretch between the min and max. Dense on
 /// purpose: browsing should feel like flipping through a collection.
-pub(crate) const CARD_WIDTH: f32 = 128.0;
-pub(crate) const GRID_CARD_MIN: f32 = 112.0;
-pub(crate) const GRID_CARD_MAX: f32 = 156.0;
-pub(crate) const CARD_GAP: f32 = 8.0;
+pub(crate) const CARD_WIDTH: f32 = 116.0;
+pub(crate) const GRID_CARD_MIN: f32 = 104.0;
+pub(crate) const GRID_CARD_MAX: f32 = 140.0;
+pub(crate) const CARD_GAP: f32 = 6.0;
 
 /// Detail page backdrop height and poster width.
-pub(crate) const BACKDROP_HEIGHT: f32 = 440.0;
-pub(crate) const DETAIL_POSTER_WIDTH: f32 = 230.0;
+pub(crate) const BACKDROP_HEIGHT: f32 = 320.0;
+pub(crate) const DETAIL_POSTER_WIDTH: f32 = 180.0;
 
-/// Seconds of hover and selection fades. Short, so the UI feels immediate.
-pub(crate) const ANIM: f32 = 0.1;
+/// Seconds of hover and selection fades: none, so the UI reacts instantly.
+pub(crate) const ANIM: f32 = 0.0;
 
 /// Points one mouse-wheel notch scrolls. egui's native default (40) suits
 /// text; poster pages need about what browsers use.
@@ -90,49 +90,49 @@ fn display_family() -> FontFamily {
 
 /// Film titles on the detail page.
 pub(crate) fn title() -> FontId {
-    FontId::new(46.0, display_family())
+    FontId::new(36.0, display_family())
 }
 
 /// The year next to a film title.
 pub(crate) fn title_year() -> FontId {
-    FontId::new(28.0, display_family())
+    FontId::new(22.0, display_family())
 }
 
 /// Page headings (Discover, Search, …) and dialog titles.
 pub(crate) fn heading() -> FontId {
-    FontId::new(36.0, display_family())
+    FontId::new(28.0, display_family())
 }
 
 pub(crate) fn logo() -> FontId {
-    FontId::new(28.0, display_family())
+    FontId::new(24.0, display_family())
 }
 
 /// Small-caps section heads (set with [`CAPS_SPACING`]).
 pub(crate) fn section() -> FontId {
-    FontId::new(12.5, strong_family())
+    FontId::new(12.0, strong_family())
 }
 
 /// Sidebar labels (small caps).
 pub(crate) fn nav() -> FontId {
-    FontId::new(12.5, strong_family())
+    FontId::new(12.0, strong_family())
 }
 
 /// Emphasised body text: names, buttons that matter.
 pub(crate) fn strong() -> FontId {
-    FontId::new(14.5, strong_family())
+    FontId::new(14.0, strong_family())
 }
 
 pub(crate) fn body() -> FontId {
-    FontId::new(14.5, FontFamily::Proportional)
+    FontId::new(14.0, FontFamily::Proportional)
 }
 
 /// Longer reading text: synopses.
 pub(crate) fn reading() -> FontId {
-    FontId::new(16.0, FontFamily::Proportional)
+    FontId::new(15.0, FontFamily::Proportional)
 }
 
 pub(crate) fn caption() -> FontId {
-    FontId::new(12.5, FontFamily::Proportional)
+    FontId::new(12.0, FontFamily::Proportional)
 }
 
 /// Inter for the UI, DM Serif Display for titles, Tabler for icons; egui's
@@ -251,11 +251,12 @@ pub(crate) fn apply(ctx: &egui::Context) {
 
     ctx.global_style_mut(|style| {
         style.animation_time = ANIM;
-        style.spacing.item_spacing = egui::vec2(8.0, 8.0);
-        style.spacing.button_padding = egui::vec2(12.0, 6.0);
-        style.spacing.window_margin = Margin::same(24);
+        style.scroll_animation = egui::style::ScrollAnimation::none();
+        style.spacing.item_spacing = egui::vec2(6.0, 6.0);
+        style.spacing.button_padding = egui::vec2(10.0, 4.0);
+        style.spacing.window_margin = Margin::same(18);
         style.spacing.menu_margin = Margin::same(6);
-        style.spacing.interact_size.y = 30.0;
+        style.spacing.interact_size.y = 26.0;
         style.spacing.combo_width = 200.0;
         style.spacing.scroll.floating = true;
         style.spacing.scroll.bar_width = 8.0;

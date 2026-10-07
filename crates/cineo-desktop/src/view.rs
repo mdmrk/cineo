@@ -207,17 +207,17 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
         .frame(
             Frame::new()
                 .fill(theme::SIDEBAR)
-                .inner_margin(Margin::symmetric(12, 22)),
+                .inner_margin(Margin::symmetric(10, 14)),
         )
         .show(ui, |ui| {
-            let edge = ui.max_rect().right() + 11.5;
+            let edge = ui.max_rect().right() + 9.5;
             ui.painter().vline(
                 edge,
-                ui.max_rect().y_range().expand(22.0),
+                ui.max_rect().y_range().expand(14.0),
                 Stroke::new(1.0, theme::RULE),
             );
             logo(ui, compact);
-            ui.add_space(32.0);
+            ui.add_space(18.0);
             ui.spacing_mut().item_spacing.y = 2.0;
             for page in Page::ALL {
                 let selected = view.page == page && state.detail.is_none();
@@ -248,9 +248,9 @@ fn logo(ui: &mut Ui, compact: bool) {
         }
         let size = 22.0;
         let slot = if compact {
-            vec2(ui.available_width(), 34.0)
+            vec2(ui.available_width(), 28.0)
         } else {
-            vec2(size, 34.0)
+            vec2(size, 28.0)
         };
         let (slot, _) = ui.allocate_exact_size(slot, Sense::hover());
         let c = slot.center();
@@ -273,7 +273,7 @@ fn logo(ui: &mut Ui, compact: bool) {
 /// `compact`. Accessible as a button labelled with the page name.
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 38.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
     if ui.is_rect_visible(rect) {
         let hover = ui
@@ -282,7 +282,7 @@ fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response 
         let painter = ui.painter();
         if selected {
             painter.rect_filled(
-                Rect::from_min_size(pos2(rect.min.x - 12.0, rect.min.y + 8.0), vec2(3.0, 22.0)),
+                Rect::from_min_size(pos2(rect.min.x - 10.0, rect.min.y + 6.0), vec2(3.0, 18.0)),
                 0.0,
                 theme::ACCENT,
             );
@@ -296,13 +296,13 @@ fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response 
         let icon_center = if compact {
             rect.center()
         } else {
-            pos2(rect.min.x + 18.0, rect.center().y)
+            pos2(rect.min.x + 16.0, rect.center().y)
         };
-        paint_icon(painter, page.icon(), icon_center, 19.0, icon_color);
+        paint_icon(painter, page.icon(), icon_center, 17.0, icon_color);
         if !compact {
             let galley = painter.layout_job(caps(label, theme::nav(), color));
             painter.galley(
-                pos2(rect.min.x + 40.0, rect.center().y - galley.size().y / 2.0),
+                pos2(rect.min.x + 34.0, rect.center().y - galley.size().y / 2.0),
                 galley,
                 color,
             );
@@ -322,13 +322,13 @@ fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
         .frame(
             Frame::new()
                 .fill(theme::PANEL)
-                .inner_margin(Margin::symmetric(0, 10)),
+                .inner_margin(Margin::symmetric(0, 6)),
         )
         .show(ui, |ui| {
             let full = ui.max_rect();
             ui.painter().hline(
                 full.x_range(),
-                full.bottom() + 9.5,
+                full.bottom() + 5.5,
                 Stroke::new(1.0, theme::WARNING),
             );
             column(ui, |ui| {
@@ -358,11 +358,11 @@ fn torrent_bar(ui: &mut Ui, status: &TorrentStatus) {
         .frame(
             Frame::new()
                 .fill(theme::PANEL)
-                .inner_margin(Margin::symmetric(0, 10)),
+                .inner_margin(Margin::symmetric(0, 6)),
         )
         .show(ui, |ui| {
             let full = ui.max_rect();
-            let track = Rect::from_min_size(full.min - vec2(0.0, 10.0), vec2(full.width(), 2.0));
+            let track = Rect::from_min_size(full.min - vec2(0.0, 6.0), vec2(full.width(), 2.0));
             let painter = ui.painter();
             painter.rect_filled(track, 0.0, theme::SURFACE);
             if let TorrentStatus::Streaming {
@@ -398,7 +398,7 @@ fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
                 .fill(theme::PANEL)
                 .stroke(Stroke::new(1.0, theme::RULE))
                 .corner_radius(CornerRadius::same(theme::RADIUS))
-                .inner_margin(Margin::same(28)),
+                .inner_margin(Margin::same(20)),
         )
         .show(ui.ctx(), |ui| {
             ui.set_max_width(480.0);
@@ -515,7 +515,7 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                 });
         });
     }
-    ui.add_space(theme::GAP * 2.0);
+    ui.add_space(theme::GAP);
     if let Some(error) = &discover.error {
         ui.label(RichText::new(error).color(theme::DANGER));
     }
@@ -544,20 +544,20 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         TextEdit::singleline(&mut view.search_input)
             .id_salt("search")
             .hint_text("A film, a series, a guilty pleasure…")
-            .font(FontId::new(17.0, egui::FontFamily::Proportional))
+            .font(FontId::new(15.0, egui::FontFamily::Proportional))
             .margin(Margin {
-                left: 40,
-                right: 12,
-                top: 11,
-                bottom: 11,
+                left: 34,
+                right: 10,
+                top: 7,
+                bottom: 7,
             })
             .desired_width(width),
     );
     paint_icon(
         ui.painter(),
         Icon::Search,
-        pos2(field.rect.min.x + 20.0, field.rect.center().y),
-        18.0,
+        pos2(field.rect.min.x + 17.0, field.rect.center().y),
+        16.0,
         if field.has_focus() {
             theme::ACCENT
         } else {
@@ -668,7 +668,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         let field = ui.add(
             TextEdit::singleline(&mut view.addon_input)
                 .hint_text("https://…/manifest.json")
-                .margin(Margin::symmetric(10, 8))
+                .margin(Margin::symmetric(8, 5))
                 .desired_width(field_width),
         );
         let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
@@ -707,7 +707,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     }
     for (index, addon) in state.addons.iter().enumerate() {
         let manifest = &addon.manifest;
-        ui.add_space(6.0);
+        ui.add_space(4.0);
         ui.horizontal(|ui| {
             let actions_width = 250.0;
             ui.vertical(|ui| {
@@ -907,7 +907,7 @@ fn detail_page(
     let height = if background.is_some() {
         theme::BACKDROP_HEIGHT
     } else {
-        72.0
+        56.0
     };
     let (backdrop, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     if let Some(background) = background {
@@ -938,7 +938,7 @@ fn detail_page(
             true,
         );
     }
-    let back = Rect::from_min_size(backdrop.min + Vec2::splat(20.0), vec2(92.0, 32.0));
+    let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(84.0, 28.0));
     if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
         out.push(Action::CloseDetail);
         view.season = None;
@@ -950,9 +950,9 @@ fn detail_page(
     column(ui, |ui| {
         let narrow = ui.available_width() < 760.0;
         ui.horizontal_top(|ui| {
-            ui.spacing_mut().item_spacing.x = if narrow { 20.0 } else { 40.0 };
+            ui.spacing_mut().item_spacing.x = if narrow { 16.0 } else { 28.0 };
             let poster_width = if narrow {
-                150.0
+                128.0
             } else {
                 theme::DETAIL_POSTER_WIDTH
             };
@@ -970,7 +970,7 @@ fn detail_page(
             let width = ui.available_width() - ui.spacing().item_spacing.x;
             ui.vertical(|ui| {
                 ui.set_width(width);
-                ui.add_space(if background.is_some() { 24.0 } else { 0.0 });
+                ui.add_space(if background.is_some() { 16.0 } else { 0.0 });
                 about(ui, name, preview, meta);
                 match &detail.meta {
                     Loadable::Loading => {
@@ -1136,7 +1136,7 @@ fn episodes(
 /// A full-width clickable row with an optional leading number, separated by
 /// a rule. Accessible as a button labelled with `text`.
 fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Response {
-    let height = 40.0;
+    let height = 32.0;
     let (rect, response) =
         ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click());
     response
@@ -1174,7 +1174,7 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
                     theme::TEXT_FAINT
                 },
             );
-            x += 36.0;
+            x += 30.0;
         }
         let mut job = LayoutJob::simple_singleline(text.to_owned(), theme::body(), color);
         job.wrap.max_width = rect.max.x - x - 12.0;
@@ -1199,7 +1199,7 @@ fn stream_group(
     p2p_enabled: bool,
     out: &mut Vec<Action>,
 ) {
-    ui.add_space(6.0);
+    ui.add_space(2.0);
     ui.horizontal(|ui| {
         ui.label(
             RichText::new(&group.addon_name)
@@ -1226,7 +1226,7 @@ fn stream_group(
             ui.label(faint("No streams"));
         }
         Loadable::Ready(streams) => {
-            ui.spacing_mut().item_spacing.y = 6.0;
+            ui.spacing_mut().item_spacing.y = 4.0;
             let mut hidden = 0;
             for (stream_index, stream) in streams.iter().enumerate() {
                 if stream.source.is_p2p() && !p2p_enabled {
@@ -1278,19 +1278,19 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
         }),
         |ui| {
             Frame::new()
-                .inner_margin(Margin::same(10))
+                .inner_margin(Margin::symmetric(8, 6))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.horizontal_top(|ui| {
-                        ui.spacing_mut().item_spacing.x = 14.0;
+                        ui.spacing_mut().item_spacing.x = 10.0;
                         let play = play_button(ui, playable).on_disabled_hover_text(format!(
                             "{} streams are not supported yet",
                             stream.source.kind_label()
                         ));
                         ui.vertical(|ui| {
-                            ui.spacing_mut().item_spacing.y = 3.0;
+                            ui.spacing_mut().item_spacing.y = 2.0;
                             ui.horizontal(|ui| {
-                                ui.spacing_mut().item_spacing.x = 5.0;
+                                ui.spacing_mut().item_spacing.x = 4.0;
                                 if let Some(quality) = &quality {
                                     quality_tags(ui, quality);
                                 }
@@ -1377,7 +1377,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
 /// played. Accessible as a button labelled "Play".
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
-        let (rect, response) = ui.allocate_exact_size(Vec2::splat(40.0), Sense::click());
+        let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), "Play"));
         if ui.is_rect_visible(rect) {
             let hover = ui.ctx().animate_bool_with_time(
@@ -1394,13 +1394,13 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
                 (theme::SURFACE, theme::TEXT_FAINT)
             };
             let painter = ui.painter();
-            painter.circle_filled(rect.center(), 18.0 + 2.0 * hover, fill);
+            painter.circle_filled(rect.center(), 15.0 + hover, fill);
             // The triangle's visual center sits right of its box's center.
             paint_icon(
                 painter,
                 Icon::Play,
-                rect.center() + vec2(1.5, 0.0),
-                19.0,
+                rect.center() + vec2(1.0, 0.0),
+                15.0,
                 ink,
             );
         }
@@ -1506,7 +1506,7 @@ fn resolution(text: &str) -> Option<(&'static str, Tier)> {
 /// The side margin of pages: smaller on narrow windows.
 fn page_margin(ui: &Ui) -> f32 {
     if ui.available_width() < 900.0 {
-        24.0
+        16.0
     } else {
         f32::from(theme::PAGE_MARGIN)
     }
@@ -1552,7 +1552,7 @@ fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     });
     ui.add_space(-4.0);
     rule(ui);
-    ui.add_space(6.0);
+    ui.add_space(4.0);
 }
 
 fn rule(ui: &mut Ui) {
@@ -1618,19 +1618,15 @@ fn catalog_row(
 fn skeleton_row(ui: &mut Ui) {
     let size = card_size(theme::CARD_WIDTH, PosterShape::Poster);
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), size.y), Sense::hover());
-    let time = ui.input(|i| i.time);
-    #[expect(clippy::cast_possible_truncation, reason = "a small periodic value")]
-    let pulse = (((time * 2.0).sin() * 0.5 + 0.5) as f32).mul_add(0.5, 0.5);
     let mut x = rect.min.x;
     while x + size.x <= rect.max.x {
         ui.painter().rect_filled(
             Rect::from_min_size(pos2(x, rect.min.y), size),
             CornerRadius::same(theme::POSTER_RADIUS),
-            theme::PANEL.gamma_multiply(pulse),
+            theme::PANEL,
         );
         x += size.x + theme::CARD_GAP;
     }
-    ui.ctx().request_repaint_after(Duration::from_millis(50));
 }
 
 /// A horizontally scrolling row of posters with page arrows that show on
@@ -1648,7 +1644,7 @@ fn poster_strip(
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
         .show(ui, |ui| {
             if let Some(delta) = pending {
-                ui.scroll_with_delta_animation(vec2(delta, 0.0), ScrollAnimation::duration(0.35));
+                ui.scroll_with_delta_animation(vec2(delta, 0.0), ScrollAnimation::duration(0.12));
             }
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = theme::CARD_GAP;
@@ -1874,28 +1870,22 @@ const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
 
 /// Paints the image at `src` filling `rect`, cropping instead of
 /// stretching. `focus_y` (0 = top, 1 = bottom) picks which part of a tall
-/// image stays visible. It fades in once loaded.
+/// image stays visible. Nothing is drawn until it has loaded.
 fn paint_cover(ui: &Ui, src: &str, rect: Rect, radius: CornerRadius, tint: Color32, focus_y: f32) {
     let image = Image::new(src)
         .corner_radius(radius)
         .texture_options(IMAGE_FILTER)
         .show_loading_spinner(false);
-    let size = image
+    let Some(size) = image
         .load_for_size(ui.ctx(), rect.size())
         .ok()
-        .and_then(|poll| poll.size());
-    let loaded = ui
-        .ctx()
-        .animate_bool_with_time(egui::Id::new(src), size.is_some(), 0.2);
-    if loaded <= 0.0 {
+        .and_then(|poll| poll.size())
+    else {
         return;
-    }
-    let uv = size.map_or(Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), |size| {
-        cover_uv(size, rect.size(), focus_y)
-    });
+    };
     image
-        .uv(uv)
-        .tint(tint.gamma_multiply(loaded))
+        .uv(cover_uv(size, rect.size(), focus_y))
+        .tint(tint)
         .paint_at(ui, rect);
 }
 
@@ -2005,7 +1995,7 @@ fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
 /// A settings row: `label` with an on/off switch at its right end.
 /// Accessible as a checkbox labelled `label`.
 fn toggle_row(ui: &mut Ui, on: bool, label: &str) -> Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
     if ui.is_rect_visible(rect) {
         let t = ui
@@ -2373,9 +2363,9 @@ fn lerp_u8(from: u8, to: u8, t: f32) -> u8 {
 }
 
 fn empty(ui: &mut Ui, text: &str) {
-    ui.add_space(theme::GAP);
+    ui.add_space(theme::GAP / 2.0);
     ui.label(dim(text));
-    ui.add_space(theme::GAP);
+    ui.add_space(theme::GAP / 2.0);
 }
 
 fn dim(text: &str) -> RichText {
