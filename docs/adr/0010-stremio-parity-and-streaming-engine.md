@@ -1,6 +1,7 @@
 # 0010. Stremio behavioral parity; own local streaming engine
 
-- Status: Accepted (goal and approach); engine library settled by 0012
+- Status: Accepted (goal and approach); engine library settled by 0012;
+  the bounded cache superseded by 0015
 - Date: 2026-10-06
 
 ## Context
@@ -54,8 +55,7 @@ Candidate libraries (crates.io, 2026-10-06):
 - **Safety** (SECURITY.md §Streaming engine):
   - The engine binds to loopback only, with an unguessable per-session path
     token.
-  - Cache size is bounded. (Amended by ADR-0012, 2026-10-07: no cache;
-    only the torrent being played is on disk.)
+  - Cache size is bounded.
   - P2P is disclosed before first use and can be disabled entirely
     (LEGAL.md).
 

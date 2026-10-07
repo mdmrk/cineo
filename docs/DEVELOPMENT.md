@@ -424,7 +424,7 @@ gains `directories` 6.0.0 and with it `option-ext` (MPL-2.0), which has a
 crate-scoped exception in `.config/deny.toml` (LEGAL.md).
 
 2026-10-07: `librqbit` is vendored (`vendor/librqbit`, used through
-`[patch.crates-io]`) so we can carry a streaming patch (ADR-0012). Its
+`[patch.crates-io]`) so we can carry a streaming patch (ADR-0015). Its
 updates follow `vendor/README.md`.
 
 UI polish (2026-10-07): not crates, but bundled assets. `cineo-desktop`
