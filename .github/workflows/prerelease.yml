@@ -1,0 +1,95 @@
+name: Prerelease
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prerelease
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, archive: tar.gz }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, archive: zip }
+          - { os: macos-latest, target: aarch64-apple-darwin, archive: tar.gz }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned toolchain (rust-toolchain.toml)
+        run: rustup toolchain install && rustup target add ${{ matrix.target }}
+      - name: Build
+        run: cargo build -p cineo-cli -p cineo-desktop --locked --release --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          ARCHIVE: ${{ matrix.archive }}
+        run: |
+          name="cineo-prerelease-${TARGET}"
+          mkdir -p "dist/$name"
+          exe=""
+          [[ "$TARGET" == *windows* ]] && exe=".exe"
+          cp "target/${TARGET}/release/cineo${exe}" "target/${TARGET}/release/cineo-desktop${exe}" \
+            README.md LICENSE crates/cineo-desktop/assets/fonts/*-OFL.txt "dist/$name/"
+          iconflow=$(cargo metadata --format-version 1 --locked \
+            | jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
+          command -v cygpath >/dev/null && iconflow=$(cygpath -u "$iconflow")
+          cp "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" "dist/$name/"
+          cd dist
+          if [[ "$ARCHIVE" == zip ]]; then 7z a "$name.zip" "$name" >/dev/null; else tar czf "$name.tar.gz" "$name"; fi
+          rm -rf "$name"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prerelease-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish GitHub prerelease
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: prerelease-*
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+      - name: Replace prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view prerelease --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release delete prerelease --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+          fi
+          gh release create prerelease dist/* --repo "$GITHUB_REPOSITORY" --prerelease \
+            --target "$GITHUB_SHA" --title prerelease \
+            --notes "Unstable build of ${GITHUB_SHA:0:7} from main. Verify downloads with SHA256SUMS and \`gh attestation verify\`."

@@ -546,6 +546,15 @@ boring.
 5. Review the draft (download, check a checksum, run
    `gh attestation verify <file> --repo <owner>/cineo`), then publish.
 
+### Prerelease builds
+
+`.github/workflows/prerelease.yml` runs on every push to `main` (and by
+hand). It builds `cineo` and `cineo-desktop` for the same three targets,
+packages them with the README, the license and the font licenses, attests
+provenance, writes `SHA256SUMS`, then deletes the previous `prerelease`
+GitHub release and its tag and recreates both at the pushed commit. It does
+not run tests; CI does that in parallel. libmpv is not bundled.
+
 ### Not yet decided (M7)
 
 - Code signing (Windows Authenticode, macOS notarization) and installer

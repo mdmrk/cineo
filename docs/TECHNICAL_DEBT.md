@@ -170,17 +170,17 @@ Format:
 - Instead: `State.notice` reports the addon that failed to load.
 - Exit: store the last good manifest and restore from it (v0.x caching).
 
-### Desktop UI: the font licenses are not packaged yet
+### Desktop UI: the font licenses are not packaged in tagged releases
 - Where: [release.yml](../.github/workflows/release.yml),
   [assets/fonts](../crates/cineo-desktop/assets/fonts)
-- Gap: the OFL-1.1 texts of the bundled fonts must ship with any
-  `cineo-desktop` binary; no release packages the desktop app yet, so
-  nothing copies `Inter-OFL.txt` and `DMSerifDisplay-OFL.txt`, nor the
-  Tabler MIT notice that comes with `iconflow`.
-- Why: releases currently ship only the `cineo` CLI.
+- Gap: the OFL-1.1 texts of the bundled fonts and the Tabler MIT notice
+  from `iconflow` must ship with any `cineo-desktop` binary. The rolling
+  `prerelease` build ([prerelease.yml](../.github/workflows/prerelease.yml))
+  copies them; tagged releases still ship only the `cineo` CLI.
+- Why: desktop packaging for tagged releases is M7.
 - Instead: the licenses sit next to the font files in the source tree.
-- Exit: when desktop packaging lands (M7), copy both `*-OFL.txt` files
-  into every desktop archive or installer.
+- Exit: when tagged releases package the desktop app (M7), copy the same
+  files as `prerelease.yml` does.
 
 ### Desktop UI: no app icon on Wayland
 - Where: [brand.rs](../crates/cineo-desktop/src/brand.rs), `app::run`
