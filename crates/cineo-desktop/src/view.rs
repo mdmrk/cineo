@@ -726,7 +726,13 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                 });
                 if let Some(description) = &manifest.description {
                     ui.add(
-                        Label::new(addon_text(description, &theme::body(), theme::TEXT_DIM)).wrap(),
+                        Label::new(addon_text(
+                            description,
+                            &theme::body(),
+                            theme::TEXT_DIM,
+                            theme::TEXT_DIM,
+                        ))
+                        .wrap(),
                     );
                 }
                 let hints = &manifest.behavior_hints;
@@ -1185,7 +1191,7 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// One addon's streams. Torrents are left out when P2P is off.
+/// One addon's streams as cards. Torrents are left out when P2P is off.
 fn stream_group(
     ui: &mut Ui,
     index: usize,
@@ -1194,11 +1200,21 @@ fn stream_group(
     out: &mut Vec<Action>,
 ) {
     ui.add_space(6.0);
-    ui.label(
-        RichText::new(&group.addon_name)
-            .font(theme::strong())
-            .color(theme::TEXT_DIM),
-    );
+    ui.horizontal(|ui| {
+        ui.label(
+            RichText::new(&group.addon_name)
+                .font(theme::strong())
+                .color(theme::TEXT_BRIGHT),
+        );
+        if let Loadable::Ready(streams) = &group.streams
+            && !streams.is_empty()
+        {
+            ui.label(caps_text(
+                &count_label(streams.len(), "stream", "streams"),
+                theme::TEXT_FAINT,
+            ));
+        }
+    });
     match &group.streams {
         Loadable::Loading => {
             spinner(ui);
@@ -1210,13 +1226,14 @@ fn stream_group(
             ui.label(faint("No streams"));
         }
         Loadable::Ready(streams) => {
+            ui.spacing_mut().item_spacing.y = 6.0;
             let mut hidden = 0;
             for (stream_index, stream) in streams.iter().enumerate() {
                 if stream.source.is_p2p() && !p2p_enabled {
                     hidden += 1;
                     continue;
                 }
-                if stream_row(ui, stream) {
+                if stream_card(ui, stream) {
                     out.push(Action::Play {
                         group: index,
                         stream: stream_index,
@@ -1234,53 +1251,292 @@ fn stream_group(
     ui.add_space(theme::GAP);
 }
 
-/// One stream between rules; returns true if Play was clicked.
-fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
-    let mut clicked = false;
-    Frame::new()
-        .inner_margin(Margin::symmetric(0, 10))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.horizontal(|ui| {
-                let playable = stream.source.is_playable();
-                let play = if playable {
-                    primary_button("Play")
-                } else {
-                    Button::new(RichText::new("Play").color(theme::TEXT_FAINT))
-                };
-                let play = ui
-                    .add_enabled(playable, play.min_size(vec2(64.0, 30.0)))
-                    .on_disabled_hover_text(format!(
-                        "{} streams are not supported yet",
-                        stream.source.kind_label()
-                    ));
-                if playable {
-                    hover_glow(ui, &play);
-                }
-                clicked = play.clicked();
-                ui.add_space(6.0);
-                ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = 4.0;
-                    ui.horizontal(|ui| {
-                        if let Some(name) = &stream.name {
-                            ui.label(addon_text(name, &theme::strong(), theme::TEXT_BRIGHT));
-                        }
-                        // Torrent rows carry no kind tag; other kinds do.
-                        if !stream.source.is_p2p() {
-                            badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
-                        }
-                    });
-                    if let Some(description) = &stream.description {
-                        ui.add(
-                            Label::new(addon_text(description, &theme::body(), theme::TEXT_DIM))
-                                .wrap(),
-                        );
-                    }
-                });
-            });
-        });
-    rule(ui);
-    clicked
+/// One stream as a card: a quality tile, the release title, the addon's
+/// details with their emoji as amber icons, and Play. The whole card plays
+/// when the stream is playable. Returns true if it was clicked.
+fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
+    let playable = stream.source.is_playable();
+    let mut lines = stream
+        .description
+        .as_deref()
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty());
+    let name = stream.name.as_deref().map(|n| n.replace('\n', " · "));
+    let title = lines.next().map(str::to_owned).or_else(|| name.clone());
+    let details: Vec<&str> = lines.collect();
+
+    let background = ui.painter().add(egui::Shape::Noop);
+    let card = ui.scope_builder(
+        UiBuilder::new().sense(if playable {
+            Sense::click()
+        } else {
+            Sense::hover()
+        }),
+        |ui| {
+            Frame::new()
+                .inner_margin(Margin::same(10))
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.horizontal_top(|ui| {
+                        ui.spacing_mut().item_spacing.x = 14.0;
+                        quality_tile(ui, stream);
+                        let text_width = (ui.available_width() - 110.0).max(120.0);
+                        ui.vertical(|ui| {
+                            ui.set_width(text_width);
+                            ui.spacing_mut().item_spacing.y = 3.0;
+                            ui.horizontal(|ui| {
+                                if !stream.source.is_p2p() {
+                                    badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
+                                }
+                                if let Some(title) = &title {
+                                    ui.add(
+                                        Label::new(addon_text(
+                                            title,
+                                            &theme::strong(),
+                                            theme::TEXT_BRIGHT,
+                                            theme::ACCENT,
+                                        ))
+                                        .truncate(),
+                                    );
+                                }
+                            });
+                            if let Some(name) = name.as_ref().filter(|n| Some(*n) != title.as_ref())
+                            {
+                                ui.add(
+                                    Label::new(addon_text(
+                                        name,
+                                        &theme::caption(),
+                                        theme::TEXT_DIM,
+                                        theme::ACCENT,
+                                    ))
+                                    .truncate(),
+                                );
+                            }
+                            for line in &details {
+                                ui.add(
+                                    Label::new(addon_text(
+                                        line,
+                                        &theme::caption(),
+                                        theme::TEXT_DIM,
+                                        theme::ACCENT,
+                                    ))
+                                    .wrap(),
+                                );
+                            }
+                        });
+                        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+                            play_button(ui, playable).on_disabled_hover_text(format!(
+                                "{} streams are not supported yet",
+                                stream.source.kind_label()
+                            ))
+                        })
+                        .inner
+                    })
+                    .inner
+                })
+                .inner
+        },
+    );
+    let play = card.inner;
+    let response = card.response;
+    let hover = ui.ctx().animate_bool_with_time(
+        response.id,
+        playable && (response.hovered() || play.hovered()),
+        theme::ANIM,
+    );
+    let rect = response.rect;
+    let radius = CornerRadius::same(theme::RADIUS);
+    ui.painter().set(
+        background,
+        egui::Shape::rect_filled(
+            rect,
+            radius,
+            lerp_color(theme::PANEL, theme::SURFACE, hover),
+        ),
+    );
+    if hover > 0.0 {
+        ui.painter().rect_filled(
+            Rect::from_min_size(rect.min, vec2(3.0, rect.height())),
+            radius,
+            theme::ACCENT.gamma_multiply(hover),
+        );
+    }
+    let response = if playable {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    };
+    play.clicked() || response.clicked()
+}
+
+/// The amber Play button, or a greyed one when the source cannot be played.
+/// Accessible as a button labelled "Play".
+fn play_button(ui: &mut Ui, playable: bool) -> Response {
+    ui.add_enabled_ui(playable, |ui| {
+        let (rect, response) = ui.allocate_exact_size(vec2(92.0, 34.0), Sense::click());
+        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), "Play"));
+        if ui.is_rect_visible(rect) {
+            let (fill, ink) = match (playable, response.hovered()) {
+                (true, true) => (theme::ACCENT_HOVER, theme::ON_ACCENT),
+                (true, false) => (theme::ACCENT, theme::ON_ACCENT),
+                (false, _) => (theme::SURFACE, theme::TEXT_FAINT),
+            };
+            let painter = ui.painter();
+            painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+            let galley = painter.layout_job(caps("Play", theme::caption(), ink));
+            let left = rect.center().x - (14.0 + 6.0 + galley.size().x) / 2.0;
+            paint_icon(
+                painter,
+                Icon::Play,
+                pos2(left + 7.0, rect.center().y),
+                14.0,
+                ink,
+            );
+            painter.galley(
+                pos2(left + 20.0, rect.center().y - galley.size().y / 2.0),
+                galley,
+                ink,
+            );
+        }
+        if playable {
+            response.on_hover_cursor(egui::CursorIcon::PointingHand)
+        } else {
+            response
+        }
+    })
+    .inner
+}
+
+/// The square at the start of a stream card: its resolution and HDR flags,
+/// colored by tier, or the source kind's icon when the addon names none.
+fn quality_tile(ui: &mut Ui, stream: &Stream) {
+    let (rect, _) = ui.allocate_exact_size(vec2(64.0, 56.0), Sense::hover());
+    if !ui.is_rect_visible(rect) {
+        return;
+    }
+    let painter = ui.painter();
+    let radius = CornerRadius::same(theme::RADIUS);
+    let Some(quality) = Quality::of(stream) else {
+        painter.rect_filled(rect, radius, theme::SURFACE);
+        paint_icon(
+            painter,
+            source_icon(stream),
+            rect.center(),
+            24.0,
+            theme::TEXT_DIM,
+        );
+        return;
+    };
+    let (fill, ink) = match quality.tier {
+        Tier::Ultra => (theme::ACCENT, theme::ON_ACCENT),
+        Tier::High => (theme::SURFACE, theme::ACCENT),
+        Tier::Standard => (theme::SURFACE, theme::TEXT_BRIGHT),
+        Tier::Low => (theme::SURFACE, theme::TEXT_DIM),
+        Tier::Cam => (theme::SURFACE, theme::WARNING),
+    };
+    painter.rect_filled(rect, radius, fill);
+    if quality.tier == Tier::High {
+        painter.rect_stroke(
+            rect,
+            radius,
+            Stroke::new(1.0, theme::ACCENT.gamma_multiply(0.6)),
+            StrokeKind::Inside,
+        );
+    }
+    let flags = quality.flags.join(" ");
+    let label_y = if flags.is_empty() {
+        rect.center().y
+    } else {
+        rect.center().y - 7.0
+    };
+    painter.text(
+        pos2(rect.center().x, label_y),
+        Align2::CENTER_CENTER,
+        quality.label,
+        FontId::new(17.0, theme::strong().family),
+        ink,
+    );
+    if !flags.is_empty() {
+        let galley =
+            painter.layout_job(caps(&flags, FontId::new(9.5, theme::section().family), ink));
+        painter.galley(
+            pos2(
+                rect.center().x - galley.size().x / 2.0,
+                rect.center().y + 7.0,
+            ),
+            galley,
+            ink,
+        );
+    }
+}
+
+/// The icon for a source kind, shown when a stream names no resolution.
+fn source_icon(stream: &Stream) -> Icon {
+    use cineo_core::addon::StreamSource;
+    Icon::Named(match stream.source {
+        StreamSource::Torrent { .. } => "magnet",
+        StreamSource::YouTube { .. } => "brand-youtube",
+        StreamSource::External(_) => "external-link",
+        StreamSource::Archive { .. } => "file-zip",
+        StreamSource::Nzb { .. } => "download",
+        _ => "link",
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Tier {
+    Ultra,
+    High,
+    Standard,
+    Low,
+    Cam,
+}
+
+/// A stream's resolution and HDR flags, read from the words of its name or,
+/// failing that, its description (e.g. `Torrentio\n4k DV | HDR`).
+#[derive(Debug, PartialEq, Eq)]
+struct Quality {
+    label: &'static str,
+    tier: Tier,
+    flags: Vec<&'static str>,
+}
+
+impl Quality {
+    fn of(stream: &Stream) -> Option<Self> {
+        let name = stream.name.as_deref().unwrap_or_default();
+        let description = stream.description.as_deref().unwrap_or_default();
+        let (label, tier) = resolution(name).or_else(|| resolution(description))?;
+        let mut flags = Vec::new();
+        let all = || words(name).chain(words(description));
+        if all().any(|w| w.starts_with("hdr")) {
+            flags.push("HDR");
+        }
+        if all().any(|w| w == "dv" || w == "dovi") {
+            flags.push("DV");
+        }
+        Some(Self { label, tier, flags })
+    }
+}
+
+/// Lowercase ASCII words of `text`.
+fn words(text: &str) -> impl Iterator<Item = String> + '_ {
+    text.split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_ascii_lowercase)
+}
+
+fn resolution(text: &str) -> Option<(&'static str, Tier)> {
+    words(text).find_map(|word| match word.as_str() {
+        "2160p" | "4k" | "uhd" => Some(("4K", Tier::Ultra)),
+        "1440p" | "2k" => Some(("1440p", Tier::High)),
+        "1080p" | "fhd" => Some(("1080p", Tier::High)),
+        "720p" => Some(("720p", Tier::Standard)),
+        "576p" | "480p" | "360p" | "sd" => Some(("SD", Tier::Low)),
+        "cam" | "hdcam" | "camrip" | "telesync" | "hdts" => Some(("CAM", Tier::Cam)),
+        _ => None,
+    })
 }
 
 /// The side margin of pages: smaller on narrow windows.
@@ -1862,13 +2118,14 @@ enum Icon {
     Loader,
     Star,
     Alert,
+    Play,
     /// Any other Tabler icon, by name (the emoji stand-ins).
     Named(&'static str),
 }
 
 impl Icon {
     #[cfg(test)]
-    const ALL: [Self; 13] = [
+    const ALL: [Self; 14] = [
         Self::Home,
         Self::Compass,
         Self::Search,
@@ -1882,6 +2139,7 @@ impl Icon {
         Self::Loader,
         Self::Star,
         Self::Alert,
+        Self::Play,
     ];
 
     fn name(self) -> &'static str {
@@ -1899,6 +2157,7 @@ impl Icon {
             Self::Loader => "loader-2",
             Self::Star => "star",
             Self::Alert => "alert-circle",
+            Self::Play => "player-play",
             Self::Named(name) => name,
         }
     }
@@ -1908,7 +2167,7 @@ impl Icon {
         let icon = iconflow::try_icon(
             iconflow::Pack::Tabler,
             self.name(),
-            if self == Self::Star {
+            if matches!(self, Self::Star | Self::Play) {
                 iconflow::Style::Filled
             } else {
                 iconflow::Style::Regular
@@ -2004,7 +2263,7 @@ fn is_emoji(c: char) -> bool {
 /// Addon text laid out with its emoji drawn as Tabler icons. Flags become
 /// their two-letter region code; other emoji are left out, so nothing
 /// falls back to egui's emoji fonts. The text is otherwise shown as is.
-fn addon_text(text: &str, font: &FontId, color: Color32) -> LayoutJob {
+fn addon_text(text: &str, font: &FontId, color: Color32, icon_color: Color32) -> LayoutJob {
     let format = TextFormat {
         font_id: font.clone(),
         color,
@@ -2025,7 +2284,7 @@ fn addon_text(text: &str, font: &FontId, color: Color32) -> LayoutJob {
         }
         if let Some(&(_, name)) = EMOJI_ICONS.iter().find(|(emoji, _)| *emoji == c) {
             job.append(&std::mem::take(&mut plain), 0.0, format.clone());
-            append_icon(&mut job, Icon::Named(name), font.size, color);
+            append_icon(&mut job, Icon::Named(name), font.size, icon_color);
             continue;
         }
         if !is_emoji(c) {
@@ -2271,6 +2530,7 @@ mod tests {
             "👤 12 💾 1.2 GB ⚙️ YTS\nMulti / 🇬🇧 / 🇮🇹 😀✨",
             &theme::body(),
             theme::TEXT,
+            theme::TEXT,
         );
         let text = &job.text;
         assert!(!text.chars().any(is_emoji), "{text:?}");
@@ -2292,8 +2552,71 @@ mod tests {
     #[test]
     fn plain_addon_text_is_unchanged() {
         let text = "Example HTTP stream — 1080p → 720p ▲";
-        let job = addon_text(text, &theme::body(), theme::TEXT);
+        let job = addon_text(text, &theme::body(), theme::TEXT, theme::TEXT);
         assert_eq!(job.text, text);
+    }
+
+    fn stream(name: Option<&str>, description: Option<&str>) -> Stream {
+        let field = |key: &str, value: Option<&str>| {
+            value.map_or(String::new(), |v| {
+                format!(r#","{key}":"{}""#, v.replace('\n', "\\n"))
+            })
+        };
+        let json = format!(
+            r#"{{"streams":[{{"infoHash":"0123456789abcdef0123456789abcdef01234567"{}{}}}]}}"#,
+            field("name", name),
+            field("description", description),
+        );
+        cineo_core::addon::parse_stream_response(json.as_bytes())
+            .unwrap()
+            .value
+            .remove(0)
+    }
+
+    #[test]
+    fn quality_comes_from_the_name_then_the_description() {
+        let q = Quality::of(&stream(Some("Torrentio\n4k DV | HDR"), None)).unwrap();
+        assert_eq!(
+            q,
+            Quality {
+                label: "4K",
+                tier: Tier::Ultra,
+                flags: vec!["HDR", "DV"]
+            }
+        );
+        let q = Quality::of(&stream(
+            Some("Torrentio"),
+            Some("Film.2023.1080p.WEB-DL.x264\n👤 12 💾 1.2 GB"),
+        ))
+        .unwrap();
+        assert_eq!((q.label, q.tier), ("1080p", Tier::High));
+        assert!(q.flags.is_empty());
+        let q = Quality::of(&stream(Some("HDCAM"), None)).unwrap();
+        assert_eq!(q.tier, Tier::Cam);
+    }
+
+    #[test]
+    fn quality_needs_a_whole_word() {
+        assert_eq!(
+            Quality::of(&stream(Some("Torrent"), Some("Scam 4kHz"))),
+            None
+        );
+        assert_eq!(Quality::of(&stream(None, None)), None);
+    }
+
+    #[test]
+    fn every_source_kind_icon_exists_in_the_tabler_set() {
+        let s = stream(None, None);
+        assert!(source_icon(&s).glyph().is_some());
+        for name in [
+            "brand-youtube",
+            "external-link",
+            "file-zip",
+            "download",
+            "link",
+        ] {
+            assert!(Icon::Named(name).glyph().is_some(), "{name}");
+        }
     }
 
     #[test]
