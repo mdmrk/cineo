@@ -518,7 +518,13 @@ fn the_settings_index_jumps_to_a_section() {
             |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
             (State::default(), settings_page(), Vec::new()),
         );
-    let about = |h: &Harness<'_, Ui>| h.get_by_label_contains("Made by people").rect().top();
+    let about = |h: &Harness<'_, Ui>| {
+        h.get_all_by_label(concat!("Cineo v", env!("CARGO_PKG_VERSION")))
+            .find(|node| node.rect().left() > 200.0)
+            .expect("About, not the sidebar")
+            .rect()
+            .top()
+    };
     assert!(about(&harness) > 500.0, "About starts below the window");
     harness.get_by_role_and_label(Role::Button, "About").click();
     harness.run_steps(30);
