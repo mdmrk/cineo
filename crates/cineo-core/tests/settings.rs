@@ -5,6 +5,8 @@
 
 use cineo_core::app::{
     HideControls, Language, Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep,
+    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
+    SubtitlePosition, SubtitleSize,
 };
 
 #[test]
@@ -26,6 +28,15 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::HideControls(HideControls::Long),
         Setting::RememberVolume(false),
         Setting::Volume(Percent::new(35)),
+        Setting::SubtitleSize(SubtitleSize::new(150)),
+        Setting::SubtitleFont(SubtitleFont::Mono),
+        Setting::SubtitleBold(true),
+        Setting::SubtitlePosition(SubtitlePosition::new(10)),
+        Setting::SubtitleColor(SubtitleColor::Yellow),
+        Setting::SubtitleOutline(SubtitleOutline::None),
+        Setting::SubtitleBackground(SubtitleBackground::Black),
+        Setting::SubtitleOpacity(SubtitleOpacity::new(60)),
+        Setting::KeepSubtitleStyles(false),
     ] {
         settings.set(setting);
     }
@@ -71,6 +82,15 @@ fn saved_keys_never_change() {
             "hide_controls",
             "remember_volume",
             "volume",
+            "subtitle_size",
+            "subtitle_font",
+            "subtitle_bold",
+            "subtitle_position",
+            "subtitle_color",
+            "subtitle_outline",
+            "subtitle_background",
+            "subtitle_opacity",
+            "keep_subtitle_styles",
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");
@@ -102,6 +122,11 @@ fn numbers_are_kept_in_range() {
     assert_eq!(
         Setting::parse("volume", "-3"),
         Err(SettingError::Unreadable)
+    );
+    assert_eq!(
+        Setting::parse("subtitle_opacity", "0"),
+        Ok(Setting::SubtitleOpacity(SubtitleOpacity::new(25))),
+        "never fully transparent"
     );
     assert_eq!(
         Setting::parse("seek_step", "7"),

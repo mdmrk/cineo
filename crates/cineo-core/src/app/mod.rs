@@ -15,6 +15,8 @@ pub use plan::{
 };
 pub use settings::{
     HideControls, Percent, Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep,
+    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
+    SubtitlePosition, SubtitleSize,
 };
 pub use state::{
     Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Row, State,

@@ -1,10 +1,14 @@
 //! The Settings page: a section index beside one scrolling list of settings.
 
-use cineo_core::app::{Action, HideControls, Language, SeekStep, Setting, ShortSeekStep, State};
+use cineo_core::app::{
+    Action, HideControls, Language, SeekStep, Setting, Settings, ShortSeekStep, State,
+    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
+    SubtitlePosition, SubtitleSize,
+};
 use eframe::egui::{
-    self, Align, Align2, CornerRadius, Frame, Label, Layout, Margin, Modal, Popup,
-    PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, Stroke, TextFormat, Ui,
-    UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
+    self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Label, Layout, Margin,
+    Modal, Popup, PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, Stroke,
+    TextFormat, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
 use crate::theme;
@@ -18,6 +22,7 @@ use crate::view::{
 pub enum Section {
     Player,
     Languages,
+    Subtitles,
     Torrents,
     Data,
     Keyboard,
@@ -25,9 +30,10 @@ pub enum Section {
 }
 
 impl Section {
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::Player,
         Self::Languages,
+        Self::Subtitles,
         Self::Torrents,
         Self::Data,
         Self::Keyboard,
@@ -38,6 +44,7 @@ impl Section {
         match self {
             Self::Player => "Player",
             Self::Languages => "Languages",
+            Self::Subtitles => "Subtitles",
             Self::Torrents => "Torrents",
             Self::Data => "Data",
             Self::Keyboard => "Keyboard",
@@ -226,6 +233,7 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 Setting::SecondarySubtitleLanguage,
             );
         }
+        Section::Subtitles => subtitle_style(ui, s, out),
         Section::Torrents => {
             switch(
                 ui,
@@ -263,6 +271,194 @@ Turn it off if videos show artifacts or a black picture.";
 const AUDIO_HELP: &str = "The file's track in this language plays; otherwise its default track.";
 const SUBTITLE_HELP: &str = "Turned on when a video starts: from the file if it has \
 them, otherwise from a subtitles addon.";
+
+fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
+    preview(ui, s);
+    ui.add_space(theme::GAP);
+    let size = s.subtitle_size;
+    number(
+        ui,
+        out,
+        "Size",
+        "",
+        size.get(),
+        (SubtitleSize::MIN, SubtitleSize::MAX, 5),
+        |v| Setting::SubtitleSize(SubtitleSize::new(v)),
+    );
+    pick(
+        ui,
+        out,
+        "Font",
+        "",
+        s.subtitle_font,
+        SubtitleFont::ALL,
+        font_name,
+        Setting::SubtitleFont,
+    );
+    switch(ui, out, "Bold", "", s.subtitle_bold, Setting::SubtitleBold);
+    pick(
+        ui,
+        out,
+        "Text color",
+        "",
+        s.subtitle_color,
+        SubtitleColor::ALL,
+        color_name,
+        Setting::SubtitleColor,
+    );
+    let opacity = s.subtitle_opacity;
+    number(
+        ui,
+        out,
+        "Text opacity",
+        "",
+        opacity.get(),
+        (SubtitleOpacity::MIN, SubtitleOpacity::MAX, 5),
+        |v| Setting::SubtitleOpacity(SubtitleOpacity::new(v)),
+    );
+    pick(
+        ui,
+        out,
+        "Outline",
+        "Not drawn when there is a background.",
+        s.subtitle_outline,
+        SubtitleOutline::ALL,
+        outline_name,
+        Setting::SubtitleOutline,
+    );
+    pick(
+        ui,
+        out,
+        "Background",
+        "",
+        s.subtitle_background,
+        SubtitleBackground::ALL,
+        background_name,
+        Setting::SubtitleBackground,
+    );
+    let position = s.subtitle_position;
+    number(
+        ui,
+        out,
+        "Raise from the bottom",
+        "Percent of the picture's height.",
+        position.get(),
+        (SubtitlePosition::MIN, SubtitlePosition::MAX, 1),
+        |v| Setting::SubtitlePosition(SubtitlePosition::new(v)),
+    );
+    switch(
+        ui,
+        out,
+        "Keep the look of styled subtitles",
+        STYLED_HELP,
+        s.keep_subtitle_styles,
+        Setting::KeepSubtitleStyles,
+    );
+}
+
+const STYLED_HELP: &str = "Styled (ASS) subtitles, common for anime, bring their own fonts, \
+colors and positions. When off, the settings above replace them.";
+
+/// An approximation of the subtitle look over a dark frame.
+fn preview(ui: &mut Ui, s: &Settings) {
+    let width = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(vec2(width, 150.0), Sense::hover());
+    if !ui.is_rect_visible(rect) {
+        return;
+    }
+    let painter = ui.painter();
+    painter.rect_filled(
+        rect,
+        CornerRadius::same(theme::RADIUS),
+        Color32::from_gray(24),
+    );
+    let family = match (s.subtitle_font, s.subtitle_bold) {
+        (SubtitleFont::Sans, false) => FontFamily::Proportional,
+        (SubtitleFont::Sans, true) => theme::strong_family(),
+        (SubtitleFont::Serif, _) => theme::display_family(),
+        (SubtitleFont::Mono, _) => FontFamily::Monospace,
+    };
+    #[expect(clippy::cast_precision_loss, reason = "a percentage")]
+    let scale = s.subtitle_size.get() as f32 / 100.0;
+    #[expect(clippy::cast_precision_loss, reason = "a percentage")]
+    let raise = s.subtitle_position.get() as f32 / 100.0;
+    let [r, g, b] = s.subtitle_color.rgb();
+    let alpha = u8::try_from(s.subtitle_opacity.get() * 255 / 100).unwrap_or(u8::MAX);
+    let ink = Color32::from_rgba_unmultiplied(r, g, b, alpha);
+    let galley = painter.layout_no_wrap(
+        "Subtitles look like this.".to_owned(),
+        FontId::new(22.0 * scale, family),
+        ink,
+    );
+    let bottom = rect.bottom() - 14.0 - rect.height() * raise;
+    let pos = pos2(
+        rect.center().x - galley.size().x / 2.0,
+        bottom - galley.size().y,
+    );
+    let text_rect = Rect::from_min_size(pos, galley.size());
+    if let Some([r, g, b]) = s.subtitle_background.rgb() {
+        painter.rect_filled(
+            text_rect.expand(4.0),
+            0.0,
+            Color32::from_rgba_unmultiplied(r, g, b, 0xCC),
+        );
+    } else if let Some([r, g, b]) = s.subtitle_outline.rgb() {
+        let outline = Color32::from_rgb(r, g, b);
+        for (dx, dy) in [
+            (-1.5, 0.0),
+            (1.5, 0.0),
+            (0.0, -1.5),
+            (0.0, 1.5),
+            (-1.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+            (1.0, -1.0),
+        ] {
+            painter.galley_with_override_text_color(pos + vec2(dx, dy), galley.clone(), outline);
+        }
+    }
+    painter.galley(pos, galley, ink);
+    painter.text(
+        rect.left_top() + vec2(10.0, 8.0),
+        Align2::LEFT_TOP,
+        "PREVIEW",
+        theme::caption(),
+        theme::TEXT_FAINT,
+    );
+}
+
+fn font_name(font: SubtitleFont) -> &'static str {
+    match font {
+        SubtitleFont::Sans => "Sans-serif",
+        SubtitleFont::Serif => "Serif",
+        SubtitleFont::Mono => "Monospace",
+    }
+}
+
+fn color_name(color: SubtitleColor) -> &'static str {
+    match color {
+        SubtitleColor::White => "White",
+        SubtitleColor::Yellow => "Yellow",
+        SubtitleColor::Cyan => "Cyan",
+        SubtitleColor::Green => "Green",
+    }
+}
+
+fn outline_name(outline: SubtitleOutline) -> &'static str {
+    match outline {
+        SubtitleOutline::Black => "Black",
+        SubtitleOutline::Gray => "Gray",
+        SubtitleOutline::None => "No outline",
+    }
+}
+
+fn background_name(background: SubtitleBackground) -> &'static str {
+    match background {
+        SubtitleBackground::None => "No background",
+        SubtitleBackground::Black => "Black box",
+        SubtitleBackground::Gray => "Gray box",
+    }
+}
 
 fn seek_name(step: SeekStep) -> &'static str {
     match step {
@@ -323,6 +519,86 @@ fn pick<T: Copy + PartialEq>(
             out.push(Action::ChangeSetting(setting(value)));
         }
     });
+}
+
+/// A whole number in `range` = (min, max, step), set by dragging or with
+/// the arrow keys.
+fn number(
+    ui: &mut Ui,
+    out: &mut Vec<Action>,
+    title: &str,
+    help: &str,
+    value: u32,
+    range: (u32, u32, u32),
+    setting: fn(u32) -> Setting,
+) {
+    row(ui, title, help, |ui| {
+        if let Some(value) = slider(ui, title, value, range) {
+            out.push(Action::ChangeSetting(setting(value)));
+        }
+    });
+}
+
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "small whole numbers within the range"
+)]
+fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32)) -> Option<u32> {
+    let width = ui.available_width().min(CONTROL_WIDTH);
+    let (rect, response) = ui.allocate_exact_size(vec2(width, 30.0), Sense::click_and_drag());
+    response.widget_info(|| WidgetInfo::slider(ui.is_enabled(), f64::from(value), label));
+    let track = Rect::from_min_max(
+        pos2(rect.min.x + 8.0, rect.center().y - 2.0),
+        pos2(rect.max.x - 60.0, rect.center().y + 2.0),
+    );
+    let mut new = value;
+    if let Some(pointer) = response.interact_pointer_pos() {
+        let t = ((pointer.x - track.min.x) / track.width()).clamp(0.0, 1.0);
+        let raw = min as f32 + t * (max - min) as f32;
+        new = ((raw / step as f32).round() as u32 * step).clamp(min, max);
+    }
+    if response.has_focus() {
+        let (down, up) = ui.input(|i| {
+            (
+                i.key_pressed(egui::Key::ArrowLeft) || i.key_pressed(egui::Key::ArrowDown),
+                i.key_pressed(egui::Key::ArrowRight) || i.key_pressed(egui::Key::ArrowUp),
+            )
+        });
+        if down {
+            new = new.saturating_sub(step).max(min);
+        }
+        if up {
+            new = (new + step).min(max);
+        }
+    }
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter();
+        let t = (new - min) as f32 / (max - min) as f32;
+        let knob = pos2(egui::lerp(track.x_range(), t), track.center().y);
+        painter.rect_filled(track, CornerRadius::same(2), theme::SURFACE_HOVER);
+        painter.rect_filled(
+            Rect::from_min_max(track.min, pos2(knob.x, track.max.y)),
+            CornerRadius::same(2),
+            theme::ACCENT,
+        );
+        let knob_color = if response.hovered() || response.dragged() || response.has_focus() {
+            theme::TEXT_BRIGHT
+        } else {
+            theme::TEXT
+        };
+        painter.circle_filled(knob, 7.0, knob_color);
+        painter.text(
+            pos2(rect.max.x, rect.center().y),
+            Align2::RIGHT_CENTER,
+            format!("{new} %"),
+            theme::body(),
+            theme::TEXT_BRIGHT,
+        );
+    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand);
+    (new != value).then_some(new)
 }
 
 fn language(

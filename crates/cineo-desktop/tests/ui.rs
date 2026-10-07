@@ -9,7 +9,10 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, Language, SeekStep, Setting, State, TorrentStatus, update};
+use cineo_core::app::{
+    Action, Effect, Language, SeekStep, Setting, State, SubtitleColor, SubtitleSize, TorrentStatus,
+    update,
+};
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
@@ -323,6 +326,7 @@ fn settings_switch_p2p_off() {
         ..ViewState::default()
     };
     let mut harness = harness(State::default(), view);
+    open_section(&mut harness, "Torrents");
     harness
         .get_by_label("Show and play torrent streams")
         .click();
@@ -514,6 +518,12 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
     harness.get_by_label("Release 299");
 }
 
+fn open_section(harness: &mut Harness<'_, Ui>, name: &str) {
+    harness.get_by_label(name).click();
+    harness.run_steps(30);
+    harness.run();
+}
+
 fn settings_page() -> ViewState {
     ViewState {
         page: Page::Settings,
@@ -524,9 +534,7 @@ fn settings_page() -> ViewState {
 #[test]
 fn resetting_settings_asks_first() {
     let mut harness = harness(State::default(), settings_page());
-    harness.get_by_label("Data").click();
-    harness.run_steps(30);
-    harness.run();
+    open_section(&mut harness, "Data");
     harness.get_by_label("Reset…").click();
     harness.run();
     harness.get_by_label("Reset all settings?");
@@ -580,6 +588,32 @@ fn player_and_language_settings_change_from_the_page() {
             Action::ChangeSetting(Setting::HardwareDecoding(false)),
             Action::ChangeSetting(Setting::SeekStep(SeekStep::S30)),
             Action::ChangeSetting(Setting::SecondaryAudioLanguage(Language::from_code("jpn"))),
+        ]
+    );
+}
+
+#[test]
+fn subtitle_style_changes_from_the_page() {
+    let mut harness = harness(State::default(), settings_page());
+    open_section(&mut harness, "Subtitles");
+    harness.get_by_label("Size").focus();
+    harness.run();
+    harness.key_press(Key::ArrowRight);
+    harness.run();
+    harness.get_by_label("Text color").click();
+    harness.run();
+    harness.get_by_label("Yellow").click();
+    harness.run();
+    harness
+        .get_by_label("Keep the look of styled subtitles")
+        .click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            Action::ChangeSetting(Setting::SubtitleSize(SubtitleSize::new(105))),
+            Action::ChangeSetting(Setting::SubtitleColor(SubtitleColor::Yellow)),
+            Action::ChangeSetting(Setting::KeepSubtitleStyles(false)),
         ]
     );
 }

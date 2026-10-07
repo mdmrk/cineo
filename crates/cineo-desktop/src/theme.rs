@@ -51,11 +51,11 @@ pub(crate) const WHEEL_LINE_POINTS: f32 = 100.0;
 
 pub(crate) const CAPS_SPACING: f32 = 1.4;
 
-fn strong_family() -> FontFamily {
+pub(crate) fn strong_family() -> FontFamily {
     FontFamily::Name("strong".into())
 }
 
-fn display_family() -> FontFamily {
+pub(crate) fn display_family() -> FontFamily {
     FontFamily::Name("display".into())
 }
 

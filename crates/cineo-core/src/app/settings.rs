@@ -155,6 +155,62 @@ impl HideControls {
     }
 }
 
+choice! {
+    /// The subtitle typeface, by generic family.
+    SubtitleFont { Sans = "sans", Serif = "serif", Mono = "mono", }
+}
+
+choice! {
+    SubtitleColor { White = "white", Yellow = "yellow", Cyan = "cyan", Green = "green", }
+}
+
+choice! {
+    SubtitleOutline { Black = "black", Gray = "gray", None = "none", }
+}
+
+choice! {
+    SubtitleBackground { None = "none", Black = "black", Gray = "gray", }
+}
+
+impl SubtitleColor {
+    pub const fn rgb(self) -> [u8; 3] {
+        match self {
+            Self::White => [0xFF, 0xFF, 0xFF],
+            Self::Yellow => [0xFF, 0xE4, 0x5C],
+            Self::Cyan => [0x5C, 0xE1, 0xFF],
+            Self::Green => [0x7C, 0xFF, 0x7C],
+        }
+    }
+}
+
+impl SubtitleOutline {
+    pub const fn rgb(self) -> Option<[u8; 3]> {
+        match self {
+            Self::Black => Some([0x00, 0x00, 0x00]),
+            Self::Gray => Some([0x40, 0x40, 0x40]),
+            Self::None => None,
+        }
+    }
+}
+
+impl SubtitleBackground {
+    /// Drawn at 80 % opacity.
+    pub const fn rgb(self) -> Option<[u8; 3]> {
+        match self {
+            Self::None => None,
+            Self::Black => Some([0x00, 0x00, 0x00]),
+            Self::Gray => Some([0x30, 0x30, 0x30]),
+        }
+    }
+}
+
+/// Subtitle size in percent of the player's default.
+pub type SubtitleSize = Ranged<50, 200>;
+/// How far above the bottom edge subtitles sit, in percent of the height.
+pub type SubtitlePosition = Ranged<0, 20>;
+/// Subtitle text opacity in percent; never fully transparent.
+pub type SubtitleOpacity = Ranged<25, 100>;
+
 macro_rules! settings {
     ($(
         $(#[$doc:meta])*
@@ -245,6 +301,21 @@ settings! {
     /// Playback starts at [`Settings::volume`], the volume the last one ended with.
     remember_volume: bool = true => RememberVolume("remember_volume"),
     volume: Percent = Percent::new(100) => Volume("volume"),
+    subtitle_size: SubtitleSize = SubtitleSize::new(100) => SubtitleSize("subtitle_size"),
+    subtitle_font: SubtitleFont = SubtitleFont::Sans => SubtitleFont("subtitle_font"),
+    subtitle_bold: bool = false => SubtitleBold("subtitle_bold"),
+    subtitle_position: SubtitlePosition = SubtitlePosition::new(0)
+        => SubtitlePosition("subtitle_position"),
+    subtitle_color: SubtitleColor = SubtitleColor::White => SubtitleColor("subtitle_color"),
+    subtitle_outline: SubtitleOutline = SubtitleOutline::Black
+        => SubtitleOutline("subtitle_outline"),
+    subtitle_background: SubtitleBackground = SubtitleBackground::None
+        => SubtitleBackground("subtitle_background"),
+    subtitle_opacity: SubtitleOpacity = SubtitleOpacity::new(100)
+        => SubtitleOpacity("subtitle_opacity"),
+    /// Styled (ASS) subtitles keep their own look; when off, the subtitle
+    /// settings above apply to them too.
+    keep_subtitle_styles: bool = true => KeepSubtitleStyles("keep_subtitle_styles"),
 }
 
 impl Settings {

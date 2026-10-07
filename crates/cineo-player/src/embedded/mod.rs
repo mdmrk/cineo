@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
-use cineo_core::app::{Language, PlayRequest, Settings};
+use cineo_core::app::{Language, PlayRequest, Settings, SubtitleFont};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -193,6 +193,12 @@ impl Player {
             core.set_option(name, value)
                 .map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
         }
+        // Older mpv may lack a style option; playback goes on without it.
+        for (name, value) in style_options(&request.settings) {
+            if let Err(err) = core.set_option(name, &value) {
+                warn!(option = name, %err, "subtitle style option not applied");
+            }
+        }
         core.initialize().map_err(fail)?;
         core.request_log_messages("warn").map_err(fail)?;
         for (id, name, format) in OBSERVED {
@@ -304,6 +310,60 @@ fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
         options.push(("volume", settings.volume.get().to_string()));
     }
     options
+}
+
+/// mpv subtitle style options, only for what differs from the defaults.
+/// The `sub-border-*` names work from mpv 0.35 on (aliases since 0.38).
+fn style_options(settings: &Settings) -> Vec<(&'static str, String)> {
+    let default = Settings::default();
+    let mut options = Vec::new();
+    if settings.subtitle_size != default.subtitle_size {
+        let scale = f64::from(settings.subtitle_size.get()) / 100.0;
+        options.push(("sub-scale", format!("{scale:.2}")));
+    }
+    if settings.subtitle_font != default.subtitle_font {
+        let family = match settings.subtitle_font {
+            SubtitleFont::Sans => "sans-serif",
+            SubtitleFont::Serif => "serif",
+            SubtitleFont::Mono => "monospace",
+        };
+        options.push(("sub-font", family.to_owned()));
+    }
+    if settings.subtitle_bold {
+        options.push(("sub-bold", "yes".to_owned()));
+    }
+    if settings.subtitle_position != default.subtitle_position {
+        let pos = 100 - settings.subtitle_position.get();
+        options.push(("sub-pos", pos.to_string()));
+    }
+    if (settings.subtitle_color, settings.subtitle_opacity)
+        != (default.subtitle_color, default.subtitle_opacity)
+    {
+        let alpha = percent_alpha(settings.subtitle_opacity.get());
+        options.push(("sub-color", argb(alpha, settings.subtitle_color.rgb())));
+    }
+    if let Some(rgb) = settings.subtitle_background.rgb() {
+        // An opaque box takes the border color: the outline gives way to it.
+        options.push(("sub-border-style", "opaque-box".to_owned()));
+        options.push(("sub-border-color", argb(0xCC, rgb)));
+    } else if settings.subtitle_outline != default.subtitle_outline {
+        match settings.subtitle_outline.rgb() {
+            Some(rgb) => options.push(("sub-border-color", argb(0xFF, rgb))),
+            None => options.push(("sub-border-size", "0".to_owned())),
+        }
+    }
+    if !settings.keep_subtitle_styles {
+        options.push(("sub-ass-override", "force".to_owned()));
+    }
+    options
+}
+
+fn percent_alpha(percent: u32) -> u8 {
+    u8::try_from(percent.min(100) * 255 / 100).unwrap_or(u8::MAX)
+}
+
+fn argb(alpha: u8, [r, g, b]: [u8; 3]) -> String {
+    format!("#{alpha:02X}{r:02X}{g:02X}{b:02X}")
 }
 
 /// Every tag of every language, in order of preference.

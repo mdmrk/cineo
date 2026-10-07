@@ -7,6 +7,10 @@ use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 
 use super::*;
+use cineo_core::app::{
+    SubtitleBackground, SubtitleColor, SubtitleOpacity, SubtitleOutline, SubtitlePosition,
+    SubtitleSize,
+};
 
 const AUDIO_ONLY: &[(&str, &str)] = &[("ao", "null"), ("vo", "null")];
 
@@ -403,4 +407,65 @@ fn real_libmpv_accepts_the_subtitle_language() {
     };
     let started = Player::start_with(&request, Arc::new(|| {}), None, AUDIO_ONLY);
     assert!(started.is_ok(), "mpv accepts the options from settings");
+}
+
+fn styled() -> Settings {
+    Settings {
+        subtitle_size: SubtitleSize::new(150),
+        subtitle_font: SubtitleFont::Serif,
+        subtitle_bold: true,
+        subtitle_position: SubtitlePosition::new(10),
+        subtitle_color: SubtitleColor::Yellow,
+        subtitle_opacity: SubtitleOpacity::new(50),
+        subtitle_background: SubtitleBackground::Gray,
+        keep_subtitle_styles: false,
+        ..Settings::default()
+    }
+}
+
+#[test]
+fn subtitle_style_becomes_mpv_options_only_when_changed() {
+    assert!(style_options(&Settings::default()).is_empty());
+    assert_eq!(
+        style_options(&styled()),
+        [
+            ("sub-scale", "1.50".to_owned()),
+            ("sub-font", "serif".to_owned()),
+            ("sub-bold", "yes".to_owned()),
+            ("sub-pos", "90".to_owned()),
+            ("sub-color", "#7FFFE45C".to_owned()),
+            ("sub-border-style", "opaque-box".to_owned()),
+            ("sub-border-color", "#CC303030".to_owned()),
+            ("sub-ass-override", "force".to_owned()),
+        ]
+    );
+    let no_outline = Settings {
+        subtitle_outline: SubtitleOutline::None,
+        ..Settings::default()
+    };
+    assert_eq!(
+        style_options(&no_outline),
+        [("sub-border-size", "0".to_owned())]
+    );
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_accepts_every_subtitle_style_option() {
+    let lib = ffi::lib().unwrap();
+    let core = Core::create(lib).unwrap();
+    let gray_outline = Settings {
+        subtitle_outline: SubtitleOutline::Gray,
+        ..Settings::default()
+    };
+    let no_outline = Settings {
+        subtitle_outline: SubtitleOutline::None,
+        ..Settings::default()
+    };
+    for (name, value) in [styled(), gray_outline, no_outline]
+        .iter()
+        .flat_map(style_options)
+    {
+        assert!(core.set_option(name, &value).is_ok(), "{name}={value}");
+    }
 }
