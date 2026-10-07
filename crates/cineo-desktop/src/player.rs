@@ -4,7 +4,7 @@
 //! performs no IO. Track names come from the media file and are shown as
 //! plain text only.
 
-use cineo_core::app::{SeekStep, Settings};
+use cineo_core::app::{Action, SeekStep, Settings};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
@@ -13,8 +13,9 @@ use eframe::egui::{
 
 use url::Url;
 
+use crate::settings::subtitle_controls;
 use crate::theme;
-use crate::view::{IMAGE_FILTER, Icon, gradient, paint_cover, paint_icon, paint_spinner};
+use crate::view::{IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_spinner};
 
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
@@ -23,6 +24,8 @@ const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
 const LOADING_BACKDROP_TINT: Color32 = Color32::from_gray(70);
 const PULSE_PERIOD: f64 = 1.6;
 const MENU_MAX_HEIGHT: f32 = 320.0;
+const STYLE_WIDTH: f32 = 420.0;
+const STYLE_MAX_HEIGHT: f32 = 520.0;
 
 /// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
@@ -33,6 +36,8 @@ pub struct Controls {
     seek_drag: Option<f64>,
     volume_drag: Option<f64>,
     addon_request: Option<Url>,
+    subtitle_delay_ms: i32,
+    settings: Vec<Action>,
 }
 
 impl Controls {
@@ -40,6 +45,10 @@ impl Controls {
     /// load.
     pub fn take_addon_subtitle(&mut self) -> Option<Url> {
         self.addon_request.take()
+    }
+
+    pub fn take_settings(&mut self) -> Vec<Action> {
+        std::mem::take(&mut self.settings)
     }
 }
 
@@ -434,15 +443,18 @@ fn bottom_bar(
         Some(TrackKind::Audio) => {
             track_menu(ui, audio, status, &[], TrackKind::Audio, controls, out);
         }
-        Some(TrackKind::Subtitle) => track_menu(
-            ui,
-            subtitles,
-            status,
-            addon_subtitles,
-            TrackKind::Subtitle,
-            controls,
-            out,
-        ),
+        Some(TrackKind::Subtitle) => {
+            let menu = track_menu(
+                ui,
+                subtitles,
+                status,
+                addon_subtitles,
+                TrackKind::Subtitle,
+                controls,
+                out,
+            );
+            style_panel(ui, menu, playback.settings, controls, out);
+        }
         _ => {}
     }
 }
@@ -572,7 +584,7 @@ fn track_menu(
     kind: TrackKind,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
-) {
+) -> Rect {
     let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
     let mut entries: Vec<(Entry, String, bool)> = Vec::new();
     if kind == TrackKind::Subtitle {
@@ -684,6 +696,104 @@ fn track_menu(
                     });
             });
         });
+    menu
+}
+
+fn style_panel(
+    ui: &mut Ui,
+    menu: Rect,
+    settings: &Settings,
+    controls: &mut Controls,
+    out: &mut Vec<PlayerCommand>,
+) {
+    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(ui.max_rect().top() + 24.0);
+    let left = (menu.left() - 8.0 - STYLE_WIDTH).max(ui.max_rect().left() + 8.0);
+    let panel = Rect::from_min_max(pos2(left, top), pos2(menu.left() - 8.0, menu.bottom()));
+    egui::Area::new(ui.id().with("subtitle-style"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(panel.min)
+        .show(ui.ctx(), |ui| {
+            ui.painter()
+                .rect_filled(panel, CornerRadius::same(theme::RADIUS), theme::PANEL);
+            ui.scope_builder(UiBuilder::new().max_rect(panel.shrink(16.0)), |ui| {
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        delay(ui, controls, out);
+                        subtitle_controls(ui, settings, &mut controls.settings);
+                    });
+            });
+        });
+}
+
+fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
+    let ms = controls.subtitle_delay_ms;
+    ui.horizontal(|ui| {
+        ui.label(
+            RichText::new("Delay")
+                .font(theme::strong())
+                .color(theme::TEXT_BRIGHT),
+        );
+        ui.label(dim("This video only.").small());
+    });
+    ui.add_space(6.0);
+    let cells = [
+        (-1000, "−1 s", "Subtitles 1 s earlier"),
+        (-100, "−0.1 s", "Subtitles 0.1 s earlier"),
+        (0, "", ""),
+        (100, "+0.1 s", "Subtitles 0.1 s later"),
+        (1000, "+1 s", "Subtitles 1 s later"),
+    ];
+    let gap = 4.0;
+    let (strip, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
+    #[expect(clippy::cast_precision_loss, reason = "five cells")]
+    let width = (strip.width() - gap * (cells.len() - 1) as f32) / cells.len() as f32;
+    let mut next = ms;
+    for (i, (step, text, label)) in cells.into_iter().enumerate() {
+        #[expect(clippy::cast_precision_loss, reason = "five cells")]
+        let left = strip.left() + i as f32 * (width + gap);
+        let rect = Rect::from_min_size(pos2(left, strip.top()), vec2(width, strip.height()));
+        let middle = step == 0;
+        let enabled = !middle || ms != 0;
+        let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
+        response.widget_info(|| {
+            let label = if middle {
+                format!("Subtitle delay {}, reset", delay_label(ms))
+            } else {
+                label.to_owned()
+            };
+            WidgetInfo::labeled(WidgetType::Button, enabled, label)
+        });
+        let hovered = enabled && response.hovered();
+        if hovered {
+            ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
+        }
+        let fill = if hovered {
+            theme::SURFACE_HOVER
+        } else {
+            theme::SURFACE
+        };
+        let painter = ui.painter();
+        painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+        let (text, font, color) = if middle {
+            (delay_label(ms), theme::strong(), theme::TEXT_BRIGHT)
+        } else {
+            (text.to_owned(), theme::body(), theme::TEXT)
+        };
+        painter.text(rect.center(), Align2::CENTER_CENTER, text, font, color);
+        if enabled && response.clicked() {
+            next = if middle { 0 } else { ms + step };
+        }
+    }
+    ui.add_space(theme::GAP);
+    if next != ms {
+        controls.subtitle_delay_ms = next;
+        out.push(PlayerCommand::SetSubtitleDelay(f64::from(next) / 1000.0));
+    }
+}
+
+fn delay_label(ms: i32) -> String {
+    format!("{:+.1} s", f64::from(ms) / 1000.0)
 }
 
 fn track_label(track: &Track, number: usize) -> String {

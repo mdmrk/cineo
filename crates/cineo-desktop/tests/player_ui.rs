@@ -5,7 +5,7 @@
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use cineo_core::app::{HideControls, SeekStep, Settings, ShortSeekStep};
+use cineo_core::app::{Action, HideControls, SeekStep, Setting, Settings, ShortSeekStep};
 use cineo_desktop::player::{AddonSubtitle, Controls, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{Key, Modifiers, ViewportId};
@@ -136,6 +136,41 @@ fn track_menus_list_tracks_and_select_one() {
         vec![
             PlayerCommand::SetSubtitle(Some(1)),
             PlayerCommand::SetAudio(Some(2))
+        ]
+    );
+}
+
+#[test]
+fn the_subtitles_menu_changes_the_style_and_the_delay() {
+    let mut harness = harness(status());
+    harness.get_by_label("Subtitles").click();
+    harness.run();
+    harness.get_by_label("Bold").click();
+    harness.run();
+    for label in [
+        "Subtitles 1 s later",
+        "Subtitles 0.1 s later",
+        "Subtitles 0.1 s earlier",
+        "Subtitles 0.1 s earlier",
+    ] {
+        harness.get_by_label(label).click();
+        harness.run();
+    }
+    harness.get_by_label("Subtitle delay +0.9 s, reset").click();
+    harness.run();
+    harness.get_by_label("Off");
+    assert_eq!(
+        harness.state_mut().1.take_settings(),
+        [Action::ChangeSetting(Setting::SubtitleBold(true))]
+    );
+    assert_eq!(
+        harness.state().2,
+        [
+            PlayerCommand::SetSubtitleDelay(1.0),
+            PlayerCommand::SetSubtitleDelay(1.1),
+            PlayerCommand::SetSubtitleDelay(1.0),
+            PlayerCommand::SetSubtitleDelay(0.9),
+            PlayerCommand::SetSubtitleDelay(0.0),
         ]
     );
 }

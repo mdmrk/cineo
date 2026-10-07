@@ -607,6 +607,7 @@ impl CineoApp {
                 };
                 commands = player::show(ui, rect, &playback, &mut embedded.controls);
             });
+        let changes = embedded.controls.take_settings();
         let mut picked = embedded.controls.take_addon_subtitle();
         if picked.is_some()
             || commands
@@ -630,6 +631,14 @@ impl CineoApp {
         }
         if let Some(url) = picked {
             self.load_addon_subtitle(url);
+        }
+        if !changes.is_empty() {
+            for action in changes {
+                self.dispatch(action);
+            }
+            if let Some(embedded) = &self.playback {
+                embedded.player.set_subtitle_style(&self.state.settings);
+            }
         }
         true
     }

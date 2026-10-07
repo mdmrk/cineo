@@ -84,6 +84,11 @@ fn commands_are_built_from_typed_values() {
         "NaN is not sent"
     );
     assert_eq!(args(PlayerCommand::SetVolume(f64::INFINITY)), None);
+    assert_eq!(
+        args(PlayerCommand::SetSubtitleDelay(-0.25)).as_deref(),
+        Some("set sub-delay -0.250")
+    );
+    assert_eq!(args(PlayerCommand::SetSubtitleDelay(f64::NAN)), None);
 }
 
 #[test]
@@ -458,6 +463,43 @@ fn subtitle_style_becomes_mpv_options_only_when_changed() {
         style_options(&no_outline),
         [("sub-border-size", "0".to_owned())]
     );
+}
+
+#[test]
+fn a_live_style_change_back_to_the_defaults_resets_every_property() {
+    let defaults = style_properties(&Settings::default());
+    for (name, _) in style_options(&styled()) {
+        assert!(defaults.iter().any(|(n, _)| *n == name), "{name} is reset");
+    }
+    assert_eq!(
+        defaults,
+        [
+            ("sub-scale", "1.00".to_owned()),
+            ("sub-font", "sans-serif".to_owned()),
+            ("sub-bold", "no".to_owned()),
+            ("sub-pos", "100".to_owned()),
+            ("sub-color", "#FFFFFFFF".to_owned()),
+            ("sub-border-style", "outline-and-shadow".to_owned()),
+            ("sub-border-color", "#FF000000".to_owned()),
+            ("sub-border-size", "1.65".to_owned()),
+            ("sub-ass-override", "scale".to_owned()),
+        ],
+        "mpv 0.41's own defaults"
+    );
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_accepts_every_live_subtitle_style_property() {
+    let lib = ffi::lib().unwrap();
+    let core = Core::create(lib).unwrap();
+    core.initialize().unwrap();
+    for (name, value) in [styled(), Settings::default()]
+        .iter()
+        .flat_map(style_properties)
+    {
+        assert!(core.set_property(name, &value).is_ok(), "{name}={value}");
+    }
 }
 
 #[test]

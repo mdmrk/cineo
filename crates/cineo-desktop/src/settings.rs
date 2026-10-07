@@ -343,6 +343,10 @@ them, otherwise from a subtitles addon.";
 fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     preview(ui, s);
     ui.add_space(theme::GAP);
+    subtitle_controls(ui, s, out);
+}
+
+pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     let size = s.subtitle_size;
     number(
         ui,
@@ -827,7 +831,7 @@ fn language(
     });
 }
 
-fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
+pub(crate) fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
     let width = ui.available_width();
     let control_width = CONTROL_WIDTH.min(width * 0.45);
     let text_width = (width - control_width - 24.0).max(0.0);

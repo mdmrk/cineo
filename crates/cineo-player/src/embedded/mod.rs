@@ -46,6 +46,7 @@ pub enum PlayerCommand {
     ToggleMute,
     SetAudio(Option<i64>),
     SetSubtitle(Option<i64>),
+    SetSubtitleDelay(f64),
     Stop,
 }
 
@@ -277,6 +278,14 @@ impl Player {
             .map_err(|err| PlayerError::Libmpv(err.0))
     }
 
+    pub fn set_subtitle_style(&self, settings: &Settings) {
+        for (name, value) in style_properties(settings) {
+            if let Err(err) = self.core.set_property(name, &value) {
+                warn!(property = name, %err, "subtitle style not applied");
+            }
+        }
+    }
+
     /// Sends `command` without waiting for it.
     pub fn send(&self, command: PlayerCommand) {
         let Some(args) = command_args(command) else {
@@ -317,46 +326,50 @@ fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
 }
 
 fn style_options(settings: &Settings) -> Vec<(&'static str, String)> {
-    let default = Settings::default();
-    let mut options = Vec::new();
-    if settings.subtitle_size != default.subtitle_size {
-        let scale = f64::from(settings.subtitle_size.get()) / 100.0;
-        options.push(("sub-scale", format!("{scale:.2}")));
-    }
-    if settings.subtitle_font != default.subtitle_font {
-        let family = match settings.subtitle_font {
-            SubtitleFont::Sans => "sans-serif",
-            SubtitleFont::Serif => "serif",
-            SubtitleFont::Mono => "monospace",
-        };
-        options.push(("sub-font", family.to_owned()));
-    }
-    if settings.subtitle_bold {
-        options.push(("sub-bold", "yes".to_owned()));
-    }
-    if settings.subtitle_position != default.subtitle_position {
-        let pos = 100 - settings.subtitle_position.get();
-        options.push(("sub-pos", pos.to_string()));
-    }
-    if (settings.subtitle_color, settings.subtitle_opacity)
-        != (default.subtitle_color, default.subtitle_opacity)
-    {
-        let alpha = percent_alpha(settings.subtitle_opacity.get());
-        options.push(("sub-color", argb(alpha, settings.subtitle_color.rgb())));
-    }
-    if let Some(rgb) = settings.subtitle_background.rgb() {
-        options.push(("sub-border-style", "opaque-box".to_owned()));
-        options.push(("sub-border-color", argb(0xCC, rgb)));
-    } else if settings.subtitle_outline != default.subtitle_outline {
-        match settings.subtitle_outline.rgb() {
-            Some(rgb) => options.push(("sub-border-color", argb(0xFF, rgb))),
-            None => options.push(("sub-border-size", "0".to_owned())),
-        }
-    }
-    if !settings.keep_subtitle_styles {
-        options.push(("sub-ass-override", "force".to_owned()));
-    }
-    options
+    let defaults = style_properties(&Settings::default());
+    style_properties(settings)
+        .into_iter()
+        .zip(defaults)
+        .filter(|(set, default)| set != default)
+        .map(|(set, _)| set)
+        .collect()
+}
+
+fn style_properties(settings: &Settings) -> Vec<(&'static str, String)> {
+    let scale = f64::from(settings.subtitle_size.get()) / 100.0;
+    let font = match settings.subtitle_font {
+        SubtitleFont::Sans => "sans-serif",
+        SubtitleFont::Serif => "serif",
+        SubtitleFont::Mono => "monospace",
+    };
+    let alpha = percent_alpha(settings.subtitle_opacity.get());
+    let (style, border, size) = match settings.subtitle_background.rgb() {
+        Some(rgb) => ("opaque-box", argb(0xCC, rgb), "1.65"),
+        None => match settings.subtitle_outline.rgb() {
+            Some(rgb) => ("outline-and-shadow", argb(0xFF, rgb), "1.65"),
+            None => ("outline-and-shadow", argb(0xFF, [0, 0, 0]), "0"),
+        },
+    };
+    let bold = if settings.subtitle_bold { "yes" } else { "no" };
+    let ass = if settings.keep_subtitle_styles {
+        "scale"
+    } else {
+        "force"
+    };
+    vec![
+        ("sub-scale", format!("{scale:.2}")),
+        ("sub-font", font.to_owned()),
+        ("sub-bold", bold.to_owned()),
+        (
+            "sub-pos",
+            (100 - settings.subtitle_position.get()).to_string(),
+        ),
+        ("sub-color", argb(alpha, settings.subtitle_color.rgb())),
+        ("sub-border-style", style.to_owned()),
+        ("sub-border-color", border),
+        ("sub-border-size", size.to_owned()),
+        ("sub-ass-override", ass.to_owned()),
+    ]
 }
 
 fn percent_alpha(percent: u32) -> u8 {
@@ -400,9 +413,13 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
             "volume".into(),
             format!("{:.0}", percent.clamp(0.0, 100.0)),
         ],
-        PlayerCommand::SeekTo(_) | PlayerCommand::SeekBy(_) | PlayerCommand::SetVolume(_) => {
-            return None;
+        PlayerCommand::SetSubtitleDelay(seconds) if seconds.is_finite() => {
+            vec!["set".into(), "sub-delay".into(), format!("{seconds:.3}")]
         }
+        PlayerCommand::SeekTo(_)
+        | PlayerCommand::SeekBy(_)
+        | PlayerCommand::SetVolume(_)
+        | PlayerCommand::SetSubtitleDelay(_) => return None,
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],
         PlayerCommand::SetAudio(id) => vec!["set".into(), "aid".into(), track(id)],
         PlayerCommand::SetSubtitle(id) => vec!["set".into(), "sid".into(), track(id)],
