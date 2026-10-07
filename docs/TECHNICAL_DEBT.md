@@ -102,6 +102,15 @@ Format:
 - Exit: send `cancel` to helpers on completion; remember the writer of
   each chunk of a shared piece.
 
+### Streaming engine: ringbuf advisory ignored
+- Where: `librqbit-utp` 0.7.0 → `ringbuf` 0.4.8; `.config/deny.toml`
+- Gap: RUSTSEC-2026-0293 (double free when an element's `Drop` panics) is
+  ignored; the fix is in `ringbuf` 0.5.2, which `librqbit-utp` does not use.
+- Why: no newer `librqbit-utp` (0.7.0 is the latest, 2026-10-07).
+- Instead: not reachable (VERIFIED from its source): it stores only `u8`,
+  which has no `Drop`.
+- Exit: drop the ignore once `librqbit-utp` moves to `ringbuf` 0.5.2+.
+
 ### Store: no in-app recovery from a corrupt database
 - Where: [store.rs](../crates/cineo-store/src/store.rs)
 - Gap: a corrupt `cineo.db` makes every persistence command fail.

@@ -70,6 +70,7 @@ Added 2026-10-07.
 | Inter 4.1 (The Inter Project Authors) | `Inter-Regular.ttf`, `Inter-SemiBold.ttf` | <https://github.com/rsms/inter/releases/tag/v4.1> | SIL OFL 1.1 (`Inter-OFL.txt`) |
 | Tabler Icons (Paweł Kuna), via the `iconflow` crate | `tabler-regular.ttf`, `tabler-filled.ttf` (inside the crate) | <https://github.com/tabler/tabler-icons> | MIT (notice in iconflow's `THIRD_PARTY_LICENSES_FONTS.md`) |
 | DM Serif Display (Colophon Foundry; Adobe Source heritage) | `DMSerifDisplay-Regular.ttf` | <https://github.com/google/fonts/tree/main/ofl/dmserifdisplay> | SIL OFL 1.1 (`DMSerifDisplay-OFL.txt`) |
+| egui's default fonts, via the `epaint_default_fonts` crate (fallbacks behind ours) | Ubuntu-Light, Hack, Noto Emoji, emoji-icon-font (inside the crate) | <https://github.com/emilk/egui/tree/master/crates/epaint_default_fonts> | Ubuntu Font Licence 1.0, SIL OFL 1.1, MIT (texts inside the crate); crate-scoped exception in `.config/deny.toml` (2026-10-07) |
 
 ## Trademarks and branding
 - "Stremio" is a name of its respective owner. Cineo is **not affiliated

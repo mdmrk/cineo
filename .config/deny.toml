@@ -8,7 +8,10 @@ all-features = true
 # Unmaintained/unsound/yanked crates are reported; vulnerabilities always fail.
 unmaintained = "workspace"
 yanked = "deny"
-ignore = []
+ignore = [
+    # ringbuf 0.4 via librqbit-utp 0.7.0 (latest): only `u8` elements, which cannot panic on drop.
+    { id = "RUSTSEC-2026-0293", reason = "not reachable: librqbit-utp stores u8 only" },
+]
 
 [licenses]
 # Permissive licenses compatible with distributing Cineo under MIT.
@@ -34,7 +37,11 @@ allow = [
 ]
 # option-ext (MPL-2.0, file-level copyleft), used unmodified via
 # librqbit-core → directories → dirs-sys. Scoped to that crate (docs/LEGAL.md).
-exceptions = [{ crate = "option-ext", allow = ["MPL-2.0"] }]
+exceptions = [
+    { crate = "option-ext", allow = ["MPL-2.0"] },
+    # egui's built-in fonts (Ubuntu-Light, Hack, emoji), our theme's fallbacks.
+    { crate = "epaint_default_fonts", allow = ["OFL-1.1", "Ubuntu-font-1.0"] },
+]
 unused-allowed-license = "allow"
 confidence-threshold = 0.9
 
