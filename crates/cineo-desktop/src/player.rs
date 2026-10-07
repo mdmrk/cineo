@@ -20,6 +20,7 @@ const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
 const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
 const PULSE_PERIOD: f64 = 1.6;
+const MENU_MAX_HEIGHT: f32 = 320.0;
 
 /// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
@@ -501,7 +502,9 @@ fn track_menu(
     let row = 30.0;
     let width = 240.0;
     #[expect(clippy::cast_precision_loss, reason = "a short list")]
-    let height = entries.len() as f32 * row + 8.0;
+    let content = entries.len() as f32 * row;
+    let room = (anchor.top() - ui.max_rect().top() - 24.0).max(row);
+    let height = content.min(MENU_MAX_HEIGHT).min(room) + 8.0;
     let menu = Rect::from_min_size(
         pos2(
             (anchor.right() - width).max(ui.max_rect().left() + 8.0),
@@ -509,53 +512,71 @@ fn track_menu(
         ),
         vec2(width, height),
     );
-    let layer = egui::LayerId::new(egui::Order::Foreground, ui.id().with("track-menu"));
-    let painter = ui.ctx().layer_painter(layer);
-    painter.rect_filled(menu, CornerRadius::same(theme::RADIUS), theme::PANEL);
-    let mut y = menu.top() + 4.0;
-    for (index, (id, label, selected)) in entries.into_iter().enumerate() {
-        let item = Rect::from_min_size(pos2(menu.left() + 4.0, y), vec2(width - 8.0, row));
-        y += row;
-        let response = ui
-            .interact(item, ui.id().with(("track", index)), Sense::click())
-            .on_hover_cursor(CursorIcon::PointingHand);
-        response
-            .widget_info(|| WidgetInfo::selected(WidgetType::RadioButton, true, selected, &label));
-        if response.hovered() {
-            painter.rect_filled(
-                item,
-                CornerRadius::same(theme::RADIUS),
-                theme::SURFACE_HOVER,
-            );
-        }
-        if selected {
-            paint_icon(
-                &painter,
-                Icon::Named("check"),
-                pos2(item.left() + 14.0, item.center().y),
-                16.0,
-                theme::ACCENT,
-            );
-        }
-        painter.text(
-            pos2(item.left() + 30.0, item.center().y),
-            Align2::LEFT_CENTER,
-            &label,
-            theme::body(),
-            if selected {
-                theme::TEXT_BRIGHT
-            } else {
-                theme::TEXT
-            },
-        );
-        if response.clicked() && (id.is_some() || kind == TrackKind::Subtitle) {
-            out.push(match kind {
-                TrackKind::Subtitle => PlayerCommand::SetSubtitle(id),
-                _ => PlayerCommand::SetAudio(id),
+    egui::Area::new(ui.id().with("track-menu"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(menu.min)
+        .show(ui.ctx(), |ui| {
+            ui.painter()
+                .rect_filled(menu, CornerRadius::same(theme::RADIUS), theme::PANEL);
+            ui.scope_builder(UiBuilder::new().max_rect(menu.shrink(4.0)), |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(height - 8.0)
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        for (id, label, selected) in entries {
+                            let (item, response) = ui.allocate_exact_size(
+                                vec2(ui.available_width(), row),
+                                Sense::click(),
+                            );
+                            let response = response.on_hover_cursor(CursorIcon::PointingHand);
+                            response.widget_info(|| {
+                                WidgetInfo::selected(
+                                    WidgetType::RadioButton,
+                                    true,
+                                    selected,
+                                    &label,
+                                )
+                            });
+                            let painter = ui.painter();
+                            if response.hovered() {
+                                painter.rect_filled(
+                                    item,
+                                    CornerRadius::same(theme::RADIUS),
+                                    theme::SURFACE_HOVER,
+                                );
+                            }
+                            if selected {
+                                paint_icon(
+                                    painter,
+                                    Icon::Named("check"),
+                                    pos2(item.left() + 14.0, item.center().y),
+                                    16.0,
+                                    theme::ACCENT,
+                                );
+                            }
+                            painter.text(
+                                pos2(item.left() + 30.0, item.center().y),
+                                Align2::LEFT_CENTER,
+                                &label,
+                                theme::body(),
+                                if selected {
+                                    theme::TEXT_BRIGHT
+                                } else {
+                                    theme::TEXT
+                                },
+                            );
+                            if response.clicked() && (id.is_some() || kind == TrackKind::Subtitle) {
+                                out.push(match kind {
+                                    TrackKind::Subtitle => PlayerCommand::SetSubtitle(id),
+                                    _ => PlayerCommand::SetAudio(id),
+                                });
+                                controls.menu = None;
+                            }
+                        }
+                    });
             });
-            controls.menu = None;
-        }
-    }
+        });
 }
 
 fn track_label(track: &Track, number: usize) -> String {
