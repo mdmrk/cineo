@@ -4,9 +4,9 @@
 #![allow(clippy::unwrap_used)]
 
 use cineo_core::app::{
-    HideControls, Language, Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep,
-    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize,
+    AudioOutput, DownloadLimit, HideControls, Language, PeerLimit, Percent, SeekStep, Setting,
+    SettingError, Settings, ShortSeekStep, SubtitleBackground, SubtitleColor, SubtitleFont,
+    SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, UploadLimit,
 };
 
 #[test]
@@ -37,6 +37,14 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::SubtitleBackground(SubtitleBackground::Black),
         Setting::SubtitleOpacity(SubtitleOpacity::new(60)),
         Setting::KeepSubtitleStyles(false),
+        Setting::AudioOutput(AudioOutput::Stereo),
+        Setting::AudioPassthrough(true),
+        Setting::TorrentUpload(false),
+        Setting::DownloadLimit(DownloadLimit::M5),
+        Setting::UploadLimit(UploadLimit::K100),
+        Setting::PeerLimit(PeerLimit::P50),
+        Setting::TorrentDht(false),
+        Setting::AllowPrivateNetwork(true),
     ] {
         settings.set(setting);
     }
@@ -91,6 +99,14 @@ fn saved_keys_never_change() {
             "subtitle_background",
             "subtitle_opacity",
             "keep_subtitle_styles",
+            "audio_output",
+            "audio_passthrough",
+            "torrent_upload",
+            "download_limit",
+            "upload_limit",
+            "peer_limit",
+            "torrent_dht",
+            "allow_private_network",
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");

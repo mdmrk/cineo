@@ -204,6 +204,61 @@ impl SubtitleBackground {
     }
 }
 
+choice! {
+    /// Speaker layout mpv decodes to.
+    AudioOutput { Auto = "auto", Stereo = "stereo", }
+}
+
+choice! {
+    /// Most a torrent may download per second, in MB/s.
+    DownloadLimit { Unlimited = "none", M1 = "1", M2 = "2", M5 = "5", M10 = "10", M20 = "20", }
+}
+
+impl DownloadLimit {
+    pub const fn bytes_per_second(self) -> Option<u32> {
+        match self {
+            Self::Unlimited => None,
+            Self::M1 => Some(1_000_000),
+            Self::M2 => Some(2_000_000),
+            Self::M5 => Some(5_000_000),
+            Self::M10 => Some(10_000_000),
+            Self::M20 => Some(20_000_000),
+        }
+    }
+}
+
+choice! {
+    /// Most a torrent may upload per second.
+    UploadLimit { Unlimited = "none", K100 = "100k", K500 = "500k", M1 = "1", M5 = "5", }
+}
+
+impl UploadLimit {
+    pub const fn bytes_per_second(self) -> Option<u32> {
+        match self {
+            Self::Unlimited => None,
+            Self::K100 => Some(100_000),
+            Self::K500 => Some(500_000),
+            Self::M1 => Some(1_000_000),
+            Self::M5 => Some(5_000_000),
+        }
+    }
+}
+
+choice! {
+    /// Most peers one torrent connects to.
+    PeerLimit { P50 = "50", P128 = "128", P200 = "200", }
+}
+
+impl PeerLimit {
+    pub const fn peers(self) -> usize {
+        match self {
+            Self::P50 => 50,
+            Self::P128 => 128,
+            Self::P200 => 200,
+        }
+    }
+}
+
 /// Subtitle size in percent of the player's default.
 pub type SubtitleSize = Ranged<50, 200>;
 /// How far above the bottom edge subtitles sit, in percent of the height.
@@ -316,6 +371,19 @@ settings! {
     /// Styled (ASS) subtitles keep their own look; when off, the subtitle
     /// settings above apply to them too.
     keep_subtitle_styles: bool = true => KeepSubtitleStyles("keep_subtitle_styles"),
+    audio_output: AudioOutput = AudioOutput::Auto => AudioOutput("audio_output"),
+    /// Compressed surround audio goes to the receiver undecoded.
+    audio_passthrough: bool = false => AudioPassthrough("audio_passthrough"),
+    /// Pieces already downloaded are shared with other peers.
+    torrent_upload: bool = true => TorrentUpload("torrent_upload"),
+    download_limit: DownloadLimit = DownloadLimit::Unlimited => DownloadLimit("download_limit"),
+    upload_limit: UploadLimit = UploadLimit::Unlimited => UploadLimit("upload_limit"),
+    peer_limit: PeerLimit = PeerLimit::P128 => PeerLimit("peer_limit"),
+    /// Find peers through the DHT, not only through trackers.
+    torrent_dht: bool = true => TorrentDht("torrent_dht"),
+    /// Addons, images and torrent peers on loopback/LAN addresses are
+    /// allowed (docs/SECURITY.md). Read at startup.
+    allow_private_network: bool = false => AllowPrivateNetwork("allow_private_network"),
 }
 
 impl Settings {

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
-use cineo_core::app::{Language, PlayRequest, Settings, SubtitleFont};
+use cineo_core::app::{AudioOutput, Language, PlayRequest, Settings, SubtitleFont};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -308,6 +308,12 @@ fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
     }
     if settings.remember_volume {
         options.push(("volume", settings.volume.get().to_string()));
+    }
+    if settings.audio_output == AudioOutput::Stereo {
+        options.push(("audio-channels", "stereo".to_owned()));
+    }
+    if settings.audio_passthrough {
+        options.push(("audio-spdif", "ac3,eac3,dts,dts-hd,truehd".to_owned()));
     }
     options
 }

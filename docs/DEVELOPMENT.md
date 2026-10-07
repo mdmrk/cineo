@@ -402,7 +402,7 @@ Re-check them when adding.
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks, decoding and downscaling (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
-| `librqbit` (`rust-tls`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/fix/urgent-piece-helpers) at `be52c57a` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
+| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/fix/urgent-piece-helpers) at `be52c57a` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.11.1 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
@@ -432,6 +432,11 @@ because it serves one route and needs exact control of range responses;
 `axum` would add routing we do not use. Through `librqbit-core` the tree
 gains `directories` 6.0.0 and with it `option-ext` (MPL-2.0), which has a
 crate-scoped exception in `.config/deny.toml` (LEGAL.md).
+
+2026-10-07: `librqbit`'s `disable-upload` feature is on for the "Upload to
+other peers" setting. It adds no dependency (`disable-upload = []`); it
+compiles the `SessionOptions::disable_upload` switch, which stops
+advertising pieces and drops a peer that asks for one anyway.
 
 2026-10-07: `librqbit` comes from the owner's fork (`[patch.crates-io]`
 in the root `Cargo.toml`, a git source allowed in `.config/deny.toml`),

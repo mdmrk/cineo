@@ -384,11 +384,18 @@ fn settings_become_mpv_options() {
         audio_language: Language::from_code("spa"),
         hardware_decoding: false,
         remember_volume: false,
+        audio_output: AudioOutput::Stereo,
+        audio_passthrough: true,
         ..Settings::default()
     };
     assert_eq!(
         settings_options(&settings),
-        [("hwdec", "no".to_owned()), ("alang", "spa,es".to_owned())]
+        [
+            ("hwdec", "no".to_owned()),
+            ("alang", "spa,es".to_owned()),
+            ("audio-channels", "stereo".to_owned()),
+            ("audio-spdif", "ac3,eac3,dts,dts-hd,truehd".to_owned()),
+        ]
     );
 }
 
@@ -401,6 +408,8 @@ fn real_libmpv_accepts_the_subtitle_language() {
             subtitle_language: Language::from_code("fre"),
             audio_language: Language::from_code("spa"),
             hardware_decoding: false,
+            audio_output: AudioOutput::Stereo,
+            audio_passthrough: true,
             ..Settings::default()
         },
         ..request(&url)

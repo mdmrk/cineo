@@ -1,9 +1,9 @@
 //! The Settings page: a section index beside one scrolling list of settings.
 
 use cineo_core::app::{
-    Action, HideControls, Language, SeekStep, Setting, Settings, ShortSeekStep, State,
-    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize,
+    Action, AudioOutput, DownloadLimit, HideControls, Language, PeerLimit, SeekStep, Setting,
+    Settings, ShortSeekStep, State, SubtitleBackground, SubtitleColor, SubtitleFont,
+    SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, UploadLimit,
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Label, Layout, Margin,
@@ -23,6 +23,7 @@ pub enum Section {
     Player,
     Languages,
     Subtitles,
+    Audio,
     Torrents,
     Data,
     Keyboard,
@@ -30,10 +31,11 @@ pub enum Section {
 }
 
 impl Section {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 8] = [
         Self::Player,
         Self::Languages,
         Self::Subtitles,
+        Self::Audio,
         Self::Torrents,
         Self::Data,
         Self::Keyboard,
@@ -45,6 +47,7 @@ impl Section {
             Self::Player => "Player",
             Self::Languages => "Languages",
             Self::Subtitles => "Subtitles",
+            Self::Audio => "Audio",
             Self::Torrents => "Torrents",
             Self::Data => "Data",
             Self::Keyboard => "Keyboard",
@@ -234,16 +237,27 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             );
         }
         Section::Subtitles => subtitle_style(ui, s, out),
-        Section::Torrents => {
+        Section::Audio => {
+            pick(
+                ui,
+                out,
+                "Audio output",
+                "Stereo mixes surround sound down to two speakers or headphones.",
+                s.audio_output,
+                AudioOutput::ALL,
+                output_name,
+                Setting::AudioOutput,
+            );
             switch(
                 ui,
                 out,
-                "Show and play torrent streams",
-                P2P_NOTICE,
-                s.p2p_enabled,
-                Setting::P2pEnabled,
+                "Passthrough",
+                PASSTHROUGH_HELP,
+                s.audio_passthrough,
+                Setting::AudioPassthrough,
             );
         }
+        Section::Torrents => torrents(ui, s, out),
         Section::Data => {
             row(
                 ui,
@@ -457,6 +471,118 @@ fn background_name(background: SubtitleBackground) -> &'static str {
         SubtitleBackground::None => "No background",
         SubtitleBackground::Black => "Black box",
         SubtitleBackground::Gray => "Gray box",
+    }
+}
+
+const PASSTHROUGH_HELP: &str = "Sends Dolby and DTS audio undecoded to a receiver over \
+HDMI or S/PDIF. Leave off unless your receiver decodes them, or you may hear silence.";
+
+fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
+    switch(
+        ui,
+        out,
+        "Show and play torrent streams",
+        P2P_NOTICE,
+        s.p2p_enabled,
+        Setting::P2pEnabled,
+    );
+    switch(
+        ui,
+        out,
+        "Upload to other peers",
+        UPLOAD_HELP,
+        s.torrent_upload,
+        Setting::TorrentUpload,
+    );
+    pick(
+        ui,
+        out,
+        "Download limit",
+        NEXT_TORRENT,
+        s.download_limit,
+        DownloadLimit::ALL,
+        download_name,
+        Setting::DownloadLimit,
+    );
+    pick(
+        ui,
+        out,
+        "Upload limit",
+        NEXT_TORRENT,
+        s.upload_limit,
+        UploadLimit::ALL,
+        upload_name,
+        Setting::UploadLimit,
+    );
+    pick(
+        ui,
+        out,
+        "Peers per torrent",
+        "More peers can be faster but use more connections.",
+        s.peer_limit,
+        PeerLimit::ALL,
+        peer_name,
+        Setting::PeerLimit,
+    );
+    switch(
+        ui,
+        out,
+        "Find peers through the DHT",
+        DHT_HELP,
+        s.torrent_dht,
+        Setting::TorrentDht,
+    );
+    switch(
+        ui,
+        out,
+        "Allow local network addresses",
+        PRIVATE_HELP,
+        s.allow_private_network,
+        Setting::AllowPrivateNetwork,
+    );
+}
+
+const NEXT_TORRENT: &str = "Applies from the next torrent you play.";
+const UPLOAD_HELP: &str = "When off, Cineo only downloads. Some peers then send less, \
+so torrents can be slower. Your IP address is still visible to peers.";
+const DHT_HELP: &str = "Finds peers without trackers. Off means fewer peers for many torrents.";
+const PRIVATE_HELP: &str = "Lets addons, images and torrent peers on 127.0.0.1 or your \
+home network be reached, for self-hosted addons. Off is safer. Takes effect after \
+restarting Cineo.";
+
+fn output_name(output: AudioOutput) -> &'static str {
+    match output {
+        AudioOutput::Auto => "Automatic (surround)",
+        AudioOutput::Stereo => "Stereo",
+    }
+}
+
+fn download_name(limit: DownloadLimit) -> &'static str {
+    match limit {
+        DownloadLimit::Unlimited => "No limit",
+        DownloadLimit::M1 => "1 MB/s",
+        DownloadLimit::M2 => "2 MB/s",
+        DownloadLimit::M5 => "5 MB/s",
+        DownloadLimit::M10 => "10 MB/s",
+        DownloadLimit::M20 => "20 MB/s",
+    }
+}
+
+fn upload_name(limit: UploadLimit) -> &'static str {
+    match limit {
+        UploadLimit::Unlimited => "No limit",
+        UploadLimit::K100 => "100 kB/s",
+        UploadLimit::K500 => "500 kB/s",
+        UploadLimit::M1 => "1 MB/s",
+        UploadLimit::M5 => "5 MB/s",
+    }
+}
+
+fn peer_name(limit: PeerLimit) -> &'static str {
+    match limit {
+        PeerLimit::P50 => "50",
+        PeerLimit::P128 => "128",
+        PeerLimit::P200 => "200",
     }
 }
 

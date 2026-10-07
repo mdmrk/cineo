@@ -1,6 +1,7 @@
 //! The imperative shell (ADR-0001, ADR-0011): owns the [`State`], runs the
 //! effects [`update`] returns, and feeds IO results back as actions.
 
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -45,17 +46,19 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .enable_all()
         .build()
         .context("cannot start the async runtime")?;
-    let client = Arc::new(AddonClient::new(NetPolicy {
-        allow_private_networks: options.allow_private_network,
-        ..NetPolicy::default()
-    })?);
     let store = Store::open_in(&options.data_dir)
         .with_context(|| format!("cannot open the database in {}", options.data_dir.display()))?;
     let restore = Action::Restore {
         addons: store.addons()?,
         library: store.library()?,
     };
-    let settings = Action::RestoreSettings(store.settings()?);
+    let saved = store.settings()?;
+    let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
+    let client = Arc::new(AddonClient::new(NetPolicy {
+        allow_private_networks: allow_private_network,
+        ..NetPolicy::default()
+    })?);
+    let settings = Action::RestoreSettings(saved);
     let (results_tx, results_rx) = channel();
     let (store_tx, writer) =
         spawn_store_writer(store, results_tx.clone()).context("cannot start the store thread")?;
@@ -64,7 +67,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         client: Arc::clone(&client),
         gl: None,
         engine: EngineOptions {
-            allow_private_network: options.allow_private_network,
+            allow_private_network,
             ..EngineOptions::new(options.cache_dir)
         },
     };
@@ -298,7 +301,7 @@ impl CineoApp {
         let generation = self.next_torrent_generation();
         let current = Arc::clone(&self.torrent_generation);
         let engine = Arc::clone(&self.engine);
-        let options = self.io.engine.clone();
+        let options = engine_options(&self.io.engine, &self.state.settings);
         let tx = self.results_tx.clone();
         let ctx = self.ctx.clone();
         let task = self.io.runtime.spawn(async move {
@@ -702,6 +705,9 @@ async fn open_torrent(
     options: EngineOptions,
     request: &TorrentRequest,
 ) -> Result<url::Url, String> {
+    if let Some(stale) = slot.take_if(|engine| *engine.options() != options) {
+        stale.shutdown().await;
+    }
     let engine = match slot {
         Some(engine) => engine,
         None => slot.insert(Engine::start(options).await.map_err(|e| e.to_string())?),
@@ -710,6 +716,31 @@ async fn open_torrent(
         error!(error = %err, "opening the torrent failed");
         err.to_string()
     })
+}
+
+/// Off unless the command line or the saved setting turns it on
+/// (docs/SECURITY.md); read once at startup.
+fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {
+    command_line || settings.allow_private_network
+}
+
+/// The engine options for the next torrent: `base` (from startup) with the
+/// user's torrent settings.
+fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
+    EngineOptions {
+        dht: base.dht && settings.torrent_dht,
+        upload: settings.torrent_upload,
+        download_limit_bps: settings
+            .download_limit
+            .bytes_per_second()
+            .and_then(NonZeroU32::new),
+        upload_limit_bps: settings
+            .upload_limit
+            .bytes_per_second()
+            .and_then(NonZeroU32::new),
+        peer_limit: Some(settings.peer_limit.peers()),
+        ..base.clone()
+    }
 }
 
 /// The volume a finished playback leaves for the next one, if it changed.
@@ -754,6 +785,45 @@ pub(crate) fn spawn_store_writer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cineo_core::app::{DownloadLimit, PeerLimit, UploadLimit};
+
+    #[test]
+    fn private_networks_stay_blocked_unless_asked_for() {
+        assert!(!private_networks_allowed(false, &Settings::default()));
+        assert!(private_networks_allowed(true, &Settings::default()));
+        let on = Settings {
+            allow_private_network: true,
+            ..Settings::default()
+        };
+        assert!(private_networks_allowed(false, &on));
+    }
+
+    #[test]
+    fn torrent_settings_shape_the_next_engine() {
+        let base = EngineOptions::new(PathBuf::from("/c"));
+        let defaults = engine_options(&base, &Settings::default());
+        assert_eq!(
+            defaults,
+            EngineOptions {
+                peer_limit: Some(128),
+                ..base.clone()
+            },
+            "the defaults match librqbit's"
+        );
+        let settings = Settings {
+            torrent_upload: false,
+            torrent_dht: false,
+            download_limit: DownloadLimit::M5,
+            upload_limit: UploadLimit::K100,
+            peer_limit: PeerLimit::P50,
+            ..Settings::default()
+        };
+        let options = engine_options(&base, &settings);
+        assert!(!options.upload && !options.dht);
+        assert_eq!(options.download_limit_bps, NonZeroU32::new(5_000_000));
+        assert_eq!(options.upload_limit_bps, NonZeroU32::new(100_000));
+        assert_eq!(options.peer_limit, Some(50));
+    }
 
     #[test]
     fn the_last_volume_is_kept_only_when_remembering() {

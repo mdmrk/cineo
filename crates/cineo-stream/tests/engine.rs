@@ -5,6 +5,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::net::{Ipv4Addr, SocketAddr};
+use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -471,4 +472,32 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
     assert!(start.body == film[..2_097_152]);
     assert!(took < Duration::from_secs(2), "the start took {took:?}");
     engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_download_limit_slows_the_torrent_down() {
+    let seeder = seeder("limit").await;
+    let mut elapsed = Vec::new();
+    for (name, limit) in [("limit-off", None), ("limit-on", NonZeroU32::new(400_000))] {
+        let engine = Engine::start(EngineOptions {
+            download_limit_bps: limit,
+            ..options(name, &seeder)
+        })
+        .await
+        .unwrap();
+        assert_eq!(engine.options().download_limit_bps, limit);
+        let url = engine.open(&request(&seeder)).await.unwrap();
+        let start = std::time::Instant::now();
+        let full = http(engine.local_addr(), "GET", url.path(), &[]).await;
+        elapsed.push(start.elapsed());
+        assert!(full.body == seeder.film);
+        engine.shutdown().await;
+    }
+    let [off, on] = elapsed[..] else {
+        unreachable!()
+    };
+    assert!(
+        on >= Duration::from_millis(1500) && on > off * 2,
+        "1.5 MB at 400 kB/s after a one-second burst: off {off:?}, on {on:?}"
+    );
 }

@@ -42,7 +42,7 @@ These are all treated as hostile:
 | Risk | Control |
 |------|---------|
 | SSRF / LAN attacks: an addon (or a URL inside its data) points at `127.0.0.1`, `192.168.1.1`, `169.254.169.254` | `NetPolicy` blocks non-public destinations **by default**. IP literals and `localhost` are checked before connecting. Hostnames are checked **after DNS resolution inside the resolver**: the connection only uses checked addresses, which defeats DNS rebinding. Blocked: loopback, RFC 1918, link-local, CGNAT, multicast, broadcast, documentation, benchmarking, reserved, unspecified, plus IPv6 forms embedding IPv4 (mapped, NAT64, 6to4). |
-| Self-hosted addons on the LAN | Explicit opt-in only: `--allow-private-network` (CLI) for now. Planned: a per-addon trust flag set at install time with a clear prompt. A public addon can never cause private-network requests. |
+| Self-hosted addons on the LAN | Explicit opt-in only: `--allow-private-network` (CLI) or the "Allow local network addresses" setting (off by default, read at startup; `private_networks_stay_blocked_unless_asked_for`). Planned: a per-addon trust flag set at install time with a clear prompt. A public addon can never cause private-network requests. |
 | Redirect-based bypass | Every redirect hop is re-validated: scheme, destination and https→http downgrade (refused). At most 5 hops. |
 | Proxy bypasses the resolver check | System proxies are disabled for addon traffic (INFERRED necessity: a proxy resolves names itself). |
 | Scheme abuse (`file:`, `ftp:`, `data:`) | Only `http`/`https` for addons and images. |
@@ -165,7 +165,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 
 | Setting | Default |
 |---------|---------|
-| Private-network access | Off |
+| Private-network access | Off (opt-in: CLI flag or Settings, applied at startup) |
+| Torrent upload | On; can be turned off in Settings (librqbit `disable_upload`, behavior not covered by a test) |
 | Max decoded body | 8 MiB |
 | Request timeout / connect timeout | 20 s / 10 s |
 | Max redirects | 5, no https→http |

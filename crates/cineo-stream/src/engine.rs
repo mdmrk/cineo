@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 use std::net::{IpAddr, SocketAddr};
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -9,6 +10,7 @@ use std::time::Duration;
 use cineo_core::app::{TorrentFile, TorrentRequest, TorrentStatus, choose_file};
 use librqbit::api::TorrentIdOrHash;
 use librqbit::dht::DhtPersistenceConfig;
+use librqbit::limits::LimitsConfig;
 use librqbit::storage::StorageFactoryExt as _;
 use librqbit::{
     AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
@@ -24,7 +26,7 @@ use crate::storage::{CacheStorageFactory, torrent_dir};
 use crate::{blocklist, cache, socks};
 
 /// How the engine runs.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngineOptions {
     /// Holds the data of the torrent being played and DHT state. Created
     /// private to the user. Torrent data is deleted when the torrent stops
@@ -33,8 +35,14 @@ pub struct EngineOptions {
     /// Allow peers and trackers on loopback/private addresses (the same
     /// user choice as `NetPolicy`'s private networks).
     pub allow_private_network: bool,
-    /// Find peers through the DHT. Off only in tests.
+    /// Find peers through the DHT.
     pub dht: bool,
+    /// Share downloaded pieces with other peers.
+    pub upload: bool,
+    pub download_limit_bps: Option<NonZeroU32>,
+    pub upload_limit_bps: Option<NonZeroU32>,
+    /// Most peers per torrent; `None` keeps librqbit's default (128).
+    pub peer_limit: Option<usize>,
     /// Peers to contact for every torrent, e.g. a local seeder in tests.
     pub extra_peers: Vec<SocketAddr>,
     /// How long to wait for a torrent's file list.
@@ -44,12 +52,17 @@ pub struct EngineOptions {
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
 
 impl EngineOptions {
-    /// Defaults: private networks blocked, DHT on, 60 s metadata timeout.
+    /// Defaults: private networks blocked, DHT and upload on, no rate
+    /// limits, 60 s metadata timeout.
     pub fn new(cache_dir: PathBuf) -> Self {
         Self {
             cache_dir,
             allow_private_network: false,
             dht: true,
+            upload: true,
+            download_limit_bps: None,
+            upload_limit_bps: None,
+            peer_limit: None,
             extra_peers: Vec::new(),
             metadata_timeout: Duration::from_secs(60),
         }
@@ -147,6 +160,12 @@ impl Engine {
                     }
                     .boxed(),
                 ),
+                disable_upload: !options.upload,
+                ratelimits: LimitsConfig {
+                    download_bps: options.download_limit_bps,
+                    upload_bps: options.upload_limit_bps,
+                },
+                peer_limit: options.peer_limit,
                 ..SessionOptions::default()
             },
         )
@@ -174,6 +193,11 @@ impl Engine {
             tasks: [server, proxy],
             active: Mutex::new(None),
         })
+    }
+
+    /// The options the engine was started with.
+    pub fn options(&self) -> &EngineOptions {
+        &self.options
     }
 
     /// The server's address (always loopback).

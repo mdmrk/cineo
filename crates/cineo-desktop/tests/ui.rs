@@ -10,8 +10,8 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, SeekStep, Setting, State, SubtitleColor, SubtitleSize, TorrentStatus,
-    update,
+    Action, DownloadLimit, Effect, Language, SeekStep, Setting, State, SubtitleColor, SubtitleSize,
+    TorrentStatus, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
@@ -614,6 +614,31 @@ fn subtitle_style_changes_from_the_page() {
             Action::ChangeSetting(Setting::SubtitleSize(SubtitleSize::new(105))),
             Action::ChangeSetting(Setting::SubtitleColor(SubtitleColor::Yellow)),
             Action::ChangeSetting(Setting::KeepSubtitleStyles(false)),
+        ]
+    );
+}
+
+#[test]
+fn audio_and_torrent_settings_change_from_the_page() {
+    let mut harness = harness(State::default(), settings_page());
+    open_section(&mut harness, "Audio");
+    harness.get_by_label("Passthrough").click();
+    harness.run();
+    open_section(&mut harness, "Torrents");
+    harness.get_by_label("Download limit").click();
+    harness.run();
+    harness.get_by_label("5 MB/s").click();
+    harness.run();
+    harness
+        .get_by_label("Allow local network addresses")
+        .click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            Action::ChangeSetting(Setting::AudioPassthrough(true)),
+            Action::ChangeSetting(Setting::DownloadLimit(DownloadLimit::M5)),
+            Action::ChangeSetting(Setting::AllowPrivateNetwork(true)),
         ]
     );
 }
