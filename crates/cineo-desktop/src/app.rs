@@ -134,6 +134,7 @@ struct Embedded {
     renderer: Arc<Mutex<Option<Renderer>>>,
     title: String,
     logo: Option<String>,
+    background: Option<String>,
     controls: Controls,
     forward: Option<tokio::task::AbortHandle>,
     subtitle_files: SubtitleFiles,
@@ -417,6 +418,7 @@ impl CineoApp {
             renderer: Arc::new(Mutex::new(Some(renderer))),
             title: request.title.clone(),
             logo: request.logo.as_ref().map(ToString::to_string),
+            background: request.background.as_ref().map(ToString::to_string),
             controls: Controls::default(),
             forward: Some(forward.abort_handle()),
             subtitle_files: SubtitleFiles::new(self.subtitle_dir()),
@@ -521,12 +523,18 @@ impl CineoApp {
     }
 
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
-        let Some((title, logo)) = self
+        let Some((title, logo, background)) = self
             .state
             .torrent
             .as_ref()
             .and_then(|t| t.connecting())
-            .map(|request| (request.title.clone(), request.logo.clone()))
+            .map(|request| {
+                (
+                    request.title.clone(),
+                    request.logo.clone(),
+                    request.background.clone(),
+                )
+            })
         else {
             return false;
         };
@@ -539,6 +547,7 @@ impl CineoApp {
                     status: &Status::default(),
                     title: &title,
                     logo: logo.as_ref().map(url::Url::as_str),
+                    background: background.as_ref().map(url::Url::as_str),
                     addon_subtitles: &[],
                     settings: &self.state.settings,
                 };
@@ -592,6 +601,7 @@ impl CineoApp {
                     status: &status,
                     title: &embedded.title,
                     logo: embedded.logo.as_deref(),
+                    background: embedded.background.as_deref(),
                     addon_subtitles: &addon_subtitles,
                     settings: &self.state.settings,
                 };

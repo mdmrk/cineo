@@ -71,6 +71,7 @@ fn harness_full(
                     status,
                     title: "A Film",
                     logo: None,
+                    background: None,
                     addon_subtitles: addon,
                     settings,
                 };

@@ -19,6 +19,7 @@ fn request(url: &str) -> PlayRequest {
         url: url.parse().unwrap(),
         title: "Film ${path} --script=x".into(),
         logo: None,
+        background: None,
         headers: vec![
             ("User-Agent".into(), "Cineo-Test, with comma".into()),
             ("Bad Name".into(), "x".into()),

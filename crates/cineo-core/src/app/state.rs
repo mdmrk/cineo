@@ -93,6 +93,8 @@ pub struct PlayRequest {
     pub title: String,
     /// The item's logo art (meta `logo`), shown while the file loads.
     pub logo: Option<Url>,
+    /// The item's backdrop (meta `background`), shown behind the logo.
+    pub background: Option<Url>,
     pub headers: Vec<(String, String)>,
     /// The settings when playback was asked for.
     pub settings: Settings,
@@ -254,7 +256,7 @@ pub enum Effect {
     DeleteLibraryItem(String),
     ClearLibrary,
     SaveSettings(Settings),
-    Play(PlayRequest),
+    Play(Box<PlayRequest>),
     StartTorrent(TorrentRequest),
     StopTorrent,
 }
@@ -564,7 +566,7 @@ fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
         return stop_torrent(state);
     }
     match torrent.pending.take() {
-        Some(request) => vec![Effect::Play(PlayRequest { url, ..request })],
+        Some(request) => vec![Effect::Play(Box::new(PlayRequest { url, ..request }))],
         None => Vec::new(),
     }
 }
@@ -932,6 +934,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         url,
         title,
         logo: preview.as_ref().and_then(|p| p.logo.clone()),
+        background: preview.as_ref().and_then(|p| p.background.clone()),
         headers,
         settings: state.settings,
         start_ms: 0,
@@ -986,7 +989,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     match torrent {
         None => {
             effects.extend(stop_torrent(state));
-            effects.push(Effect::Play(request));
+            effects.push(Effect::Play(Box::new(request)));
         }
         Some(torrent) => {
             state.torrent = Some(TorrentPlayback {

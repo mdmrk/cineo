@@ -1706,7 +1706,14 @@ pub(crate) const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
     ..egui::TextureOptions::LINEAR
 };
 
-fn paint_cover(ui: &Ui, src: &str, rect: Rect, radius: CornerRadius, tint: Color32, focus_y: f32) {
+pub(crate) fn paint_cover(
+    ui: &Ui,
+    src: &str,
+    rect: Rect,
+    radius: CornerRadius,
+    tint: Color32,
+    focus_y: f32,
+) {
     let image = Image::new(src)
         .corner_radius(radius)
         .texture_options(IMAGE_FILTER)

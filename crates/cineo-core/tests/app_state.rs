@@ -459,6 +459,11 @@ fn playing_an_http_stream_records_library_and_resumes() {
         Some("https://img.example/logo/tt0000001.png"),
         "the loading screen shows the item's logo"
     );
+    assert_eq!(
+        play.background.as_ref().map(url::Url::as_str),
+        Some("https://img.example/background/tt0000001.jpg"),
+        "the loading screen shows the item's backdrop behind the logo"
+    );
 
     update(
         &mut state,

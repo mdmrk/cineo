@@ -14,12 +14,13 @@ use eframe::egui::{
 use url::Url;
 
 use crate::theme;
-use crate::view::{IMAGE_FILTER, Icon, gradient, paint_icon, paint_spinner};
+use crate::view::{IMAGE_FILTER, Icon, gradient, paint_cover, paint_icon, paint_spinner};
 
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
 const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
+const LOADING_BACKDROP_TINT: Color32 = Color32::from_gray(70);
 const PULSE_PERIOD: f64 = 1.6;
 const MENU_MAX_HEIGHT: f32 = 320.0;
 
@@ -64,6 +65,7 @@ pub struct Playback<'a> {
     pub status: &'a Status,
     pub title: &'a str,
     pub logo: Option<&'a str>,
+    pub background: Option<&'a str>,
     pub addon_subtitles: &'a [AddonSubtitle],
     pub settings: &'a Settings,
 }
@@ -80,6 +82,7 @@ pub fn show(
         status,
         title,
         logo,
+        background,
         settings,
         ..
     } = playback;
@@ -99,6 +102,18 @@ pub fn show(
         out.push(PlayerCommand::TogglePause);
     }
 
+    if !status.loaded
+        && let Some(background) = background
+    {
+        paint_cover(
+            ui,
+            background,
+            rect,
+            CornerRadius::ZERO,
+            LOADING_BACKDROP_TINT,
+            0.5,
+        );
+    }
     if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {
         loading_art(ui, rect, title, logo);
     } else if !status.loaded || status.buffering {
