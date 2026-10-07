@@ -16,7 +16,7 @@ Stremio-protocol addons.
 - Continue watching and a local library
 - No account and no cloud: your data stays on your machine
 
-Linux and Windows come first. macOS is best-effort.
+Runs on Linux, Windows and macOS.
 
 ## Run it
 
