@@ -1,7 +1,7 @@
 //! The JSON IPC conversation with mpv, independent of how the byte stream
 //! was obtained (socket, named pipe, or an in-memory pipe in tests).
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use cineo_core::app::PlayRequest;
 use serde_json::{Value, json};
@@ -9,10 +9,12 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
+use crate::tracker::{EndReason, Input, Tracker};
+
 /// What the player reports back to the shell.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerEvent {
-    /// Playback position, throttled to at most one per `PROGRESS_INTERVAL`.
+    /// Playback position, throttled to at most one every 5 seconds.
     Progress { time_ms: u64, duration_ms: u64 },
     /// The file played to the end.
     Ended { time_ms: u64, duration_ms: u64 },
@@ -22,7 +24,6 @@ pub enum PlayerEvent {
     Closed { time_ms: u64, duration_ms: u64 },
 }
 
-const PROGRESS_INTERVAL: Duration = Duration::from_secs(5);
 const TIME_POS: u64 = 1;
 const DURATION: u64 = 2;
 
@@ -78,10 +79,7 @@ pub async fn drive_session<S>(
     }
 
     let mut lines = BufReader::new(reader).lines();
-    let mut time_ms = 0_u64;
-    let mut duration_ms = 0_u64;
-    let mut last_report: Option<Instant> = None;
-    let mut started = false;
+    let mut tracker = Tracker::new(request.start_ms);
     loop {
         let Ok(Some(line)) = lines.next_line().await else {
             break;
@@ -90,88 +88,58 @@ pub async fn drive_session<S>(
             warn!("mpv ipc: unparsable line");
             continue;
         };
-        match message.get("event").and_then(Value::as_str) {
-            Some("property-change") => {
-                let seconds = message.get("data").and_then(Value::as_f64);
-                match (message.get("id").and_then(Value::as_u64), seconds) {
-                    (Some(TIME_POS), Some(s)) => time_ms = seconds_to_ms(s),
-                    (Some(DURATION), Some(s)) => duration_ms = seconds_to_ms(s),
-                    _ => continue,
-                }
-                if last_report.is_none_or(|t| t.elapsed() >= PROGRESS_INTERVAL) && time_ms > 0 {
-                    last_report = Some(Instant::now());
-                    let _ = events.send(PlayerEvent::Progress {
-                        time_ms,
-                        duration_ms,
-                    });
-                }
+        let Some(input) = decode(&message) else {
+            if let Some(error) = message.get("error").and_then(Value::as_str)
+                && error != "success"
+            {
+                warn!(error, "mpv ipc command failed");
             }
-            Some("file-loaded") => {
-                started = true;
-                if request.start_ms > 0 {
-                    #[expect(
-                        clippy::cast_precision_loss,
-                        reason = "milliseconds of a video fit in f64"
-                    )]
-                    let seconds = request.start_ms as f64 / 1000.0;
-                    let line =
-                        json!({ "command": ["seek", seconds, "absolute"] }).to_string() + "\n";
-                    if let Err(err) = writer.write_all(line.as_bytes()).await {
-                        warn!(%err, "mpv ipc: resume seek failed");
-                    }
-                }
-            }
-            Some("end-file") => {
-                let reason = message.get("reason").and_then(Value::as_str).unwrap_or("");
-                debug!(reason, "mpv end-file");
-                match reason {
-                    "eof" => {
-                        let _ = events.send(PlayerEvent::Ended {
-                            time_ms,
-                            duration_ms,
-                        });
-                        return;
-                    }
-                    "error" => {
-                        let detail = message
-                            .get("file_error")
-                            .and_then(Value::as_str)
-                            .unwrap_or("unknown error");
-                        let _ = events.send(PlayerEvent::Failed(format!(
-                            "mpv could not play the stream: {detail}"
-                        )));
-                        return;
-                    }
-                    // `stop`/`quit`/`redirect`: the user closed it or mpv replaced the file.
-                    _ if started => break,
-                    _ => {}
-                }
-            }
-            _ => {
-                if let Some(error) = message.get("error").and_then(Value::as_str)
-                    && error != "success"
-                {
-                    warn!(error, "mpv ipc command failed");
-                }
+            continue;
+        };
+        let step = tracker.on(input, Instant::now());
+        if let Some(seconds) = step.seek_to {
+            let line = json!({ "command": ["seek", seconds, "absolute"] }).to_string() + "\n";
+            if let Err(err) = writer.write_all(line.as_bytes()).await {
+                warn!(%err, "mpv ipc: resume seek failed");
             }
         }
+        if let Some(event) = step.event {
+            let _ = events.send(event);
+        }
+        if step.done {
+            return;
+        }
     }
-    let _ = events.send(PlayerEvent::Closed {
-        time_ms,
-        duration_ms,
-    });
+    let _ = events.send(tracker.closed());
 }
 
-fn seconds_to_ms(seconds: f64) -> u64 {
-    if seconds.is_finite() && seconds > 0.0 {
-        #[expect(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            reason = "positive, finite, sub-2^53"
-        )]
-        let ms = (seconds * 1000.0) as u64;
-        ms
-    } else {
-        0
+/// The tracker input carried by an IPC message, if any.
+fn decode(message: &Value) -> Option<Input> {
+    match message.get("event").and_then(Value::as_str)? {
+        "property-change" => {
+            let seconds = message.get("data").and_then(Value::as_f64)?;
+            match message.get("id").and_then(Value::as_u64)? {
+                TIME_POS => Some(Input::TimePos(seconds)),
+                DURATION => Some(Input::Duration(seconds)),
+                _ => None,
+            }
+        }
+        "file-loaded" => Some(Input::FileLoaded),
+        "end-file" => {
+            let reason = message.get("reason").and_then(Value::as_str).unwrap_or("");
+            debug!(reason, "mpv end-file");
+            Some(Input::EndFile(match reason {
+                "eof" => EndReason::Eof,
+                "error" => EndReason::Error(
+                    message
+                        .get("file_error")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown error")
+                        .to_owned(),
+                ),
+                _ => EndReason::Other,
+            }))
+        }
+        _ => None,
     }
 }

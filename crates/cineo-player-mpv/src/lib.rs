@@ -7,6 +7,7 @@
 
 mod ipc;
 mod process;
+mod tracker;
 
 pub use ipc::{PlayerEvent, drive_session};
 pub use process::{PlayerError, PlayerHandle, launch};
