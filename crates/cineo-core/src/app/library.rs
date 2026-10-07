@@ -28,9 +28,9 @@ impl LibraryItem {
         if self.duration_ms == 0 {
             return 0.0;
         }
-        #[allow(clippy::cast_precision_loss)] // ms values are far below 2^52
+        #[expect(clippy::cast_precision_loss, reason = "ms values are far below 2^52")]
         let p = self.time_offset_ms as f64 / self.duration_ms as f64;
-        #[allow(clippy::cast_possible_truncation)] // clamped to 0..=1
+        #[expect(clippy::cast_possible_truncation, reason = "clamped to 0..=1")]
         let p = p.clamp(0.0, 1.0) as f32;
         p
     }

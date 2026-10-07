@@ -46,7 +46,6 @@ pub(crate) const SUCCESS: Color32 = Color32::from_rgb(0x8e, 0xd8, 0xa4);
 
 /// Buttons, inputs, tags and panels.
 pub(crate) const RADIUS: u8 = 3;
-/// Posters.
 pub(crate) const POSTER_RADIUS: u8 = 3;
 pub(crate) const GAP: f32 = 12.0;
 pub(crate) const SECTION_GAP: f32 = 36.0;
@@ -198,7 +197,6 @@ pub(crate) fn ensure(ctx: &egui::Context) -> bool {
     true
 }
 
-/// Applies the Cineo theme to `ctx`.
 pub(crate) fn apply(ctx: &egui::Context) {
     ctx.data_mut(|d| d.insert_temp(applied_id(), ()));
     ctx.set_fonts(fonts());

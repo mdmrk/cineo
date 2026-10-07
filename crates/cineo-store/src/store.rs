@@ -227,7 +227,6 @@ impl Store {
         Ok(settings)
     }
 
-    /// Saves every setting.
     pub fn save_settings(&mut self, settings: &Settings) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
         {

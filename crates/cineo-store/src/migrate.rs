@@ -32,7 +32,10 @@ pub(crate) const MIGRATIONS: &[&str] = &[
 ];
 
 /// The schema version this build reads and writes.
-#[allow(clippy::cast_possible_wrap)] // a handful of migrations, far below i64::MAX
+#[expect(
+    clippy::cast_possible_wrap,
+    reason = "a handful of migrations, far below i64::MAX"
+)]
 pub const SCHEMA_VERSION: i64 = MIGRATIONS.len() as i64;
 
 pub(crate) fn user_version(conn: &Connection) -> rusqlite::Result<i64> {

@@ -193,8 +193,6 @@ fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>
     }
 }
 
-// --- chrome ---
-
 fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let compact = ui.ctx().content_rect().width() < theme::SIDEBAR_COMPACT_BELOW;
     let width = if compact {
@@ -426,8 +424,6 @@ const P2P_NOTICE: &str = "Torrent streams come from other people's computers. Wh
 plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
 uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
 a local cache. You can turn peer-to-peer streaming off in Settings.";
-
-// --- pages ---
 
 fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let resume = continue_watching(&state.library);
@@ -1287,8 +1283,6 @@ fn stream_row(ui: &mut Ui, stream: &Stream) -> bool {
     clicked
 }
 
-// --- building blocks ---
-
 /// The side margin of pages: smaller on narrow windows.
 fn page_margin(ui: &Ui) -> f32 {
     if ui.available_width() < 900.0 {
@@ -1577,7 +1571,6 @@ fn card(
         painter.rect_filled(done, 0.0, theme::ACCENT);
     }
     if hover > 0.0 && poster_url.is_some() {
-        // Title band over the lower part of the poster.
         let band = Rect::from_min_max(pos2(rect.min.x, rect.max.y - 72.0), rect.max);
         gradient(
             ui,
@@ -1891,7 +1884,6 @@ impl Icon {
         Self::Alert,
     ];
 
-    /// The Tabler icon name.
     fn name(self) -> &'static str {
         match self {
             Self::Home => "home",

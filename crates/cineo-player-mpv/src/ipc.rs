@@ -109,7 +109,10 @@ pub async fn drive_session<S>(
             Some("file-loaded") => {
                 started = true;
                 if request.start_ms > 0 {
-                    #[allow(clippy::cast_precision_loss)] // milliseconds of a video fit in f64
+                    #[expect(
+                        clippy::cast_precision_loss,
+                        reason = "milliseconds of a video fit in f64"
+                    )]
                     let seconds = request.start_ms as f64 / 1000.0;
                     let line =
                         json!({ "command": ["seek", seconds, "absolute"] }).to_string() + "\n";
@@ -161,8 +164,11 @@ pub async fn drive_session<S>(
 
 fn seconds_to_ms(seconds: f64) -> u64 {
     if seconds.is_finite() && seconds > 0.0 {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        // positive, finite, sub-2^53
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "positive, finite, sub-2^53"
+        )]
         let ms = (seconds * 1000.0) as u64;
         ms
     } else {

@@ -126,21 +126,17 @@ pub struct State {
     /// A torrent stream (`group`, `stream`) waiting for the user to accept
     /// the P2P notice.
     pub p2p_prompt: Option<(usize, usize)>,
-    /// The torrent being streamed, if any.
     pub torrent: Option<TorrentPlayback>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
-    // --- startup / persistence ---
     /// Restore saved addon URLs (in order) and library items.
     Restore {
         addons: Vec<TransportUrl>,
         library: Vec<LibraryItem>,
     },
-    /// Restore saved settings.
     RestoreSettings(Settings),
-    // --- user actions ---
     InstallAddon(String),
     RemoveAddon(TransportUrl),
     /// Move the addon at `from` to position `to`.
@@ -185,7 +181,6 @@ pub enum Action {
     /// The user closed the P2P notice without accepting.
     DeclineP2p,
     SetP2pEnabled(bool),
-    // --- IO results ---
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
@@ -249,7 +244,6 @@ pub enum Effect {
     /// Start serving a torrent, replacing any other; answer with
     /// `TorrentReady` or `TorrentFailed`, then `TorrentStatus` updates.
     StartTorrent(TorrentRequest),
-    /// Stop the torrent engine's current torrent.
     StopTorrent,
 }
 
