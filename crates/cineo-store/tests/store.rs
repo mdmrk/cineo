@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use cineo_core::addon::{
     ContentType, TransportUrl, parse_manifest, parse_meta_response, parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, LibraryItem, Settings, State, continue_watching, update};
+use cineo_core::app::{
+    Action, Effect, Language, LibraryItem, Settings, State, continue_watching, update,
+};
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
 
@@ -174,6 +176,7 @@ fn settings_default_until_saved_and_survive_a_reopen() {
     let changed = Settings {
         p2p_enabled: false,
         p2p_acknowledged: true,
+        subtitle_language: Language::from_code("spa"),
     };
     assert!(store.apply(&Effect::SaveSettings(changed)).unwrap());
     drop(store);
@@ -190,7 +193,8 @@ fn unknown_or_unreadable_settings_are_ignored() {
         .execute_batch(
             "INSERT INTO settings VALUES ('p2p_enabled', 'maybe');
              INSERT INTO settings VALUES ('from_the_future', 'true');
-             INSERT INTO settings VALUES ('p2p_acknowledged', 'true');",
+             INSERT INTO settings VALUES ('p2p_acknowledged', 'true');
+             INSERT INTO settings VALUES ('subtitle_language', 'klingon');",
         )
         .unwrap();
     let settings = Store::open_in(&dir).unwrap().settings().unwrap();
@@ -199,6 +203,7 @@ fn unknown_or_unreadable_settings_are_ignored() {
         Settings {
             p2p_enabled: true,
             p2p_acknowledged: true,
+            subtitle_language: None,
         }
     );
 }

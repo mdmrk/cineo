@@ -4,10 +4,11 @@
 
 use url::Url;
 
+use super::language::Language;
 use super::state::PlayRequest;
 use crate::addon::{Stream, StreamSource};
 
-/// User settings that control peer-to-peer streaming.
+/// User settings: peer-to-peer streaming and the subtitle language.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Settings {
     /// Torrent streams are shown and playable. When off, nothing
@@ -16,6 +17,8 @@ pub struct Settings {
     /// The user has seen and accepted the P2P notice. Until then, playing a
     /// torrent asks first.
     pub p2p_acknowledged: bool,
+    /// Subtitles in this language are selected when a playback starts.
+    pub subtitle_language: Option<Language>,
 }
 
 impl Default for Settings {
@@ -23,6 +26,7 @@ impl Default for Settings {
         Self {
             p2p_enabled: true,
             p2p_acknowledged: false,
+            subtitle_language: None,
         }
     }
 }

@@ -9,8 +9,8 @@ use cineo_core::addon::{
     parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, LibraryItem, Loadable, Settings, State, TorrentRequest, TorrentStatus,
-    continue_watching, update,
+    Action, Effect, Language, LibraryItem, Loadable, Settings, State, TorrentRequest,
+    TorrentStatus, continue_watching, update,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -517,6 +517,7 @@ fn detail_with_p2p_accepted() -> State {
         Action::RestoreSettings(Settings {
             p2p_enabled: true,
             p2p_acknowledged: true,
+            subtitle_language: None,
         }),
     );
     state
@@ -904,4 +905,27 @@ fn subtitle_request_without_hints_has_no_extras() {
         panic!("{effects:?}");
     };
     assert_eq!(path.to_url_path(), "subtitles/movie/tt0000001.json");
+}
+
+#[test]
+fn the_subtitle_language_is_saved_and_sent_with_the_play_request() {
+    let mut state = detail_with_streams();
+    let spanish = Language::from_code("spa");
+    let effects = update(&mut state, Action::SetSubtitleLanguage(spanish));
+    assert!(
+        matches!(effects.as_slice(), [Effect::SaveSettings(s)] if s.subtitle_language == spanish),
+        "{effects:?}"
+    );
+    let effects = update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    let play = effects.iter().find_map(|e| match e {
+        Effect::Play(play) => Some(play),
+        _ => None,
+    });
+    assert_eq!(play.and_then(|p| p.subtitle_language), spanish);
 }

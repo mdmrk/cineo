@@ -20,6 +20,7 @@ fn request(url: &str) -> PlayRequest {
             ("Bad Name".into(), "x".into()),
             ("X-Inject".into(), "a\r\nHost: evil".into()),
         ],
+        subtitle_language: None,
         start_ms: 0,
         meta_id: "tt1".into(),
         video_id: "tt1".into(),
@@ -341,4 +342,22 @@ fn real_libmpv_loads_a_subtitle_file_without_an_extension() {
     assert_eq!(selected.lang.as_deref(), Some("eng"));
     drop(player);
     let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn preferred_subtitle_language_covers_every_tag() {
+    let french = Language::from_code("fre").unwrap();
+    assert_eq!(slang(french), "fre,fra,fr");
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_accepts_the_subtitle_language() {
+    let (url, _heads) = serve(wav(1));
+    let request = PlayRequest {
+        subtitle_language: Language::from_code("fre"),
+        ..request(&url)
+    };
+    let started = Player::start_with(&request, Arc::new(|| {}), None, AUDIO_ONLY);
+    assert!(started.is_ok(), "mpv rejects a bad slang value at start");
 }

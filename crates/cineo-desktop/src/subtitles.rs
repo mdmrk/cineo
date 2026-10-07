@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 
-use cineo_core::app::SubtitleGroup;
+use cineo_core::app::{Language, SubtitleGroup};
 use cineo_player::embedded::{Track, TrackKind};
 use tracing::warn;
 use url::Url;
@@ -73,6 +73,40 @@ impl SubtitleFiles {
             })
             .collect()
     }
+}
+
+/// What to do about the preferred subtitle language once the file loaded.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum AutoPick {
+    /// A subtitle in the language is on: nothing more to do.
+    Done,
+    Load(Url),
+    /// Nothing in the language yet; addons may still answer.
+    Wait,
+}
+
+pub(crate) fn auto_pick(
+    language: Language,
+    tracks: &[Track],
+    entries: &[AddonSubtitle],
+) -> AutoPick {
+    let file_track_on = tracks.iter().any(|t| {
+        t.kind == TrackKind::Subtitle
+            && t.selected
+            && t.external_file.is_none()
+            && t.lang.as_deref().is_some_and(|l| language.matches(l))
+    });
+    if file_track_on
+        || entries
+            .iter()
+            .any(|e| e.selected && language.matches(&e.lang))
+    {
+        return AutoPick::Done;
+    }
+    entries
+        .iter()
+        .find(|e| language.matches(&e.lang))
+        .map_or(AutoPick::Wait, |e| AutoPick::Load(e.url.clone()))
 }
 
 impl Drop for SubtitleFiles {
@@ -185,5 +219,39 @@ mod tests {
             .map(|e| (e.addon_name.as_str(), e.lang.as_str(), e.selected))
             .collect();
         assert_eq!(summary, [("Stream", "eng", false), ("Subs", "spa", true)]);
+    }
+
+    #[test]
+    fn auto_pick_prefers_the_file_then_the_first_addon_match() {
+        let spanish = Language::from_code("spa").unwrap_or_else(|| panic!("listed"));
+        let track = |lang: &str, selected: bool| Track {
+            id: 1,
+            kind: TrackKind::Subtitle,
+            title: None,
+            lang: Some(lang.into()),
+            selected,
+            external_file: None,
+        };
+        let entry = |u: &str, lang: &str| AddonSubtitle {
+            url: url(u),
+            lang: lang.into(),
+            label: None,
+            addon_name: "Subs".into(),
+            selected: false,
+        };
+        let addon = [
+            entry("https://s.example/en", "eng"),
+            entry("https://s.example/es", "es"),
+        ];
+        assert_eq!(
+            auto_pick(spanish, &[track("spa", true)], &addon),
+            AutoPick::Done
+        );
+        assert_eq!(
+            auto_pick(spanish, &[track("eng", true)], &addon),
+            AutoPick::Load(url("https://s.example/es")),
+            "the preference beats the file's default track"
+        );
+        assert_eq!(auto_pick(spanish, &[], &addon[..1]), AutoPick::Wait);
     }
 }

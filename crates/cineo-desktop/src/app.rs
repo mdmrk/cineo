@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
-use cineo_core::app::{Action, Effect, PlayRequest, State, TorrentRequest, update};
+use cineo_core::app::{Action, Effect, Language, PlayRequest, State, TorrentRequest, update};
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
@@ -20,7 +20,7 @@ use tracing::{debug, error, warn};
 
 use crate::images::NetImageLoader;
 use crate::player::{self, Controls};
-use crate::subtitles::SubtitleFiles;
+use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
 use crate::view::{self, ViewState};
 
@@ -127,6 +127,9 @@ struct Embedded {
     controls: Controls,
     forward: Option<tokio::task::AbortHandle>,
     subtitle_files: SubtitleFiles,
+    /// The preferred language, until a subtitle in it is on or the user
+    /// picks one.
+    auto_subtitle: Option<Language>,
 }
 
 impl Drop for Embedded {
@@ -403,6 +406,7 @@ impl CineoApp {
             controls: Controls::default(),
             forward: Some(forward.abort_handle()),
             subtitle_files: SubtitleFiles::new(self.subtitle_dir()),
+            auto_subtitle: request.subtitle_language,
         })
     }
 
@@ -555,10 +559,31 @@ impl CineoApp {
                     &mut embedded.controls,
                 );
             });
+        let mut picked = embedded.controls.take_addon_subtitle();
+        if picked.is_some()
+            || commands
+                .iter()
+                .any(|c| matches!(c, PlayerCommand::SetSubtitle(_)))
+        {
+            embedded.auto_subtitle = None;
+        }
         for command in commands {
             embedded.player.send(command);
         }
-        if let Some(url) = embedded.controls.take_addon_subtitle() {
+        if let Some(language) = embedded.auto_subtitle
+            && status.loaded
+            && !status.tracks.is_empty()
+        {
+            match subtitles::auto_pick(language, &status.tracks, &addon_subtitles) {
+                AutoPick::Done => embedded.auto_subtitle = None,
+                AutoPick::Load(url) => {
+                    embedded.auto_subtitle = None;
+                    picked = Some(url);
+                }
+                AutoPick::Wait => {}
+            }
+        }
+        if let Some(url) = picked {
             self.load_addon_subtitle(url);
         }
         true

@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
 use cineo_core::app::{
-    Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, board_targets,
-    continue_watching,
+    Action, CatalogTarget, Detail, LANGUAGES, Language, LibraryItem, Loadable, Row, State,
+    StreamGroup, board_targets, continue_watching,
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
@@ -762,6 +762,10 @@ fn settings_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
         ui.add(Label::new(dim(P2P_NOTICE)).wrap());
     });
     ui.add_space(theme::SECTION_GAP);
+    section(ui, "Subtitles", |_| {});
+    subtitle_language(ui, state.settings.subtitle_language, out);
+    ui.add(Label::new(dim(SUBTITLE_NOTICE)).wrap());
+    ui.add_space(theme::SECTION_GAP);
     section(ui, "Keyboard", |_| {});
     egui::Grid::new("shortcuts")
         .num_columns(2)
@@ -790,6 +794,36 @@ fn settings_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
         "Cineo {}. Made by people who stay for the credits.",
         env!("CARGO_PKG_VERSION")
     )));
+}
+
+const SUBTITLE_NOTICE: &str = "Subtitles in this language are turned on when a video starts: \
+from the file if it has them, otherwise from a subtitles addon.";
+
+fn subtitle_language(ui: &mut Ui, current: Option<Language>, out: &mut Vec<Action>) {
+    ComboBox::from_label("Subtitle language")
+        .icon(|ui, rect, visuals, _open| {
+            paint_icon(
+                ui.painter(),
+                Icon::ChevronDown,
+                rect.center(),
+                16.0,
+                visuals.fg_stroke.color,
+            );
+        })
+        .selected_text(current.map_or("None", |l| l.name))
+        .width(200.0)
+        .height(420.0)
+        .show_ui(ui, |ui| {
+            if ui.selectable_label(current.is_none(), "None").clicked() && current.is_some() {
+                out.push(Action::SetSubtitleLanguage(None));
+            }
+            for &language in LANGUAGES {
+                let selected = current == Some(language);
+                if ui.selectable_label(selected, language.name).clicked() && !selected {
+                    out.push(Action::SetSubtitleLanguage(Some(language)));
+                }
+            }
+        });
 }
 
 fn detail_page(

@@ -9,7 +9,7 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, State, TorrentStatus, update};
+use cineo_core::app::{Action, Effect, Language, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Key, Modifiers};
 use egui_kittest::Harness;
@@ -321,6 +321,23 @@ fn settings_switch_p2p_off() {
         .click();
     harness.run();
     assert_eq!(harness.state().2, vec![Action::SetP2pEnabled(false)]);
+}
+
+#[test]
+fn settings_pick_a_subtitle_language() {
+    let view = ViewState {
+        page: Page::Settings,
+        ..ViewState::default()
+    };
+    let mut harness = harness(State::default(), view);
+    harness.get_by_label("Subtitle language").click();
+    harness.run();
+    harness.get_by_label("English").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::SetSubtitleLanguage(Language::from_code("eng"))]
+    );
 }
 
 #[test]

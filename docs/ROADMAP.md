@@ -179,7 +179,8 @@ flowchart LR
 | M4 Persistence + library | **Done** (2026-10-06) |
 | M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](DEVELOPMENT.md#manual-gui-test) on Linux and Windows |
 | M9 Streaming engine: torrents | **Implemented** (2026-10-06); acceptance pending: [torrent manual test](DEVELOPMENT.md#torrents-m9) on Linux and Windows. Moved ahead of M6/M7 (owner decision 2026-10-06) |
-| M6 Subtitles, M7 Packaging | Next after M9 |
+| M6 Subtitles | **Implemented** (2026-10-07); acceptance pending: subtitles from a live subtitles addon shown in the app (each part is tested separately, but not yet end to end) |
+| M7 Packaging | Next |
 | M8, M10 | Planned |
 
 ---

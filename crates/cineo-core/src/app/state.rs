@@ -2,6 +2,7 @@
 
 use url::Url;
 
+use super::language::Language;
 use super::library::LibraryItem;
 use super::plan::{self, CatalogTarget};
 use super::torrent::{Settings, TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
@@ -93,6 +94,8 @@ pub struct PlayRequest {
     /// The item's logo art (meta `logo`), shown while the file loads.
     pub logo: Option<Url>,
     pub headers: Vec<(String, String)>,
+    /// The preferred subtitle language from Settings.
+    pub subtitle_language: Option<Language>,
     pub start_ms: u64,
     pub meta_id: String,
     pub video_id: String,
@@ -182,6 +185,7 @@ pub enum Action {
     AcceptP2p,
     DeclineP2p,
     SetP2pEnabled(bool),
+    SetSubtitleLanguage(Option<Language>),
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
@@ -463,6 +467,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 effects.extend(stop_torrent(state));
             }
             effects
+        }
+        Action::SetSubtitleLanguage(language) => {
+            state.settings.subtitle_language = language;
+            vec![Effect::SaveSettings(state.settings)]
         }
         Action::RemoveFromLibrary(id) => {
             state.library.retain(|i| i.id != id);
@@ -915,6 +923,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         title,
         logo: preview.as_ref().and_then(|p| p.logo.clone()),
         headers,
+        subtitle_language: state.settings.subtitle_language,
         start_ms: 0,
         meta_id: detail.id.clone(),
         video_id: video_id.clone(),

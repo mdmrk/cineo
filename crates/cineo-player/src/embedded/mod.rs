@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
-use cineo_core::app::PlayRequest;
+use cineo_core::app::{Language, PlayRequest};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -184,6 +184,10 @@ impl Player {
             core.set_option(name, value)
                 .map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
         }
+        if let Some(language) = request.subtitle_language {
+            core.set_option("slang", &slang(language))
+                .map_err(|err| PlayerError::Libmpv(format!("option slang: {err}")))?;
+        }
         core.initialize().map_err(fail)?;
         core.request_log_messages("warn").map_err(fail)?;
         for (id, name, format) in OBSERVED {
@@ -274,6 +278,11 @@ impl Player {
             warn!(%err, ?command, "mpv command failed");
         }
     }
+}
+
+/// mpv's preferred subtitle languages: every tag the language goes by.
+fn slang(language: Language) -> String {
+    language.codes().collect::<Vec<_>>().join(",")
 }
 
 /// `sub-add` with `cached`: adding the same file again selects the loaded
