@@ -1,7 +1,7 @@
 # Architecture
 
 Status: **partly implemented** (M1–M5, see [ROADMAP.md](ROADMAP.md)).
-Decisions are recorded in [DECISIONS.md](DECISIONS.md) and [ADR/](ADR/). This
+Decisions are recorded in [adr/](adr/README.md). This
 document describes the target; each section says what exists today.
 
 ## System overview
@@ -206,11 +206,11 @@ sequenceDiagram
 
 `tracing` spans exist per addon request (`req` id, addon origin, resource
 path), per playback session and per startup phase. See
-[DEBUGGING.md](DEBUGGING.md).
+[DEVELOPMENT.md](DEVELOPMENT.md#debugging).
 
 ## Testing boundaries
 
-See [TESTING.md](TESTING.md):
+See [DEVELOPMENT.md](DEVELOPMENT.md#testing):
 
 - The core is tested with fixtures and pure assertions.
 - IO crates are tested against local mocks (HTTP mock server, fake mpv

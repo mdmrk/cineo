@@ -1,4 +1,5 @@
-# cargo-deny configuration. Run: `cargo deny check`. Rationale: docs/dev/DEPENDENCIES.md.
+# cargo-deny configuration. Run: `cargo deny --config .config/deny.toml check`.
+# Rationale: docs/DEVELOPMENT.md (Dependencies).
 
 [graph]
 all-features = true

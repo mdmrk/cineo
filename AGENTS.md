@@ -1,10 +1,10 @@
 # AGENTS.md — engineering contract
 
 Cineo: an independent Rust desktop media center for Stremio-protocol addons.
-Goals and scope: `docs/GOALS.md`. Current state: `docs/ROADMAP.md` (the
+Goals, scope and milestones: `docs/ROADMAP.md`. Current state: its
 milestone table) and `docs/COMPATIBILITY.md`.
 
-## Architecture invariants (docs/ARCHITECTURE.md, docs/ADR/)
+## Architecture invariants (docs/ARCHITECTURE.md, docs/adr/)
 - Dependency direction: shells → IO crates → `cineo-core`. **`cineo-core`
   does no IO**: no network, filesystem, clock or async runtime. Time and IO
   results are inputs; effects are returned as data (ADR-0001).
@@ -48,9 +48,9 @@ milestone table) and `docs/COMPATIBILITY.md`.
 - Architecture → ADR + `docs/ARCHITECTURE.md` + this file if an invariant
   changed.
 - Security-relevant defaults → `docs/SECURITY.md`.
-- New dependency → `docs/dev/DEPENDENCIES.md` (+ `docs/LEGAL.md` for a new
+- New dependency → `docs/DEVELOPMENT.md#dependencies` (+ `docs/LEGAL.md` for a new
   license).
-- Known limitation left in place → `docs/dev/TECHNICAL_DEBT.md`.
+- Known limitation left in place → `docs/TECHNICAL_DEBT.md`.
 - User-visible change → `CHANGELOG.md` under *Unreleased*.
 
 ## Honesty rules

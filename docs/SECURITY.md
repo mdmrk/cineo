@@ -48,7 +48,7 @@ These are all treated as hostile:
 | Scheme abuse (`file:`, `ftp:`, `data:`) | Only `http`/`https` for addons and images. |
 | Oversized responses / decompression bombs | Limit on **decoded** bytes (default 8 MiB), counted while streaming. `Content-Length` is checked early. |
 | Slow-loris addons | Total request timeout of 20 s, connect timeout of 10 s. |
-| Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. Fuzzing is planned for the parsers (TESTING.md). |
+| Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. Fuzzing is planned for the parsers ([DEVELOPMENT.md](DEVELOPMENT.md#testing)). |
 | Credential leakage | Transport URLs with userinfo are rejected. Logs and errors include only the origin and resource path, never full addon URLs. Error messages from the HTTP stack are scrubbed of URLs. |
 
 ### Player (`cineo-player`, M3; embedded since ADR-0014)

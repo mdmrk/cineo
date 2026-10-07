@@ -7,7 +7,7 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 ## Our code
 - Cineo's own code is licensed under the **MIT license** (`LICENSE`).
 - Contributions are accepted under the same terms (inbound = outbound;
-  CONTRIBUTING.md).
+  docs/DEVELOPMENT.md).
 - Cineo is an **independent implementation**. No code is copied from Stremio
   repositories. If code is ever adapted from an open-source project, record it
   under *Adapted code* below **before** merging.
@@ -34,7 +34,7 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 ## Third-party crates
 - Dependencies are permissively licensed and MIT-compatible (Apache-2.0
   dependencies are fine to use; their notices must ship with binaries), and checked by `cargo deny`
-  (`deny.toml`). Extending the license allowlist requires a note here.
+  (`.config/deny.toml`). Extending the license allowlist requires a note here.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
   CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls),
@@ -46,7 +46,7 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   `dirs-sys` (M9, ADR-0012) and cannot be removed without forking
   librqbit. MPL-2.0 is copyleft per file: we use it unmodified, so the
   obligation is to ship its notice and point to its source. The exception
-  in `deny.toml` covers only this crate; MPL-2.0 is not on the general
+  in `.config/deny.toml` covers only this crate; MPL-2.0 is not on the general
   allowlist.
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.

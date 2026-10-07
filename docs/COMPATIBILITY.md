@@ -36,7 +36,7 @@ _Last reviewed: 2026-10-06._
 | Stream response: `url` (http/https) | Supported | `stream_sources_are_recognized_in_reference_order`; playback in M3 |
 | Stream response: `ytId` | Planned | v0.x; resolution strategy UNKNOWN (ADR-0010) |
 | Stream response: `externalUrl` | Planned | M2; opened in the system browser after confirmation |
-| Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Partial | M9 in progress: P2P consent, file choice and tracker handling in the core (`the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine`, `choose_file` tests); the engine (`cineo-stream`) serves a file from a local seeder with ranges (`serves_the_chosen_file_with_ranges_from_a_local_peer`); the desktop plays torrents, asks for consent and hides them when P2P is off (`the_first_torrent_play_shows_the_p2p_notice`, `turning_p2p_off_hides_torrent_streams`). Playback in mpv from a real swarm is not yet tested through the app ([manual test](dev/GUI_MANUAL_TEST.md#torrents-m9)) |
+| Stream response: `infoHash` (torrent), `fileIdx`, `sources` | Partial | M9 in progress: P2P consent, file choice and tracker handling in the core (`the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine`, `choose_file` tests); the engine (`cineo-stream`) serves a file from a local seeder with ranges (`serves_the_chosen_file_with_ranges_from_a_local_peer`); the desktop plays torrents, asks for consent and hides them when P2P is off (`the_first_torrent_play_shows_the_p2p_notice`, `turning_p2p_off_hides_torrent_streams`). Playback in mpv from a real swarm is not yet tested through the app ([manual test](DEVELOPMENT.md#torrents-m9)) |
 | Stream response: archives (`rarUrls`, `zipUrls`, `7zipUrls`, `tgzUrls`, `tarUrls`) | Planned | M10 (ADR-0010) |
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
 | Stream `behaviorHints.proxyHeaders` | Supported | Validated in the core and again by the player; sent via `http-header-fields` (`sends_typed_commands_and_reports_events`; real mpv delivered them to an HTTP server, 2026-10-06) |
@@ -60,7 +60,7 @@ _Last reviewed: 2026-10-06._
 | Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; GUI search page |
 | Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`) |
 | Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
-| Playback in the window (libmpv) | Partial | libmpv loaded at runtime (ADR-0014); without it, playback fails with a message. The external mpv player was removed 2026-10-07. Playback, headers, resume, stop and tracks against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07); controls (`crates/cineo-desktop/tests/player_ui.rs`). Video in the window seen on Linux under Wayland and X11 (XWayland), 2026-10-07, with a test build, not yet through the full app ([manual test](dev/GUI_MANUAL_TEST.md)). Windows and macOS: untested |
+| Playback in the window (libmpv) | Partial | libmpv loaded at runtime (ADR-0014); without it, playback fails with a message. The external mpv player was removed 2026-10-07. Playback, headers, resume, stop and tracks against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07); controls (`crates/cineo-desktop/tests/player_ui.rs`). Video in the window seen on Linux under Wayland and X11 (XWayland), 2026-10-07, with a test build, not yet through the full app ([manual test](DEVELOPMENT.md#manual-gui-test)). Windows and macOS: untested |
 | Audio and subtitle track selection | Partial | Embedded tracks: Audio and Subtitles menus in the embedded player (`track_menus_list_tracks_and_select_one`). Addon subtitles: M6 |
 | Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`; GUI Library page. Explicit "add to library" without playing: not yet |
 | Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`; GUI "Continue watching" row. The GUI turns mpv progress events into saved progress (INFERRED from code; covered by the manual test script, not yet run) |
@@ -78,7 +78,7 @@ _Last reviewed: 2026-10-06._
 | Linux x86_64 | Partial | CLI and GUI run (KDE Wayland, 2026-10-06); no package yet (M7) |
 | Windows x86_64 | Planned | CI from M0 |
 | macOS aarch64 | Planned | CI from M0; best-effort until v1.0 |
-| Android / iOS / TV / Web | Unsupported | Postponed (GOALS.md) |
+| Android / iOS / TV / Web | Unsupported | Postponed ([ROADMAP.md](ROADMAP.md#platforms)) |
 
 ## Verified addons
 

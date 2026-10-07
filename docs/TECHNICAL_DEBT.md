@@ -14,7 +14,7 @@ Format:
 
 ```
 ### <Area>: <short title>
-- Where: [path](../../path)
+- Where: [path](../path)
 - Gap: …
 - Why: …
 - Instead: … (observable behavior today)
@@ -24,8 +24,8 @@ Format:
 ## Entries
 
 ### Embedded player: no hardware-decoding interop display, subtitles under the controls
-- Where: [render.rs](../../crates/cineo-player/src/embedded/render.rs),
-  [player.rs](../../crates/cineo-desktop/src/player.rs)
+- Where: [render.rs](../crates/cineo-player/src/embedded/render.rs),
+  [player.rs](../crates/cineo-desktop/src/player.rs)
 - Gap: the render context gets no `X11_DISPLAY`/`WL_DISPLAY` parameter, so
   mpv may not use zero-copy hardware decoding (VA-API interop). Subtitles
   stay at their position while the controls are shown and can sit under
@@ -39,7 +39,7 @@ Format:
   `sub-margin-y` when the controls show and hide.
 
 ### Embedded player: GL thread assumption, Windows and macOS untested
-- Where: [app.rs](../../crates/cineo-desktop/src/app.rs)
+- Where: [app.rs](../crates/cineo-desktop/src/app.rs)
 - Gap: the renderer is created and freed inside eframe's `logic`/`ui`/
   `on_exit`, which assumes the window's GL context is current there
   (INFERRED from eframe's single-window glow integration). On Linux, a test
@@ -51,7 +51,7 @@ Format:
 - Exit: run the manual test on Windows and macOS (M7).
 
 ### Streaming engine: UDP trackers and the DHT bypass the address filter
-- Where: [engine.rs](../../crates/cineo-stream/src/engine.rs)
+- Where: [engine.rs](../crates/cineo-stream/src/engine.rs)
 - Gap: a UDP tracker given by host name may resolve to a private address
   and still be contacted; DHT traffic (UDP) is not filtered either.
 - Why: SOCKS5 `CONNECT` covers TCP only, and librqbit 9.0.1 sends UDP
@@ -64,8 +64,8 @@ Format:
   address filter.
 
 ### Streaming engine: a cancelled open can leave a paused torrent
-- Where: [app.rs](../../crates/cineo-desktop/src/app.rs) (`start_torrent`),
-  [engine.rs](../../crates/cineo-stream/src/engine.rs) (`open`)
+- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`start_torrent`),
+  [engine.rs](../crates/cineo-stream/src/engine.rs) (`open`)
 - Gap: a stop or a new start cancels an `open` still in progress. If that
   happens after librqbit added the torrent but before the engine recorded
   it, the torrent stays in the session, paused, until the app exits
@@ -77,7 +77,7 @@ Format:
   or remove unknown torrents from the session at the next `open`.
 
 ### Streaming engine: the torrent being played can exceed the cache limit
-- Where: [cache.rs](../../crates/cineo-stream/src/cache.rs)
+- Where: [cache.rs](../crates/cineo-stream/src/cache.rs)
 - Gap: eviction runs when a torrent opens and never removes the current
   one, so a file larger than the limit fills the disk past it.
 - Why: deleting data under the player would break playback.
@@ -86,7 +86,7 @@ Format:
   already played (needs piece-level storage).
 
 ### Store: no in-app recovery from a corrupt database
-- Where: [store.rs](../../crates/cineo-store/src/store.rs)
+- Where: [store.rs](../crates/cineo-store/src/store.rs)
 - Gap: a corrupt `cineo.db` makes every persistence command fail.
 - Why: silently replacing it would lose the user's library.
 - Instead: the error and `cineo doctor` explain it; the user moves the file
@@ -94,8 +94,8 @@ Format:
 - Exit: a GUI prompt (M5) that renames the file aside and starts fresh.
 
 ### Desktop: no log file or diagnostics view
-- Where: [main.rs](../../crates/cineo-desktop/src/main.rs)
-- Gap: logs go to stderr only; DEBUGGING.md planned a rotating file and an
+- Where: [main.rs](../crates/cineo-desktop/src/main.rs)
+- Gap: logs go to stderr only; the debugging guide planned a rotating file and an
   About/Diagnostics view.
 - Why: it would add a dependency (`tracing-appender`) and a page outside
   M5's acceptance.
@@ -104,7 +104,7 @@ Format:
 - Exit: a log file in the platform state directory, plus a diagnostics page.
 
 ### Desktop: image cache is unbounded for a session
-- Where: [images.rs](../../crates/cineo-desktop/src/images.rs)
+- Where: [images.rs](../crates/cineo-desktop/src/images.rs)
 - Gap: decoded images (downscaled to about twice their display size) stay
   in memory until exit.
 - Why: egui decides when to forget images; a size-bounded cache was not
@@ -113,15 +113,15 @@ Format:
 - Exit: an LRU cap on `NetImageLoader` images.
 
 ### Desktop: private networks are a launch flag only
-- Where: [main.rs](../../crates/cineo-desktop/src/main.rs)
+- Where: [main.rs](../crates/cineo-desktop/src/main.rs)
 - Gap: self-hosted addons need `--allow-private-network`; there is no
-  setting, and no per-addon trust (GOALS.md v0.x).
+  setting, and no per-addon trust (ROADMAP.md, v0.x).
 - Why: a settings page was not in M5's scope.
 - Instead: blocked addons fail to install with "blocked by network policy".
 - Exit: a settings page, then per-addon trust.
 
 ### Store: manifests are not cached
-- Where: [migrate.rs](../../crates/cineo-store/src/migrate.rs) (only
+- Where: [migrate.rs](../crates/cineo-store/src/migrate.rs) (only
   transport URLs are stored)
 - Gap: at startup every installed addon's manifest is fetched again; an
   addon that is offline is reported and missing until the next start.
@@ -131,8 +131,8 @@ Format:
 - Exit: store the last good manifest and restore from it (v0.x caching).
 
 ### Desktop UI: the font licenses are not packaged yet
-- Where: [release.yml](../../.github/workflows/release.yml),
-  [assets/fonts](../../crates/cineo-desktop/assets/fonts)
+- Where: [release.yml](../.github/workflows/release.yml),
+  [assets/fonts](../crates/cineo-desktop/assets/fonts)
 - Gap: the OFL-1.1 texts of the bundled fonts must ship with any
   `cineo-desktop` binary; no release packages the desktop app yet, so
   nothing copies `Inter-OFL.txt` and `DMSerifDisplay-OFL.txt`, nor the
@@ -143,7 +143,7 @@ Format:
   into every desktop archive or installer.
 
 ### Desktop UI: rows scroll sideways only with Shift, a touchpad or arrows
-- Where: [view.rs](../../crates/cineo-desktop/src/view.rs) (`poster_strip`)
+- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`poster_strip`)
 - Gap: a plain mouse wheel over a poster row scrolls the page, not the row.
 - Why: egui gives the wheel to one scroll area; the page wins so vertical
   browsing never gets stuck on a row.

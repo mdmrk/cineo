@@ -31,7 +31,7 @@ pub struct EngineOptions {
     pub cache_dir: PathBuf,
     /// Torrents not in use are evicted, least recently used first, until
     /// the cache is at most this size. The torrent being played may exceed
-    /// it (docs/dev/TECHNICAL_DEBT.md).
+    /// it (docs/TECHNICAL_DEBT.md).
     pub cache_limit_bytes: u64,
     /// Allow peers and trackers on loopback/private addresses (the same
     /// user choice as `NetPolicy`'s private networks).

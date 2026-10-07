@@ -26,7 +26,7 @@ if [[ "${1:-}" != "--quick" ]]; then
 
   step "cargo-deny"
   if command -v cargo-deny >/dev/null 2>&1; then
-    cargo deny check
+    cargo deny --config .config/deny.toml check
   else
     echo "cargo-deny not installed; skipped (CI runs it). Install: cargo install --locked cargo-deny"
   fi

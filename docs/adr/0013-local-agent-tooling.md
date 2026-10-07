@@ -17,6 +17,12 @@ ADR-0008 versioned a Claude Code setup in `.claude/` (four path-scoped rules, fi
 - Conventions that lived only in `.claude/rules/` moved to `CONTRIBUTING.md` (Rust and documentation conventions) and `docs/SECURITY.md` (code and CI rules).
 - Formatting is enforced by `scripts/check.sh` and CI, not by an editor hook.
 
+- **Amended 2026-10-07 (owner decision):** `CLAUDE.md` is no longer
+  versioned either. It moved to the local `.claude/CLAUDE.md`, which Claude
+  Code also reads, to keep the repository root small. `AGENTS.md` stays the
+  versioned contract. `CONTRIBUTING.md` was merged into
+  `docs/DEVELOPMENT.md`.
+
 ## Consequences
 - Fresh clones get no project skills, path-scoped rules, permission allowlist or rustfmt hook; agents work from AGENTS.md and the docs it links.
 - Docs no longer reference skills (`/adr`, `/addon-compat`, …).

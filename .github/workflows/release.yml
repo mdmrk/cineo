@@ -1,6 +1,6 @@
 # Builds the `cineo` CLI for each platform on a version tag and publishes a
 # DRAFT release with SHA256SUMS and build provenance. A maintainer reviews and
-# publishes the draft. See docs/dev/RELEASING.md.
+# publishes the draft. See docs/DEVELOPMENT.md (Releasing).
 name: Release
 
 on:

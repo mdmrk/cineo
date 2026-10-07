@@ -1,7 +1,7 @@
 //! `cineo` — headless shell over the Cineo core.
 //!
 //! It is the first end-to-end front end and the main debugging tool for
-//! addon behavior (see `docs/DEBUGGING.md`). Output goes to stdout; logs go to
+//! addon behavior (see `docs/DEVELOPMENT.md`, Debugging). Output goes to stdout; logs go to
 //! stderr and are controlled by `-v` or `RUST_LOG`.
 
 // The CLI's job is printing.
