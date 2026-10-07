@@ -1,0 +1,8 @@
+{
+  "id": "org.cineo.fixture.subtitles",
+  "version": "0.1.0",
+  "name": "Subtitles Fixture",
+  "types": ["movie", "series"],
+  "catalogs": [],
+  "resources": [{ "name": "subtitles", "types": ["movie", "series"], "idPrefixes": ["tt"] }]
+}

@@ -248,6 +248,20 @@ impl CineoApp {
                     }
                 });
             }
+            Effect::FetchSubtitles { addon, path } => {
+                self.spawn(async move {
+                    let result = client
+                        .fetch_subtitles(&addon, &path)
+                        .await
+                        .map(|s| s.value)
+                        .map_err(|e| e.to_string());
+                    Action::SubtitlesLoaded {
+                        addon,
+                        path,
+                        result,
+                    }
+                });
+            }
             effect @ (Effect::SaveAddons(_)
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)

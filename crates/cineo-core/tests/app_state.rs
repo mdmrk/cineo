@@ -6,7 +6,7 @@
 
 use cineo_core::addon::{
     ContentType, Manifest, MetaPreview, ResourcePath, TransportUrl, parse_catalog_response,
-    parse_manifest, parse_meta_response, parse_stream_response,
+    parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
     Action, Effect, LibraryItem, Loadable, Settings, State, TorrentRequest, TorrentStatus,
@@ -35,6 +35,7 @@ fn ty(s: &str) -> ContentType {
 
 const BASIC: &str = "https://basic.example/manifest.json";
 const STREAMS: &str = "https://streams.example/manifest.json";
+const SUBS: &str = "https://subs.example/manifest.json";
 
 fn restored() -> (State, Vec<Effect>) {
     let mut state = State::default();
@@ -446,14 +447,13 @@ fn playing_an_http_stream_records_library_and_resumes() {
             stream: 0,
         },
     );
-    let [Effect::SaveLibraryItem(item), Effect::Play(play)] = effects.as_slice() else {
+    let [Effect::SaveLibraryItem(item), Effect::Play(play), ..] = effects.as_slice() else {
         panic!("{effects:?}");
     };
     assert_eq!(item.id, "tt0000001");
     assert_eq!(play.start_ms, 0);
     assert_eq!(play.url.as_str(), "https://media.example/v/1.mp4");
     assert_eq!(play.headers.len(), 2);
-    assert_eq!(play.subtitles.len(), 1);
     assert_eq!(
         play.logo.as_ref().map(url::Url::as_str),
         Some("https://img.example/logo/tt0000001.png"),
@@ -478,8 +478,11 @@ fn playing_an_http_stream_records_library_and_resumes() {
             stream: 0,
         },
     );
-    let Some(Effect::Play(play)) = effects.last() else {
-        panic!()
+    let Some(play) = effects.iter().find_map(|e| match e {
+        Effect::Play(play) => Some(play),
+        _ => None,
+    }) else {
+        panic!("{effects:?}")
     };
     assert_eq!(play.start_ms, 60_000, "resumes");
 }
@@ -531,6 +534,7 @@ fn the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine()
         Effect::SaveSettings(settings),
         Effect::SaveLibraryItem(item),
         Effect::StartTorrent(request),
+        ..,
     ] = effects.as_slice()
     else {
         panic!("{effects:?}");
@@ -692,7 +696,8 @@ fn playing_an_http_stream_stops_a_running_torrent() {
             [
                 Effect::SaveLibraryItem(_),
                 Effect::StopTorrent,
-                Effect::Play(_)
+                Effect::Play(_),
+                ..
             ]
         ),
         "{effects:?}"
@@ -774,4 +779,129 @@ fn continue_watching_excludes_finished_and_sorts_by_recency() {
     assert_eq!(ids, vec!["c", "a"]);
     assert_eq!(items[1].resume_ms("b"), 0, "finished restarts");
     assert_eq!(items[2].resume_ms("other"), 0);
+}
+
+#[test]
+fn playing_asks_subtitle_addons_with_the_stream_hints() {
+    let mut state = detail_with_streams();
+    update(&mut state, Action::InstallAddon(SUBS.into()));
+    update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: url(SUBS),
+            result: Ok(manifest("basic/manifest-subtitles.json")),
+            install: true,
+        },
+    );
+    let effects = update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    let fetches: Vec<_> = effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::FetchSubtitles { addon, path } => Some((addon, path)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(fetches.len(), 2, "every subtitles addon is asked");
+    let (addon, path) = fetches[1];
+    assert_eq!(*addon, url(SUBS));
+    assert_eq!(
+        path.to_url_path(),
+        "subtitles/movie/tt0000001/videoHash=8e245d9679d31e12&videoSize=1234567&filename=film.mp4.json"
+    );
+    let stream_subs = &state.subtitles[0];
+    assert_eq!(
+        stream_subs.path, None,
+        "the stream's own subtitles come first"
+    );
+    assert_eq!(stream_subs.subtitles.ready().map(Vec::len), Some(1));
+    assert!(
+        state.subtitles[1..]
+            .iter()
+            .all(|g| g.subtitles.is_loading())
+    );
+
+    let loaded = parse_subtitles_response(&fixture("basic/subtitles.json"))
+        .unwrap()
+        .value;
+    update(
+        &mut state,
+        Action::SubtitlesLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(loaded),
+        },
+    );
+    let addon_subs = &state.subtitles[2];
+    assert_eq!(addon_subs.addon_name, "Subtitles Fixture");
+    assert_eq!(addon_subs.subtitles.ready().map(Vec::len), Some(1));
+
+    update(&mut state, Action::PlaybackStopped);
+    assert!(
+        state.subtitles.is_empty(),
+        "subtitles belong to one playback"
+    );
+}
+
+#[test]
+fn subtitle_request_without_hints_has_no_extras() {
+    let mut state = restore(&[BASIC, STREAMS, SUBS]);
+    for (transport, file) in [
+        (BASIC, "basic/manifest.json"),
+        (STREAMS, "basic/manifest-streams.json"),
+        (SUBS, "basic/manifest-subtitles.json"),
+    ] {
+        update(&mut state, loaded(transport, file));
+    }
+    update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value;
+    let (addon, path) = state.detail.as_ref().unwrap().meta_request.clone().unwrap();
+    update(
+        &mut state,
+        Action::MetaLoaded {
+            addon,
+            path,
+            result: Ok(Box::new(meta)),
+        },
+    );
+    let mut streams = parse_stream_response(&fixture("basic/streams-movie.json"))
+        .unwrap()
+        .value;
+    streams[0].video_hash = None;
+    streams[0].video_size = None;
+    streams[0].filename = None;
+    let g = state.detail.as_ref().unwrap().streams[0].clone();
+    update(
+        &mut state,
+        Action::StreamsLoaded {
+            addon: g.addon,
+            path: g.path,
+            result: Ok(streams),
+        },
+    );
+    let effects = update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    let Some(Effect::FetchSubtitles { path, .. }) = effects.last() else {
+        panic!("{effects:?}");
+    };
+    assert_eq!(path.to_url_path(), "subtitles/movie/tt0000001.json");
 }

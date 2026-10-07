@@ -41,7 +41,7 @@ _Last reviewed: 2026-10-06._
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
 | Stream `behaviorHints.proxyHeaders` | Supported | Validated in the core and again by the player; sent via `http-header-fields` (`sends_typed_commands_and_reports_events`; real mpv delivered them to an HTTP server, 2026-10-06) |
 | Stream `behaviorHints.bingeGroup` | Planned | v0.x binge-watching |
-| Subtitles resource | Planned | M6 |
+| Subtitles resource | Partial | Requested from every subtitles addon with the stream's `videoHash`/`videoSize`/`filename` hints (`playing_asks_subtitle_addons_with_the_stream_hints`); not yet loaded into the player (M6) |
 | Subtitles in stream objects | Partial | Parsed (`stream_sources_*`); loaded into the player in M6 |
 | `addon_catalog` resource | Planned | v0.x |
 | Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |

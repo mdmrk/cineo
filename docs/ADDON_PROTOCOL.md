@@ -168,6 +168,20 @@ Torrent streams (`infoHash`, M9; ADR-0012):
 - Real addons may send no `sources` at all: Torrentio's streams had only
   `infoHash`, `fileIdx` and `behaviorHints.filename` (VERIFIED 2026-10-06).
 
+Subtitles (M6):
+- When a stream plays, every addon that supports `subtitles` for the item's
+  type and the **video** id is asked for `subtitles/{type}/{videoId}`. The
+  extras are `videoHash`, `videoSize` and `filename`, in that order, taken
+  from the stream's `behaviorHints`; missing ones are left out (VERIFIED-REF,
+  `models/player.rs` `subtitles_update`).
+- The reference client also fills these extras from values its player
+  reports and skips the request when it has none at all. Cineo's player
+  reports none yet, so Cineo always asks, without extras if the stream has no
+  hints (INFERRED to match the reference client, whose player always reports
+  something; `subtitle_request_without_hints_has_no_extras`).
+- The stream's own `subtitles` are listed first, then each addon's, in user
+  order. Duplicate URLs within one list are dropped.
+
 ## Doc vs reference differences
 
 | Topic | SDK docs | Reference client | Cineo follows |

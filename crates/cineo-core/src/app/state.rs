@@ -93,10 +93,19 @@ pub struct PlayRequest {
     /// The item's logo art (meta `logo`), shown while the file loads.
     pub logo: Option<Url>,
     pub headers: Vec<(String, String)>,
-    pub subtitles: Vec<Subtitle>,
     pub start_ms: u64,
     pub meta_id: String,
     pub video_id: String,
+}
+
+/// Subtitles for the current playback from one addon. `path` is `None` for
+/// the subtitles that came with the stream itself.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubtitleGroup {
+    pub addon: TransportUrl,
+    pub addon_name: String,
+    pub path: Option<ResourcePath>,
+    pub subtitles: Loadable<Vec<Subtitle>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -123,6 +132,8 @@ pub struct State {
     /// the P2P notice.
     pub p2p_prompt: Option<(usize, usize)>,
     pub torrent: Option<TorrentPlayback>,
+    /// Addon subtitles for the current playback, stream subtitles first.
+    pub subtitles: Vec<SubtitleGroup>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -191,6 +202,11 @@ pub enum Action {
         path: ResourcePath,
         result: Result<Vec<Stream>, String>,
     },
+    SubtitlesLoaded {
+        addon: TransportUrl,
+        path: ResourcePath,
+        result: Result<Vec<Subtitle>, String>,
+    },
     TorrentReady {
         info_hash: String,
         url: Url,
@@ -221,6 +237,10 @@ pub enum Effect {
         path: ResourcePath,
     },
     FetchStreams {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    FetchSubtitles {
         addon: TransportUrl,
         path: ResourcePath,
     },
@@ -396,9 +416,33 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::PlaybackFailed(reason) => {
             state.notice = Some(reason);
+            state.subtitles.clear();
             stop_torrent(state)
         }
-        Action::PlaybackStopped => stop_torrent(state),
+        Action::PlaybackStopped => {
+            state.subtitles.clear();
+            stop_torrent(state)
+        }
+        Action::SubtitlesLoaded {
+            addon,
+            path,
+            result,
+        } => {
+            if let Some(group) = state
+                .subtitles
+                .iter_mut()
+                .find(|g| g.addon == addon && g.path.as_ref() == Some(&path))
+            {
+                group.subtitles = match result {
+                    Ok(mut subtitles) => {
+                        dedup_by_url(&mut subtitles);
+                        Loadable::Ready(subtitles)
+                    }
+                    Err(err) => Loadable::Failed(err),
+                };
+            }
+            Vec::new()
+        }
         Action::AcceptP2p => {
             state.settings.p2p_acknowledged = true;
             let mut effects = vec![Effect::SaveSettings(state.settings)];
@@ -860,8 +904,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         Some(ep) => format!("{name} — {ep}"),
         None => name.clone(),
     };
-    let mut subtitles = stream.subtitles.clone();
-    subtitles.dedup_by(|a, b| a.url == b.url);
+    let subtitles = subtitle_groups(state, detail, group, stream, &video_id);
     let headers = if torrent.is_some() {
         Vec::new()
     } else {
@@ -872,7 +915,6 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         title,
         logo: preview.as_ref().and_then(|p| p.logo.clone()),
         headers,
-        subtitles,
         start_ms: 0,
         meta_id: detail.id.clone(),
         video_id: video_id.clone(),
@@ -912,6 +954,16 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         start_ms,
         ..request
     };
+    let fetch_subtitles: Vec<Effect> = subtitles
+        .iter()
+        .filter_map(|g| {
+            g.path.clone().map(|path| Effect::FetchSubtitles {
+                addon: g.addon.clone(),
+                path,
+            })
+        })
+        .collect();
+    state.subtitles = subtitles;
     match torrent {
         None => {
             effects.extend(stop_torrent(state));
@@ -926,5 +978,64 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
             effects.push(Effect::StartTorrent(torrent));
         }
     }
+    effects.extend(fetch_subtitles);
     effects
+}
+
+/// The stream's own subtitles plus one request per subtitles addon, with
+/// the stream's `videoHash`, `videoSize` and `filename` hints as extras in
+/// the reference client's order.
+fn subtitle_groups(
+    state: &State,
+    detail: &Detail,
+    group: usize,
+    stream: &Stream,
+    video_id: &str,
+) -> Vec<SubtitleGroup> {
+    let mut groups = Vec::new();
+    if let Some(source) = detail.streams.get(group)
+        && !stream.subtitles.is_empty()
+    {
+        let mut subtitles = stream.subtitles.clone();
+        dedup_by_url(&mut subtitles);
+        groups.push(SubtitleGroup {
+            addon: source.addon.clone(),
+            addon_name: source.addon_name.clone(),
+            path: None,
+            subtitles: Loadable::Ready(subtitles),
+        });
+    }
+    let extra: Vec<ExtraValue> = [
+        ("videoHash", stream.video_hash.clone()),
+        ("videoSize", stream.video_size.map(|s| s.to_string())),
+        ("filename", stream.filename.clone()),
+    ]
+    .into_iter()
+    .filter_map(|(name, value)| value.map(|v| ExtraValue::new(name, v)))
+    .collect();
+    groups.extend(
+        plan::subtitle_targets(&state.addons, &detail.content_type, video_id)
+            .into_iter()
+            .map(|(addon, path)| SubtitleGroup {
+                addon_name: addon_name(state, &addon),
+                addon,
+                path: Some(path.with_extra(extra.clone())),
+                subtitles: Loadable::Loading,
+            }),
+    );
+    groups
+}
+
+fn addon_name(state: &State, addon: &TransportUrl) -> String {
+    state
+        .addons
+        .iter()
+        .find(|a| a.transport == *addon)
+        .map(|a| a.manifest.name.clone())
+        .unwrap_or_default()
+}
+
+fn dedup_by_url(subtitles: &mut Vec<Subtitle>) {
+    let mut seen = std::collections::HashSet::new();
+    subtitles.retain(|s| seen.insert(s.url.clone()));
 }

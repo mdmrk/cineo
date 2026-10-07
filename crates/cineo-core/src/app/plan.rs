@@ -77,6 +77,16 @@ pub fn stream_targets(
     targets(addons, ResourceName::Stream, content_type, video_id)
 }
 
+/// Addons that serve `subtitles` for this video, in user order. All are
+/// asked.
+pub fn subtitle_targets(
+    addons: &[InstalledAddon],
+    content_type: &ContentType,
+    video_id: &str,
+) -> Vec<(TransportUrl, ResourcePath)> {
+    targets(addons, ResourceName::Subtitles, content_type, video_id)
+}
+
 fn targets(
     addons: &[InstalledAddon],
     resource: ResourceName,

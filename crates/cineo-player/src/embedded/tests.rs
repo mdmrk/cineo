@@ -19,7 +19,6 @@ fn request(url: &str) -> PlayRequest {
             ("Bad Name".into(), "x".into()),
             ("X-Inject".into(), "a\r\nHost: evil".into()),
         ],
-        subtitles: Vec::new(),
         start_ms: 0,
         meta_id: "tt1".into(),
         video_id: "tt1".into(),
