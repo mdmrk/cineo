@@ -41,6 +41,8 @@ struct Seeder {
     addr: SocketAddr,
     info_hash: String,
     film: Vec<u8>,
+    /// The film's index in the torrent, which follows directory order.
+    film_index: usize,
 }
 
 /// Creates a two-file torrent (a film and a small text file) and seeds it
@@ -93,7 +95,16 @@ async fn seeder(name: &str) -> Seeder {
         .await
         .unwrap()
         .unwrap();
+    let film_index = handle
+        .with_metadata(|m| {
+            m.file_infos
+                .iter()
+                .position(|f| f.relative_filename.ends_with("film.mkv"))
+        })
+        .unwrap()
+        .unwrap();
     Seeder {
+        film_index,
         addr: session.listen_addr().unwrap(),
         _session: session,
         info_hash: torrent.info_hash().as_string(),
@@ -188,7 +199,7 @@ async fn serves_the_chosen_file_with_ranges_from_a_local_peer() {
     let path = url.path().to_owned();
     // The largest video, not the larger text file.
     assert!(
-        path.ends_with(&format!("/{}/0", seeder.info_hash)),
+        path.ends_with(&format!("/{}/{}", seeder.info_hash, seeder.film_index)),
         "{path}"
     );
 
@@ -243,9 +254,10 @@ async fn requests_without_the_token_or_from_a_foreign_host_are_refused() {
     let path = url.path().to_owned();
     let hash = &seeder.info_hash;
 
-    let wrong_token = format!("/{}/{hash}/0", "0".repeat(32));
+    let (film, other) = (seeder.film_index, 1 - seeder.film_index);
+    let wrong_token = format!("/{}/{hash}/{film}", "0".repeat(32));
     assert_eq!(http(addr, "GET", &wrong_token, &[]).await.status, 404);
-    let wrong_file = path.replace(&format!("/{hash}/0"), &format!("/{hash}/1"));
+    let wrong_file = path.replace(&format!("/{hash}/{film}"), &format!("/{hash}/{other}"));
     assert_eq!(http(addr, "GET", &wrong_file, &[]).await.status, 404);
     assert_eq!(http(addr, "GET", "/", &[]).await.status, 404);
     assert_eq!(
