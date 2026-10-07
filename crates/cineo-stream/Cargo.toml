@@ -9,7 +9,6 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
-# librqbit's storage traits return anyhow errors.
 anyhow.workspace = true
 bytes.workspace = true
 cineo-core.workspace = true

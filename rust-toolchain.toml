@@ -1,6 +1,4 @@
 [toolchain]
-# Pinned for reproducibility. Bump deliberately: update `rust-version` in
-# Cargo.toml in the same change.
 channel = "1.99.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

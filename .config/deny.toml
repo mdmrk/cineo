@@ -1,22 +1,14 @@
-# cargo-deny configuration. Run: `cargo deny --config .config/deny.toml check`.
-# Rationale: docs/DEVELOPMENT.md (Dependencies).
-
 [graph]
 all-features = true
 
 [advisories]
-# Unmaintained/unsound/yanked crates are reported; vulnerabilities always fail.
 unmaintained = "workspace"
 yanked = "deny"
 ignore = [
-    # ringbuf 0.4 via librqbit-utp 0.7.0 (latest): only `u8` elements, which cannot panic on drop.
     { id = "RUSTSEC-2026-0293", reason = "not reachable: librqbit-utp stores u8 only" },
 ]
 
 [licenses]
-# Permissive licenses compatible with distributing Cineo under MIT.
-# Extend this list only when a new dependency needs it, and record why in
-# docs/LEGAL.md.
 allow = [
     "MIT",
     "MIT-0",
@@ -30,16 +22,12 @@ allow = [
     "Unicode-3.0",
     "Unlicense",
     "CC0-1.0",
-    # webpki-root-certs: Mozilla's CA bundle data.
     "CDLA-Permissive-2.0",
-    # clipboard-win, error-code (Windows clipboard via egui-winit/arboard).
     "BSL-1.0",
 ]
-# option-ext (MPL-2.0, file-level copyleft), used unmodified via
-# librqbit-core → directories → dirs-sys. Scoped to that crate (docs/LEGAL.md).
+# option-ext: MPL-2.0, used unmodified (docs/LEGAL.md).
 exceptions = [
     { crate = "option-ext", allow = ["MPL-2.0"] },
-    # egui's built-in fonts (Ubuntu-Light, Hack, emoji), our theme's fallbacks.
     { crate = "epaint_default_fonts", allow = ["OFL-1.1", "Ubuntu-font-1.0"] },
 ]
 unused-allowed-license = "allow"
@@ -50,7 +38,6 @@ multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
 deny = [
-    # TLS: we standardize on rustls; OpenSSL adds a system dependency.
     { crate = "openssl-sys", reason = "use rustls" },
 ]
 

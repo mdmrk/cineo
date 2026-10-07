@@ -16,18 +16,14 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
-# A copy of the workspace lints (Cargo cannot override one lint of
-# `workspace = true`); keep it in sync with the root Cargo.toml.
+# Copy of the workspace lints with `unsafe_code` relaxed; keep in sync.
 [lints.rust]
-# The only crate allowed `unsafe`, in the libmpv FFI modules (ADR-0014).
 unsafe_code = "deny"
 missing_debug_implementations = "warn"
 unreachable_pub = "warn"
 rust_2024_compatibility = { level = "warn", priority = -1 }
 
 [lints.clippy]
-# Default clippy groups (correctness, suspicious, style, complexity, perf) stay on.
-# Additions below are deliberate; see docs/DEVELOPMENT.md (Lint policy) before adding more.
 dbg_macro = "warn"
 todo = "warn"
 unimplemented = "warn"

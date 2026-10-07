@@ -5,22 +5,18 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.0.0"
 edition = "2024"
-# Cineo is an application, not a library: MSRV == the pinned toolchain.
-# Bump together with rust-toolchain.toml (see docs/DEVELOPMENT.md).
 rust-version = "1.99"
 license = "MIT"
 repository = "https://github.com/mdmrk/cineo"
 publish = false
 
 [workspace.dependencies]
-# Internal
 cineo-core = { path = "crates/cineo-core" }
 cineo-net = { path = "crates/cineo-net" }
 cineo-player = { path = "crates/cineo-player" }
 cineo-store = { path = "crates/cineo-store" }
 cineo-stream = { path = "crates/cineo-stream" }
 
-# Every dependency is recorded in docs/DEVELOPMENT.md (Dependencies) with its justification.
 anyhow = "1.0.104"
 bytes = "1.12.1"
 clap = { version = "4.6.7", features = ["derive"] }
@@ -47,7 +43,6 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 url = "2.5.8"
 
-# Dev-only
 egui_kittest = { version = "0.36.2", default-features = false }
 wiremock = "0.6.5"
 
@@ -58,8 +53,6 @@ unreachable_pub = "warn"
 rust_2024_compatibility = { level = "warn", priority = -1 }
 
 [workspace.lints.clippy]
-# Default clippy groups (correctness, suspicious, style, complexity, perf) stay on.
-# Additions below are deliberate; see docs/DEVELOPMENT.md (Lint policy) before adding more.
 dbg_macro = "warn"
 todo = "warn"
 unimplemented = "warn"
@@ -81,8 +74,6 @@ lto = "thin"
 codegen-units = 1
 strip = "symbols"
 
-# Dependencies (image decoding, BitTorrent, SQLite) are slow unoptimized;
-# workspace crates stay at opt-level 0 so rebuilds remain fast.
 [profile.dev.package."*"]
 opt-level = 2
 
