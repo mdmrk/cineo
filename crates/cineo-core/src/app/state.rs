@@ -105,6 +105,10 @@ pub struct PlayRequest {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct State {
+    /// Every installed addon in user order, including those still loading
+    /// or whose manifest failed to load. This is what gets saved.
+    pub installed: Vec<TransportUrl>,
+    /// The installed addons whose manifest loaded, in user order.
     pub addons: Vec<InstalledAddon>,
     /// Addons whose manifests are being (re)loaded, e.g. at startup.
     pub addons_loading: Vec<TransportUrl>,
@@ -254,6 +258,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
     match action {
         Action::Restore { addons, library } => {
             state.library = library;
+            state.installed.clone_from(&addons);
             state.addons_loading.clone_from(&addons);
             addons
                 .into_iter()
@@ -268,7 +273,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             Vec::new()
         }
         Action::InstallAddon(input) => match TransportUrl::parse(&input) {
-            Ok(transport) if state.addons.iter().any(|a| a.transport == transport) => {
+            Ok(transport)
+                if state.addons.iter().any(|a| a.transport == transport)
+                    || state.addons_loading.contains(&transport) =>
+            {
                 state.install = Some(Loadable::Failed("This addon is already installed".into()));
                 Vec::new()
             }
@@ -285,17 +293,28 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             }
         },
         Action::RemoveAddon(transport) => {
+            state.installed.retain(|t| *t != transport);
+            state.addons_loading.retain(|t| *t != transport);
             state.addons.retain(|a| a.transport != transport);
             let mut effects = vec![save_addons(state)];
-            effects.extend(load_board(state));
+            effects.extend(refresh_board(state));
             effects
         }
         Action::MoveAddon { from, to } => {
             if from < state.addons.len() && to < state.addons.len() && from != to {
                 let addon = state.addons.remove(from);
                 state.addons.insert(to, addon);
+                // Loaded addons trade places; the others keep their slots.
+                let mut order = state.addons.iter().map(|a| a.transport.clone());
+                for slot in &mut state.installed {
+                    if state.addons.iter().any(|a| a.transport == *slot)
+                        && let Some(next) = order.next()
+                    {
+                        *slot = next;
+                    }
+                }
                 let mut effects = vec![save_addons(state)];
-                effects.extend(load_board(state));
+                effects.extend(refresh_board(state));
                 effects
             } else {
                 Vec::new()
@@ -509,8 +528,20 @@ fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
     }
 }
 
+impl State {
+    /// Installed addons whose manifest failed to load.
+    pub fn unavailable_addons(&self) -> Vec<&TransportUrl> {
+        self.installed
+            .iter()
+            .filter(|t| {
+                !self.addons_loading.contains(t) && !self.addons.iter().any(|a| a.transport == **t)
+            })
+            .collect()
+    }
+}
+
 fn save_addons(state: &State) -> Effect {
-    Effect::SaveAddons(state.addons.iter().map(|a| a.transport.clone()).collect())
+    Effect::SaveAddons(state.installed.clone())
 }
 
 fn fetch_catalog(target: &CatalogTarget) -> Effect {
@@ -533,6 +564,27 @@ fn load_board(state: &mut State) -> Vec<Effect> {
         .iter()
         .map(|r| fetch_catalog(&r.target))
         .collect()
+}
+
+/// Rebuilds the board for the loaded addons, keeping rows that are still
+/// on it and fetching only new ones.
+fn refresh_board(state: &mut State) -> Vec<Effect> {
+    let mut old = std::mem::take(&mut state.board);
+    let mut effects = Vec::new();
+    state.board = plan::board_targets(&state.addons)
+        .into_iter()
+        .map(|target| match old.iter().position(|r| r.target == target) {
+            Some(index) => old.swap_remove(index),
+            None => {
+                effects.push(fetch_catalog(&target));
+                Row {
+                    target,
+                    items: Loadable::Loading,
+                }
+            }
+        })
+        .collect();
+    effects
 }
 
 /// Catalogs with required extras (only reachable through Discover).
@@ -607,7 +659,11 @@ fn manifest_loaded(
     result: Result<Box<Manifest>, String>,
     install: bool,
 ) -> Vec<Effect> {
+    let was_loading = state.addons_loading.contains(transport);
     state.addons_loading.retain(|t| t != transport);
+    if !install && !was_loading {
+        return Vec::new(); // removed while loading
+    }
     match result {
         Ok(manifest) => {
             if install {
@@ -620,15 +676,22 @@ fn manifest_loaded(
             if let Some(existing) = state.addons.iter_mut().find(|a| &a.transport == transport) {
                 *existing = addon;
             } else {
-                state.addons.push(addon);
+                if !state.installed.contains(transport) {
+                    state.installed.push(transport.clone());
+                }
+                let rank = |t: &TransportUrl| state.installed.iter().position(|i| i == t);
+                let at = state
+                    .addons
+                    .iter()
+                    .take_while(|a| rank(&a.transport) < rank(transport))
+                    .count();
+                state.addons.insert(at, addon);
             }
             let mut effects = Vec::new();
             if install {
                 effects.push(save_addons(state));
             }
-            if state.addons_loading.is_empty() {
-                effects.extend(load_board(state));
-            }
+            effects.extend(refresh_board(state));
             effects
         }
         Err(err) => {
@@ -637,11 +700,7 @@ fn manifest_loaded(
             } else {
                 state.notice = Some(format!("An addon could not be loaded: {err}"));
             }
-            if !install && state.addons_loading.is_empty() {
-                load_board(state)
-            } else {
-                Vec::new()
-            }
+            Vec::new()
         }
     }
 }

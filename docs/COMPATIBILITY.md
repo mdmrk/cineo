@@ -54,8 +54,8 @@ _Last reviewed: 2026-10-06._
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Install/remove/order addons | Supported | Persisted in order (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon add/remove/list` (`addons_are_added_listed_and_removed_across_runs`); GUI Addons page with install, move up/down and remove |
-| Board (browsable catalogs) | Supported | Rows fail independently (`board_shows_rows_with_independent_failures_and_a_card_opens_the_detail`); live Cinemeta board rendered on Linux, 2026-10-06 |
+| Install/remove/order addons | Supported | Persisted in order (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon add/remove/list` (`addons_are_added_listed_and_removed_across_runs`); GUI Addons page with install, move up/down and remove; the saved order holds whatever order manifests load in (`addons_keep_the_saved_order_whatever_order_they_load_in`); an addon whose manifest fails stays installed and can be retried or removed (`an_addon_that_fails_to_load_stays_installed`, `addons_that_failed_to_load_can_be_retried_or_removed`) |
+| Board (browsable catalogs) | Supported | Rows fail independently (`board_shows_rows_with_independent_failures_and_a_card_opens_the_detail`); each addon's rows load as soon as its manifest does (`board_rows_load_as_soon_as_their_addon_does`); live Cinemeta board rendered on Linux, 2026-10-06 |
 | Discover with filters | Supported | Genre and `skip` paging in the core (`discover_pages_with_skip_and_deduplicates`); catalog and genre pickers in the GUI. No dedicated UI test |
 | Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; GUI search page |
 | Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`) |

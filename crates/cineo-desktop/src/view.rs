@@ -440,7 +440,7 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
         });
         ui.add_space(theme::SECTION_GAP);
     }
-    if state.addons.is_empty() && state.addons_loading.is_empty() {
+    if state.installed.is_empty() {
         page_title(ui, "The projector is warm.", Some("The reels are missing."));
         empty(
             ui,
@@ -697,6 +697,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     }
     ui.add_space(theme::SECTION_GAP);
     let count = state.addons.len();
+    let unavailable = state.unavailable_addons();
     section(ui, "Installed", |ui| {
         if count > 0 {
             ui.label(caps_text(
@@ -705,7 +706,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             ));
         }
     });
-    if count == 0 {
+    if state.installed.is_empty() {
         empty(ui, "Nothing installed yet.");
     }
     for (index, addon) in state.addons.iter().enumerate() {
@@ -768,6 +769,31 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                         from: index,
                         to: index - 1,
                     });
+                }
+            });
+        });
+        ui.add_space(6.0);
+        rule(ui);
+    }
+    for transport in unavailable {
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            let url = transport.as_url();
+            ui.label(
+                RichText::new(url.host_str().unwrap_or("Addon"))
+                    .font(theme::strong())
+                    .color(theme::TEXT_BRIGHT),
+            );
+            badge(ui, "Could not load", theme::DANGER);
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if ui
+                    .add(Button::new(RichText::new("Remove").color(theme::DANGER)))
+                    .clicked()
+                {
+                    out.push(Action::RemoveAddon(transport.clone()));
+                }
+                if ui.button("Retry").clicked() {
+                    out.push(Action::InstallAddon(url.as_str().to_owned()));
                 }
             });
         });

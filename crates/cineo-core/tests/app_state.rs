@@ -47,24 +47,48 @@ fn restored() -> (State, Vec<Effect>) {
         },
     );
     assert_eq!(effects.len(), 2, "one manifest fetch per addon");
-    let first = update(
+    let mut board = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    board.extend(update(
         &mut state,
-        Action::ManifestLoaded {
-            transport: url(BASIC),
-            result: Ok(manifest("basic/manifest.json")),
-            install: false,
-        },
-    );
-    assert!(first.is_empty(), "board waits until every addon is loaded");
-    let board = update(
-        &mut state,
-        Action::ManifestLoaded {
-            transport: url(STREAMS),
-            result: Ok(manifest("basic/manifest-streams.json")),
-            install: false,
-        },
-    );
+        loaded(STREAMS, "basic/manifest-streams.json"),
+    ));
     (state, board)
+}
+
+fn loaded(transport: &str, fixture_path: &str) -> Action {
+    Action::ManifestLoaded {
+        transport: url(transport),
+        result: Ok(manifest(fixture_path)),
+        install: false,
+    }
+}
+
+fn load_failed(transport: &str) -> Action {
+    Action::ManifestLoaded {
+        transport: url(transport),
+        result: Err("HTTP 503".into()),
+        install: false,
+    }
+}
+
+fn restore(addons: &[&str]) -> State {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: addons.iter().map(|a| url(a)).collect(),
+            library: Vec::new(),
+        },
+    );
+    state
+}
+
+fn addon_names(state: &State) -> Vec<&str> {
+    state
+        .addons
+        .iter()
+        .map(|a| a.manifest.name.as_str())
+        .collect()
 }
 
 fn catalog_items() -> Vec<MetaPreview> {
@@ -96,6 +120,92 @@ fn restore_loads_addons_in_order_then_the_board() {
             .iter()
             .all(|e| matches!(e, Effect::FetchCatalog { .. }))
     );
+}
+
+#[test]
+fn board_rows_load_as_soon_as_their_addon_does() {
+    let mut state = restore(&[STREAMS, BASIC]);
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    assert_eq!(state.board.len(), 2, "no wait for the streams addon");
+    assert_eq!(effects.len(), 2);
+    let effects = update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    assert!(effects.is_empty(), "loaded rows are not fetched again");
+}
+
+#[test]
+fn addons_keep_the_saved_order_whatever_order_they_load_in() {
+    let mut state = restore(&[BASIC, STREAMS]);
+    update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    assert_eq!(
+        addon_names(&state),
+        vec!["Basic Fixture", "Streams Fixture"]
+    );
+}
+
+#[test]
+fn an_addon_that_fails_to_load_stays_installed() {
+    const OTHER: &str = "https://other.example/manifest.json";
+    let mut state = restore(&[OTHER, BASIC, STREAMS]);
+    update(&mut state, load_failed(OTHER));
+    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    assert!(state.notice.is_some());
+
+    let effects = update(&mut state, Action::MoveAddon { from: 1, to: 0 });
+    assert_eq!(
+        effects[0],
+        Effect::SaveAddons(vec![url(OTHER), url(STREAMS), url(BASIC)])
+    );
+    let effects = update(&mut state, Action::RemoveAddon(url(BASIC)));
+    assert_eq!(
+        effects[0],
+        Effect::SaveAddons(vec![url(OTHER), url(STREAMS)])
+    );
+    assert_eq!(state.unavailable_addons(), vec![&url(OTHER)]);
+
+    let effects = update(&mut state, Action::InstallAddon(OTHER.into()));
+    assert!(
+        matches!(
+            effects.as_slice(),
+            [Effect::FetchManifest { install: true, .. }]
+        ),
+        "an unavailable addon can be retried"
+    );
+    update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: url(OTHER),
+            result: Ok(manifest("basic/manifest.json")),
+            install: true,
+        },
+    );
+    assert_eq!(state.installed, vec![url(OTHER), url(STREAMS)]);
+    assert_eq!(state.addons.len(), 2);
+    assert!(state.unavailable_addons().is_empty());
+}
+
+#[test]
+fn a_manifest_that_arrives_after_removal_is_ignored() {
+    let mut state = restore(&[BASIC, STREAMS]);
+    update(&mut state, Action::RemoveAddon(url(BASIC)));
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    assert!(effects.is_empty(), "{effects:?}");
+    assert!(state.addons.is_empty());
+    assert_eq!(state.installed, vec![url(STREAMS)]);
+}
+
+#[test]
+fn reordering_and_removing_addons_reuse_loaded_rows() {
+    let (mut state, _) = restored();
+    let effects = update(&mut state, Action::MoveAddon { from: 0, to: 1 });
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::FetchCatalog { .. })),
+        "{effects:?}"
+    );
+    assert_eq!(state.board.len(), 2);
 }
 
 #[test]

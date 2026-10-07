@@ -201,6 +201,42 @@ fn addons_page_installs_from_the_typed_url_and_lists_installed_addons() {
 }
 
 #[test]
+fn addons_that_failed_to_load_can_be_retried_or_removed() {
+    const DOWN: &str = "https://down.example/manifest.json";
+    let mut state = State::default();
+    let down = TransportUrl::parse(DOWN).unwrap();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![down.clone()],
+            library: Vec::new(),
+        },
+    );
+    update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: down.clone(),
+            result: Err("HTTP 503".into()),
+            install: false,
+        },
+    );
+    let view = ViewState {
+        page: Page::Addons,
+        ..ViewState::default()
+    };
+    let mut harness = harness(state, view);
+    harness.get_by_label("down.example");
+    harness.get_by_label("Retry").click();
+    harness.run();
+    harness.get_by_label("Remove").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::InstallAddon(DOWN.into()), Action::RemoveAddon(down)]
+    );
+}
+
+#[test]
 fn notices_are_shown_and_can_be_dismissed() {
     let mut state = State::default();
     update(
