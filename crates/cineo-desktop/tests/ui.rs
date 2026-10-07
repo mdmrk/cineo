@@ -9,7 +9,7 @@ use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response,
 };
-use cineo_core::app::{Action, Effect, Language, State, TorrentStatus, update};
+use cineo_core::app::{Action, Effect, Language, Setting, State, TorrentStatus, update};
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
@@ -254,7 +254,10 @@ fn notices_are_shown_and_can_be_dismissed() {
 #[test]
 fn turning_p2p_off_hides_torrent_streams() {
     let mut state = detail_state();
-    update(&mut state, Action::SetP2pEnabled(false));
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::P2pEnabled(false)),
+    );
     let harness = harness(state, ViewState::default());
     assert_eq!(harness.get_all_by_label("Play").count(), 5);
     harness.get_by_label("1 torrent stream hidden: peer-to-peer is off in Settings");
@@ -324,7 +327,10 @@ fn settings_switch_p2p_off() {
         .get_by_label("Show and play torrent streams")
         .click();
     harness.run();
-    assert_eq!(harness.state().2, vec![Action::SetP2pEnabled(false)]);
+    assert_eq!(
+        harness.state().2,
+        vec![Action::ChangeSetting(Setting::P2pEnabled(false))]
+    );
 }
 
 #[test]
@@ -340,7 +346,9 @@ fn settings_pick_a_subtitle_language() {
     harness.run();
     assert_eq!(
         harness.state().2,
-        vec![Action::SetSubtitleLanguage(Language::from_code("eng"))]
+        vec![Action::ChangeSetting(Setting::SubtitleLanguage(
+            Language::from_code("eng")
+        ))]
     );
 }
 
@@ -504,4 +512,46 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
     harness.run_steps(60);
     harness.run();
     harness.get_by_label("Release 299");
+}
+
+fn settings_page() -> ViewState {
+    ViewState {
+        page: Page::Settings,
+        ..ViewState::default()
+    }
+}
+
+#[test]
+fn resetting_settings_asks_first() {
+    let mut harness = harness(State::default(), settings_page());
+    harness.get_by_label("Reset…").click();
+    harness.run();
+    harness.get_by_label("Reset all settings?");
+    harness.get_by_label("Cancel").click();
+    harness.run();
+    assert!(harness.query_by_label("Reset all settings?").is_none());
+    assert!(harness.state().2.is_empty());
+
+    harness.get_by_label("Reset…").click();
+    harness.run();
+    harness.get_by_label("Reset").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::ResetSettings]);
+}
+
+#[test]
+fn the_settings_index_jumps_to_a_section() {
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 360.0])
+        .build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (State::default(), settings_page(), Vec::new()),
+        );
+    let about = |h: &Harness<'_, Ui>| h.get_by_label_contains("Made by people").rect().top();
+    assert!(about(&harness) > 360.0, "About starts below the window");
+    harness.get_by_label("About").click();
+    harness.run_steps(30);
+    harness.run();
+    let top = about(&harness);
+    assert!(top < 360.0, "About is scrolled into view: {top}");
 }

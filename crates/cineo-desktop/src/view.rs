@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
 use cineo_core::app::{
-    Action, CatalogTarget, Detail, LANGUAGES, Language, LibraryItem, Loadable, Row, State,
-    StreamGroup, board_targets, continue_watching,
+    Action, CatalogTarget, Detail, LibraryItem, Loadable, Row, State, StreamGroup, board_targets,
+    continue_watching,
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
@@ -17,6 +17,7 @@ use eframe::egui::{
 };
 use url::Url;
 
+use crate::settings::{self, Confirm, Section};
 use crate::theme;
 
 /// The top-level pages in the sidebar.
@@ -77,6 +78,9 @@ pub struct ViewState {
     pub search_edited_at: Option<f64>,
     /// Focus the search field on the next frame.
     pub focus_search: bool,
+    /// Scroll the Settings page to this section on the next frame.
+    pub settings_jump: Option<Section>,
+    pub confirm: Option<Confirm>,
 }
 
 const SEARCH_DEBOUNCE: f64 = 0.45;
@@ -103,6 +107,10 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
             } else {
                 view.page.label()
             };
+            if state.detail.is_none() && view.page == Page::Settings {
+                settings::page(ui, state, view, &mut out);
+                return;
+            }
             ScrollArea::vertical()
                 .id_salt(salt)
                 .auto_shrink(false)
@@ -117,7 +125,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                             Page::Search => search_page(ui, state, view, &mut out),
                             Page::Library => library_page(ui, state, &mut out),
                             Page::Addons => addons_page(ui, state, view, &mut out),
-                            Page::Settings => settings_page(ui, state, &mut out),
+                            Page::Settings => {}
                         });
                     }
                     ui.add_space(page_margin(ui));
@@ -369,7 +377,7 @@ fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
     }
 }
 
-const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
+pub(crate) const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
 plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
 uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
 a local cache. You can turn peer-to-peer streaming off in Settings.";
@@ -748,82 +756,6 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         ui.add_space(6.0);
         rule(ui);
     }
-}
-
-fn settings_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
-    page_title(ui, "Settings", None);
-    section(ui, "Peer-to-peer", |_| {});
-    let enabled = state.settings.p2p_enabled;
-    if toggle_row(ui, enabled, "Show and play torrent streams").clicked() {
-        out.push(Action::SetP2pEnabled(!enabled));
-    }
-    ui.scope(|ui| {
-        ui.set_max_width(ui.available_width().min(720.0));
-        ui.add(Label::new(dim(P2P_NOTICE)).wrap());
-    });
-    ui.add_space(theme::SECTION_GAP);
-    section(ui, "Subtitles", |_| {});
-    subtitle_language(ui, state.settings.subtitle_language, out);
-    ui.add(Label::new(dim(SUBTITLE_NOTICE)).wrap());
-    ui.add_space(theme::SECTION_GAP);
-    section(ui, "Keyboard", |_| {});
-    egui::Grid::new("shortcuts")
-        .num_columns(2)
-        .spacing(vec2(32.0, 10.0))
-        .show(ui, |ui| {
-            let key = TextFormat::simple(theme::body(), theme::TEXT_BRIGHT);
-            let plain = |text: &str| LayoutJob::single_section(text.to_owned(), key.clone());
-            let mut back = plain("Esc  ·  Alt+");
-            append_icon(&mut back, Icon::ArrowLeft, 15.0, theme::TEXT_BRIGHT);
-            back.append("  ·  mouse back", 0.0, key.clone());
-            let rows = [
-                (plain("Ctrl+F  or  /"), "Search"),
-                (plain("Ctrl+1 … Ctrl+6"), "Switch page"),
-                (back, "Leave a detail page"),
-                (plain("Shift+wheel"), "Scroll a row sideways"),
-            ];
-            for (keys, what) in rows {
-                ui.label(keys);
-                ui.label(dim(what));
-                ui.end_row();
-            }
-        });
-    ui.add_space(theme::SECTION_GAP);
-    section(ui, "About", |_| {});
-    ui.label(dim(&format!(
-        "Cineo {}. Made by people who stay for the credits.",
-        env!("CARGO_PKG_VERSION")
-    )));
-}
-
-const SUBTITLE_NOTICE: &str = "Subtitles in this language are turned on when a video starts: \
-from the file if it has them, otherwise from a subtitles addon.";
-
-fn subtitle_language(ui: &mut Ui, current: Option<Language>, out: &mut Vec<Action>) {
-    ComboBox::from_label("Subtitle language")
-        .icon(|ui, rect, visuals, _open| {
-            paint_icon(
-                ui.painter(),
-                Icon::ChevronDown,
-                rect.center(),
-                16.0,
-                visuals.fg_stroke.color,
-            );
-        })
-        .selected_text(current.map_or("None", |l| l.name))
-        .width(200.0)
-        .height(420.0)
-        .show_ui(ui, |ui| {
-            if ui.selectable_label(current.is_none(), "None").clicked() && current.is_some() {
-                out.push(Action::SetSubtitleLanguage(None));
-            }
-            for &language in LANGUAGES {
-                let selected = current == Some(language);
-                if ui.selectable_label(selected, language.name).clicked() && !selected {
-                    out.push(Action::SetSubtitleLanguage(Some(language)));
-                }
-            }
-        });
 }
 
 fn detail_page(
@@ -1427,7 +1359,7 @@ fn resolution(text: &str) -> Option<(&'static str, Tier)> {
     })
 }
 
-fn page_margin(ui: &Ui) -> f32 {
+pub(crate) fn page_margin(ui: &Ui) -> f32 {
     if ui.available_width() < 900.0 {
         16.0
     } else {
@@ -1451,7 +1383,7 @@ fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     .inner
 }
 
-fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
+pub(crate) fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
     ui.label(
         RichText::new(text)
             .font(theme::heading())
@@ -1463,7 +1395,7 @@ fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
     ui.add_space(theme::GAP * 1.5);
 }
 
-fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
+pub(crate) fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         ui.label(caps(title, theme::section(), theme::TEXT_DIM));
         ui.with_layout(Layout::right_to_left(Align::Center), right);
@@ -1838,7 +1770,7 @@ fn primary_button(text: &str) -> Button<'_> {
     .fill(theme::ACCENT)
 }
 
-fn primary(ui: &mut Ui, enabled: bool, text: &str) -> Response {
+pub(crate) fn primary(ui: &mut Ui, enabled: bool, text: &str) -> Response {
     let response = ui.add_enabled(enabled, primary_button(text));
     hover_glow(ui, &response);
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -1876,38 +1808,6 @@ fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
         let painter = ui.painter();
         painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
         painter.galley(rect.center() - galley.size() / 2.0, galley, ink);
-    }
-    response.on_hover_cursor(egui::CursorIcon::PointingHand)
-}
-
-fn toggle_row(ui: &mut Ui, on: bool, label: &str) -> Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
-    if ui.is_rect_visible(rect) {
-        let t = ui
-            .ctx()
-            .animate_bool_with_time(response.id, on, theme::ANIM);
-        let painter = ui.painter();
-        painter.text(
-            pos2(rect.min.x, rect.center().y),
-            Align2::LEFT_CENTER,
-            label,
-            theme::strong(),
-            theme::TEXT_BRIGHT,
-        );
-        let track =
-            Rect::from_center_size(pos2(rect.max.x - 22.0, rect.center().y), vec2(40.0, 20.0));
-        painter.rect_filled(
-            track,
-            CornerRadius::same(10),
-            lerp_color(theme::SURFACE_HOVER, theme::ACCENT, t),
-        );
-        let knob_x = egui::lerp(track.min.x + 10.0..=track.max.x - 10.0, t);
-        painter.circle_filled(
-            pos2(knob_x, track.center().y),
-            7.0,
-            lerp_color(theme::TEXT_DIM, theme::ON_ACCENT, t),
-        );
     }
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
@@ -2120,7 +2020,7 @@ fn addon_text(text: &str, font: &FontId, color: Color32, icon_color: Color32) ->
     job
 }
 
-fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Color32) {
+pub(crate) fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Color32) {
     if let Some((glyph, family)) = icon.glyph() {
         job.append(
             &glyph.to_string(),
@@ -2199,7 +2099,7 @@ fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
+pub(crate) fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.append(
         &text.to_uppercase(),
@@ -2218,7 +2118,7 @@ fn caps_text(text: &str, color: Color32) -> LayoutJob {
     caps(text, theme::caption(), color)
 }
 
-fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
+pub(crate) fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
     Color32::from_rgba_unmultiplied(
         lerp_u8(from.r(), to.r(), t),
         lerp_u8(from.g(), to.g(), t),
@@ -2244,7 +2144,7 @@ fn empty(ui: &mut Ui, text: &str) {
     ui.add_space(theme::GAP / 2.0);
 }
 
-fn dim(text: &str) -> RichText {
+pub(crate) fn dim(text: &str) -> RichText {
     RichText::new(text).color(theme::TEXT_DIM)
 }
 

@@ -1,35 +1,11 @@
 //! Torrent playback decisions (ADR-0010, ADR-0012): what the engine is asked
-//! to serve, which file of a torrent to play, and the user's P2P settings.
-//! The engine (`cineo-stream`) does the IO.
+//! to serve and which file of a torrent to play. The engine (`cineo-stream`)
+//! does the IO.
 
 use url::Url;
 
-use super::language::Language;
 use super::state::PlayRequest;
 use crate::addon::{Stream, StreamSource};
-
-/// User settings: peer-to-peer streaming and the subtitle language.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Settings {
-    /// Torrent streams are shown and playable. When off, nothing
-    /// torrent-related runs.
-    pub p2p_enabled: bool,
-    /// The user has seen and accepted the P2P notice. Until then, playing a
-    /// torrent asks first.
-    pub p2p_acknowledged: bool,
-    /// Subtitles in this language are selected when a playback starts.
-    pub subtitle_language: Option<Language>,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            p2p_enabled: true,
-            p2p_acknowledged: false,
-            subtitle_language: None,
-        }
-    }
-}
 
 /// A torrent the engine should serve, built from an addon's stream.
 #[derive(Debug, Clone, PartialEq, Eq)]

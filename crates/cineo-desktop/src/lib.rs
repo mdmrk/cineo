@@ -3,6 +3,7 @@
 mod app;
 mod images;
 pub mod player;
+pub mod settings;
 mod subtitles;
 mod theme;
 pub mod view;

@@ -5,7 +5,8 @@ use url::Url;
 use super::language::Language;
 use super::library::LibraryItem;
 use super::plan::{self, CatalogTarget};
-use super::torrent::{Settings, TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
+use super::settings::{Setting, Settings};
+use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
     ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, StreamSource,
     Subtitle, TransportUrl,
@@ -184,8 +185,9 @@ pub enum Action {
     DismissNotice,
     AcceptP2p,
     DeclineP2p,
-    SetP2pEnabled(bool),
-    SetSubtitleLanguage(Option<Language>),
+    ChangeSetting(Setting),
+    /// Back to the default settings.
+    ResetSettings,
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
@@ -459,18 +461,13 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.p2p_prompt = None;
             Vec::new()
         }
-        Action::SetP2pEnabled(enabled) => {
-            state.settings.p2p_enabled = enabled;
-            let mut effects = vec![Effect::SaveSettings(state.settings)];
-            if !enabled {
-                state.p2p_prompt = None;
-                effects.extend(stop_torrent(state));
-            }
-            effects
+        Action::ChangeSetting(setting) => {
+            state.settings.set(setting);
+            settings_changed(state)
         }
-        Action::SetSubtitleLanguage(language) => {
-            state.settings.subtitle_language = language;
-            vec![Effect::SaveSettings(state.settings)]
+        Action::ResetSettings => {
+            state.settings = state.settings.reset();
+            settings_changed(state)
         }
         Action::RemoveFromLibrary(id) => {
             state.library.retain(|i| i.id != id);
@@ -535,6 +532,15 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             }
         }
     }
+}
+
+fn settings_changed(state: &mut State) -> Vec<Effect> {
+    let mut effects = vec![Effect::SaveSettings(state.settings)];
+    if !state.settings.p2p_enabled {
+        state.p2p_prompt = None;
+        effects.extend(stop_torrent(state));
+    }
+    effects
 }
 
 fn stop_torrent(state: &mut State) -> Vec<Effect> {

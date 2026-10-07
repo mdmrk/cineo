@@ -9,7 +9,7 @@ use cineo_core::addon::{
     parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, Settings, State, TorrentRequest,
+    Action, Effect, Language, LibraryItem, Loadable, Setting, Settings, State, TorrentRequest,
     TorrentStatus, continue_watching, update,
 };
 
@@ -515,9 +515,8 @@ fn detail_with_p2p_accepted() -> State {
     update(
         &mut state,
         Action::RestoreSettings(Settings {
-            p2p_enabled: true,
             p2p_acknowledged: true,
-            subtitle_language: None,
+            ..Settings::default()
         }),
     );
     state
@@ -666,7 +665,10 @@ fn an_engine_failure_is_shown_and_stops_the_torrent() {
 fn turning_p2p_off_blocks_torrents_and_stops_a_running_one() {
     let mut state = detail_with_p2p_accepted();
     update(&mut state, PLAY_TORRENT);
-    let effects = update(&mut state, Action::SetP2pEnabled(false));
+    let effects = update(
+        &mut state,
+        Action::ChangeSetting(Setting::P2pEnabled(false)),
+    );
     let [Effect::SaveSettings(settings), Effect::StopTorrent] = effects.as_slice() else {
         panic!("{effects:?}");
     };
@@ -911,7 +913,10 @@ fn subtitle_request_without_hints_has_no_extras() {
 fn the_subtitle_language_is_saved_and_sent_with_the_play_request() {
     let mut state = detail_with_streams();
     let spanish = Language::from_code("spa");
-    let effects = update(&mut state, Action::SetSubtitleLanguage(spanish));
+    let effects = update(
+        &mut state,
+        Action::ChangeSetting(Setting::SubtitleLanguage(spanish)),
+    );
     assert!(
         matches!(effects.as_slice(), [Effect::SaveSettings(s)] if s.subtitle_language == spanish),
         "{effects:?}"
@@ -928,4 +933,20 @@ fn the_subtitle_language_is_saved_and_sent_with_the_play_request() {
         _ => None,
     });
     assert_eq!(play.and_then(|p| p.subtitle_language), spanish);
+}
+
+#[test]
+fn resetting_settings_restores_defaults_but_keeps_the_p2p_notice_accepted() {
+    let mut state = detail_with_p2p_accepted();
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::SubtitleLanguage(Language::from_code("spa"))),
+    );
+    let effects = update(&mut state, Action::ResetSettings);
+    let expected = Settings {
+        p2p_acknowledged: true,
+        ..Settings::default()
+    };
+    assert_eq!(effects, vec![Effect::SaveSettings(expected)]);
+    assert_eq!(state.settings, expected);
 }

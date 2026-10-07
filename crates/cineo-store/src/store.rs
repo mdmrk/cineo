@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
-use cineo_core::app::{Effect, Language, LibraryItem, Settings};
+use cineo_core::app::{Effect, LibraryItem, Setting, SettingError, Settings};
 use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use rusqlite::{Connection, ErrorCode, Row, params};
 use tracing::warn;
@@ -205,25 +205,10 @@ impl Store {
         })?;
         for row in rows {
             let (key, value) = row?;
-            if key == SUBTITLE_LANGUAGE {
-                settings.subtitle_language = Language::from_code(&value);
-                if settings.subtitle_language.is_none() && !value.is_empty() {
-                    warn!(key, "ignoring an unreadable setting");
-                }
-                continue;
-            }
-            let flag = match value.as_str() {
-                "true" => true,
-                "false" => false,
-                _ => {
-                    warn!(key, "ignoring an unreadable setting");
-                    continue;
-                }
-            };
-            match key.as_str() {
-                P2P_ENABLED => settings.p2p_enabled = flag,
-                P2P_ACKNOWLEDGED => settings.p2p_acknowledged = flag,
-                _ => {} // written by a newer version
+            match Setting::parse(&key, &value) {
+                Ok(setting) => settings.set(setting),
+                Err(SettingError::UnknownKey) => {} // written by a newer version
+                Err(_) => warn!(key, "ignoring an unreadable setting"),
             }
         }
         Ok(settings)
@@ -236,14 +221,9 @@ impl Store {
                 "INSERT INTO settings (key, value) VALUES (?1, ?2)
                  ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             )?;
-            for (key, flag) in [
-                (P2P_ENABLED, settings.p2p_enabled),
-                (P2P_ACKNOWLEDGED, settings.p2p_acknowledged),
-            ] {
-                upsert.execute(params![key, flag.to_string()])?;
+            for setting in settings.all() {
+                upsert.execute(params![setting.key(), setting.value()])?;
             }
-            let language = settings.subtitle_language.map_or("", |l| l.code);
-            upsert.execute(params![SUBTITLE_LANGUAGE, language])?;
         }
         tx.commit()?;
         Ok(())
@@ -262,10 +242,6 @@ impl Store {
         Ok(true)
     }
 }
-
-const P2P_ENABLED: &str = "p2p_enabled";
-const P2P_ACKNOWLEDGED: &str = "p2p_acknowledged";
-const SUBTITLE_LANGUAGE: &str = "subtitle_language";
 
 fn to_sql_int(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
