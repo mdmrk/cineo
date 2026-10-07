@@ -1978,6 +1978,7 @@ pub(crate) enum Icon {
     ChevronRight,
     ChevronDown,
     ArrowLeft,
+    Loader,
     Star,
     Alert,
     Play,
@@ -1988,7 +1989,7 @@ pub(crate) enum Icon {
 
 impl Icon {
     #[cfg(test)]
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 15] = [
         Self::Home,
         Self::Compass,
         Self::Search,
@@ -1999,6 +2000,7 @@ impl Icon {
         Self::ChevronRight,
         Self::ChevronDown,
         Self::ArrowLeft,
+        Self::Loader,
         Self::Star,
         Self::Alert,
         Self::Play,
@@ -2017,6 +2019,7 @@ impl Icon {
             Self::ChevronRight => "chevron-right",
             Self::ChevronDown => "chevron-down",
             Self::ArrowLeft => "arrow-left",
+            Self::Loader => "loader-2",
             Self::Star => "star",
             Self::Alert => "alert-circle",
             Self::Play => "player-play",
@@ -2186,34 +2189,33 @@ fn centered_spinner(ui: &mut Ui) {
     paint_spinner(ui, rect.center(), 24.0, theme::TEXT_DIM);
 }
 
-/// Paints a rotating arc, `size` points across and centered exactly at
-/// `center` (one turn per second), and keeps repainting while it is
-/// visible. Drawn as geometry: a font glyph's box is not centered on its
-/// shape, so a rotated glyph wobbles off-center.
+/// Paints the Tabler loader `size` points tall, turning about `center`
+/// once per second, and keeps repainting while it is visible. The pivot is
+/// the glyph's inked box, not its text box: a glyph's line box is not
+/// centered on its shape, so turning about it would wobble.
 pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32, color: Color32) {
     if !ui.is_rect_visible(Rect::from_center_size(center, Vec2::splat(size))) {
         return;
     }
-    let width = (size / 9.0).max(2.0);
-    let radius = (size - width) / 2.0;
+    let Some((glyph, family)) = Icon::Loader.glyph() else {
+        return;
+    };
+    let galley = ui
+        .painter()
+        .layout_no_wrap(glyph.to_string(), FontId::new(size, family), color);
+    let Some(pivot) = galley.rows.first().and_then(|row| {
+        let glyph = row.glyphs.first()?;
+        let ink = Rect::from_min_size(glyph.pos + glyph.uv_rect.offset, glyph.uv_rect.size);
+        Some(row.pos + ink.center().to_vec2())
+    }) else {
+        return;
+    };
     let turns = ui.input(|i| i.time).fract();
     #[expect(clippy::cast_possible_truncation, reason = "an angle in 0..2π")]
-    let start = (turns * std::f64::consts::TAU) as f32;
-    let sweep = std::f32::consts::TAU * 0.7;
-    const SEGMENTS: u16 = 32;
-    let points = (0..=SEGMENTS)
-        .map(|i| {
-            let angle = start + sweep * f32::from(i) / f32::from(SEGMENTS);
-            center + radius * Vec2::angled(angle)
-        })
-        .collect();
-    let painter = ui.painter();
-    painter.circle_stroke(
-        center,
-        radius,
-        Stroke::new(width, color.gamma_multiply(0.2)),
-    );
-    painter.add(egui::Shape::line(points, Stroke::new(width, color)));
+    let angle = (turns * std::f64::consts::TAU) as f32;
+    let pos = center - egui::emath::Rot2::from_angle(angle) * pivot.to_vec2();
+    ui.painter()
+        .add(egui::epaint::TextShape::new(pos, galley, color).with_angle(angle));
     ui.ctx().request_repaint();
 }
 
