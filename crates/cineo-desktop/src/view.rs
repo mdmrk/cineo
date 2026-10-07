@@ -1438,15 +1438,21 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
     }
 }
 
+/// A small boxed caps label, painted at its text's height so it never
+/// grows with the row around it. Accessible as a label.
 fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
-    Frame::new()
-        .fill(fill)
-        .stroke(stroke)
-        .corner_radius(CornerRadius::same(theme::RADIUS))
-        .inner_margin(Margin::symmetric(6, 1))
-        .show(ui, |ui| {
-            ui.label(caps(text, FontId::new(10.5, theme::section().family), ink));
-        });
+    let galley =
+        ui.painter()
+            .layout_job(caps(text, FontId::new(10.0, theme::section().family), ink));
+    let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(10.0, 2.0), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, galley.text()));
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter();
+        let radius = CornerRadius::same(theme::RADIUS);
+        painter.rect_filled(rect, radius, fill);
+        painter.rect_stroke(rect, radius, stroke, StrokeKind::Inside);
+        painter.galley(rect.center() - galley.size() / 2.0, galley, ink);
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
