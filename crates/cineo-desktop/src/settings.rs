@@ -12,8 +12,8 @@ use eframe::egui::{
 
 use crate::theme;
 use crate::view::{
-    Icon, P2P_NOTICE, ViewState, append_icon, caps, dim, lerp_color, page_margin, page_title,
-    paint_icon, primary, section,
+    Icon, P2P_NOTICE, ViewState, append_icon, compact, dim, lerp_color, page_title, paint_icon,
+    primary, section,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,8 +69,8 @@ const CONTROL_WIDTH: f32 = 220.0;
 pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let jump = view.settings_jump.take();
     let full = ui.available_rect_before_wrap();
-    let margin = page_margin(ui);
-    let show_nav = full.width() >= 900.0;
+    let margin = theme::PAGE_MARGIN;
+    let show_nav = !compact(ui.ctx());
     let nav = Rect::from_min_size(
         full.min + vec2(margin, margin),
         vec2(NAV_WIDTH, full.height() - margin),
@@ -435,7 +435,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     let family = match (s.subtitle_font, s.subtitle_bold) {
         (SubtitleFont::Sans, false) => FontFamily::Proportional,
         (SubtitleFont::Sans, true) => theme::strong_family(),
-        (SubtitleFont::Serif, _) => theme::display_family(),
+        (SubtitleFont::Serif, _) => theme::serif_family(),
         (SubtitleFont::Mono, _) => FontFamily::Monospace,
     };
     #[expect(clippy::cast_precision_loss, reason = "a percentage")]
@@ -935,22 +935,24 @@ fn nav_item(ui: &mut Ui, label: &str, selected: bool) -> Response {
     response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
-        if selected {
-            painter.rect_filled(
-                Rect::from_min_size(pos2(rect.min.x, rect.min.y + 6.0), vec2(3.0, 18.0)),
-                0.0,
-                theme::ACCENT,
-            );
+        if selected || response.hovered() {
+            let fill = if selected {
+                theme::SURFACE
+            } else {
+                theme::PANEL
+            };
+            painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
         }
         let color = if selected || response.hovered() {
             theme::TEXT_BRIGHT
         } else {
             theme::TEXT_DIM
         };
-        let galley = painter.layout_job(caps(label, theme::nav(), color));
-        painter.galley(
-            pos2(rect.min.x + 14.0, rect.center().y - galley.size().y / 2.0),
-            galley,
+        painter.text(
+            pos2(rect.min.x + 12.0, rect.center().y),
+            Align2::LEFT_CENTER,
+            label,
+            theme::nav(),
             color,
         );
     }

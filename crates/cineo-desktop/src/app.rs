@@ -22,6 +22,7 @@ use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
 use tracing::{debug, error, warn};
 
+use crate::brand;
 use crate::images::{self, NetImageLoader};
 use crate::player::{self, Controls, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
@@ -71,12 +72,16 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             ..EngineOptions::new(options.cache_dir)
         },
     };
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("Cineo")
+        .with_app_id("cineo")
+        .with_inner_size([1280.0, 800.0])
+        .with_min_inner_size([800.0, 500.0]);
+    if let Some(icon) = brand::icon() {
+        viewport = viewport.with_icon(icon);
+    }
     let native = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Cineo")
-            .with_app_id("cineo")
-            .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([800.0, 500.0]),
+        viewport,
         ..Default::default()
     };
     let handle = runtime.handle().clone();

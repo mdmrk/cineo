@@ -44,6 +44,11 @@ Research, crates.io 2026-10-06:
     Navigation is a left sidebar instead of a top bar; the home page is
     catalog rows only; the detail page keeps the backdrop hero. Bundled
     fonts are assets, not dependencies (LEGAL.md *Bundled assets*).
+  - Amended 2026-10-07: a quieter look. Cool slate grays with a green
+    accent, Inter only for the UI (DM Serif Display remains only for the
+    serif choice in the subtitle preview), sentence-case headings over a
+    thin rule, a filled pill for the selected navigation item, and
+    Cineo's logo over film grain at the top of the sidebar.
 - **State flow (ADR-0001).** The egui app owns the state. Each frame it
   drains a channel of IO results, applies them, and renders. User actions
   spawn IO on a tokio runtime owned by the app. Results come back through

@@ -65,6 +65,10 @@ unmodified and not sold on their own, as the OFL requires. Each license
 text ships next to its files and must accompany binary distributions.
 Added 2026-10-07.
 
+Cineo's logo and app icon (`crates/cineo-desktop/assets/brand/`) are the
+project's own artwork, supplied by the owner on 2026-10-07 and covered by
+the repository license.
+
 | Font | Files | Source | License |
 |------|-------|--------|---------|
 | Inter 4.1 (The Inter Project Authors) | `Inter-Regular.ttf`, `Inter-SemiBold.ttf` | <https://github.com/rsms/inter/releases/tag/v4.1> | SIL OFL 1.1 (`Inter-OFL.txt`) |

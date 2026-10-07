@@ -17,6 +17,7 @@ use eframe::egui::{
 };
 use url::Url;
 
+use crate::brand;
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
 
@@ -128,7 +129,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                     if let Some(detail) = &state.detail {
                         detail_page(ui, detail, state.settings.p2p_enabled, view, &mut out);
                     } else {
-                        ui.add_space(page_margin(ui));
+                        ui.add_space(theme::PAGE_MARGIN);
                         column(ui, |ui| match view.page {
                             Page::Board => board_page(ui, state, view, &mut out),
                             Page::Discover => discover_page(ui, state, &mut out),
@@ -138,7 +139,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                             Page::Settings => {}
                         });
                     }
-                    ui.add_space(page_margin(ui));
+                    ui.add_space(theme::PAGE_MARGIN);
                 });
         });
     out
@@ -212,7 +213,7 @@ fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>
 }
 
 fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    let compact = ui.ctx().content_rect().width() < theme::SIDEBAR_COMPACT_BELOW;
+    let compact = compact(ui.ctx());
     let width = if compact {
         theme::SIDEBAR_COMPACT_WIDTH
     } else {
@@ -234,8 +235,7 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 ui.max_rect().y_range().expand(14.0),
                 Stroke::new(1.0, theme::RULE),
             );
-            logo(ui, compact);
-            ui.add_space(18.0);
+            logo(ui, width);
             ui.spacing_mut().item_spacing.y = 2.0;
             for page in Page::ALL {
                 let selected = view.page == page && state.detail.is_none();
@@ -257,67 +257,81 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
         });
 }
 
-fn logo(ui: &mut Ui, compact: bool) {
-    ui.horizontal(|ui| {
-        if !compact {
-            ui.add_space(8.0);
-        }
-        let size = 22.0;
-        let slot = if compact {
-            vec2(ui.available_width(), 28.0)
-        } else {
-            vec2(size, 28.0)
-        };
-        let (slot, _) = ui.allocate_exact_size(slot, Sense::hover());
-        let c = slot.center();
-        let painter = ui.painter();
-        painter.circle_filled(c, size / 2.0, theme::ACCENT);
-        painter.circle_filled(c + vec2(4.5, 0.0), size * 0.3, theme::SIDEBAR);
-        painter.circle_filled(c + vec2(4.5, 0.0), 2.0, theme::ACCENT);
-        if !compact {
-            ui.add_space(2.0);
-            ui.label(
-                RichText::new("Cineo")
-                    .font(theme::logo())
-                    .color(theme::TEXT_BRIGHT),
-            );
-        }
-    });
+fn logo(ui: &mut Ui, sidebar_width: f32) {
+    let window = ui.ctx().content_rect();
+    let size = vec2(theme::LOGO_WIDTH, theme::LOGO_WIDTH * theme::LOGO_ASPECT);
+    let left = if sidebar_width < theme::SIDEBAR_WIDTH {
+        (sidebar_width - size.x) / 2.0
+    } else {
+        theme::LOGO_BLEED.x
+    };
+    let rect = Rect::from_min_size(window.min + vec2(left, theme::LOGO_BLEED.y), size);
+    let height = window.min.y + theme::NAV_TOP - ui.cursor().min.y;
+    let (_, response) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Image, true, "Cineo"));
+    let sidebar = Rect::from_min_max(window.min, pos2(window.min.x + sidebar_width, window.max.y));
+    let painter = ui
+        .ctx()
+        .layer_painter(ui.layer_id())
+        .with_clip_rect(sidebar);
+    let backdrop = Rect::from_min_size(
+        window.min,
+        vec2(theme::SIDEBAR_WIDTH, theme::NAV_TOP + theme::GRAIN_FADE),
+    );
+    let ppp = ui.ctx().pixels_per_point();
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a small positive size in pixels"
+    )]
+    let pixels = [
+        (backdrop.width() * ppp).round() as usize,
+        (backdrop.height() * ppp).round() as usize,
+    ];
+    let full = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+    painter.image(
+        brand::grain(ui.ctx(), pixels).id(),
+        backdrop,
+        full,
+        Color32::WHITE,
+    );
+    if let Some(texture) = brand::logo(ui.ctx()) {
+        painter.image(texture.id(), rect, full, theme::LOGO_TINT);
+    }
 }
 
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()
             .animate_bool_with_time(response.id, response.hovered(), theme::ANIM);
         let painter = ui.painter();
+        let radius = CornerRadius::same(theme::RADIUS);
         if selected {
-            painter.rect_filled(
-                Rect::from_min_size(pos2(rect.min.x - 10.0, rect.min.y + 6.0), vec2(3.0, 18.0)),
-                0.0,
-                theme::ACCENT,
-            );
+            painter.rect_filled(rect, radius, theme::SURFACE);
+        } else if hover > 0.0 {
+            painter.rect_filled(rect, radius, theme::PANEL.gamma_multiply(hover));
         }
         let color = if selected {
             theme::TEXT_BRIGHT
         } else {
             lerp_color(theme::TEXT_DIM, theme::TEXT_BRIGHT, hover)
         };
-        let icon_color = if selected { theme::ACCENT } else { color };
         let icon_center = if compact {
             rect.center()
         } else {
-            pos2(rect.min.x + 16.0, rect.center().y)
+            pos2(rect.min.x + 18.0, rect.center().y)
         };
-        paint_icon(painter, page.icon(), icon_center, 17.0, icon_color);
+        paint_icon(painter, page.icon(), icon_center, 18.0, color);
         if !compact {
-            let galley = painter.layout_job(caps(label, theme::nav(), color));
-            painter.galley(
-                pos2(rect.min.x + 34.0, rect.center().y - galley.size().y / 2.0),
-                galley,
+            painter.text(
+                pos2(rect.min.x + 36.0, rect.center().y),
+                Align2::LEFT_CENTER,
+                label,
+                theme::nav(),
                 color,
             );
         }
@@ -412,10 +426,10 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
         ui.add_space(theme::SECTION_GAP);
     }
     if state.installed.is_empty() {
-        page_title(ui, "The projector is warm.", Some("The reels are missing."));
+        page_title(ui, "Home", None);
         empty(
             ui,
-            "No addons installed. Open Addons and paste an addon's manifest URL.",
+            "No addons installed. Catalogs show up here once you add one by its manifest URL.",
         );
         if primary(ui, true, "Open Addons").clicked() {
             go(Page::Addons, state, view, out);
@@ -429,11 +443,7 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
 fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     let targets = board_targets(&state.addons);
     let discover = &state.discover;
-    page_title(
-        ui,
-        "Discover",
-        Some("Browse a catalog, narrow it by genre."),
-    );
+    page_title(ui, "Discover", None);
     if targets.is_empty() {
         empty(ui, "No installed addon has a browsable catalog.");
         return;
@@ -517,7 +527,7 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     let field = ui.add(
         TextEdit::singleline(&mut view.search_input)
             .id_salt("search")
-            .hint_text("A film, a series, a guilty pleasure…")
+            .hint_text("Search movies and series")
             .font(FontId::new(15.0, egui::FontFamily::Proportional))
             .margin(Margin {
                 left: 34,
@@ -571,7 +581,7 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     if state.search_query.is_empty() {
         empty(
             ui,
-            "Type a title. Every installed addon that supports search is asked.",
+            "Results come from every installed addon that supports search.",
         );
         return;
     }
@@ -584,24 +594,14 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
 }
 
 fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
-    page_title(
-        ui,
-        "Library",
-        Some("Everything you've pressed play on, most recent first."),
-    );
-    section(ui, "Your films", |ui| {
+    page_title(ui, "Library", None);
+    section(ui, "Recently played", |ui| {
         if !state.library.is_empty() {
-            ui.label(caps_text(
-                &count_label(state.library.len(), "film", "films"),
-                theme::TEXT_FAINT,
-            ));
+            ui.label(faint(&count_label(state.library.len(), "title", "titles")));
         }
     });
     if state.library.is_empty() {
-        empty(
-            ui,
-            "Items you play appear here. Every collection starts with a single film.",
-        );
+        empty(ui, "Anything you play shows up here.");
         return;
     }
     let mut items: Vec<&LibraryItem> = state.library.iter().collect();
@@ -614,10 +614,7 @@ fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                 ui.spacing_mut().item_spacing.y = 0.0;
                 library_card(ui, width, item, out);
                 if ui
-                    .add(
-                        Button::new(caps("Remove", theme::caption(), theme::TEXT_FAINT))
-                            .frame(false),
-                    )
+                    .add(Button::new(faint("Remove")).frame(false))
                     .on_hover_cursor(egui::CursorIcon::PointingHand)
                     .clicked()
                 {
@@ -632,7 +629,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     page_title(
         ui,
         "Addons",
-        Some("Where the films come from. Order matters: earlier addons win ties."),
+        Some("When two addons return the same item, the one higher in the list wins."),
     );
     section(ui, "Install an addon", |_| {});
     ui.horizontal(|ui| {
@@ -669,10 +666,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     let unavailable = state.unavailable_addons();
     section(ui, "Installed", |ui| {
         if count > 0 {
-            ui.label(caps_text(
-                &count_label(count, "addon", "addons"),
-                theme::TEXT_FAINT,
-            ));
+            ui.label(faint(&count_label(count, "addon", "addons")));
         }
     });
     if state.installed.is_empty() {
@@ -821,7 +815,7 @@ fn detail_page(
             true,
         );
     }
-    let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(84.0, 28.0));
+    let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(76.0, 30.0));
     if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
         out.push(Action::CloseDetail);
         view.season = None;
@@ -952,22 +946,21 @@ fn facts(preview: Option<&MetaPreview>, meta: Option<&Meta>) -> Option<LayoutJob
         return None;
     }
     let mut job = LayoutJob::default();
-    let caps_format = TextFormat {
-        font_id: theme::caption(),
-        color: theme::TEXT_FAINT,
-        extra_letter_spacing: theme::CAPS_SPACING,
+    let format = TextFormat {
+        font_id: theme::body(),
+        color: theme::TEXT_DIM,
         valign: Align::Center,
         ..TextFormat::default()
     };
     if let Some(runtime) = runtime {
-        job.append(&runtime.to_uppercase(), 0.0, caps_format.clone());
+        job.append(runtime, 0.0, format.clone());
     }
     if let Some(rating) = rating {
         if runtime.is_some() {
-            job.append("  ·  ", 0.0, caps_format.clone());
+            job.append("  ·  ", 0.0, format.clone());
         }
-        append_icon(&mut job, Icon::Star, 13.0, theme::ACCENT);
-        job.append(&format!(" {rating} IMDB"), 0.0, caps_format);
+        append_icon(&mut job, Icon::Star, 14.0, theme::ACCENT);
+        job.append(&format!(" {rating} IMDb"), 0.0, format);
     }
     Some(job)
 }
@@ -1028,11 +1021,7 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
             painter.rect_filled(rect, 0.0, theme::PANEL.gamma_multiply(hover));
         }
         if selected {
-            painter.rect_filled(
-                Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
-                0.0,
-                theme::ACCENT,
-            );
+            painter.rect_filled(rect, 0.0, theme::SURFACE);
         }
         let color = if selected {
             theme::TEXT_BRIGHT
@@ -1086,10 +1075,7 @@ fn stream_group(
         if let Loadable::Ready(streams) = &group.streams
             && !streams.is_empty()
         {
-            ui.label(caps_text(
-                &count_label(streams.len(), "stream", "streams"),
-                theme::TEXT_FAINT,
-            ));
+            ui.label(faint(&count_label(streams.len(), "stream", "streams")));
         }
     });
     match &group.streams {
@@ -1188,7 +1174,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
                                             title,
                                             &theme::strong(),
                                             theme::TEXT_BRIGHT,
-                                            theme::ACCENT,
+                                            theme::TEXT_DIM,
                                         ))
                                         .truncate(),
                                     );
@@ -1201,7 +1187,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
                                         name,
                                         &theme::caption(),
                                         theme::TEXT_DIM,
-                                        theme::ACCENT,
+                                        theme::TEXT_FAINT,
                                     ))
                                     .truncate(),
                                 );
@@ -1212,7 +1198,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
                                         line,
                                         &theme::caption(),
                                         theme::TEXT_DIM,
-                                        theme::ACCENT,
+                                        theme::TEXT_FAINT,
                                     ))
                                     .wrap(),
                                 );
@@ -1312,9 +1298,7 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
 }
 
 fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
-    let galley =
-        ui.painter()
-            .layout_job(caps(text, FontId::new(10.0, theme::section().family), ink));
+    let galley = ui.painter().layout_job(caps(text, theme::tag(), ink));
     let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(10.0, 2.0), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, galley.text()));
     if ui.is_rect_visible(rect) {
@@ -1377,17 +1361,13 @@ fn resolution(text: &str) -> Option<(&'static str, Tier)> {
     })
 }
 
-pub(crate) fn page_margin(ui: &Ui) -> f32 {
-    if ui.available_width() < 900.0 {
-        16.0
-    } else {
-        f32::from(theme::PAGE_MARGIN)
-    }
+pub(crate) fn compact(ctx: &egui::Context) -> bool {
+    ctx.content_rect().width() < theme::COMPACT_BELOW
 }
 
 fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     let available = ui.available_rect_before_wrap();
-    let margin = page_margin(ui);
+    let margin = theme::PAGE_MARGIN;
     let width = (available.width() - 2.0 * margin).clamp(0.0, theme::CONTENT_MAX_WIDTH);
     let left = available.min.x + (available.width() - width) / 2.0;
     let rect = Rect::from_min_max(
@@ -1415,12 +1395,16 @@ pub(crate) fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
 
 pub(crate) fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
-        ui.label(caps(title, theme::section(), theme::TEXT_DIM));
+        ui.label(
+            RichText::new(title)
+                .font(theme::section())
+                .color(theme::TEXT_BRIGHT),
+        );
         ui.with_layout(Layout::right_to_left(Align::Center), right);
     });
-    ui.add_space(-4.0);
+    ui.add_space(-2.0);
     rule(ui);
-    ui.add_space(4.0);
+    ui.add_space(8.0);
 }
 
 fn rule(ui: &mut Ui) {
@@ -1442,7 +1426,7 @@ fn catalog_row(
     section(ui, &row.target.title, |ui| {
         if let Some(view) = see_all
             && ui
-                .add(Button::new(caps("See all", theme::caption(), theme::ACCENT)).frame(false))
+                .add(Button::new(RichText::new("See all").color(theme::TEXT_DIM)).frame(false))
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
                 .clicked()
         {
@@ -1460,12 +1444,12 @@ fn catalog_row(
         }
         Loadable::Failed(err) => {
             ui.horizontal(|ui| {
-                ui.label(faint("This reel jammed:"));
+                ui.label(faint("Could not load:"));
                 ui.label(RichText::new(err).color(theme::DANGER));
             });
         }
         Loadable::Ready(items) if items.is_empty() => {
-            ui.label(faint("This reel is empty."));
+            ui.label(faint("Nothing in this catalog."));
         }
         Loadable::Ready(items) => {
             poster_strip(ui, salt, |ui| {
@@ -1513,7 +1497,13 @@ fn poster_strip(
                 add(ui);
             });
         });
-    let inner = output.inner_rect;
+    let inner = Rect::from_min_size(
+        output.inner_rect.min,
+        vec2(
+            output.inner_rect.width(),
+            output.content_size.y.min(output.inner_rect.height()),
+        ),
+    );
     let max_offset = (output.content_size.x - inner.width()).max(0.0);
     let offset = output.state.offset.x;
     let hovered = ui.rect_contains_pointer(inner);
@@ -1525,29 +1515,27 @@ fn poster_strip(
     }
     let page = inner.width() * 0.85;
     let y = inner.center().y;
-    if offset > 1.0 && pager(ui, pos2(inner.min.x + 22.0, y), false, shown).clicked() {
+    if offset > 1.0 && pager(ui, id, pos2(inner.min.x + 22.0, y), false, shown).clicked() {
         ui.data_mut(|d| d.insert_temp(id, page));
     }
-    if offset < max_offset - 1.0 && pager(ui, pos2(inner.max.x - 22.0, y), true, shown).clicked() {
+    if offset < max_offset - 1.0
+        && pager(ui, id, pos2(inner.max.x - 22.0, y), true, shown).clicked()
+    {
         ui.data_mut(|d| d.insert_temp(id, -page));
     }
 }
 
-fn pager(ui: &mut Ui, center: Pos2, right: bool, opacity: f32) -> Response {
+fn pager(ui: &mut Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> Response {
     let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
     let label = if right { "Scroll right" } else { "Scroll left" };
-    let response = ui.interact(rect, ui.id().with(label), Sense::click());
+    let response = ui.interact(rect, strip.with(label), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     let fill = if response.hovered() {
-        theme::ACCENT
+        theme::SURFACE_HOVER
     } else {
-        Color32::from_black_alpha(210)
+        Color32::from_black_alpha(200)
     };
-    let ink = if response.hovered() {
-        theme::ON_ACCENT
-    } else {
-        theme::TEXT_BRIGHT
-    };
+    let ink = theme::TEXT_BRIGHT;
     let painter = ui.painter();
     painter.rect_filled(
         rect,
@@ -1695,7 +1683,7 @@ fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
     } else {
         let font = FontId::new(
             (rect.width() / 7.0).clamp(14.0, 26.0),
-            theme::heading().family,
+            theme::strong_family(),
         );
         let mut job =
             LayoutJob::simple(name.to_owned(), font, theme::TEXT_DIM, rect.width() - 20.0);
@@ -1805,19 +1793,17 @@ fn hover_glow(ui: &Ui, response: &Response) {
 }
 
 fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
-    let ink = if selected {
-        theme::ON_ACCENT
-    } else {
-        theme::TEXT
-    };
-    let galley = ui.painter().layout_job(caps(text, theme::caption(), ink));
-    let size = galley.size() + vec2(22.0, 14.0);
+    let ink = if selected { theme::BG } else { theme::TEXT };
+    let galley = ui
+        .painter()
+        .layout_no_wrap(text.to_owned(), theme::body(), ink);
+    let size = galley.size() + vec2(24.0, 12.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
     response
         .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
         let fill = if selected {
-            theme::ACCENT
+            theme::TEXT_BRIGHT
         } else if response.hovered() {
             theme::SURFACE_HOVER
         } else {
@@ -1934,15 +1920,19 @@ impl Icon {
 }
 
 pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
-    if let Some((glyph, family)) = icon.glyph() {
-        painter.text(
-            c,
-            Align2::CENTER_CENTER,
-            glyph,
-            FontId::new(size, family),
-            color,
-        );
-    }
+    let Some((glyph, family)) = icon.glyph() else {
+        return;
+    };
+    let galley = painter.layout_no_wrap(glyph.to_string(), FontId::new(size, family), color);
+    let center = ink_center(&galley).unwrap_or_else(|| galley.rect.center());
+    painter.galley(c - center.to_vec2(), galley, color);
+}
+
+fn ink_center(galley: &egui::Galley) -> Option<Pos2> {
+    let row = galley.rows.first()?;
+    let glyph = row.glyphs.first()?;
+    let ink = Rect::from_min_size(glyph.pos + glyph.uv_rect.offset, glyph.uv_rect.size);
+    Some(row.pos + ink.center().to_vec2())
 }
 
 const EMOJI_ICONS: &[(char, &str)] = &[
@@ -2073,11 +2063,7 @@ pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32, color: Color32) {
     let galley = ui
         .painter()
         .layout_no_wrap(glyph.to_string(), FontId::new(size, family), color);
-    let Some(pivot) = galley.rows.first().and_then(|row| {
-        let glyph = row.glyphs.first()?;
-        let ink = Rect::from_min_size(glyph.pos + glyph.uv_rect.offset, glyph.uv_rect.size);
-        Some(row.pos + ink.center().to_vec2())
-    }) else {
+    let Some(pivot) = ink_center(&galley) else {
         return;
     };
     let turns = ui.input(|i| i.time).fract();
@@ -2099,7 +2085,7 @@ fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
         theme::SCRIM
     };
     painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-    let galley = painter.layout_job(caps(label, theme::caption(), theme::TEXT_BRIGHT));
+    let galley = painter.layout_no_wrap(label.to_owned(), theme::body(), theme::TEXT_BRIGHT);
     let content = 16.0 + 6.0 + galley.size().x;
     let left = rect.center().x - content / 2.0;
     paint_icon(
@@ -2117,7 +2103,7 @@ fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-pub(crate) fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
+fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.append(
         &text.to_uppercase(),
@@ -2130,10 +2116,6 @@ pub(crate) fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
         },
     );
     job
-}
-
-fn caps_text(text: &str, color: Color32) -> LayoutJob {
-    caps(text, theme::caption(), color)
 }
 
 pub(crate) fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
@@ -2242,6 +2224,33 @@ mod tests {
             uv,
             Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0))
         );
+    }
+
+    #[test]
+    fn icons_are_centered_by_their_visible_shape() {
+        let ctx = egui::Context::default();
+        theme::apply(&ctx);
+        let center = pos2(100.0, 100.0);
+        let mut text = None;
+        for _ in 0..2 {
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                paint_icon(
+                    ui.painter(),
+                    Icon::ChevronRight,
+                    center,
+                    22.0,
+                    Color32::WHITE,
+                );
+            });
+            output.textures_delta.clear();
+            text = output.shapes.into_iter().find_map(|c| match c.shape {
+                egui::Shape::Text(text) => Some(text),
+                _ => None,
+            });
+        }
+        let text = text.unwrap();
+        let ink = text.pos + ink_center(&text.galley).unwrap().to_vec2();
+        assert!(ink.distance(center) < 0.5, "{ink:?}");
     }
 
     #[test]

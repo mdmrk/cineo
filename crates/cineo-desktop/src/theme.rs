@@ -6,36 +6,43 @@ use eframe::egui::{
     TextStyle, Visuals,
 };
 
-pub(crate) const BG: Color32 = Color32::from_rgb(0x11, 0x10, 0x13);
-pub(crate) const SIDEBAR: Color32 = Color32::from_rgb(0x0b, 0x0b, 0x0d);
-pub(crate) const PANEL: Color32 = Color32::from_rgb(0x19, 0x18, 0x1c);
-pub(crate) const SURFACE: Color32 = Color32::from_rgb(0x26, 0x24, 0x2a);
-pub(crate) const SURFACE_HOVER: Color32 = Color32::from_rgb(0x34, 0x31, 0x39);
-pub(crate) const RULE: Color32 = Color32::from_rgb(0x2b, 0x29, 0x2f);
-pub(crate) const TEXT_BRIGHT: Color32 = Color32::from_rgb(0xf5, 0xf1, 0xea);
-pub(crate) const TEXT: Color32 = Color32::from_rgb(0xd6, 0xd0, 0xc7);
-pub(crate) const TEXT_DIM: Color32 = Color32::from_rgb(0x9a, 0x94, 0x8b);
-pub(crate) const TEXT_FAINT: Color32 = Color32::from_rgb(0x6b, 0x66, 0x5f);
-pub(crate) const ACCENT: Color32 = Color32::from_rgb(0xff, 0xb5, 0x47);
-pub(crate) const ACCENT_HOVER: Color32 = Color32::from_rgb(0xff, 0xc8, 0x73);
-pub(crate) const ON_ACCENT: Color32 = Color32::from_rgb(0x1c, 0x13, 0x05);
-pub(crate) const BACKDROP_TINT: Color32 = Color32::from_gray(140);
+pub(crate) const BG: Color32 = Color32::from_rgb(0x14, 0x18, 0x1d);
+pub(crate) const SIDEBAR: Color32 = Color32::from_rgb(0x10, 0x13, 0x17);
+pub(crate) const PANEL: Color32 = Color32::from_rgb(0x1b, 0x21, 0x28);
+pub(crate) const SURFACE: Color32 = Color32::from_rgb(0x25, 0x2d, 0x36);
+pub(crate) const SURFACE_HOVER: Color32 = Color32::from_rgb(0x31, 0x3b, 0x46);
+pub(crate) const RULE: Color32 = Color32::from_rgb(0x26, 0x2e, 0x37);
+pub(crate) const TEXT_BRIGHT: Color32 = Color32::from_rgb(0xf1, 0xf4, 0xf7);
+pub(crate) const TEXT: Color32 = Color32::from_rgb(0xc3, 0xcc, 0xd6);
+pub(crate) const TEXT_DIM: Color32 = Color32::from_rgb(0x8b, 0x98, 0xa8);
+pub(crate) const TEXT_FAINT: Color32 = Color32::from_rgb(0x60, 0x6c, 0x7b);
+pub(crate) const ACCENT: Color32 = Color32::from_rgb(0x34, 0xc7, 0x7b);
+pub(crate) const ACCENT_HOVER: Color32 = Color32::from_rgb(0x52, 0xd6, 0x91);
+pub(crate) const ON_ACCENT: Color32 = Color32::from_rgb(0x06, 0x18, 0x0e);
+pub(crate) const BACKDROP_TINT: Color32 = Color32::from_gray(150);
 pub(crate) const SCRIM: Color32 = Color32::from_black_alpha(170);
-pub(crate) const POSTER_EDGE: Color32 = Color32::from_rgba_premultiplied(22, 22, 22, 22);
-pub(crate) const DANGER: Color32 = Color32::from_rgb(0xff, 0x6b, 0x5e);
-pub(crate) const WARNING: Color32 = Color32::from_rgb(0xff, 0x91, 0x56);
-pub(crate) const SUCCESS: Color32 = Color32::from_rgb(0x8e, 0xd8, 0xa4);
+pub(crate) const POSTER_EDGE: Color32 = Color32::from_rgba_premultiplied(26, 26, 26, 26);
+pub(crate) const DANGER: Color32 = Color32::from_rgb(0xff, 0x6b, 0x6b);
+pub(crate) const WARNING: Color32 = Color32::from_rgb(0xf2, 0xa1, 0x4b);
+pub(crate) const SUCCESS: Color32 = Color32::from_rgb(0x7f, 0xdc, 0xa5);
 
-pub(crate) const RADIUS: u8 = 3;
-pub(crate) const POSTER_RADIUS: u8 = 3;
+pub(crate) const RADIUS: u8 = 4;
+pub(crate) const POSTER_RADIUS: u8 = 4;
 pub(crate) const GAP: f32 = 8.0;
-pub(crate) const SECTION_GAP: f32 = 22.0;
-pub(crate) const PAGE_MARGIN: i8 = 24;
+pub(crate) const SECTION_GAP: f32 = 26.0;
+pub(crate) const PAGE_MARGIN: f32 = 24.0;
 pub(crate) const CONTENT_MAX_WIDTH: f32 = 1440.0;
 
 pub(crate) const SIDEBAR_WIDTH: f32 = 176.0;
 pub(crate) const SIDEBAR_COMPACT_WIDTH: f32 = 56.0;
-pub(crate) const SIDEBAR_COMPACT_BELOW: f32 = 1000.0;
+pub(crate) const COMPACT_BELOW: f32 = 1000.0;
+
+pub(crate) const LOGO_WIDTH: f32 = 144.0;
+pub(crate) const LOGO_ASPECT: f32 = 360.0 / 304.0;
+pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-12.0, -10.0);
+pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
+pub(crate) const GRAIN_FADE: f32 = 40.0;
+pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(191, 191, 191, 217);
 
 pub(crate) const CARD_WIDTH: f32 = 116.0;
 pub(crate) const GRID_CARD_MIN: f32 = 104.0;
@@ -49,38 +56,38 @@ pub(crate) const ANIM: f32 = 0.0;
 
 pub(crate) const WHEEL_LINE_POINTS: f32 = 100.0;
 
-pub(crate) const CAPS_SPACING: f32 = 1.4;
+pub(crate) const CAPS_SPACING: f32 = 0.6;
 
 pub(crate) fn strong_family() -> FontFamily {
     FontFamily::Name("strong".into())
 }
 
-pub(crate) fn display_family() -> FontFamily {
-    FontFamily::Name("display".into())
+pub(crate) fn serif_family() -> FontFamily {
+    FontFamily::Name("serif".into())
 }
 
 pub(crate) fn title() -> FontId {
-    FontId::new(36.0, display_family())
+    FontId::new(32.0, strong_family())
 }
 
 pub(crate) fn title_year() -> FontId {
-    FontId::new(22.0, display_family())
+    FontId::new(22.0, FontFamily::Proportional)
 }
 
 pub(crate) fn heading() -> FontId {
-    FontId::new(28.0, display_family())
-}
-
-pub(crate) fn logo() -> FontId {
-    FontId::new(24.0, display_family())
+    FontId::new(24.0, strong_family())
 }
 
 pub(crate) fn section() -> FontId {
-    FontId::new(12.0, strong_family())
+    FontId::new(15.0, strong_family())
 }
 
 pub(crate) fn nav() -> FontId {
-    FontId::new(12.0, strong_family())
+    FontId::new(14.0, FontFamily::Proportional)
+}
+
+pub(crate) fn tag() -> FontId {
+    FontId::new(10.0, strong_family())
 }
 
 pub(crate) fn strong() -> FontId {
@@ -122,8 +129,8 @@ fn fonts() -> FontDefinitions {
     proportional.extend(fallback.iter().cloned());
     let mut strong = vec!["inter-semibold".to_owned()];
     strong.extend(proportional.iter().cloned());
-    let mut display = vec!["dm-serif-display".to_owned()];
-    display.extend(proportional.iter().cloned());
+    let mut serif = vec!["dm-serif-display".to_owned()];
+    serif.extend(proportional.iter().cloned());
     fonts
         .families
         .insert(FontFamily::Proportional, proportional);
@@ -134,12 +141,12 @@ fn fonts() -> FontDefinitions {
             FontData::from_static(font.bytes).into(),
         );
         let mut family = vec![font.family.to_owned()];
-        family.extend(display.iter().skip(1).cloned());
+        family.extend(serif.iter().skip(1).cloned());
         fonts
             .families
             .insert(FontFamily::Name(font.family.into()), family);
     }
-    fonts.families.insert(display_family(), display);
+    fonts.families.insert(serif_family(), serif);
     fonts
 }
 

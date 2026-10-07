@@ -182,6 +182,19 @@ Format:
 - Exit: when desktop packaging lands (M7), copy both `*-OFL.txt` files
   into every desktop archive or installer.
 
+### Desktop UI: no app icon on Wayland
+- Where: [brand.rs](../crates/cineo-desktop/src/brand.rs), `app::run`
+- Gap: the window icon is set through `ViewportBuilder::with_icon`.
+  Wayland has no protocol for an app to set its own window icon; the
+  compositor takes it from a `cineo.desktop` entry matching the `cineo`
+  app id. Nothing installs that entry yet, so on Wayland the taskbar shows
+  a generic icon (INFERRED from winit's platform notes; UNKNOWN on Windows
+  and macOS, which are untested).
+- Why: no desktop packaging yet.
+- Instead: X11 and the other platforms get the icon from the window.
+- Exit: when desktop packaging lands (M7), install `cineo.desktop` and the
+  icon under the hicolor theme.
+
 ### Desktop UI: rows scroll sideways only with Shift, a touchpad or arrows
 - Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`poster_strip`)
 - Gap: a plain mouse wheel over a poster row scrolls the page, not the row.

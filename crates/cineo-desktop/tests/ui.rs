@@ -10,10 +10,11 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, DownloadLimit, Effect, InterfaceScale, Language, SeekStep, Setting, Settings,
+    Action, DownloadLimit, Effect, InterfaceScale, Language, Loadable, SeekStep, Setting, Settings,
     StartPage, State, SubtitleColor, SubtitleSize, TorrentStatus, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
+use eframe::egui::accesskit::Role;
 use eframe::egui::{self, Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
@@ -134,10 +135,100 @@ fn empty_board_explains_how_to_add_addons() {
 }
 
 #[test]
+fn the_compact_sidebar_keeps_every_item_in_place() {
+    let place = |width: f32| {
+        let harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (State::default(), ViewState::default(), Vec::new()),
+        );
+        ["Home", "Settings"].map(|label| {
+            harness
+                .get_by_role_and_label(Role::Button, label)
+                .rect()
+                .min
+        })
+    };
+    assert_eq!(place(1280.0), place(900.0));
+}
+
+#[test]
+fn the_logo_keeps_its_size_and_height_and_is_cut_evenly_by_the_compact_sidebar() {
+    let logo = |width: f32| {
+        let mut harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (State::default(), ViewState::default(), Vec::new()),
+        );
+        harness.run();
+        harness
+            .output()
+            .shapes
+            .iter()
+            .rev()
+            .find_map(|clipped| match &clipped.shape {
+                egui::Shape::Mesh(mesh) if mesh.texture_id != egui::TextureId::default() => {
+                    Some((mesh.calc_bounds(), clipped.clip_rect))
+                }
+                _ => None,
+            })
+            .unwrap()
+    };
+    let ((wide, _), (compact, clip)) = (logo(1280.0), logo(900.0));
+    assert_eq!(wide.size(), compact.size());
+    assert_eq!(wide.y_range(), compact.y_range());
+    let compact_sidebar = 56.0;
+    assert!(
+        (compact.center().x - compact_sidebar / 2.0).abs() < 0.5,
+        "{compact:?}"
+    );
+    assert!(clip.right() <= compact_sidebar, "{clip:?}");
+}
+
+#[test]
+fn the_compact_sidebar_does_not_move_page_content_vertically() {
+    let top = |width: f32, page: Page| {
+        let harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (
+                State::default(),
+                ViewState {
+                    page,
+                    ..ViewState::default()
+                },
+                Vec::new(),
+            ),
+        );
+        harness
+            .get_by_role_and_label(Role::Label, page_title(page))
+            .rect()
+            .top()
+    };
+    for page in [Page::Board, Page::Addons, Page::Settings] {
+        assert_eq!(top(1280.0, page), top(900.0, page), "{page:?}");
+    }
+}
+
+fn page_title(page: Page) -> &'static str {
+    match page {
+        Page::Board => "Home",
+        Page::Addons => "Addons",
+        _ => "Settings",
+    }
+}
+
+#[test]
+fn the_sidebar_shows_the_logo() {
+    let harness = harness(State::default(), ViewState::default());
+    assert_eq!(
+        harness.get_by_label("Cineo").accesskit_node().role(),
+        Role::Image
+    );
+}
+
+#[test]
 fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
     let mut harness = harness(board_state(), ViewState::default());
-    harness.get_by_label("TOP MOVIES MOVIES");
-    harness.get_by_label("MULTI-GENRE SERIES");
+    harness.get_by_label("Top Movies Movies");
+    harness.get_by_label("Multi-genre Series");
     harness.get_by_label("HTTP status 500");
     harness.get_by_label("Second Example Film");
     harness.get_by_label("First Example Film").click();
@@ -453,7 +544,7 @@ fn narrow_windows_keep_an_icon_sidebar() {
 #[test]
 fn see_all_opens_the_row_in_discover() {
     let mut harness = harness(board_state(), ViewState::default());
-    harness.get_all_by_label("SEE ALL").next().unwrap().click();
+    harness.get_all_by_label("See all").next().unwrap().click();
     harness.run();
     assert_eq!(harness.state().1.page, Page::Discover);
     let actions = &harness.state().2;
@@ -519,7 +610,7 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
 }
 
 fn open_section(harness: &mut Harness<'_, Ui>, name: &str) {
-    harness.get_by_label(name).click();
+    harness.get_by_role_and_label(Role::Button, name).click();
     harness.run_steps(30);
     harness.run();
 }
@@ -560,7 +651,7 @@ fn the_settings_index_jumps_to_a_section() {
         );
     let about = |h: &Harness<'_, Ui>| h.get_by_label_contains("Made by people").rect().top();
     assert!(about(&harness) > 500.0, "About starts below the window");
-    harness.get_by_label("About").click();
+    harness.get_by_role_and_label(Role::Button, "About").click();
     harness.run_steps(30);
     harness.run();
     let top = about(&harness);
@@ -693,7 +784,10 @@ fn the_index_marks_the_last_sections_when_scrolled_to_the_end() {
     harness.run_steps(60);
     harness.run();
     let marked = |harness: &Harness<'_, Ui>, name: &str| {
-        harness.get_by_label(name).accesskit_node().toggled()
+        harness
+            .get_by_role_and_label(Role::Button, name)
+            .accesskit_node()
+            .toggled()
             == Some(egui::accesskit::Toggled::True)
     };
     assert!(
@@ -701,4 +795,32 @@ fn the_index_marks_the_last_sections_when_scrolled_to_the_end() {
         "the last section is marked at the end"
     );
     assert!(!marked(&harness, "Torrents"));
+}
+
+#[test]
+fn only_the_hovered_row_shows_its_arrows() {
+    let mut state = board_state();
+    let mut row = state.board[0].clone();
+    if let Loadable::Ready(items) = &mut row.items {
+        let first = items[0].clone();
+        items.extend(std::iter::repeat_n(first, 20));
+    }
+    state.board = vec![row.clone(), row];
+    let mut harness = harness(state, ViewState::default());
+    let second = harness
+        .get_all_by_label("Second Example Film")
+        .nth(1)
+        .unwrap()
+        .rect();
+    harness.hover_at(second.center());
+    harness.run();
+    let arrows: Vec<_> = harness
+        .query_all_by_label("Scroll right")
+        .map(|node| node.rect())
+        .collect();
+    assert_eq!(arrows.len(), 1);
+    assert!(
+        arrows[0].y_range().contains(second.center().y),
+        "{arrows:?}"
+    );
 }
