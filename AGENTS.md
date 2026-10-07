@@ -15,7 +15,7 @@ milestone table) and `docs/COMPATIBILITY.md`.
   `docs/ADDON_PROTOCOL.md`.
 - All HTTP goes through `cineo-net` and its `NetPolicy` (ADR-0006). The one
   exception is BitTorrent traffic inside `cineo-stream` (ADR-0012). The
-  player only receives typed commands (ADR-0004).
+  player only receives typed commands (ADR-0014).
 - The goal is Stremio-equivalent behavior, with no cloud sync for now.
   Non-URL stream sources go through our own `cineo-stream` engine, never
   Stremio's server (ADR-0010).

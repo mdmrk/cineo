@@ -1,6 +1,6 @@
 # 0004. mpv as an external process over JSON IPC
 
-- Status: Accepted
+- Status: Superseded by 0014
 - Date: 2026-10-06
 
 ## Context

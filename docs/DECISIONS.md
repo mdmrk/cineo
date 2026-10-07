@@ -20,7 +20,7 @@ old one *Superseded by NNNN*.
 | [0001](ADR/0001-functional-core-effects-as-data.md) | Functional core with effects as data | Accepted |
 | [0002](ADR/0002-workspace-and-crate-boundaries.md) | Minimal workspace; crates by IO boundary | Accepted |
 | [0003](ADR/0003-lenient-wire-strict-domain.md) | Lenient wire parsing, strict domain types | Accepted |
-| [0004](ADR/0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Accepted |
+| [0004](ADR/0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Superseded by 0014 |
 | [0005](ADR/0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
 | [0006](ADR/0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
 | [0007](ADR/0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
@@ -30,6 +30,7 @@ old one *Superseded by NNNN*.
 | [0011](ADR/0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 | [0012](ADR/0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted |
 | [0013](ADR/0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
+| [0014](ADR/0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted |
 
 ## What we took from the reference projects
 
