@@ -237,14 +237,21 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
             );
             logo(ui, width);
             ui.spacing_mut().item_spacing.y = 2.0;
-            for page in Page::ALL {
+            let mut item = |ui: &mut Ui, page: Page| {
                 let selected = view.page == page && state.detail.is_none();
                 if nav_item(ui, page, selected, compact).clicked() {
                     go(page, state, view, out);
                 }
+            };
+            for page in Page::ALL {
+                if page != Page::Settings {
+                    item(ui, page);
+                }
             }
-            if !state.addons_loading.is_empty() {
-                ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+            ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                item(ui, Page::Settings);
+                if !state.addons_loading.is_empty() {
+                    ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         ui.add_space(8.0);
                         spinner(ui);
@@ -252,8 +259,8 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                             ui.label(faint("Loading addons…"));
                         }
                     });
-                });
-            }
+                }
+            });
         });
 }
 

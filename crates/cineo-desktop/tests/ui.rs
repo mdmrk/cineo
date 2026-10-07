@@ -840,3 +840,14 @@ fn the_compact_settings_page_keeps_its_right_margin() {
     let right = 900.0 - harness.get_by_label("Interface size").rect().right();
     assert!(right >= left, "left {left}, right {right}");
 }
+
+#[test]
+fn settings_sits_at_the_bottom_of_the_sidebar() {
+    let harness = harness(State::default(), ViewState::default());
+    let settings = harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .rect();
+    let addons = harness.get_by_role_and_label(Role::Button, "Addons").rect();
+    assert!(settings.bottom() > 900.0 - 40.0, "{settings:?}");
+    assert!(settings.top() > addons.bottom() + 100.0, "{addons:?}");
+}
