@@ -256,3 +256,29 @@ async fn images_use_their_own_size_limit() {
         Err(FetchError::Blocked(_))
     ));
 }
+
+#[tokio::test]
+async fn subtitle_files_are_fetched_under_the_policy() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/file/1",
+        b"1\n00:00:00,000 --> 00:00:01,000\nHi\n".to_vec(),
+    )
+    .await;
+    let client = AddonClient::new(local_policy()).unwrap();
+    let url = url::Url::parse(&format!("{}/file/1", server.uri())).unwrap();
+    assert!(
+        client
+            .fetch_subtitle(&url)
+            .await
+            .unwrap()
+            .ends_with(b"Hi\n")
+    );
+
+    let blocked = AddonClient::new(NetPolicy::default()).unwrap();
+    assert!(matches!(
+        blocked.fetch_subtitle(&url).await,
+        Err(FetchError::Blocked(_))
+    ));
+}

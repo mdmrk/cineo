@@ -4,6 +4,7 @@
 mod ffi;
 mod render;
 
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
@@ -65,6 +66,8 @@ pub struct Track {
     pub title: Option<String>,
     pub lang: Option<String>,
     pub selected: bool,
+    /// The file an external track was loaded from (`external-filename`).
+    pub external_file: Option<String>,
 }
 
 /// A snapshot of the playback for the UI.
@@ -248,6 +251,18 @@ impl Player {
         self.finished.load(Ordering::SeqCst)
     }
 
+    /// Loads a subtitle file Cineo wrote and selects it. `title` and `lang`
+    /// are shown in the track list.
+    pub fn add_subtitle(&self, path: &Path, title: &str, lang: &str) -> Result<(), PlayerError> {
+        let args = sub_add_args(path, title, lang).ok_or_else(|| {
+            PlayerError::Libmpv("subtitle path is not an absolute UTF-8 path".into())
+        })?;
+        debug!("mpv sub-add");
+        self.core
+            .command_async(&args)
+            .map_err(|err| PlayerError::Libmpv(err.0))
+    }
+
     /// Sends `command` without waiting for it.
     pub fn send(&self, command: PlayerCommand) {
         let Some(args) = command_args(command) else {
@@ -259,6 +274,15 @@ impl Player {
             warn!(%err, ?command, "mpv command failed");
         }
     }
+}
+
+/// `sub-add` with `cached`: adding the same file again selects the loaded
+/// track. Only absolute local paths, so a value is never read as a protocol.
+fn sub_add_args<'a>(path: &'a Path, title: &'a str, lang: &'a str) -> Option<[&'a str; 5]> {
+    if !path.is_absolute() {
+        return None;
+    }
+    Some(["sub-add", path.to_str()?, "cached", title, lang])
 }
 
 fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
@@ -315,6 +339,7 @@ fn parse_tracks(json: &str) -> Vec<Track> {
                 title: text(item, "title"),
                 lang: text(item, "lang"),
                 selected: item.get("selected").and_then(Json::as_bool) == Some(true),
+                external_file: text(item, "external-filename"),
             })
         })
         .collect()

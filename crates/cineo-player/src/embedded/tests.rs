@@ -2,6 +2,7 @@
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
+use std::path::Path;
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 
@@ -86,7 +87,7 @@ fn track_list_is_parsed_leniently() {
             {"id":1,"type":"video","selected":true},
             {"id":1,"type":"audio","lang":"eng","title":"Commentary","selected":true},
             {"id":2,"type":"audio","lang":"  "},
-            {"id":1,"type":"sub","lang":"spa"},
+            {"id":1,"type":"sub","lang":"spa","external":true,"external-filename":"/c/subtitles/1"},
             {"type":"sub"},
             {"id":3,"type":"other"},
             "junk"
@@ -101,10 +102,12 @@ fn track_list_is_parsed_leniently() {
             title: Some("Commentary".into()),
             lang: Some("eng".into()),
             selected: true,
+            external_file: None,
         }
     );
     assert_eq!(tracks[2].lang, None, "blank text is no text");
     assert_eq!(tracks[3].kind, TrackKind::Subtitle);
+    assert_eq!(tracks[3].external_file.as_deref(), Some("/c/subtitles/1"));
     assert!(parse_tracks("not json").is_empty());
 }
 
@@ -287,4 +290,55 @@ fn real_libmpv_stop_before_the_file_loads_closes_the_player() {
             duration_ms: 0,
         })
     );
+}
+
+#[test]
+fn subtitle_files_are_added_as_one_argument_each() {
+    let args = sub_add_args(Path::new("/c/subtitles/1"), "English, [CC] ${path}", "eng").unwrap();
+    assert_eq!(
+        args,
+        [
+            "sub-add",
+            "/c/subtitles/1",
+            "cached",
+            "English, [CC] ${path}",
+            "eng"
+        ]
+    );
+    assert!(
+        sub_add_args(Path::new("http://evil/x"), "t", "eng").is_none(),
+        "only absolute local paths"
+    );
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_loads_a_subtitle_file_without_an_extension() {
+    let dir = std::env::temp_dir().join(format!("cineo-sub-test-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("1");
+    std::fs::write(&file, "1\n00:00:00,000 --> 00:00:05,000\nHello\n").unwrap();
+    let (url, _heads) = serve(wav(3));
+    let (player, _, _events) =
+        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while !player.status().loaded && std::time::Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    player.add_subtitle(&file, "Addon English", "eng").unwrap();
+    let path = file.to_str().unwrap();
+    let selected = loop {
+        let found = player.status().tracks.into_iter().find(|t| {
+            t.kind == TrackKind::Subtitle && t.selected && t.external_file.as_deref() == Some(path)
+        });
+        if found.is_some() || std::time::Instant::now() > deadline {
+            break found;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    };
+    let selected = selected.expect("the added subtitle is selected");
+    assert_eq!(selected.title.as_deref(), Some("Addon English"));
+    assert_eq!(selected.lang.as_deref(), Some("eng"));
+    drop(player);
+    let _ = std::fs::remove_dir_all(dir);
 }

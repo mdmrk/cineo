@@ -20,6 +20,7 @@ fn track(id: i64, kind: TrackKind, lang: &str, selected: bool) -> Track {
         title: None,
         lang: Some(lang.into()),
         selected,
+        external_file: None,
     }
 }
 

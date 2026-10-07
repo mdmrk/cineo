@@ -660,6 +660,7 @@ mod tests {
             title: title.map(str::to_owned),
             lang: lang.map(str::to_owned),
             selected: false,
+            external_file: None,
         };
         assert_eq!(
             track_label(&track(Some("eng"), Some("Commentary")), 1),

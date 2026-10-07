@@ -152,6 +152,15 @@ impl AddonClient {
             .await
     }
 
+    /// Fetches a subtitle file under the same network policy and body limit.
+    /// Returns the raw bytes; mpv parses them.
+    pub async fn fetch_subtitle(&self, url: &Url) -> Result<Vec<u8>, FetchError> {
+        let span = info_span!("subtitle_request", req = next_request_id(), origin = %origin(url));
+        self.get_limited(url.clone(), self.policy.max_body_bytes, "*/*")
+            .instrument(span)
+            .await
+    }
+
     async fn fetch_resource<T>(
         &self,
         addon: &TransportUrl,
