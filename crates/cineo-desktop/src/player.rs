@@ -64,7 +64,7 @@ pub fn show(
     }
 
     if !status.loaded || status.buffering {
-        paint_spinner(ui, rect.center(), 40.0);
+        paint_spinner(ui, rect.center(), 44.0, theme::TEXT_BRIGHT);
     }
 
     let idle = now - controls.last_activity;
@@ -86,7 +86,10 @@ pub fn show(
     }
 
     top_bar(ui, rect, title, &mut out);
-    bottom_bar(ui, rect, status, controls, &mut out);
+    // Position, volume and tracks mean nothing until the file has loaded.
+    if status.loaded {
+        bottom_bar(ui, rect, status, controls, &mut out);
+    }
     out
 }
 

@@ -50,7 +50,8 @@ fn harness(status: Status) -> Harness<'static, Screen> {
             },
             (status, Controls::default(), Vec::new()),
         );
-    harness.run();
+    // Fixed steps: a spinner repaints forever, so `run` would not settle.
+    harness.run_steps(2);
     harness
 }
 
@@ -152,4 +153,18 @@ fn controls_hide_while_playing_and_stay_while_paused() {
     let mut harness = self::harness(status());
     harness.run_steps(16);
     harness.get_by_label("Play");
+}
+
+#[test]
+fn before_the_file_loads_back_is_available_and_stops() {
+    // The screen shown while a torrent is still being prepared.
+    let mut harness = harness(Status::default());
+    harness.get_by_label("A Film");
+    assert!(
+        harness.query_by_label("Pause").is_none(),
+        "no playback controls yet"
+    );
+    harness.get_by_label("Back").click();
+    harness.run_steps(1);
+    assert_eq!(harness.state().2, vec![PlayerCommand::Stop]);
 }

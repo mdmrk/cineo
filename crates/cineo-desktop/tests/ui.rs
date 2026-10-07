@@ -285,7 +285,7 @@ fn the_first_torrent_play_shows_the_p2p_notice() {
 }
 
 #[test]
-fn a_streaming_torrent_shows_its_status() {
+fn a_streaming_torrent_shows_no_status_text() {
     let mut state = detail_state();
     update(&mut state, Action::AcceptP2p);
     update(
@@ -295,9 +295,6 @@ fn a_streaming_torrent_shows_its_status() {
             stream: 1,
         },
     );
-    let harness = harness(state.clone(), ViewState::default());
-    harness.get_by_label("Torrent: looking for peers…");
-
     update(
         &mut state,
         Action::TorrentStatus {
@@ -310,8 +307,9 @@ fn a_streaming_torrent_shows_its_status() {
             },
         },
     );
-    let harness = self::harness(state, ViewState::default());
-    harness.get_by_label("Torrent: 3 peers · 1.0 MiB/s · 50% of 2.0 GiB");
+    let harness = harness(state, ViewState::default());
+    assert!(harness.query_by_label_contains("Torrent:").is_none());
+    assert!(harness.query_by_label_contains("peers").is_none());
 }
 
 #[test]

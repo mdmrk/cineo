@@ -548,9 +548,11 @@ fn the_first_torrent_play_asks_for_p2p_consent_and_accepting_starts_the_engine()
         }
     );
     assert_eq!(state.p2p_prompt, None);
-    assert_eq!(
-        state.torrent.as_ref().unwrap().status,
-        TorrentStatus::Starting
+    let torrent = state.torrent.as_ref().unwrap();
+    assert_eq!(torrent.status, TorrentStatus::Starting);
+    assert!(
+        torrent.connecting_title().is_some(),
+        "the shell can show the player while the engine prepares the file"
     );
 }
 
@@ -594,6 +596,11 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
     assert_eq!(play.url, served);
     assert!(play.headers.is_empty());
     assert_eq!(play.meta_id, "tt0000001");
+    assert_eq!(
+        state.torrent.as_ref().unwrap().connecting_title(),
+        None,
+        "handed to the player"
+    );
 
     let status = TorrentStatus::Streaming {
         peers: 3,

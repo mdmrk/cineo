@@ -18,7 +18,7 @@ use cineo_core::app::{Action, Effect, PlayRequest, State, TorrentRequest, update
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
-use cineo_player::embedded::{Player, ProcAddress, Renderer, Video};
+use cineo_player::embedded::{Player, PlayerCommand, ProcAddress, Renderer, Status, Video};
 use cineo_store::Store;
 use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
@@ -161,6 +161,8 @@ pub(crate) struct CineoApp {
     /// Taken on exit so the store thread can finish its last writes.
     store_tx: Option<Sender<Effect>>,
     playback: Option<Box<Embedded>>,
+    /// The player screen's controls while a torrent is being prepared.
+    connecting_controls: Controls,
     /// The engine, once a torrent has been played.
     engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
     /// Bumped by every start or stop, so stale torrent work gives up.
@@ -189,6 +191,7 @@ impl CineoApp {
             results_rx,
             store_tx: Some(store_tx),
             playback: None,
+            connecting_controls: Controls::default(),
             engine: Arc::default(),
             torrent_generation: Arc::default(),
             torrent_task: None,
@@ -423,6 +426,39 @@ impl CineoApp {
         }
     }
 
+    /// While a torrent is prepared for playback, shows the player screen
+    /// with its spinner, so Play goes straight to the player. Back cancels.
+    fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
+        let Some(title) = self
+            .state
+            .torrent
+            .as_ref()
+            .and_then(|t| t.connecting_title())
+            .map(str::to_owned)
+        else {
+            return false;
+        };
+        let mut commands = Vec::new();
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(egui::Color32::BLACK))
+            .show(ui, |ui| {
+                let rect = ui.max_rect();
+                commands = player::show(
+                    ui,
+                    rect,
+                    &Status::default(),
+                    &title,
+                    &mut self.connecting_controls,
+                );
+            });
+        if commands.contains(&PlayerCommand::Stop) {
+            self.connecting_controls = Controls::default();
+            player::leave_fullscreen(&self.ctx);
+            self.dispatch(Action::PlaybackStopped);
+        }
+        true
+    }
+
     /// Draws the embedded player over the whole window. Returns `false`
     /// when there is none (or it just ended).
     fn show_player(&mut self, ui: &mut egui::Ui) -> bool {
@@ -519,7 +555,7 @@ impl eframe::App for CineoApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        if self.show_player(ui) {
+        if self.show_player(ui) || self.show_connecting(ui) {
             return;
         }
         for action in view::show(ui, &self.state, &mut self.view) {

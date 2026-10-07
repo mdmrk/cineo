@@ -69,9 +69,9 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 |---|----|--------|
 | T1 | Open the film; Play the torrent stream | The "Peer-to-peer streaming" notice; nothing appears in the cache directory yet |
 | T2 | Cancel | No playback, no engine log lines (`-v`) |
-| T3 | Play again → Accept and play | A bottom bar "Torrent: looking for peers…", then peers, speed and percent; mpv opens and plays |
+| T3 | Play again → Accept and play | The player opens at once with a centered spinner, Back and the title; the video starts once the engine serves the file |
 | T4 | Seek forward and back in mpv | Playback resumes within a few seconds |
-| T5 | Close mpv | The bottom bar disappears; the log shows the torrent stopped |
+| T5 | Back (or Esc) | The detail page returns; the log shows the torrent stopped. Back while still connecting cancels the torrent too |
 | T6 | Play it again | No notice this time; starts faster (data in the cache) |
 | T7 | Settings → untick "Show and play torrent streams"; open the film | The torrent stream is gone; "1 torrent stream hidden…" is shown |
 | T8 | Restart with the same directories | The setting is kept |

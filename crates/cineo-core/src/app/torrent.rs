@@ -177,6 +177,14 @@ pub struct TorrentPlayback {
     pub(crate) pending: Option<PlayRequest>,
 }
 
+impl TorrentPlayback {
+    /// The title of the playback while the engine is still preparing the
+    /// file; `None` once it has been handed to the player.
+    pub fn connecting_title(&self) -> Option<&str> {
+        self.pending.as_ref().map(|request| request.title.as_str())
+    }
+}
+
 /// Whether `url` is one the engine may hand to the player: `http` on a
 /// loopback address (SECURITY.md §Player).
 pub(crate) fn is_engine_url(url: &Url) -> bool {
