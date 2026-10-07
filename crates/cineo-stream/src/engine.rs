@@ -44,6 +44,9 @@ pub struct EngineOptions {
     pub metadata_timeout: Duration,
 }
 
+/// How long [`Engine::shutdown`] lets librqbit wind down after cancelling.
+const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
+
 impl EngineOptions {
     /// Defaults: 5 GiB cache, private networks blocked, DHT on, 60 s
     /// metadata timeout.
@@ -318,10 +321,16 @@ impl Engine {
         }
     }
 
-    /// Stops everything: the torrent, the session and the server.
+    /// Stops everything: the torrent, the session and the server. Returns
+    /// without librqbit's 1 s grace period.
     pub async fn shutdown(self) {
         self.stop().await;
-        self.session.stop().await;
+        // librqbit 9.0.1's `Session::stop` pauses the torrents and cancels
+        // the session's tasks right away, then sleeps a fixed second
+        // ("hopefully will be enough") for them to wind down. Nothing
+        // needs that at exit: written data is checked again on the next
+        // start. So it runs only long enough to cancel.
+        let _ = tokio::time::timeout(SESSION_STOP_GRACE, self.session.stop()).await;
         for task in &self.tasks {
             task.abort();
         }

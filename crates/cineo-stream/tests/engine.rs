@@ -305,3 +305,37 @@ async fn downloaded_data_is_stored_by_hash_and_file_index_only() {
         "{stored:?}"
     );
 }
+
+/// Regression: closing the app right after Play waited a fixed second in
+/// librqbit's `Session::stop` (a grace sleep after cancelling).
+#[tokio::test(flavor = "multi_thread")]
+async fn shutdown_while_waiting_for_metadata_is_quick() {
+    let options = EngineOptions {
+        dht: false,
+        metadata_timeout: Duration::from_secs(30),
+        ..EngineOptions::new(temp_dir("quick-shutdown-cache"))
+    };
+    let engine = std::sync::Arc::new(Engine::start(options).await.unwrap());
+    // Nobody seeds this hash: `open` waits for metadata.
+    let waiting = {
+        let engine = std::sync::Arc::clone(&engine);
+        tokio::spawn(async move {
+            let request = TorrentRequest {
+                info_hash: "0123456789abcdef0123456789abcdef01234567".into(),
+                file_idx: None,
+                filename: None,
+                trackers: Vec::new(),
+            };
+            let _ = engine.open(&request).await;
+        })
+    };
+    tokio::task::yield_now().await;
+    waiting.abort();
+    let _ = waiting.await;
+    let engine = std::sync::Arc::into_inner(engine).unwrap();
+
+    let started = std::time::Instant::now();
+    engine.shutdown().await;
+    let took = started.elapsed();
+    assert!(took < Duration::from_millis(500), "shutdown took {took:?}");
+}

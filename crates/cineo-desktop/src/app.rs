@@ -102,6 +102,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if writer.join().is_err() {
         error!("the store thread panicked");
     }
+    // Everything that must finish has: the store thread above, the engine
+    // in `on_exit`. Dropping the runtime would instead wait for every
+    // blocking task, such as a DNS lookup for a tracker.
+    runtime.shutdown_background();
     result.map_err(|err| anyhow::anyhow!("the window failed: {err}"))
 }
 
