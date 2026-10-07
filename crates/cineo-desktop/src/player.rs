@@ -10,6 +10,8 @@ use eframe::egui::{
     Response, RichText, Sense, Ui, UiBuilder, ViewportCommand, WidgetInfo, WidgetType, pos2, vec2,
 };
 
+use url::Url;
+
 use crate::theme;
 use crate::view::{IMAGE_FILTER, Icon, gradient, paint_icon, paint_spinner};
 
@@ -30,6 +32,32 @@ pub struct Controls {
     menu: Option<TrackKind>,
     seek_drag: Option<f64>,
     volume_drag: Option<f64>,
+    addon_request: Option<Url>,
+}
+
+impl Controls {
+    /// The addon subtitle the user picked since the last call, to fetch and
+    /// load.
+    pub fn take_addon_subtitle(&mut self) -> Option<Url> {
+        self.addon_request.take()
+    }
+}
+
+/// A subtitle from an addon, offered in the Subtitles menu. `selected` is
+/// true when its file is loaded and is the current track.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddonSubtitle {
+    pub url: Url,
+    pub lang: String,
+    pub label: Option<String>,
+    pub addon_name: String,
+    pub selected: bool,
+}
+
+enum Entry {
+    Track(Option<i64>),
+    Addon(Url),
+    Empty,
 }
 
 /// Draws the controls over `rect` (the video) and returns the commands to
@@ -40,6 +68,7 @@ pub fn show(
     status: &Status,
     title: &str,
     logo: Option<&str>,
+    addon_subtitles: &[AddonSubtitle],
     controls: &mut Controls,
 ) -> Vec<PlayerCommand> {
     let mut out = Vec::new();
@@ -84,7 +113,7 @@ pub fn show(
 
     top_bar(ui, rect, title, &mut out);
     if status.loaded {
-        bottom_bar(ui, rect, status, controls, &mut out);
+        bottom_bar(ui, rect, status, addon_subtitles, controls, &mut out);
     }
     out
 }
@@ -241,6 +270,7 @@ fn bottom_bar(
     ui: &mut Ui,
     rect: Rect,
     status: &Status,
+    addon_subtitles: &[AddonSubtitle],
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
@@ -352,10 +382,18 @@ fn bottom_bar(
     }
 
     match controls.menu {
-        Some(TrackKind::Audio) => track_menu(ui, audio, status, TrackKind::Audio, controls, out),
-        Some(TrackKind::Subtitle) => {
-            track_menu(ui, subtitles, status, TrackKind::Subtitle, controls, out);
+        Some(TrackKind::Audio) => {
+            track_menu(ui, audio, status, &[], TrackKind::Audio, controls, out);
         }
+        Some(TrackKind::Subtitle) => track_menu(
+            ui,
+            subtitles,
+            status,
+            addon_subtitles,
+            TrackKind::Subtitle,
+            controls,
+            out,
+        ),
         _ => {}
     }
 }
@@ -481,23 +519,37 @@ fn track_menu(
     ui: &mut Ui,
     anchor: Rect,
     status: &Status,
+    addon_subtitles: &[AddonSubtitle],
     kind: TrackKind,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
     let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
-    let mut entries: Vec<(Option<i64>, String, bool)> = Vec::new();
+    let mut entries: Vec<(Entry, String, bool)> = Vec::new();
     if kind == TrackKind::Subtitle {
-        entries.push((None, "Off".into(), !tracks.iter().any(|t| t.selected)));
+        entries.push((
+            Entry::Track(None),
+            "Off".into(),
+            !tracks.iter().any(|t| t.selected),
+        ));
     }
     entries.extend(
         tracks
             .iter()
+            .filter(|t| t.external_file.is_none())
             .enumerate()
-            .map(|(i, t)| (Some(t.id), track_label(t, i + 1), t.selected)),
+            .map(|(i, t)| (Entry::Track(Some(t.id)), track_label(t, i + 1), t.selected)),
     );
+    entries.extend(addon_subtitles.iter().map(|s| {
+        let source = s.label.as_deref().unwrap_or(&s.addon_name);
+        (
+            Entry::Addon(s.url.clone()),
+            plain_text(&format!("{} · {source}", s.lang)),
+            s.selected,
+        )
+    }));
     if entries.is_empty() {
-        entries.push((None, "No audio tracks".into(), false));
+        entries.push((Entry::Empty, "No audio tracks".into(), false));
     }
     let row = 30.0;
     let width = 240.0;
@@ -566,11 +618,17 @@ fn track_menu(
                                     theme::TEXT
                                 },
                             );
-                            if response.clicked() && (id.is_some() || kind == TrackKind::Subtitle) {
-                                out.push(match kind {
-                                    TrackKind::Subtitle => PlayerCommand::SetSubtitle(id),
-                                    _ => PlayerCommand::SetAudio(id),
-                                });
+                            if response.clicked() {
+                                match id {
+                                    Entry::Track(id) if kind == TrackKind::Subtitle => {
+                                        out.push(PlayerCommand::SetSubtitle(id));
+                                    }
+                                    Entry::Track(id @ Some(_)) => {
+                                        out.push(PlayerCommand::SetAudio(id));
+                                    }
+                                    Entry::Addon(url) => controls.addon_request = Some(url),
+                                    Entry::Track(None) | Entry::Empty => continue,
+                                }
                                 controls.menu = None;
                             }
                         }
@@ -587,9 +645,13 @@ fn track_label(track: &Track, number: usize) -> String {
     if parts.is_empty() {
         format!("Track {number}")
     } else {
-        let label = parts.join(" · ").replace(['\n', '\r'], " ");
-        label.chars().take(60).collect()
+        plain_text(&parts.join(" · "))
     }
+}
+
+/// One line, at most 60 characters: text from media files and addons.
+fn plain_text(text: &str) -> String {
+    text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }
 
 fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {

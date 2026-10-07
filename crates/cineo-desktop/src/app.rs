@@ -16,10 +16,11 @@ use cineo_player::embedded::{Player, PlayerCommand, ProcAddress, Renderer, Statu
 use cineo_store::Store;
 use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::images::NetImageLoader;
 use crate::player::{self, Controls};
+use crate::subtitles::SubtitleFiles;
 use crate::theme;
 use crate::view::{self, ViewState};
 
@@ -103,6 +104,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 pub(crate) enum Msg {
     Action(Action),
     Notice(String),
+    SubtitleFetched {
+        url: url::Url,
+        result: Result<Vec<u8>, String>,
+    },
 }
 
 pub(crate) struct Io {
@@ -121,6 +126,7 @@ struct Embedded {
     logo: Option<String>,
     controls: Controls,
     forward: Option<tokio::task::AbortHandle>,
+    subtitle_files: SubtitleFiles,
 }
 
 impl Drop for Embedded {
@@ -396,6 +402,71 @@ impl CineoApp {
             logo: request.logo.as_ref().map(ToString::to_string),
             controls: Controls::default(),
             forward: Some(forward.abort_handle()),
+            subtitle_files: SubtitleFiles::new(self.subtitle_dir()),
+        })
+    }
+
+    fn subtitle_dir(&self) -> PathBuf {
+        self.io.engine.cache_dir.join("subtitles")
+    }
+
+    fn load_addon_subtitle(&mut self, url: url::Url) {
+        let Some(embedded) = &self.playback else {
+            return;
+        };
+        let Some(subtitle) = self.find_subtitle(&url) else {
+            return;
+        };
+        if let Some(path) = embedded.subtitle_files.get(&url) {
+            if let Err(err) = embedded.player.add_subtitle(path, &subtitle.0, &subtitle.1) {
+                warn!(%err, "could not select the subtitle");
+            }
+            return;
+        }
+        let client = Arc::clone(&self.io.client);
+        let tx = self.results_tx.clone();
+        let ctx = self.ctx.clone();
+        self.io.runtime.spawn(async move {
+            let result = client.fetch_subtitle(&url).await.map_err(|e| e.to_string());
+            let _ = tx.send(Msg::SubtitleFetched { url, result });
+            ctx.request_repaint();
+        });
+    }
+
+    fn subtitle_fetched(&mut self, url: &url::Url, result: Result<Vec<u8>, String>) {
+        let Some((title, lang)) = self.find_subtitle(url) else {
+            return;
+        };
+        let Some(embedded) = &mut self.playback else {
+            return;
+        };
+        let loaded = result.and_then(|bytes| {
+            let path = embedded
+                .subtitle_files
+                .write(url, &bytes)
+                .map_err(|e| format!("cannot save it: {e}"))?;
+            embedded
+                .player
+                .add_subtitle(&path, &title, &lang)
+                .map_err(|e| e.to_string())
+        });
+        if let Err(err) = loaded {
+            warn!(%err, "addon subtitle failed");
+            self.state.notice = Some(format!("Could not load the subtitle: {err}"));
+        }
+    }
+
+    /// The menu title and language of an offered addon subtitle.
+    fn find_subtitle(&self, url: &url::Url) -> Option<(String, String)> {
+        self.state.subtitles.iter().find_map(|g| {
+            g.subtitles
+                .ready()?
+                .iter()
+                .find(|s| s.url == *url)
+                .map(|s| {
+                    let source = s.label.as_deref().unwrap_or(&g.addon_name);
+                    (source.to_owned(), s.lang.clone())
+                })
         })
     }
 
@@ -429,6 +500,7 @@ impl CineoApp {
                     &Status::default(),
                     &title,
                     logo.as_ref().map(url::Url::as_str),
+                    &[],
                     &mut self.connecting_controls,
                 );
             });
@@ -451,6 +523,9 @@ impl CineoApp {
             return false;
         }
         let status = embedded.player.status();
+        let addon_subtitles = embedded
+            .subtitle_files
+            .entries(&self.state.subtitles, &status.tracks);
         let renderer = Arc::clone(&embedded.renderer);
         let mut commands = Vec::new();
         egui::CentralPanel::default()
@@ -476,11 +551,15 @@ impl CineoApp {
                     &status,
                     &embedded.title,
                     embedded.logo.as_deref(),
+                    &addon_subtitles,
                     &mut embedded.controls,
                 );
             });
         for command in commands {
             embedded.player.send(command);
+        }
+        if let Some(url) = embedded.controls.take_addon_subtitle() {
+            self.load_addon_subtitle(url);
         }
         true
     }
@@ -533,6 +612,7 @@ impl eframe::App for CineoApp {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
                 Msg::Notice(notice) => self.state.notice = Some(notice),
+                Msg::SubtitleFetched { url, result } => self.subtitle_fetched(&url, result),
             }
         }
     }

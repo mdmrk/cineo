@@ -23,6 +23,20 @@ Format:
 
 ## Entries
 
+### Subtitles: no video hash or size from the player
+- Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`subtitle_groups`)
+- Gap: the `subtitles` request's `videoHash`, `videoSize` and `filename`
+  come only from the stream's `behaviorHints`. The reference client also
+  uses values its player reports (an OpenSubtitles hash from its streaming
+  server, the file size and name).
+- Why: computing the hash needs the first and last 64 KiB of the file
+  (from `cineo-stream` for torrents, or range requests for HTTP), which is
+  not built yet.
+- Instead: for streams without hints, subtitle addons are asked by video id
+  only, so hash-matched results (exact sync) are missing.
+- Exit: report the file size and name from the player or the engine, and
+  compute the OpenSubtitles hash in `cineo-stream`.
+
 ### Embedded player: no hardware-decoding interop display, subtitles under the controls
 - Where: [render.rs](../crates/cineo-player/src/embedded/render.rs),
   [player.rs](../crates/cineo-desktop/src/player.rs)

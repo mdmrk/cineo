@@ -41,8 +41,8 @@ _Last reviewed: 2026-10-06._
 | Stream response: `nzbUrl` + `servers` | Planned | M10, after archives (ADR-0010) |
 | Stream `behaviorHints.proxyHeaders` | Supported | Validated in the core and again by the player; sent via `http-header-fields` (`sends_typed_commands_and_reports_events`; real mpv delivered them to an HTTP server, 2026-10-06) |
 | Stream `behaviorHints.bingeGroup` | Planned | v0.x binge-watching |
-| Subtitles resource | Partial | Requested from every subtitles addon with the stream's `videoHash`/`videoSize`/`filename` hints (`playing_asks_subtitle_addons_with_the_stream_hints`); not yet loaded into the player (M6) |
-| Subtitles in stream objects | Partial | Parsed (`stream_sources_*`); loaded into the player in M6 |
+| Subtitles resource | Supported | Requested from every subtitles addon with the stream's `videoHash`/`videoSize`/`filename` hints (`playing_asks_subtitle_addons_with_the_stream_hints`); listed in the Subtitles menu and loaded into mpv when picked (`addon_subtitles_are_listed_and_requested`, `real_libmpv_loads_a_subtitle_file_without_an_extension`). Not yet checked against a live subtitles addon |
+| Subtitles in stream objects | Supported | Listed first in the Subtitles menu (`playing_asks_subtitle_addons_with_the_stream_hints`, `entries_list_each_url_once_and_mark_the_loaded_selected_one`) and loaded like addon subtitles |
 | `addon_catalog` resource | Planned | v0.x |
 | Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |
 | `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown as badges on the GUI Addons page (no UI test yet) |
@@ -61,7 +61,7 @@ _Last reviewed: 2026-10-06._
 | Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`) |
 | Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
 | Playback in the window (libmpv) | Partial | libmpv loaded at runtime (ADR-0014); without it, playback fails with a message. The external mpv player was removed 2026-10-07. Playback, headers, resume, stop (also before the file loads) and tracks against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07); controls (`crates/cineo-desktop/tests/player_ui.rs`); while the file loads, the meta `logo` pulses in the middle, or the title without one (`playing_an_http_stream_records_library_and_resumes`, `the_loading_art_pulses_between_faint_and_opaque`). Video in the window seen on Linux under Wayland and X11 (XWayland), 2026-10-07, with a test build, not yet through the full app ([manual test](DEVELOPMENT.md#manual-gui-test)). Windows and macOS: untested |
-| Audio and subtitle track selection | Partial | Embedded tracks: Audio and Subtitles menus in the embedded player (`track_menus_list_tracks_and_select_one`). Addon subtitles: M6 |
+| Audio and subtitle track selection | Partial | Embedded tracks: Audio and Subtitles menus in the embedded player (`track_menus_list_tracks_and_select_one`). Addon subtitles in the same menu (`addon_subtitles_are_listed_and_requested`). Language preference: M6 |
 | Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`; GUI Library page. Explicit "add to library" without playing: not yet |
 | Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`; GUI "Continue watching" row. The GUI turns mpv progress events into saved progress (INFERRED from code; covered by the manual test script, not yet run) |
 | Deep links (`cineo://`) | Planned | v0.x |

@@ -65,17 +65,30 @@ process and no IPC socket.
 | User mpv config/scripts changing behavior | Set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=auto-safe` (`vaapi,auto-safe` on Linux) before `mpv_initialize`; there is no IPC server (`cineo-player`, `embedded::OPTIONS`). Revisit if users want their own config. |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
 | Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only (`embedded::PlayerCommand`: pause, seek, volume, mute, track ids, stop), formatted from numbers by `cineo-player`. There is no "send arbitrary mpv command" path, unlike shell-ng. |
-| Track names from the media file | Shown as plain text, one line, at most 60 characters. |
+| Track names from the media file | Shown as plain text, one line, at most 60 characters. The same applies to addon subtitle languages and labels in the Subtitles menu. |
 | Loading a planted libmpv | libmpv is looked up next to the executable first, then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. On Windows the system search order applies to the bare names (UNKNOWN whether it should be restricted; review before the Windows release). |
 
 ### Subtitles
 
 Subtitle parsing and rendering is delegated to mpv/libass. Cineo does not
 parse subtitle formats itself (INFERRED: this reduces our attack surface; we
-rely on mpv updates). Subtitle URLs follow the same network policy and are
-fetched by mpv. Whether mpv applies our policy to them is **UNKNOWN**; this
-must be resolved in M6. One option is fetching them through `cineo-net` into
-a temp file.
+rely on mpv updates).
+
+mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
+- Cineo fetches it through `cineo-net` under the `NetPolicy` (scheme, public
+  addresses only unless private networks are allowed, redirect checks, the
+  body size cap) (`subtitle_files_are_fetched_under_the_policy`). It is
+  fetched only when picked, not for every listed subtitle.
+- The bytes go to a file in `<cache dir>/subtitles/`, named by a counter
+  (never by addon data). The directory is `0700` and the file `0600` on Unix
+  (`files_are_private_and_deleted_on_drop`).
+- mpv loads it with an argument-array `sub-add <absolute path> cached
+  <title> <lang>`. Only absolute local paths are accepted, so the value is
+  never read as a protocol (`subtitle_files_are_added_as_one_argument_each`).
+  `title` and `lang` come from the addon. They are single argv elements,
+  like the `loadfile` URL, and are only shown in the track list.
+- The files are deleted when the playback ends, and leftovers from a crash
+  are deleted when the next playback starts.
 
 ### Deep links (v0.x)
 

@@ -5,13 +5,13 @@
 // Test helpers panic on purpose: a panic is a failed assertion.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use cineo_desktop::player::{Controls, show};
+use cineo_desktop::player::{AddonSubtitle, Controls, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::Key;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
-type Screen = (Status, Controls, Vec<PlayerCommand>);
+type Screen = (Status, Controls, Vec<PlayerCommand>, Vec<AddonSubtitle>);
 
 fn track(id: i64, kind: TrackKind, lang: &str, selected: bool) -> Track {
     Track {
@@ -42,14 +42,18 @@ fn status() -> Status {
 }
 
 fn harness(status: Status) -> Harness<'static, Screen> {
+    harness_with(status, Vec::new())
+}
+
+fn harness_with(status: Status, addon: Vec<AddonSubtitle>) -> Harness<'static, Screen> {
     let mut harness = Harness::builder()
         .with_size([1280.0, 720.0])
         .build_ui_state(
-            |ui, (status, controls, out): &mut Screen| {
+            |ui, (status, controls, out, addon): &mut Screen| {
                 let rect = ui.max_rect();
-                out.extend(show(ui, rect, status, "A Film", None, controls));
+                out.extend(show(ui, rect, status, "A Film", None, addon, controls));
             },
-            (status, Controls::default(), Vec::new()),
+            (status, Controls::default(), Vec::new(), addon),
         );
     harness.run_steps(2);
     harness
@@ -181,4 +185,53 @@ fn long_track_menu_stays_on_screen() {
         off.top() >= 0.0,
         "the menu's first entry is visible: {off:?}"
     );
+}
+
+#[test]
+fn addon_subtitles_are_listed_and_requested() {
+    let mut status = status();
+    status.tracks.push(Track {
+        external_file: Some("/cache/subtitles/1".into()),
+        ..track(2, TrackKind::Subtitle, "spa", false)
+    });
+    let addon = vec![
+        AddonSubtitle {
+            url: "https://subs.example/en.srt".parse().unwrap(),
+            lang: "eng".into(),
+            label: None,
+            addon_name: "Subs Fixture".into(),
+            selected: false,
+        },
+        AddonSubtitle {
+            url: "https://subs.example/es.srt".parse().unwrap(),
+            lang: "spa".into(),
+            label: Some("Latino".into()),
+            addon_name: "Subs Fixture".into(),
+            selected: true,
+        },
+    ];
+    let mut harness = harness_with(status, addon);
+    harness.get_by_label("Subtitles").click();
+    harness.run();
+    harness.get_by_label("fra");
+    harness.get_by_label("spa · Latino");
+    assert!(
+        harness.query_by_label("spa").is_none(),
+        "loaded addon files are listed once, as addon entries"
+    );
+    harness.get_by_label("eng · Subs Fixture").click();
+    harness.run();
+    assert_eq!(
+        harness
+            .state_mut()
+            .1
+            .take_addon_subtitle()
+            .map(String::from),
+        Some("https://subs.example/en.srt".to_owned())
+    );
+    assert!(
+        harness.state().2.is_empty(),
+        "no mpv command until the file is fetched"
+    );
+    assert!(harness.query_by_label("Off").is_none(), "the menu closes");
 }
