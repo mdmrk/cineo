@@ -51,7 +51,6 @@ milestone table) and `docs/COMPATIBILITY.md`.
 - New dependency → `docs/DEVELOPMENT.md#dependencies` (+ `docs/LEGAL.md` for a new
   license).
 - Known limitation left in place → `docs/TECHNICAL_DEBT.md`.
-- User-visible change → `CHANGELOG.md` under *Unreleased*.
 
 ## Honesty rules
 - Label claims **VERIFIED** (tested or observed), **INFERRED** (reasoned) or

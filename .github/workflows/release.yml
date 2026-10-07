@@ -87,4 +87,4 @@ jobs:
           prerelease=""
           [[ "$TAG" == *-* ]] && prerelease="--prerelease"
           gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft $prerelease \
-            --title "$TAG" --notes "See CHANGELOG.md for changes. Verify downloads with SHA256SUMS and \`gh attestation verify\`."
+            --title "$TAG" --notes "Verify downloads with SHA256SUMS and \`gh attestation verify\`."

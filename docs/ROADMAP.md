@@ -186,7 +186,7 @@ flowchart LR
 ---
 
 Finished milestones (M0–M4) are summarized in the table above; what they
-delivered is in [CHANGELOG.md](../CHANGELOG.md) and the git history.
+delivered is in the git history.
 
 ### M5 — Desktop GUI
 - **Prerequisites:** M3, M4. UI technology: egui (ADR-0011).
