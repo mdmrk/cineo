@@ -372,6 +372,9 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 5. `cargo deny --config .config/deny.toml check` must pass. A new license needs a
    [LEGAL.md](LEGAL.md) note.
 
+Updates are manual (`cargo update`, then `scripts/check.sh`); there is
+no Dependabot, so no bot branches.
+
 Every direct dependency gets a row **when it is added**. Research
 snapshot: crates.io, 2026-10-06. Versions are the latest stable at that date.
 Re-check them when adding.
