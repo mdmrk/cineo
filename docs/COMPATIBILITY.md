@@ -88,4 +88,4 @@ Only list public addons, never configured URLs.
 | Addon | Manifest URL | Checked | Result |
 |-------|-------------|---------|--------|
 | Cinemeta | https://v3-cinemeta.strem.io/manifest.json | 2026-10-06 | Manifest: 0 warnings. Catalogs `movie/top` with `genre`, `series/top` with `search` OK (`cineo` CLI) |
-| OpenSubtitles v3 | https://opensubtitles-v3.strem.io/manifest.json | 2026-10-06 | Manifest: 0 warnings (subtitles resource not exercised yet) |
+| OpenSubtitles v3 | https://opensubtitles-v3.strem.io/manifest.json | 2026-10-07 | Manifest: 0 warnings (2026-10-06). `subtitles/movie/tt0111161/filename=….json` returned 39 subtitles with `id`, `url`, `lang` (ISO 639-2, including `ell` and the non-standard `pob`); file URLs have no extension (observed with curl, not yet through the app) |
