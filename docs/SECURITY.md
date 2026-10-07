@@ -62,7 +62,7 @@ process and no IPC socket.
 | Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv, plus loopback URLs issued by `cineo-stream` (ADR-0010). Local files are allowed only when the **user** picked them. |
 | Untrusted playlists | Do not enable `--load-unsafe-playlists`. |
 | `ytdl` hook running an external program on addon URLs | Set `ytdl=no` (and `load-scripts=no`). `ytId` support (v0.x) may enable it only for URLs Cineo builds from a validated YouTube id (`[A-Za-z0-9_-]{11}`), decided by its own ADR. |
-| User mpv config/scripts changing behavior | Set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=auto-safe` before `mpv_initialize`; there is no IPC server (`cineo-player`, `embedded::OPTIONS`). Revisit if users want their own config. |
+| User mpv config/scripts changing behavior | Set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=auto-safe` (`vaapi,auto-safe` on Linux) before `mpv_initialize`; there is no IPC server (`cineo-player`, `embedded::OPTIONS`). Revisit if users want their own config. |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
 | Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only (`embedded::PlayerCommand`: pause, seek, volume, mute, track ids, stop), formatted from numbers by `cineo-player`. There is no "send arbitrary mpv command" path, unlike shell-ng. |
 | Track names from the media file | Shown as plain text, one line, at most 60 characters. |

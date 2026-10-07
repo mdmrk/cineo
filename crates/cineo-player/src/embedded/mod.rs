@@ -114,6 +114,15 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 7] = [
     (TRACK_LIST, "track-list", ffi::FORMAT_STRING),
 ];
 
+/// Under OpenGL, mpv's `auto-safe` loads its CUDA interop before trying
+/// VA-API; without an NVIDIA driver, that prints "Cannot load libcuda.so.1"
+/// straight to stderr. Trying VA-API first avoids it; `auto-safe` stays the
+/// fallback.
+#[cfg(target_os = "linux")]
+const HWDEC: &str = "vaapi,auto-safe";
+#[cfg(not(target_os = "linux"))]
+const HWDEC: &str = "auto-safe";
+
 /// Options set before mpv initializes. No user config, scripts, ytdl,
 /// input bindings or on-screen display: Cineo draws its own controls.
 const OPTIONS: &[(&str, &str)] = &[
@@ -126,7 +135,7 @@ const OPTIONS: &[(&str, &str)] = &[
     ("input-vo-keyboard", "no"),
     ("osd-level", "0"),
     ("osd-bar", "no"),
-    ("hwdec", "auto-safe"),
+    ("hwdec", HWDEC),
     ("vo", "libmpv"),
     ("idle", "yes"),
     ("keep-open", "no"),
@@ -349,6 +358,16 @@ struct EventLoop {
     tracker: Tracker,
 }
 
+/// The `tracing` level for an mpv log level (only `warn` and worse are
+/// requested). mpv warnings are about the media, not Cineo, and some repeat
+/// on every frame, so they are info.
+fn log_level(mpv_level: &str) -> tracing::Level {
+    match mpv_level {
+        "fatal" | "error" => tracing::Level::ERROR,
+        _ => tracing::Level::INFO,
+    }
+}
+
 impl EventLoop {
     fn run(mut self) {
         let mut done = false;
@@ -361,9 +380,10 @@ impl EventLoop {
                     text,
                 } => {
                     let text = text.trim_end();
-                    match level.as_str() {
-                        "fatal" | "error" => error!(target: "libmpv", "[{prefix}] {text}"),
-                        _ => warn!(target: "libmpv", "[{prefix}] {text}"),
+                    if log_level(&level) == tracing::Level::ERROR {
+                        error!(target: "libmpv", "[{prefix}] {text}");
+                    } else {
+                        info!(target: "libmpv", "[{prefix}] {text}");
                     }
                     None
                 }

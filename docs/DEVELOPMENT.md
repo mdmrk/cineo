@@ -192,7 +192,9 @@ subsystem logs and how to diagnose it.
   `RUST_LOG=cineo_net=trace`. Logs go to **stderr**, so stdout stays
   machine-readable.
 - GUI: `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
-  `RUST_LOG` rules. A log file and a diagnostics view are not implemented
+  `RUST_LOG` rules. libmpv's own messages use the target `libmpv`: its
+  errors are always shown, its warnings (about the media, some on every
+  frame) only with `-v`. A log file and a diagnostics view are not implemented
   yet ([TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)).
 
 #### Span conventions

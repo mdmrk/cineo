@@ -27,6 +27,25 @@ fn request(url: &str) -> PlayRequest {
     }
 }
 
+/// Regression: `auto-safe` alone tried mpv's CUDA interop first under
+/// OpenGL; without an NVIDIA driver that printed "Cannot load
+/// libcuda.so.1" straight to stderr.
+#[test]
+#[cfg(target_os = "linux")]
+fn linux_tries_vaapi_before_the_other_hardware_decoders() {
+    let hwdec = OPTIONS.iter().find(|(name, _)| *name == "hwdec");
+    assert_eq!(hwdec, Some(&("hwdec", "vaapi,auto-safe")));
+}
+
+/// mpv warnings are about the media (for example a Dolby Vision warning on
+/// every frame), so they show with `-v`; errors always show.
+#[test]
+fn mpv_warnings_log_as_info_and_errors_as_errors() {
+    assert_eq!(log_level("fatal"), tracing::Level::ERROR);
+    assert_eq!(log_level("error"), tracing::Level::ERROR);
+    assert_eq!(log_level("warn"), tracing::Level::INFO);
+}
+
 #[test]
 fn commands_are_built_from_typed_values() {
     let args = |c| command_args(c).map(|v| v.join(" "));
