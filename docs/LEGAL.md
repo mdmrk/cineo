@@ -128,4 +128,4 @@ caching or export feature must be reviewed against provider terms.
 
 ## Fixtures
 Test fixtures are written by contributors. See
-`tests/fixtures/addons/README.md` for the provenance rules.
+`tests/addons/README.md` for the provenance rules.

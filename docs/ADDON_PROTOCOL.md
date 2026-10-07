@@ -238,6 +238,6 @@ See [SECURITY.md](SECURITY.md). In short:
 
 Steps:
 1. Document the behavior here with a source label.
-2. Add a fixture under `tests/fixtures/addons/`.
+2. Add a fixture under `tests/addons/`.
 3. Add a test that names the behavior.
 4. Update COMPATIBILITY.md.

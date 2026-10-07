@@ -81,7 +81,7 @@ updated `Cargo.lock`.
   across modules.
 - Async only in IO crates and shells (tokio). `cineo-core` stays sync and
   pure.
-- Tests: behavior-named, fixtures from `tests/fixtures/`, no network, no
+- Tests: behavior-named, fixtures from `tests/`, no network, no
   sleeps ([Testing](#testing)).
 
 ### Documentation
@@ -131,7 +131,7 @@ first test needs it.
 | Layer | Where | Tools | Runs in CI |
 |-------|-------|-------|-----------|
 | Unit | `#[cfg(test)] mod tests` next to the code | std test harness | always |
-| Protocol fixtures | `crates/cineo-core/tests/` + `tests/fixtures/addons/` | JSON fixtures | always |
+| Protocol fixtures | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures | always |
 | Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`, chosen in M1) | always |
 | Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always (M4+) |
 | Player | `crates/cineo-player/src/` (unit tests) | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |

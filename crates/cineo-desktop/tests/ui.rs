@@ -20,10 +20,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
 fn fixture(rel: &str) -> Vec<u8> {
-    let full = format!(
-        "{}/../../tests/fixtures/addons/{rel}",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let full = format!("{}/../../tests/addons/{rel}", env!("CARGO_MANIFEST_DIR"));
     std::fs::read(&full).unwrap_or_else(|err| panic!("reading {full}: {err}"))
 }
 

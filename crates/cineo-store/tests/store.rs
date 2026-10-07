@@ -16,7 +16,7 @@ use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
 
 fn fixture(rel: &str) -> Vec<u8> {
-    let full = format!("{}/../../tests/fixtures/{rel}", env!("CARGO_MANIFEST_DIR"));
+    let full = format!("{}/../../tests/{rel}", env!("CARGO_MANIFEST_DIR"));
     std::fs::read(&full).unwrap_or_else(|err| panic!("reading {full}: {err}"))
 }
 

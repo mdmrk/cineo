@@ -1,4 +1,4 @@
-//! Protocol behavior pinned against the fixtures in `tests/fixtures/addons`.
+//! Protocol behavior pinned against the fixtures in `tests/addons`.
 //! Each test names the documented behavior it protects
 //! (`docs/ADDON_PROTOCOL.md`).
 
@@ -12,10 +12,7 @@ use cineo_core::addon::{
 };
 
 fn fixture(path: &str) -> Vec<u8> {
-    let full = format!(
-        "{}/../../tests/fixtures/addons/{path}",
-        env!("CARGO_MANIFEST_DIR")
-    );
+    let full = format!("{}/../../tests/addons/{path}", env!("CARGO_MANIFEST_DIR"));
     std::fs::read(&full).unwrap_or_else(|err| panic!("reading {full}: {err}"))
 }
 

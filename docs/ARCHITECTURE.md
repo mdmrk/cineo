@@ -121,7 +121,7 @@ library items, progress). The core defines what is stored: the
 `SaveAddons`, `SaveLibraryItem` and `DeleteLibraryItem` effects, which
 `Store::apply` executes. The store defines how: one SQLite file, the schema
 version in `PRAGMA user_version`, append-only migrations run in one
-transaction, and a fixture per released schema (`tests/fixtures/store/`).
+transaction, and a fixture per released schema (`tests/store/`).
 The API is blocking; async shells call it off the runtime's worker threads.
 Implemented in M4.
 Secrets (future account tokens) go to the OS keyring, never to SQLite.
