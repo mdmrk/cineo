@@ -295,6 +295,8 @@ on **Linux and Windows**, and record the date, OS and result in
 
 - Build: `cargo build -p cineo-desktop --release`. libmpv (mpv 0.35 or
   newer) must be installed for playback.
+  Release builds strip symbols, so their panic backtraces show addresses
+  only; reproduce with a debug build to get function names.
 - Use a throwaway data directory: `--data-dir <tmp>`.
 - A stream addon that returns direct `http(s)` URLs. Without one, use this
   local addon (only for testing; the video must be a file you may use):

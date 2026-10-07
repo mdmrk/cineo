@@ -79,7 +79,7 @@ match_same_arms = "warn"
 [profile.release]
 lto = "thin"
 codegen-units = 1
-strip = "debuginfo"
+strip = "symbols"
 
 # Dependencies (image decoding, BitTorrent, SQLite) are slow unoptimized;
 # workspace crates stay at opt-level 0 so rebuilds remain fast.
