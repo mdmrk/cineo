@@ -7,6 +7,9 @@ use std::time::Duration;
 
 use super::*;
 
+/// Tests run without a window or sound card.
+const AUDIO_ONLY: &[(&str, &str)] = &[("ao", "null"), ("vo", "null")];
+
 fn request(url: &str) -> PlayRequest {
     PlayRequest {
         url: url.parse().unwrap(),
@@ -94,7 +97,8 @@ fn track_list_is_parsed_leniently() {
 
 #[test]
 fn non_http_urls_are_refused_before_loading_libmpv() {
-    let err = Player::start(&request("file:///etc/passwd"), Arc::new(|| {})).unwrap_err();
+    let err =
+        Player::start_with(&request("file:///etc/passwd"), Arc::new(|| {}), None, &[]).unwrap_err();
     assert!(err.to_string().contains("only http(s)"), "{err}");
 }
 
@@ -148,8 +152,8 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
 #[ignore = "needs libmpv"]
 fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
     let (url, heads) = serve(wav(1));
-    let (player, mut events) =
-        Player::start_with(&request(&url), Arc::new(|| {}), &[("ao", "null")]).unwrap();
+    let (player, _, mut events) =
+        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
 
     let head = heads.recv_timeout(Duration::from_secs(10)).unwrap();
     assert!(
@@ -214,8 +218,8 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
     let (url, _heads) = serve(wav(60));
     let mut req = request(&url);
     req.start_ms = 2_000;
-    let (player, mut events) =
-        Player::start_with(&req, Arc::new(|| {}), &[("ao", "null")]).unwrap();
+    let (player, _, mut events) =
+        Player::start_with(&req, Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
     let last = next_end(&mut events, &player);
     let Some(PlayerEvent::Closed {
         time_ms,

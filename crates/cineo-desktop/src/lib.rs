@@ -6,6 +6,7 @@
 
 mod app;
 mod images;
+pub mod player;
 mod theme;
 pub mod view;
 

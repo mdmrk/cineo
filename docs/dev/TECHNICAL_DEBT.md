@@ -23,6 +23,34 @@ Format:
 
 ## Entries
 
+### Embedded player: no hardware-decoding interop display, subtitles under the controls
+- Where: [render.rs](../../crates/cineo-player-mpv/src/embedded/render.rs),
+  [player.rs](../../crates/cineo-desktop/src/player.rs)
+- Gap: the render context gets no `X11_DISPLAY`/`WL_DISPLAY` parameter, so
+  mpv may not use zero-copy hardware decoding (VA-API interop). Subtitles
+  stay at their position while the controls are shown and can sit under
+  the bottom bar.
+- Why: passing the display needs the window's raw display handle from
+  eframe; moving subtitles needs a `sub-margin-y` change tied to the
+  controls' visibility. Both were left out of the first slice.
+- Instead: mpv decodes with a copy-back or software path (UNKNOWN which on a
+  given machine); subtitles can be covered for up to 2.5 s after input.
+- Exit: pass the raw display handle at render-context creation; adjust
+  `sub-margin-y` when the controls show and hide.
+
+### Embedded player: GL thread assumption, Windows and macOS untested
+- Where: [app.rs](../../crates/cineo-desktop/src/app.rs)
+- Gap: the renderer is created and freed inside eframe's `logic`/`ui`/
+  `on_exit`, which assumes the window's GL context is current there
+  (INFERRED from eframe's single-window glow integration). On Linux, a test
+  build that created it at startup and freed it in `ui` worked under
+  Wayland and X11 (VERIFIED 2026-10-07); the full app path is not yet
+  exercised. Windows and macOS have never run embedded playback.
+- Why: no Windows or macOS machine in the loop yet.
+- Instead: on Linux it works; elsewhere behavior is UNKNOWN.
+  `--external-player` is the escape hatch.
+- Exit: run the manual test on Windows and macOS (M7).
+
 ### Streaming engine: UDP trackers and the DHT bypass the address filter
 - Where: [engine.rs](../../crates/cineo-stream/src/engine.rs)
 - Gap: a UDP tracker given by host name may resolve to a private address

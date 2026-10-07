@@ -30,6 +30,20 @@ pub fn available() -> Result<(), String> {
     ffi::lib().map(|_| ())
 }
 
+/// The host window's OpenGL access, for drawing the video.
+pub struct Video {
+    /// Resolves OpenGL functions in the window's context.
+    pub get_proc_address: ProcAddress,
+    /// Schedules a repaint of the window.
+    pub on_frame: OnFrame,
+}
+
+impl std::fmt::Debug for Video {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Video").finish_non_exhaustive()
+    }
+}
+
 /// What the UI can ask of a running playback.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[non_exhaustive]
@@ -152,21 +166,28 @@ impl Drop for Player {
 }
 
 impl Player {
-    /// Starts playing `request`. Events arrive on the returned channel.
-    /// `notify` is called (from another thread) whenever [`Self::status`]
-    /// changes.
+    /// Starts playing `request` with its video drawn by the returned
+    /// [`Renderer`]. Events arrive on the returned channel. `notify` is
+    /// called (from another thread) whenever [`Self::status`] changes.
+    ///
+    /// Call it on the thread whose OpenGL context `video` belongs to, with
+    /// that context current (see [`Renderer`]).
     pub fn start(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
-    ) -> Result<(Self, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
-        Self::start_with(request, notify, &[])
+        video: Video,
+    ) -> Result<(Self, Renderer, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
+        let (player, renderer, events) = Self::start_with(request, notify, Some(video), &[])?;
+        let renderer = renderer.ok_or_else(|| PlayerError::Render("no renderer".into()))?;
+        Ok((player, renderer, events))
     }
 
     fn start_with(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
+        video: Option<Video>,
         extra_options: &[(&str, &str)],
-    ) -> Result<(Self, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
+    ) -> Result<(Self, Option<Renderer>, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
         if !matches!(request.url.scheme(), "http" | "https") {
             return Err(PlayerError::UnsupportedScheme(
                 request.url.scheme().to_owned(),
@@ -184,6 +205,11 @@ impl Player {
         for (id, name, format) in OBSERVED {
             core.observe(id, name, format).map_err(fail)?;
         }
+        // The render context must exist before a file loads, or mpv finds
+        // no video output and plays audio only (VERIFIED with mpv 0.41).
+        let renderer = video
+            .map(|video| Renderer::new(Arc::clone(&core), video.get_proc_address, video.on_frame))
+            .transpose()?;
         for (name, value) in &request.headers {
             if is_header_safe(name, value) {
                 // `append` adds exactly one item: no list parsing of the value.
@@ -224,6 +250,7 @@ impl Player {
                 status,
                 finished,
             },
+            renderer,
             rx,
         ))
     }
@@ -251,16 +278,6 @@ impl Player {
         if let Err(err) = self.core.command_async(&args) {
             warn!(%err, ?command, "mpv command failed");
         }
-    }
-
-    /// Creates the OpenGL renderer for this playback. See [`Renderer`] for
-    /// the thread contract.
-    pub fn renderer(
-        &self,
-        get_proc_address: ProcAddress,
-        on_frame: OnFrame,
-    ) -> Result<Renderer, PlayerError> {
-        Renderer::new(Arc::clone(&self.core), get_proc_address, on_frame)
     }
 }
 

@@ -99,17 +99,24 @@ response.
 All HTTP goes through `cineo-net`'s `AddonClient`, which enforces `NetPolicy`
 ([SECURITY.md](SECURITY.md)). The core only builds `Url`s; it never fetches.
 
-### Player boundary (ADR-0004)
+### Player boundary (ADR-0014)
 
-The player is a separate **mpv process** controlled over its JSON IPC socket.
-The core defines the vocabulary:
+The core's `Effect::Play(PlayRequest)` starts playback. `cineo-player-mpv`
+plays it one of two ways:
 
-- `PlayerCommand`: `Load{url, headers, subtitles}`, `Pause`, `Seek`,
-  `SetSubtitleTrack`, …
-- `PlayerEvent`: `TimeChanged`, `DurationKnown`, `Ended`, `Error`, `TracksChanged`.
+- **Embedded** (`embedded::Player`): libmpv, loaded at runtime, draws into
+  the desktop window through the OpenGL render API. The desktop shell draws
+  the video in an egui paint callback over the whole window and its own
+  controls on top (`cineo-desktop/src/player.rs`). The controls send typed
+  `PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
+  feeds them.
+- **External** (ADR-0004): a separate mpv process over JSON IPC. It is used
+  when libmpv or OpenGL is unavailable, or with `--external-player`.
 
-`cineo-player-mpv` translates these to mpv commands. Shells never send raw mpv
-commands or options. Untrusted strings never become mpv options.
+Both report the same `PlayerEvent`s (`Progress`, `Ended`, `Failed`,
+`Closed`) through one shared state machine (`tracker`), which the shell
+turns into core actions. Shells never send raw mpv commands or options.
+Untrusted strings never become mpv options.
 
 ### Persistence boundary
 

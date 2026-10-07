@@ -63,7 +63,7 @@ delivered is in [CHANGELOG.md](../CHANGELOG.md) and the git history.
 - **Prerequisites:** M5.
 - **Deliverables:**
   - Installers (AppImage or Flatpak, MSI).
-  - Bundling or locating mpv.
+  - Bundling or locating libmpv (embedded, ADR-0014) and mpv (fallback).
   - The release workflow producing GUI artifacts.
   - A signing plan.
 - **Acceptance:** a tagged pre-release installs and runs on clean machines.

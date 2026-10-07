@@ -99,8 +99,6 @@ as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
 
 ### Future research (not committed)
 
-- **Embedded video.** libmpv rendering inside the app window instead of a
-  separate mpv window.
 - Casting (Chromecast, DLNA), and Android, iOS, TV and web/WASM targets.
 - Live TV EPG (`epgProvider`, scheduled videos). This is needed for full
   parity, so it is scheduled after v1.0.

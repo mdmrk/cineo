@@ -18,7 +18,7 @@ first test needs it.
 | Protocol fixtures | `crates/cineo-core/tests/` + `tests/fixtures/addons/` | JSON fixtures | always |
 | Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`, chosen in M1) | always |
 | Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always (M4+) |
-| Player | `crates/cineo-player-mpv/tests/` | fake IPC server for unit tests; real mpv tests marked `#[ignore]` | fake: always; real: nightly/manual |
+| Player | `crates/cineo-player-mpv/tests/`, `src/embedded/tests.rs` | fake IPC server for unit tests; real mpv and libmpv tests marked `#[ignore]` (`cargo test -p cineo-player-mpv -- --ignored`) | fake: always; real: nightly/manual |
 | E2E | `crates/cineo-cli/tests/` | built binary (`CARGO_BIN_EXE_cineo`) + mock addon | always |
 | Live addons | `scripts/` (manual) | real public addons | never in CI (flaky, external) |
 

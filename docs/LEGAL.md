@@ -50,10 +50,15 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   allowlist.
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.
-- Copyleft libraries (for example LGPL libmpv) are **not linked**. mpv runs as
-  a separate program (ADR-0004). Bundling an mpv binary in installers (M7)
-  must comply with mpv's license (GPL-2.0+ or LGPL-2.1+ depending on the
-  build). This needs a review before the first installer.
+- libmpv (LGPL-2.1+ or GPL-2.0+, depending on the build) is **not linked**.
+  Cineo loads it at runtime with `libloading` when it is present (ADR-0014)
+  and otherwise runs mpv as a separate program (ADR-0004). Our bindings are
+  written from mpv's ISC-licensed headers (`client.h`, `render.h`,
+  `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
+  not use the LGPL `libmpv2` crates. Bundling libmpv or mpv in installers
+  (M7) must comply with its license: ship it as a separate, replaceable
+  shared library or program, with its notices and source offer. This needs
+  a review before the first installer.
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),

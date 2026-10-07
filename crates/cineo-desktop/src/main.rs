@@ -26,6 +26,9 @@ struct Cli {
     /// Path to the mpv executable (default: `mpv` on PATH).
     #[arg(long, value_name = "PATH")]
     mpv: Option<PathBuf>,
+    /// Play in a separate mpv window instead of inside Cineo's window.
+    #[arg(long)]
+    external_player: bool,
 }
 
 fn main() -> ExitCode {
@@ -65,5 +68,6 @@ fn start(cli: Cli) -> anyhow::Result<()> {
         cache_dir,
         allow_private_network: cli.allow_private_network,
         mpv: cli.mpv,
+        external_player: cli.external_player,
     })
 }

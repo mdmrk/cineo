@@ -60,9 +60,9 @@ _Last reviewed: 2026-10-06._
 | Search across addons | Supported | `search_asks_only_catalogs_that_support_search`; GUI search page |
 | Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`) |
 | Stream list aggregated across addons | Supported | `meta_falls_back_*`, partial failure kept per addon |
-| Playback via external mpv | Supported | `cineo-player-mpv` tests (fake IPC peer); IPC commands verified against real mpv 0.41 on Linux, headless, 2026-10-06. Windows named pipe: untested |
-| Embedded playback in the window | Planned | Future (libmpv render API) |
-| Audio and subtitle track selection | Partial | mpv's own on-screen controls (embedded tracks). Addon subtitles: M6 |
+| Playback via external mpv | Supported | Fallback when libmpv is unavailable, or with `--external-player`. `cineo-player-mpv` tests (fake IPC peer); IPC commands verified against real mpv 0.41 on Linux, headless, 2026-10-06. Windows named pipe: untested |
+| Embedded playback in the window | Partial | libmpv loaded at runtime (ADR-0014). Playback, headers, resume, stop and tracks against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07); controls (`crates/cineo-desktop/tests/player_ui.rs`). Video in the window seen on Linux under Wayland and X11 (XWayland), 2026-10-07, with a test build, not yet through the full app ([manual test](dev/GUI_MANUAL_TEST.md)). Windows and macOS: untested |
+| Audio and subtitle track selection | Partial | Embedded tracks: Audio and Subtitles menus in the embedded player (`track_menus_list_tracks_and_select_one`); mpv's own controls in the external player. Addon subtitles: M6 |
 | Library | Supported | Items are recorded on play and persisted (`library_items_upsert_and_delete`); CLI `library --all`; GUI Library page. Explicit "add to library" without playing: not yet |
 | Watch progress / continue watching | Supported | Survives restarts and resumes at the saved position (`continue_watching_resumes_at_the_saved_position_after_restart`); CLI `library`; GUI "Continue watching" row. The GUI turns mpv progress events into saved progress (INFERRED from code; covered by the manual test script, not yet run) |
 | Deep links (`cineo://`) | Planned | v0.x |

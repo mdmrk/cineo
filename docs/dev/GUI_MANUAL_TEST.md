@@ -8,8 +8,9 @@ on **Linux and Windows**, and record the date, OS and result in
 
 ## Setup
 
-- Build: `cargo build -p cineo-desktop --release`. mpv must be on `PATH`
-  (or pass `--mpv <path>`).
+- Build: `cargo build -p cineo-desktop --release`. libmpv (mpv 0.35 or
+  newer) must be installed for playback in the window. Without it, or with
+  `--external-player`, mpv must be on `PATH` (or pass `--mpv <path>`).
 - Use a throwaway data directory: `--data-dir <tmp>`.
 - A stream addon that returns direct `http(s)` URLs. Without one, use this
   local addon (only for testing; the video must be a file you may use):

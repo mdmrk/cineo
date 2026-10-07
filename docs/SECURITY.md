@@ -51,18 +51,24 @@ These are all treated as hostile:
 | Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. Fuzzing is planned for the parsers (TESTING.md). |
 | Credential leakage | Transport URLs with userinfo are rejected. Logs and errors include only the origin and resource path, never full addon URLs. Error messages from the HTTP stack are scrubbed of URLs. |
 
-### Player (`cineo-player-mpv`, M3)
+### Player (`cineo-player-mpv`, M3; embedded since ADR-0014)
+
+Playback runs in libmpv inside the Cineo window when libmpv loads, and in an
+external mpv process otherwise (or with `--external-player`). Both follow the
+controls below.
 
 | Risk | Control |
 |------|---------|
-| Option injection via the URL (`--script=…`) | Load media through the IPC `loadfile` command with a JSON array argument. Never build command lines from addon data. Never use `mpv_command_string`-style string commands. The title goes through the `force-media-title` property, not the `--title` option (which expands `${…}`). Resuming uses a `seek` after `file-loaded`. |
+| Option injection via the URL (`--script=…`) | Load media with `loadfile` as an argument array: a JSON array over IPC, `mpv_command` (argv) in libmpv. Never build command lines from addon data. Never use `mpv_command_string`-style string commands. Embedded headers are added one at a time with `change-list http-header-fields append`, so a value is never parsed as a list (VERIFIED: a value with a comma arrives intact, `real_libmpv_plays_to_the_end_with_headers_and_tracks`). The title goes through the `force-media-title` property, not the `--title` option (which expands `${…}`). Resuming uses a `seek` after `file-loaded`. |
 | Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv, plus loopback URLs issued by `cineo-stream` (ADR-0010). Local files are allowed only when the **user** picked them. |
 | Untrusted playlists | Do not enable `--load-unsafe-playlists`. |
 | `ytdl` hook running an external program on addon URLs | Start mpv with `--ytdl=no`. `ytId` support (v0.x) may enable it only for URLs Cineo builds from a validated YouTube id (`[A-Za-z0-9_-]{11}`), decided by its own ADR. |
-| User mpv config/scripts changing behavior | Start mpv with `--no-config --ytdl=no --idle=once --terminal=no --hwdec=auto-safe` (implemented in `cineo-player-mpv`). Revisit if users want their own config. |
+| User mpv config/scripts changing behavior | External: start mpv with `--no-config --ytdl=no --idle=once --terminal=no --hwdec=auto-safe`. Embedded: set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=auto-safe` before `mpv_initialize`; there is no IPC server. Both in `cineo-player-mpv`. Revisit if users want their own config. |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
-| IPC socket hijack | The mpv manual states that IPC is not secure. The socket lives in `$XDG_RUNTIME_DIR/cineo-<pid>/` (or the temp dir), created with mode `0700`. Its name is `mpv-<pid>-<nanos>`, which is unique but **not** cryptographically random. The directory permissions are the protection. Windows named pipes use the same name scheme and default pipe ACLs (UNKNOWN whether those are sufficient; review before the Windows release). |
-| Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only. There is no "send arbitrary mpv command" path, unlike shell-ng. |
+| IPC socket hijack (external player only) | The mpv manual states that IPC is not secure. The socket lives in `$XDG_RUNTIME_DIR/cineo-<pid>/` (or the temp dir), created with mode `0700`. Its name is `mpv-<pid>-<nanos>`, which is unique but **not** cryptographically random. The directory permissions are the protection. Windows named pipes use the same name scheme and default pipe ACLs (UNKNOWN whether those are sufficient; review before the Windows release). |
+| Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only (`embedded::PlayerCommand`: pause, seek, volume, mute, track ids, stop), formatted from numbers by `cineo-player-mpv`. There is no "send arbitrary mpv command" path, unlike shell-ng. |
+| Track names from the media file | Shown as plain text, one line, at most 60 characters. |
+| Loading a planted libmpv | libmpv is looked up next to the executable first, then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. On Windows the system search order applies to the bare names (UNKNOWN whether it should be restricted; review before the Windows release). |
 
 ### Subtitles
 
@@ -152,15 +158,19 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Max decoded body | 8 MiB |
 | Request timeout / connect timeout | 20 s / 10 s |
 | Max redirects | 5, no https→http |
-| mpv | `--no-config --ytdl=no`, IPC `loadfile` only, http(s) only |
+| mpv | No user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; embedded when libmpv loads |
 
 ## Unsafe code
 
 `unsafe_code = "forbid"` workspace-wide. A crate that genuinely needs FFI
-(for example a future libmpv embedding) must:
+must:
 1. Lift the lint for that crate only.
 2. Justify it in an ADR.
 3. Document every `unsafe` block with a `// SAFETY:` comment.
+
+The one exception so far is `cineo-player-mpv` (ADR-0014): its own lint
+table sets `unsafe_code = "deny"`, and only the modules `embedded::ffi`
+(libmpv bindings) and `embedded::render` (the OpenGL renderer) allow it.
 
 ## Reporting a vulnerability
 

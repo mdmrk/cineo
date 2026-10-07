@@ -1910,7 +1910,7 @@ fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
 
 /// Paints a gradient over `rect` from `from` at its min edge to `to` at its
 /// max edge: left to right if `horizontal`, else top to bottom.
-fn gradient(ui: &Ui, rect: Rect, from: Color32, to: Color32, horizontal: bool) {
+pub(crate) fn gradient(ui: &Ui, rect: Rect, from: Color32, to: Color32, horizontal: bool) {
     let (tl, tr, br, bl) = if horizontal {
         (from, to, to, from)
     } else {
@@ -2053,7 +2053,7 @@ fn tags(ui: &mut Ui, items: &[String]) {
 
 /// The icons in use, drawn from the Tabler set (via `iconflow`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Icon {
+pub(crate) enum Icon {
     Home,
     Compass,
     Search,
@@ -2068,13 +2068,14 @@ enum Icon {
     Star,
     Alert,
     Play,
+    Pause,
     /// Any other Tabler icon, by name (the emoji stand-ins).
     Named(&'static str),
 }
 
 impl Icon {
     #[cfg(test)]
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 15] = [
         Self::Home,
         Self::Compass,
         Self::Search,
@@ -2089,6 +2090,7 @@ impl Icon {
         Self::Star,
         Self::Alert,
         Self::Play,
+        Self::Pause,
     ];
 
     fn name(self) -> &'static str {
@@ -2107,16 +2109,17 @@ impl Icon {
             Self::Star => "star",
             Self::Alert => "alert-circle",
             Self::Play => "player-play",
+            Self::Pause => "player-pause",
             Self::Named(name) => name,
         }
     }
 
     /// The glyph and the font family that draws it.
-    fn glyph(self) -> Option<(char, egui::FontFamily)> {
+    pub(crate) fn glyph(self) -> Option<(char, egui::FontFamily)> {
         let icon = iconflow::try_icon(
             iconflow::Pack::Tabler,
             self.name(),
-            if matches!(self, Self::Star | Self::Play) {
+            if matches!(self, Self::Star | Self::Play | Self::Pause) {
                 iconflow::Style::Filled
             } else {
                 iconflow::Style::Regular
@@ -2130,7 +2133,7 @@ impl Icon {
 }
 
 /// Paints `icon` centered at `c`, `size` points tall.
-fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
+pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
     if let Some((glyph, family)) = icon.glyph() {
         painter.text(
             c,
@@ -2268,7 +2271,7 @@ fn spinner(ui: &mut Ui) {
 
 /// Paints a rotating Tabler loader centered at `center`, one turn per
 /// second, and keeps repainting while it is visible.
-fn paint_spinner(ui: &Ui, center: Pos2, size: f32) {
+pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32) {
     if !ui.is_rect_visible(Rect::from_center_size(center, Vec2::splat(size))) {
         return;
     }
