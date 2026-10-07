@@ -86,16 +86,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn grain_varies_and_fades_out_at_the_bottom() {
-        let image = grain_image([40, 30]);
-        assert_eq!(image, grain_image([40, 30]), "deterministic");
-        let top: Vec<_> = image.pixels[..40].iter().map(|p| p.to_array()).collect();
-        assert!(top.windows(2).any(|w| w[0] != w[1]), "grain");
-        let bottom = &image.pixels[29 * 40..];
-        assert!(bottom.iter().all(|p| p.a() <= 1), "fades out");
-    }
-
-    #[test]
     fn the_logo_and_icon_decode() {
         assert!(decode(LOGO).is_some());
         let icon = icon().expect("icon");

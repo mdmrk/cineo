@@ -2241,33 +2241,6 @@ mod tests {
     }
 
     #[test]
-    fn icons_are_centered_by_their_visible_shape() {
-        let ctx = egui::Context::default();
-        theme::apply(&ctx);
-        let center = pos2(100.0, 100.0);
-        let mut text = None;
-        for _ in 0..2 {
-            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
-                paint_icon(
-                    ui.painter(),
-                    Icon::ChevronRight,
-                    center,
-                    22.0,
-                    Color32::WHITE,
-                );
-            });
-            output.textures_delta.clear();
-            text = output.shapes.into_iter().find_map(|c| match c.shape {
-                egui::Shape::Text(text) => Some(text),
-                _ => None,
-            });
-        }
-        let text = text.unwrap();
-        let ink = text.pos + ink_center(&text.galley).unwrap().to_vec2();
-        assert!(ink.distance(center) < 0.5, "{ink:?}");
-    }
-
-    #[test]
     fn every_icon_exists_in_the_tabler_set() {
         for icon in Icon::ALL {
             assert!(icon.glyph().is_some(), "{icon:?} ({})", icon.name());

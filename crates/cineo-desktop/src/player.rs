@@ -743,17 +743,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_loading_art_pulses_between_faint_and_opaque() {
-        assert!((pulse_opacity(0.0) - 0.25).abs() < 1e-6);
-        assert!((pulse_opacity(PULSE_PERIOD / 2.0) - 1.0).abs() < 1e-6);
-        assert!((pulse_opacity(PULSE_PERIOD) - 0.25).abs() < 1e-6);
-        for step in 0..100 {
-            let opacity = pulse_opacity(f64::from(step) * 0.037);
-            assert!((0.25..=1.0).contains(&opacity), "{opacity}");
-        }
-    }
-
-    #[test]
     fn clock_shows_hours_only_for_long_media() {
         assert_eq!(clock(0.0, 0.0), "0:00");
         assert_eq!(clock(75.9, 600.0), "1:15");

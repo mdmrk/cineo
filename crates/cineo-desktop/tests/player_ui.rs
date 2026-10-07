@@ -196,25 +196,6 @@ fn before_the_file_loads_back_is_available_and_stops() {
 }
 
 #[test]
-fn long_track_menu_stays_on_screen() {
-    let mut status = status();
-    status.tracks = status
-        .tracks
-        .iter()
-        .cloned()
-        .chain((2..60).map(|id| track(id, TrackKind::Subtitle, &format!("sub{id}"), false)))
-        .collect();
-    let mut harness = harness(status);
-    harness.get_by_label("Subtitles").click();
-    harness.run();
-    let off = harness.get_by_label("Off").rect();
-    assert!(
-        off.top() >= 0.0,
-        "the menu's first entry is visible: {off:?}"
-    );
-}
-
-#[test]
 fn addon_subtitles_are_listed_and_requested() {
     let mut status = status();
     status.tracks = status

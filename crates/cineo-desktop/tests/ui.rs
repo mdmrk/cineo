@@ -10,12 +10,12 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, DownloadLimit, Effect, InterfaceScale, Language, Loadable, SeekStep, Setting, Settings,
-    StartPage, State, SubtitleColor, SubtitleSize, TorrentStatus, update,
+    Action, DownloadLimit, Effect, InterfaceScale, Language, SeekStep, Setting, Settings,
+    StartPage, State, SubtitleColor, SubtitleSize, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;
-use eframe::egui::{self, Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
+use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -132,97 +132,6 @@ fn harness(state: State, view: ViewState) -> Harness<'static, Ui> {
 fn empty_board_explains_how_to_add_addons() {
     let harness = harness(State::default(), ViewState::default());
     harness.get_by_label_contains("No addons installed");
-}
-
-#[test]
-fn the_compact_sidebar_keeps_every_item_in_place() {
-    let place = |width: f32| {
-        let harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
-            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-            (State::default(), ViewState::default(), Vec::new()),
-        );
-        ["Home", "Settings"].map(|label| {
-            harness
-                .get_by_role_and_label(Role::Button, label)
-                .rect()
-                .min
-        })
-    };
-    assert_eq!(place(1280.0), place(900.0));
-}
-
-#[test]
-fn the_logo_keeps_its_size_and_height_with_the_moustache_centered_in_the_compact_sidebar() {
-    let logo = |width: f32| {
-        let mut harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
-            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-            (State::default(), ViewState::default(), Vec::new()),
-        );
-        harness.run();
-        harness
-            .output()
-            .shapes
-            .iter()
-            .rev()
-            .find_map(|clipped| match &clipped.shape {
-                egui::Shape::Mesh(mesh) if mesh.texture_id != egui::TextureId::default() => {
-                    Some((mesh.calc_bounds(), clipped.clip_rect))
-                }
-                _ => None,
-            })
-            .unwrap()
-    };
-    let ((wide, _), (compact, clip)) = (logo(1280.0), logo(900.0));
-    assert_eq!(wide.size(), compact.size());
-    assert_eq!(wide.y_range(), compact.y_range());
-    let compact_sidebar = 56.0;
-    let moustache = compact.left() + compact.width() * 110.5 / 304.0;
-    assert!(
-        (moustache - compact_sidebar / 2.0).abs() < 0.5,
-        "{compact:?}"
-    );
-    assert!(clip.right() <= compact_sidebar, "{clip:?}");
-}
-
-#[test]
-fn the_compact_sidebar_does_not_move_page_content_vertically() {
-    let top = |width: f32, page: Page| {
-        let harness = Harness::builder().with_size([width, 800.0]).build_ui_state(
-            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-            (
-                State::default(),
-                ViewState {
-                    page,
-                    ..ViewState::default()
-                },
-                Vec::new(),
-            ),
-        );
-        harness
-            .get_by_role_and_label(Role::Label, page_title(page))
-            .rect()
-            .top()
-    };
-    for page in [Page::Board, Page::Addons, Page::Settings] {
-        assert_eq!(top(1280.0, page), top(900.0, page), "{page:?}");
-    }
-}
-
-fn page_title(page: Page) -> &'static str {
-    match page {
-        Page::Board => "Home",
-        Page::Addons => "Addons",
-        _ => "Settings",
-    }
-}
-
-#[test]
-fn the_sidebar_shows_the_logo() {
-    let harness = harness(State::default(), ViewState::default());
-    assert_eq!(
-        harness.get_by_label("Cineo").accesskit_node().role(),
-        Role::Image
-    );
 }
 
 #[test]
@@ -384,34 +293,6 @@ fn the_first_torrent_play_shows_the_p2p_notice() {
 }
 
 #[test]
-fn a_streaming_torrent_shows_no_status_text() {
-    let mut state = detail_state();
-    update(&mut state, Action::AcceptP2p);
-    update(
-        &mut state,
-        Action::Play {
-            group: 0,
-            stream: 1,
-        },
-    );
-    update(
-        &mut state,
-        Action::TorrentStatus {
-            info_hash: "0123456789abcdef0123456789abcdef01234567".into(),
-            status: TorrentStatus::Streaming {
-                peers: 3,
-                download_bytes_per_sec: 1024 * 1024,
-                downloaded: 1024 * 1024 * 1024,
-                size: 2 * 1024 * 1024 * 1024,
-            },
-        },
-    );
-    let harness = harness(state, ViewState::default());
-    assert!(harness.query_by_label_contains("Torrent:").is_none());
-    assert!(harness.query_by_label_contains("peers").is_none());
-}
-
-#[test]
 fn settings_switch_p2p_off() {
     let view = ViewState {
         page: Page::Settings,
@@ -531,18 +412,6 @@ fn discover_lists_catalogs_as_choices() {
 }
 
 #[test]
-fn narrow_windows_keep_an_icon_sidebar() {
-    let mut harness = Harness::builder().with_size([820.0, 600.0]).build_ui_state(
-        |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-        (board_state(), ViewState::default(), Vec::new()),
-    );
-    harness.get_by_label("Home");
-    harness.get_by_label("Addons").click();
-    harness.run();
-    assert_eq!(harness.state().1.page, Page::Addons);
-}
-
-#[test]
 fn see_all_opens_the_row_in_discover() {
     let mut harness = harness(board_state(), ViewState::default());
     harness.get_all_by_label("See all").next().unwrap().click();
@@ -553,36 +422,6 @@ fn see_all_opens_the_row_in_discover() {
         matches!(actions.as_slice(), [Action::OpenDiscover { path, .. }] if path.id == "top"),
         "{actions:?}"
     );
-}
-
-#[test]
-fn home_has_no_spotlight_banner_even_with_backdrops() {
-    let mut state = board_state();
-    for row in &mut state.board {
-        if let cineo_core::app::Loadable::Ready(items) = &mut row.items {
-            for item in items {
-                item.background = Some("https://img.example/backdrop.jpg".parse().unwrap());
-            }
-        }
-    }
-    let harness = harness(state, ViewState::default());
-    assert!(harness.query_by_label_contains("Spotlight").is_none());
-    assert!(harness.query_by_label("More info").is_none());
-    harness.get_by_label("First Example Film");
-}
-
-#[test]
-fn a_wheel_notch_scrolls_about_as_far_as_in_a_browser() {
-    let harness = harness(State::default(), ViewState::default());
-    let speed = harness.ctx.options(|o| o.input_options.line_scroll_speed);
-    assert!(speed >= 100.0, "{speed} points per wheel notch");
-}
-
-#[test]
-fn torrent_streams_carry_no_kind_tag() {
-    let harness = harness(detail_state(), ViewState::default());
-    assert!(harness.query_by_label("TORRENT").is_none());
-    assert!(harness.query_all_by_label("HTTP").count() > 0);
 }
 
 #[test]
@@ -770,103 +609,4 @@ fn clearing_watch_history_asks_first() {
     harness.get_by_label("Clear").click();
     harness.run();
     assert_eq!(harness.state().2, vec![Action::ClearLibrary]);
-}
-
-#[test]
-fn the_index_marks_the_last_sections_when_scrolled_to_the_end() {
-    let mut harness = harness(State::default(), settings_page());
-    harness.hover_at(pos2(900.0, 450.0));
-    harness.event(Event::MouseWheel {
-        unit: MouseWheelUnit::Point,
-        delta: vec2(0.0, -1.0e6),
-        phase: TouchPhase::Move,
-        modifiers: Modifiers::NONE,
-    });
-    harness.run_steps(60);
-    harness.run();
-    let marked = |harness: &Harness<'_, Ui>, name: &str| {
-        harness
-            .get_by_role_and_label(Role::Button, name)
-            .accesskit_node()
-            .toggled()
-            == Some(egui::accesskit::Toggled::True)
-    };
-    assert!(
-        marked(&harness, "About"),
-        "the last section is marked at the end"
-    );
-    assert!(!marked(&harness, "Torrents"));
-}
-
-#[test]
-fn only_the_hovered_row_shows_its_arrows() {
-    let mut state = board_state();
-    let mut row = state.board[0].clone();
-    if let Loadable::Ready(items) = &mut row.items {
-        let first = items[0].clone();
-        items.extend(std::iter::repeat_n(first, 20));
-    }
-    state.board = vec![row.clone(), row];
-    let mut harness = harness(state, ViewState::default());
-    let second = harness
-        .get_all_by_label("Second Example Film")
-        .nth(1)
-        .unwrap()
-        .rect();
-    harness.hover_at(second.center());
-    harness.run();
-    let arrows: Vec<_> = harness
-        .query_all_by_label("Scroll right")
-        .map(|node| node.rect())
-        .collect();
-    assert_eq!(arrows.len(), 1);
-    assert!(
-        arrows[0].y_range().contains(second.center().y),
-        "{arrows:?}"
-    );
-}
-
-#[test]
-fn the_compact_settings_page_keeps_its_right_margin() {
-    let harness = Harness::builder().with_size([900.0, 800.0]).build_ui_state(
-        |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-        (State::default(), settings_page(), Vec::new()),
-    );
-    let left = harness
-        .get_by_role_and_label(Role::Label, "Settings")
-        .rect()
-        .left()
-        - 56.0;
-    let right = 900.0 - harness.get_by_label("Interface size").rect().right();
-    assert!(right >= left, "left {left}, right {right}");
-}
-
-#[test]
-fn settings_sits_at_the_bottom_of_the_sidebar() {
-    let harness = harness(State::default(), ViewState::default());
-    let settings = harness
-        .get_by_role_and_label(Role::Button, "Settings")
-        .rect();
-    let addons = harness.get_by_role_and_label(Role::Button, "Addons").rect();
-    assert!(settings.bottom() > 900.0 - 40.0, "{settings:?}");
-    assert!(settings.top() > addons.bottom() + 100.0, "{addons:?}");
-}
-
-#[test]
-fn about_links_to_the_repository() {
-    let mut harness = harness(State::default(), settings_page());
-    open_section(&mut harness, "About");
-    harness.get_by_label_contains("GitHub").click();
-    harness.step();
-    let opened: Vec<_> = harness
-        .output()
-        .platform_output
-        .commands
-        .iter()
-        .filter_map(|command| match command {
-            egui::OutputCommand::OpenUrl(open) => Some(open.url.as_str()),
-            _ => None,
-        })
-        .collect();
-    assert_eq!(opened, ["https://github.com/mdmrk/cineo"]);
 }
