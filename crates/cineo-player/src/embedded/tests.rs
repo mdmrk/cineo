@@ -310,12 +310,13 @@ fn real_libmpv_stop_before_the_file_loads_closes_the_player() {
 
 #[test]
 fn subtitle_files_are_added_as_one_argument_each() {
-    let args = sub_add_args(Path::new("/c/subtitles/1"), "English, [CC] ${path}", "eng").unwrap();
+    let path = std::env::temp_dir().join("subtitles").join("1");
+    let args = sub_add_args(&path, "English, [CC] ${path}", "eng").unwrap();
     assert_eq!(
         args,
         [
             "sub-add",
-            "/c/subtitles/1",
+            path.to_str().unwrap(),
             "cached",
             "English, [CC] ${path}",
             "eng"
