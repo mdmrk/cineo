@@ -324,6 +324,15 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 "Cineo {}. Made by people who stay for the credits.",
                 env!("CARGO_PKG_VERSION")
             )));
+            ui.add_space(theme::GAP);
+            let mut job = LayoutJob::default();
+            append_icon(&mut job, Icon::Named("brand-github"), 18.0, theme::ACCENT);
+            job.append(
+                "GitHub",
+                6.0,
+                TextFormat::simple(theme::body(), theme::ACCENT),
+            );
+            ui.hyperlink_to(job, env!("CARGO_PKG_REPOSITORY"));
         }
     }
 }

@@ -851,3 +851,22 @@ fn settings_sits_at_the_bottom_of_the_sidebar() {
     assert!(settings.bottom() > 900.0 - 40.0, "{settings:?}");
     assert!(settings.top() > addons.bottom() + 100.0, "{addons:?}");
 }
+
+#[test]
+fn about_links_to_the_repository() {
+    let mut harness = harness(State::default(), settings_page());
+    open_section(&mut harness, "About");
+    harness.get_by_label_contains("GitHub").click();
+    harness.step();
+    let opened: Vec<_> = harness
+        .output()
+        .platform_output
+        .commands
+        .iter()
+        .filter_map(|command| match command {
+            egui::OutputCommand::OpenUrl(open) => Some(open.url.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(opened, ["https://github.com/mdmrk/cineo"]);
+}
