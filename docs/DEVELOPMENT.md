@@ -394,7 +394,7 @@ Re-check them when adding.
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks, decoding and downscaling (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
-| `librqbit` (`rust-tls`, no default features) | 9.0.1, vendored in `vendor/librqbit` with our patch | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
+| `librqbit` (`rust-tls`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/fix/urgent-piece-helpers) at `be52c57a` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.11.1 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
@@ -425,9 +425,12 @@ because it serves one route and needs exact control of range responses;
 gains `directories` 6.0.0 and with it `option-ext` (MPL-2.0), which has a
 crate-scoped exception in `.config/deny.toml` (LEGAL.md).
 
-2026-10-07: `librqbit` is vendored (`vendor/librqbit`, used through
-`[patch.crates-io]`) so we can carry a streaming patch (ADR-0015). Its
-updates follow `vendor/README.md`.
+2026-10-07: `librqbit` comes from the owner's fork (`[patch.crates-io]`
+in the root `Cargo.toml`, a git source allowed in `.config/deny.toml`),
+pinned to a commit of branch `fix/urgent-piece-helpers`: upstream `main`
+plus our streaming patch (ADR-0016). To update: rebase the branch on
+upstream, push, and change `rev`. Dropping the fork once upstream
+releases the patch is the goal.
 
 UI polish (2026-10-07): not crates, but bundled assets. `cineo-desktop`
 embeds Inter 4.1 (Regular and SemiBold) and DM Serif Display (Regular),

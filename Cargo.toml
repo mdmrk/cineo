@@ -1,8 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
-# Patched third-party crates (vendor/README.md), not ours to lint.
-exclude = ["vendor"]
 
 [workspace.package]
 version = "0.0.0"
@@ -88,6 +86,7 @@ strip = "debuginfo"
 [profile.dev.package."*"]
 opt-level = 2
 
-# librqbit 9.0.1 with Cineo's streaming patch (vendor/README.md).
+# librqbit with our streaming patch: branch fix/urgent-piece-helpers of
+# the owner's fork, pinned to a commit (ADR-0016).
 [patch.crates-io]
-librqbit = { path = "vendor/librqbit" }
+librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "be52c57a0d6c85d6d35467a2c8d5d60f66924aea" }

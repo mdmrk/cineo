@@ -88,8 +88,8 @@ Format:
   already played (needs piece-level storage).
 
 ### Streaming engine: shared urgent pieces waste some bandwidth and blame
-- Where: [piece_tracker.rs](../vendor/librqbit/src/piece_tracker.rs)
-  (our librqbit patch, [vendor/README.md](../vendor/README.md))
+- Where: `crates/librqbit/src/piece_tracker.rs` in our librqbit fork
+  ([commit be52c57a](https://github.com/mdmrk/rqbit/commit/be52c57a0d6c85d6d35467a2c8d5d60f66924aea), ADR-0016)
 - Gap: up to three peers download each of the next four pieces a stream
   needs. When one finishes, the others are not sent BitTorrent `cancel`
   messages, so their chunks still arrive and are dropped. If a shared

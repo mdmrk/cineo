@@ -1,6 +1,6 @@
 # 0015. No torrent cache; a vendored, patched librqbit
 
-- Status: Accepted
+- Status: Accepted (vendoring librqbit: superseded by 0016)
 - Date: 2026-10-07
 
 ## Context

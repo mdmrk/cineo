@@ -433,7 +433,7 @@ async fn seed_limited(
 
 /// Regression: librqbit asked one peer per piece, so a slow peer holding
 /// one of the first pieces held back the start (about 5 s here, against
-/// under 0.1 s with our vendored patch: urgent pieces get helper peers).
+/// under 0.1 s with our librqbit fork's patch: urgent pieces get helper peers).
 #[tokio::test(flavor = "multi_thread")]
 async fn a_slow_peer_does_not_hold_back_the_start() {
     let content = temp_dir("slow-peer-seed").join("content");

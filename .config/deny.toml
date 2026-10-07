@@ -51,3 +51,5 @@ deny = [
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# librqbit with our streaming patch, pinned by commit in Cargo.toml (ADR-0016).
+allow-git = ["https://github.com/mdmrk/rqbit"]
