@@ -40,10 +40,10 @@ pub(crate) const COMPACT_BELOW: f32 = 1000.0;
 pub(crate) const LOGO_WIDTH: f32 = 144.0;
 pub(crate) const LOGO_ASPECT: f32 = 360.0 / 304.0;
 pub(crate) const LOGO_MOUSTACHE_X: f32 = 110.5 / 304.0;
-pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-12.0, -10.0);
+pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-20.0, -18.0);
 pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
 pub(crate) const GRAIN_FADE: f32 = 40.0;
-pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(191, 191, 191, 217);
+pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(158, 158, 158, 179);
 
 pub(crate) const CARD_WIDTH: f32 = 116.0;
 pub(crate) const GRID_CARD_MIN: f32 = 104.0;
