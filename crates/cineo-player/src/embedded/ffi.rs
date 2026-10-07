@@ -162,12 +162,19 @@ fn load() -> Result<Lib, String> {
                 return Ok(lib);
             }
             Err(err) => {
-                debug!(library = %path.display(), %err, "libmpv not loaded");
-                last = err.to_string();
+                last = describe(&err);
+                debug!(library = %path.display(), err = %last, "libmpv not loaded");
             }
         }
     }
     Err(format!("libmpv was not found ({last})"))
+}
+
+fn describe(err: &libloading::Error) -> String {
+    match std::error::Error::source(err) {
+        Some(source) => format!("{err}: {source}"),
+        None => err.to_string(),
+    }
 }
 
 fn resolve(library: libloading::Library) -> Result<Lib, String> {
@@ -176,7 +183,7 @@ fn resolve(library: libloading::Library) -> Result<Lib, String> {
             // SAFETY: the declared type matches the C prototype in mpv's
             // client API 2.x headers; the pointer is copied out and stays
             // valid because `library` is stored in the returned `Lib`.
-            *unsafe { library.get($name) }.map_err(|err| err.to_string())?
+            *unsafe { library.get($name) }.map_err(|err| describe(&err))?
         };
     }
     let version: unsafe extern "C" fn() -> c_ulong = sym!(b"mpv_client_api_version\0");
@@ -457,5 +464,17 @@ mod tests {
         assert_eq!(owned.len(), 1);
         assert_eq!(pointers.len(), 2, "NULL-terminated");
         assert!(pointers[1].is_null());
+    }
+
+    #[test]
+    fn a_load_error_keeps_the_system_reason() {
+        // SAFETY: the library does not exist, so nothing is loaded.
+        let Err(err) = (unsafe { libloading::Library::new("libcineo-missing.so") }) else {
+            panic!("loaded a library that does not exist");
+        };
+        let reason = std::error::Error::source(&err).map(ToString::to_string);
+        assert!(reason.is_some(), "{err}");
+        let message = describe(&err);
+        assert!(message.ends_with(&reason.unwrap_or_default()), "{message}");
     }
 }

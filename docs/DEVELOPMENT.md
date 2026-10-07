@@ -402,12 +402,12 @@ Re-check them when adding.
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks, decoding and downscaling (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/fix/urgent-piece-helpers) at `be52c57a` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
-| `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.11.1 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
+| `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
 | `tokio-util` (`io`) | 0.7.19 | `ReaderStream` from a torrent file reader (stream) | MIT |
 | `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
-| `libloading` | 0.8.9 | Loads libmpv at runtime for embedded playback (player, ADR-0014). 0.9.0 exists (as of 2026-10-07); 0.8.9 is already in the tree via glutin, so we avoid a second copy | ISC |
+| `libloading` | 0.9.0 | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC |
 
 `tokio` features `io-util` and `sync` were added for the mpv player (M3);
 `process` was dropped with the external mpv player (2026-10-07). The player
