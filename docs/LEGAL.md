@@ -117,7 +117,7 @@ caching or export feature must be reviewed against provider terms.
 
 | File(s) | Source | License | Notes |
 |---------|--------|---------|-------|
-| — | — | — | None so far |
+| `vendor/librqbit/` | `librqbit` 9.0.1 (crates.io) | Apache-2.0 | Vendored to carry our patch; changes listed in `vendor/README.md`, each changed file has a notice |
 
 ## Fixtures
 Test fixtures are written by contributors. See

@@ -77,6 +77,14 @@ mpv 0.41.
   cache: the 5 GiB least-recently-used cache took too much disk. Playing
   a torrent again downloads it again.
 
+- **Patched librqbit (amended 2026-10-07).** We carry changes to
+  `librqbit` 9.0.1 in `vendor/librqbit` (used through
+  `[patch.crates-io]`; the changes are listed in `vendor/README.md`). The
+  first is for streaming: librqbit downloads each piece from one peer
+  only, so a slow peer holding the next piece stalls playback. Our
+  changes are offered upstream where they fit; until then every librqbit
+  update means porting them.
+
 ## Consequences
 - AGENTS.md's network invariant gains this one exception.
 - Deleting torrent data, the HTTP server and the blocklist need their own
