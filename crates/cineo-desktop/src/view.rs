@@ -1251,9 +1251,10 @@ fn stream_group(
     ui.add_space(theme::GAP);
 }
 
-/// One stream as a card: a quality tile, the release title, the addon's
-/// details with their emoji as amber icons, and Play. The whole card plays
-/// when the stream is playable. Returns true if it was clicked.
+/// One stream as a card: a round play button, the release title after
+/// small resolution and HDR tags, and the addon's details with their emoji
+/// as amber icons. The whole card plays when the stream is playable.
+/// Returns true if it was clicked.
 fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     let playable = stream.source.is_playable();
     let mut lines = stream
@@ -1266,6 +1267,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     let name = stream.name.as_deref().map(|n| n.replace('\n', " · "));
     let title = lines.next().map(str::to_owned).or_else(|| name.clone());
     let details: Vec<&str> = lines.collect();
+    let quality = Quality::of(stream);
 
     let background = ui.painter().add(egui::Shape::Noop);
     let card = ui.scope_builder(
@@ -1281,16 +1283,22 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
                     ui.set_width(ui.available_width());
                     ui.horizontal_top(|ui| {
                         ui.spacing_mut().item_spacing.x = 14.0;
-                        quality_tile(ui, stream);
-                        let text_width = (ui.available_width() - 110.0).max(120.0);
+                        let play = play_button(ui, playable).on_disabled_hover_text(format!(
+                            "{} streams are not supported yet",
+                            stream.source.kind_label()
+                        ));
                         ui.vertical(|ui| {
-                            ui.set_width(text_width);
                             ui.spacing_mut().item_spacing.y = 3.0;
                             ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 5.0;
+                                if let Some(quality) = &quality {
+                                    quality_tags(ui, quality);
+                                }
                                 if !stream.source.is_p2p() {
                                     badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
                                 }
                                 if let Some(title) = &title {
+                                    ui.add_space(3.0);
                                     ui.add(
                                         Label::new(addon_text(
                                             title,
@@ -1326,13 +1334,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
                                 );
                             }
                         });
-                        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-                            play_button(ui, playable).on_disabled_hover_text(format!(
-                                "{} streams are not supported yet",
-                                stream.source.kind_label()
-                            ))
-                        })
-                        .inner
+                        play
                     })
                     .inner
                 })
@@ -1371,37 +1373,41 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     play.clicked() || response.clicked()
 }
 
-/// The amber Play button, or a greyed one when the source cannot be played.
-/// Accessible as a button labelled "Play".
+/// A round amber button with a play icon, greyed when the source cannot be
+/// played. Accessible as a button labelled "Play".
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
-        let (rect, response) = ui.allocate_exact_size(vec2(92.0, 34.0), Sense::click());
+        let (rect, response) = ui.allocate_exact_size(Vec2::splat(40.0), Sense::click());
         response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), "Play"));
         if ui.is_rect_visible(rect) {
-            let (fill, ink) = match (playable, response.hovered()) {
-                (true, true) => (theme::ACCENT_HOVER, theme::ON_ACCENT),
-                (true, false) => (theme::ACCENT, theme::ON_ACCENT),
-                (false, _) => (theme::SURFACE, theme::TEXT_FAINT),
+            let hover = ui.ctx().animate_bool_with_time(
+                response.id,
+                playable && response.hovered(),
+                theme::ANIM,
+            );
+            let (fill, ink) = if playable {
+                (
+                    lerp_color(theme::ACCENT, theme::ACCENT_HOVER, hover),
+                    theme::ON_ACCENT,
+                )
+            } else {
+                (theme::SURFACE, theme::TEXT_FAINT)
             };
             let painter = ui.painter();
-            painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-            let galley = painter.layout_job(caps("Play", theme::caption(), ink));
-            let left = rect.center().x - (14.0 + 6.0 + galley.size().x) / 2.0;
+            painter.circle_filled(rect.center(), 18.0 + 2.0 * hover, fill);
+            // The triangle's visual center sits right of its box's center.
             paint_icon(
                 painter,
                 Icon::Play,
-                pos2(left + 7.0, rect.center().y),
-                14.0,
-                ink,
-            );
-            painter.galley(
-                pos2(left + 20.0, rect.center().y - galley.size().y / 2.0),
-                galley,
+                rect.center() + vec2(1.5, 0.0),
+                19.0,
                 ink,
             );
         }
         if playable {
-            response.on_hover_cursor(egui::CursorIcon::PointingHand)
+            response
+                .on_hover_cursor(egui::CursorIcon::PointingHand)
+                .on_hover_text("Play")
         } else {
             response
         }
@@ -1409,80 +1415,38 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
     .inner
 }
 
-/// The square at the start of a stream card: its resolution and HDR flags,
-/// colored by tier, or the source kind's icon when the addon names none.
-fn quality_tile(ui: &mut Ui, stream: &Stream) {
-    let (rect, _) = ui.allocate_exact_size(vec2(64.0, 56.0), Sense::hover());
-    if !ui.is_rect_visible(rect) {
-        return;
-    }
-    let painter = ui.painter();
-    let radius = CornerRadius::same(theme::RADIUS);
-    let Some(quality) = Quality::of(stream) else {
-        painter.rect_filled(rect, radius, theme::SURFACE);
-        paint_icon(
-            painter,
-            source_icon(stream),
-            rect.center(),
-            24.0,
-            theme::TEXT_DIM,
-        );
-        return;
+/// Small tags for the resolution, colored by tier, and its HDR flags.
+fn quality_tags(ui: &mut Ui, quality: &Quality) {
+    let (fill, ink, stroke) = match quality.tier {
+        Tier::Ultra => (theme::ACCENT, theme::ON_ACCENT, Stroke::NONE),
+        Tier::High => (
+            Color32::TRANSPARENT,
+            theme::ACCENT,
+            Stroke::new(1.0, theme::ACCENT.gamma_multiply(0.7)),
+        ),
+        Tier::Standard => (theme::SURFACE, theme::TEXT_BRIGHT, Stroke::NONE),
+        Tier::Low => (theme::SURFACE, theme::TEXT_DIM, Stroke::NONE),
+        Tier::Cam => (
+            Color32::TRANSPARENT,
+            theme::WARNING,
+            Stroke::new(1.0, theme::WARNING),
+        ),
     };
-    let (fill, ink) = match quality.tier {
-        Tier::Ultra => (theme::ACCENT, theme::ON_ACCENT),
-        Tier::High => (theme::SURFACE, theme::ACCENT),
-        Tier::Standard => (theme::SURFACE, theme::TEXT_BRIGHT),
-        Tier::Low => (theme::SURFACE, theme::TEXT_DIM),
-        Tier::Cam => (theme::SURFACE, theme::WARNING),
-    };
-    painter.rect_filled(rect, radius, fill);
-    if quality.tier == Tier::High {
-        painter.rect_stroke(
-            rect,
-            radius,
-            Stroke::new(1.0, theme::ACCENT.gamma_multiply(0.6)),
-            StrokeKind::Inside,
-        );
-    }
-    let flags = quality.flags.join(" ");
-    let label_y = if flags.is_empty() {
-        rect.center().y
-    } else {
-        rect.center().y - 7.0
-    };
-    painter.text(
-        pos2(rect.center().x, label_y),
-        Align2::CENTER_CENTER,
-        quality.label,
-        FontId::new(17.0, theme::strong().family),
-        ink,
-    );
-    if !flags.is_empty() {
-        let galley =
-            painter.layout_job(caps(&flags, FontId::new(9.5, theme::section().family), ink));
-        painter.galley(
-            pos2(
-                rect.center().x - galley.size().x / 2.0,
-                rect.center().y + 7.0,
-            ),
-            galley,
-            ink,
-        );
+    tag(ui, quality.label, fill, ink, stroke);
+    for flag in &quality.flags {
+        badge(ui, flag, theme::TEXT_DIM);
     }
 }
 
-/// The icon for a source kind, shown when a stream names no resolution.
-fn source_icon(stream: &Stream) -> Icon {
-    use cineo_core::addon::StreamSource;
-    Icon::Named(match stream.source {
-        StreamSource::Torrent { .. } => "magnet",
-        StreamSource::YouTube { .. } => "brand-youtube",
-        StreamSource::External(_) => "external-link",
-        StreamSource::Archive { .. } => "file-zip",
-        StreamSource::Nzb { .. } => "download",
-        _ => "link",
-    })
+fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
+    Frame::new()
+        .fill(fill)
+        .stroke(stroke)
+        .corner_radius(CornerRadius::same(theme::RADIUS))
+        .inner_margin(Margin::symmetric(6, 1))
+        .show(ui, |ui| {
+            ui.label(caps(text, FontId::new(10.5, theme::section().family), ink));
+        });
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2073,17 +2037,13 @@ fn toggle_row(ui: &mut Ui, on: bool, label: &str) -> Response {
 }
 
 fn badge(ui: &mut Ui, text: &str, color: Color32) {
-    Frame::new()
-        .stroke(Stroke::new(1.0, theme::RULE))
-        .corner_radius(CornerRadius::same(theme::RADIUS))
-        .inner_margin(Margin::symmetric(6, 1))
-        .show(ui, |ui| {
-            ui.label(caps(
-                text,
-                FontId::new(10.5, theme::section().family),
-                color,
-            ));
-        });
+    tag(
+        ui,
+        text,
+        Color32::TRANSPARENT,
+        color,
+        Stroke::new(1.0, theme::RULE),
+    );
 }
 
 /// Small boxed tags, as genres and cast are shown.
@@ -2602,21 +2562,6 @@ mod tests {
             None
         );
         assert_eq!(Quality::of(&stream(None, None)), None);
-    }
-
-    #[test]
-    fn every_source_kind_icon_exists_in_the_tabler_set() {
-        let s = stream(None, None);
-        assert!(source_icon(&s).glyph().is_some());
-        for name in [
-            "brand-youtube",
-            "external-link",
-            "file-zip",
-            "download",
-            "link",
-        ] {
-            assert!(Icon::Named(name).glyph().is_some(), "{name}");
-        }
     }
 
     #[test]
