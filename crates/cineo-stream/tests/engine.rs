@@ -383,3 +383,108 @@ async fn shutdown_while_waiting_for_metadata_is_quick() {
     let took = started.elapsed();
     assert!(took < Duration::from_millis(500), "shutdown took {took:?}");
 }
+
+/// Seeds `torrent` from `content` on loopback, uploading at most
+/// `upload_bps` bytes per second if given.
+async fn seed_limited(
+    content: &Path,
+    torrent: &[u8],
+    upload_bps: Option<u32>,
+) -> (Arc<Session>, SocketAddr) {
+    let session = Session::new_with_opts(
+        content.to_path_buf(),
+        SessionOptions {
+            dht: None,
+            persistence: None,
+            listen: Some(ListenerOptions {
+                listen_addr: (Ipv4Addr::LOCALHOST, 0).into(),
+                ..ListenerOptions::default()
+            }),
+            disable_local_service_discovery: true,
+            ratelimits: librqbit::limits::LimitsConfig {
+                upload_bps: upload_bps.and_then(std::num::NonZeroU32::new),
+                download_bps: None,
+            },
+            ..SessionOptions::default()
+        },
+    )
+    .await
+    .unwrap();
+    let handle = session
+        .add_torrent(
+            AddTorrent::from_bytes(torrent.to_vec()),
+            Some(AddTorrentOptions {
+                output_folder: Some(content.to_str().unwrap().to_owned()),
+                overwrite: true,
+                ..AddTorrentOptions::default()
+            }),
+        )
+        .await
+        .unwrap()
+        .into_handle()
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(20), handle.wait_until_completed())
+        .await
+        .unwrap()
+        .unwrap();
+    let addr = session.listen_addr().unwrap();
+    (session, addr)
+}
+
+/// Regression: librqbit asked one peer per piece, so a slow peer holding
+/// one of the first pieces held back the start (about 5 s here, against
+/// under 0.1 s with our vendored patch: urgent pieces get helper peers).
+#[tokio::test(flavor = "multi_thread")]
+async fn a_slow_peer_does_not_hold_back_the_start() {
+    let content = temp_dir("slow-peer-seed").join("content");
+    std::fs::create_dir_all(&content).unwrap();
+    let film: Vec<u8> = (0..8_000_000u32)
+        .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
+        .collect();
+    std::fs::write(content.join("film.mkv"), &film).unwrap();
+    let torrent = create_torrent(
+        &content,
+        CreateTorrentOptions {
+            piece_length: Some(512 * 1024),
+            ..CreateTorrentOptions::default()
+        },
+        &BlockingSpawner::new(1),
+    )
+    .await
+    .unwrap();
+    let bytes = torrent.as_bytes().unwrap().to_vec();
+    // 4 s per piece from the slow peer.
+    let (_slow_session, slow) = seed_limited(&content, &bytes, Some(128 * 1024)).await;
+    let (_fast_session, fast) = seed_limited(&content, &bytes, None).await;
+
+    let engine = Engine::start(EngineOptions {
+        allow_private_network: true,
+        dht: false,
+        extra_peers: vec![slow, fast],
+        metadata_timeout: Duration::from_secs(20),
+        ..EngineOptions::new(temp_dir("slow-peer-cache"))
+    })
+    .await
+    .unwrap();
+    let started = std::time::Instant::now();
+    let url = engine
+        .open(&TorrentRequest {
+            info_hash: torrent.info_hash().as_string(),
+            file_idx: None,
+            filename: None,
+            trackers: Vec::new(),
+        })
+        .await
+        .unwrap();
+    let start = http(
+        engine.local_addr(),
+        "GET",
+        url.path(),
+        &[("Range", "bytes=0-2097151")],
+    )
+    .await;
+    let took = started.elapsed();
+    assert!(start.body == film[..2_097_152]);
+    assert!(took < Duration::from_secs(2), "the start took {took:?}");
+    engine.shutdown().await;
+}

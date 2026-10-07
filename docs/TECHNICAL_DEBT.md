@@ -87,6 +87,21 @@ Format:
 - Exit: refuse files larger than the free space up front, or drop pieces
   already played (needs piece-level storage).
 
+### Streaming engine: shared urgent pieces waste some bandwidth and blame
+- Where: [piece_tracker.rs](../vendor/librqbit/src/piece_tracker.rs)
+  (our librqbit patch, [vendor/README.md](../vendor/README.md))
+- Gap: up to three peers download each of the next four pieces a stream
+  needs. When one finishes, the others are not sent BitTorrent `cancel`
+  messages, so their chunks still arrive and are dropped. If a shared
+  piece fails its hash check, the peer that completed it is disconnected,
+  though a helper may have sent the bad chunk (INFERRED from the code).
+- Why: upstream librqbit sends no cancellations when a piece completes
+  either; tracking which peer wrote each chunk is a larger change.
+- Instead: the waste is bounded (four pieces, two helpers each); a failed
+  piece is downloaded again.
+- Exit: send `cancel` to helpers on completion; remember the writer of
+  each chunk of a shared piece.
+
 ### Store: no in-app recovery from a corrupt database
 - Where: [store.rs](../crates/cineo-store/src/store.rs)
 - Gap: a corrupt `cineo.db` makes every persistence command fail.
