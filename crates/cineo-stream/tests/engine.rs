@@ -305,17 +305,49 @@ async fn downloaded_data_is_stored_by_hash_and_file_index_only() {
     let url = engine.open(&request(&seeder)).await.unwrap();
     let full = http(engine.local_addr(), "GET", url.path(), &[]).await;
     assert!(full.body == seeder.film);
-    engine.shutdown().await;
 
     let stored: Vec<String> = std::fs::read_dir(cache.join(&seeder.info_hash))
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-        .filter(|n| n != "used")
         .collect();
+    assert!(!stored.is_empty());
     assert!(
         stored.iter().all(|n| n.parse::<usize>().is_ok()),
         "{stored:?}"
     );
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stopping_deletes_the_torrent_data() {
+    let seeder = seeder("stop-deletes").await;
+    let opts = options("stop-deletes", &seeder);
+    let dir = opts.cache_dir.join(&seeder.info_hash);
+    let engine = Engine::start(opts).await.unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    let full = http(engine.local_addr(), "GET", url.path(), &[]).await;
+    assert!(full.body == seeder.film);
+    assert!(dir.exists());
+
+    engine.stop().await;
+    assert!(!dir.exists(), "no torrent data is kept after it stops");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn leftover_torrent_data_is_deleted_at_start() {
+    let cache = temp_dir("leftover-cache");
+    let leftover = cache.join("c".repeat(40));
+    std::fs::create_dir_all(&leftover).unwrap();
+    std::fs::write(leftover.join("0"), b"data").unwrap();
+    let engine = Engine::start(EngineOptions {
+        dht: false,
+        ..EngineOptions::new(cache)
+    })
+    .await
+    .unwrap();
+    assert!(!leftover.exists());
+    engine.shutdown().await;
 }
 
 /// Regression: closing the app right after Play waited a fixed second in

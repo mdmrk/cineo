@@ -26,13 +26,10 @@ use crate::{blocklist, cache, socks};
 /// How the engine runs.
 #[derive(Debug, Clone)]
 pub struct EngineOptions {
-    /// Holds torrent data, the peer blocklist and DHT state. Created
-    /// private to the user.
+    /// Holds the data of the torrent being played and DHT state. Created
+    /// private to the user. Torrent data is deleted when the torrent stops
+    /// and, if a run did not stop cleanly, when the engine starts.
     pub cache_dir: PathBuf,
-    /// Torrents not in use are evicted, least recently used first, until
-    /// the cache is at most this size. The torrent being played may exceed
-    /// it (docs/TECHNICAL_DEBT.md).
-    pub cache_limit_bytes: u64,
     /// Allow peers and trackers on loopback/private addresses (the same
     /// user choice as `NetPolicy`'s private networks).
     pub allow_private_network: bool,
@@ -48,12 +45,10 @@ pub struct EngineOptions {
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
 
 impl EngineOptions {
-    /// Defaults: 5 GiB cache, private networks blocked, DHT on, 60 s
-    /// metadata timeout.
+    /// Defaults: private networks blocked, DHT on, 60 s metadata timeout.
     pub fn new(cache_dir: PathBuf) -> Self {
         Self {
             cache_dir,
-            cache_limit_bytes: 5 * 1024 * 1024 * 1024,
             allow_private_network: false,
             dht: true,
             extra_peers: Vec::new(),
@@ -90,7 +85,8 @@ pub struct Engine {
     options: EngineOptions,
     /// The HTTP server and the SOCKS proxy.
     tasks: [tokio::task::JoinHandle<()>; 2],
-    active: Mutex<Option<usize>>,
+    /// librqbit's id and the info hash of the torrent being played.
+    active: Mutex<Option<(usize, String)>>,
 }
 
 impl std::fmt::Debug for Engine {
@@ -112,7 +108,16 @@ impl Engine {
     /// run inside a tokio runtime.
     pub async fn start(options: EngineOptions) -> Result<Self, StreamError> {
         let cache_dir = options.cache_dir.clone();
-        cache::create_private_dir(&cache_dir).map_err(StreamError::Cache)?;
+        let prepared = tokio::task::spawn_blocking({
+            let cache_dir = cache_dir.clone();
+            move || {
+                cache::create_private_dir(&cache_dir)?;
+                cache::remove_all(&cache_dir)
+            }
+        })
+        .await
+        .map_err(|err| StreamError::Cache(std::io::Error::other(err)))?;
+        prepared.map_err(StreamError::Cache)?;
         // Every peer connection goes through the filtering proxy.
         let proxy = TcpListener::bind((IpAddr::from([127, 0, 0, 1]), 0))
             .await
@@ -190,24 +195,10 @@ impl Engine {
     pub async fn open(&self, request: &TorrentRequest) -> Result<Url, StreamError> {
         self.stop().await;
         let hash = request.info_hash.to_ascii_lowercase();
-        let dir = torrent_dir(&self.options.cache_dir, &hash);
-        let (cache_dir, limit, keep) = (
-            self.options.cache_dir.clone(),
-            self.options.cache_limit_bytes,
-            hash.clone(),
-        );
-        let prepared = tokio::task::spawn_blocking(move || {
-            cache::touch(&dir)?;
-            cache::evict(&cache_dir, limit, Some(&keep))
-        })
-        .await
-        .map_err(|err| StreamError::Cache(std::io::Error::other(err)))?;
-        prepared.map_err(StreamError::Cache)?;
-
         let magnet = magnet(&hash, &request.trackers, self.options.allow_private_network);
         let add = AddTorrentOptions {
             paused: true,
-            // Reuse what the cache already holds.
+            // Never refuse a torrent because files of it are on disk.
             overwrite: true,
             output_folder: Some(self.options.cache_dir.to_string_lossy().into_owned()),
             initial_peers: (!self.options.extra_peers.is_empty())
@@ -234,7 +225,7 @@ impl Engine {
                 return Err(StreamError::Add("unexpected list-only answer".into()));
             }
         };
-        *self.active.lock().await = Some(id);
+        *self.active.lock().await = Some((id, hash.clone()));
         tokio::time::timeout(wait, torrent.wait_until_initialized())
             .await
             .map_err(|_| StreamError::MetadataTimeout)?
@@ -309,15 +300,23 @@ impl Engine {
         Some((served.info_hash.clone(), status))
     }
 
-    /// Stops the current torrent. Its data stays in the cache.
+    /// Stops the current torrent and deletes its data.
     pub async fn stop(&self) {
         if let Ok(mut current) = self.ctx.current.write() {
             *current = None;
         }
-        if let Some(id) = self.active.lock().await.take()
-            && let Err(err) = self.session.delete(TorrentIdOrHash::Id(id), false).await
-        {
+        let Some((id, hash)) = self.active.lock().await.take() else {
+            return;
+        };
+        if let Err(err) = self.session.delete(TorrentIdOrHash::Id(id), false).await {
             warn!(error = %format!("{err:#}"), "stopping the torrent failed");
+        }
+        let dir = torrent_dir(&self.options.cache_dir, &hash);
+        match tokio::task::spawn_blocking(move || cache::remove_torrent(&dir)).await {
+            Ok(Ok(())) => {}
+            // Deleted at the next start instead.
+            Ok(Err(err)) => warn!(%err, "deleting the torrent data failed"),
+            Err(err) => warn!(%err, "deleting the torrent data failed"),
         }
     }
 
@@ -328,8 +327,8 @@ impl Engine {
         // librqbit 9.0.1's `Session::stop` pauses the torrents and cancels
         // the session's tasks right away, then sleeps a fixed second
         // ("hopefully will be enough") for them to wind down. Nothing
-        // needs that at exit: written data is checked again on the next
-        // start. So it runs only long enough to cancel.
+        // needs that at exit: the data is deleted anyway. So it runs only
+        // long enough to cancel.
         let _ = tokio::time::timeout(SESSION_STOP_GRACE, self.session.stop()).await;
         for task in &self.tasks {
             task.abort();

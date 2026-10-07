@@ -72,17 +72,19 @@ Format:
   (INFERRED from the code; not observed).
 - Why: cancelling is what keeps a stuck metadata lookup from blocking the
   next torrent.
-- Instead: it is paused, so it moves no data; its files stay in the cache.
+- Instead: it is paused, so it moves no data; its files are deleted when
+  the engine next starts.
 - Exit: have `open` record the torrent id before awaiting anything else,
   or remove unknown torrents from the session at the next `open`.
 
-### Streaming engine: the torrent being played can exceed the cache limit
-- Where: [cache.rs](../crates/cineo-stream/src/cache.rs)
-- Gap: eviction runs when a torrent opens and never removes the current
-  one, so a file larger than the limit fills the disk past it.
-- Why: deleting data under the player would break playback.
-- Instead: other torrents are evicted first; the current one keeps growing.
-- Exit: refuse files larger than the limit up front, or evict pieces
+### Streaming engine: the torrent being played can fill the disk
+- Where: [storage.rs](../crates/cineo-stream/src/storage.rs)
+- Gap: the file being played is kept whole on disk until it stops, so a
+  file larger than the free space fills the disk.
+- Why: deleting data under the player would break playback and seeking.
+- Instead: nothing else is kept: data is deleted when the torrent stops
+  and leftovers when the engine starts.
+- Exit: refuse files larger than the free space up front, or drop pieces
   already played (needs piece-level storage).
 
 ### Store: no in-app recovery from a corrupt database

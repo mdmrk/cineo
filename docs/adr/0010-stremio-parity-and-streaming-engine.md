@@ -54,7 +54,8 @@ Candidate libraries (crates.io, 2026-10-06):
 - **Safety** (SECURITY.md §Streaming engine):
   - The engine binds to loopback only, with an unguessable per-session path
     token.
-  - Cache size is bounded.
+  - Cache size is bounded. (Amended by ADR-0012, 2026-10-07: no cache;
+    only the torrent being played is on disk.)
   - P2P is disclosed before first use and can be disabled entirely
     (LEGAL.md).
 

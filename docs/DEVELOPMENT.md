@@ -352,10 +352,10 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 | T3 | Play again → Accept and play | The player opens at once with Back and the film's logo (or, without one, its title) pulsing in the middle; the video starts once the engine serves the file |
 | T4 | Seek forward and back | Playback resumes within a few seconds |
 | T5 | Back (or Esc) | The detail page returns; the log shows the torrent stopped. Back while still connecting cancels the torrent too |
-| T6 | Play it again | No notice this time; starts faster (data in the cache) |
+| T6 | Play it again | No notice this time. While it plays, the cache directory holds its `<info hash>` folder with only `<file index>` files (no torrent file names) |
 | T7 | Settings → untick "Show and play torrent streams"; open the film | The torrent stream is gone; "1 torrent stream hidden…" is shown |
 | T8 | Restart with the same directories | The setting is kept |
-| T9 | Look in the cache directory | Only `<info hash>/<file index>` files and `dht.json`; no torrent file names |
+| T9 | Back, then look in the cache directory | Only `dht.json`: the torrent's data was deleted when it stopped |
 
 ## Dependencies
 

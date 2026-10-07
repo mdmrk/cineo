@@ -162,8 +162,8 @@ impl TorrentStorage for CacheStorage {
     }
 
     fn remove_directory_if_empty(&self, _path: &std::path::Path) -> anyhow::Result<()> {
-        // The torrent's own directory is removed by cache eviction; paths
-        // derived from the torrent are never touched.
+        // The engine removes the torrent's own directory when it stops;
+        // paths derived from the torrent are never touched.
         Ok(())
     }
 

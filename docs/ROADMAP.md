@@ -241,7 +241,7 @@ delivered is in [CHANGELOG.md](../CHANGELOG.md) and the git history.
   - Engine against a local test swarm or fixture torrent with
     public-domain content.
   - Loopback-only binding and path-token tests.
-  - Cache limit tests.
+  - Tests that torrent data is deleted when it stops.
 - **Acceptance:** a torrent stream from a mock addon plays and seeks in mpv
   on Linux and Windows. Disabling P2P hides and blocks torrent sources.
 

@@ -71,10 +71,16 @@ mpv 0.41.
   file-level copyleft; we use it unmodified.
 - **Files on disk.** Our storage names files `<cache>/<info hash>/<file
   index>`; torrent file names never become paths.
+- **No cache (amended 2026-10-07, owner decision).** A torrent's data is
+  deleted when it stops, and leftovers when the engine starts, so only
+  the torrent being played is on disk. This replaces ADR-0010's bounded
+  cache: the 5 GiB least-recently-used cache took too much disk. Playing
+  a torrent again downloads it again.
 
 ## Consequences
 - AGENTS.md's network invariant gains this one exception.
-- The cache, the HTTP server and the blocklist need their own tests.
+- Deleting torrent data, the HTTP server and the blocklist need their own
+  tests.
 - `librqbit` adds about 350 crates to the build (most shared with reqwest
   and tokio) and is a large surface we do not control; its updates need
   review like any network-facing dependency.
