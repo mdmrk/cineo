@@ -19,7 +19,6 @@ use librqbit::{
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-/// A fresh, empty directory per test.
 fn temp_dir(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("stream")
@@ -29,7 +28,6 @@ fn temp_dir(name: &str) -> PathBuf {
     dir
 }
 
-/// Deterministic, non-repeating bytes, so misplaced ranges are detected.
 fn film_bytes() -> Vec<u8> {
     (0..1_500_000u32)
         .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
@@ -41,12 +39,9 @@ struct Seeder {
     addr: SocketAddr,
     info_hash: String,
     film: Vec<u8>,
-    /// The film's index in the torrent, which follows directory order.
     film_index: usize,
 }
 
-/// Creates a two-file torrent (a film and a small text file) and seeds it
-/// on loopback.
 async fn seeder(name: &str) -> Seeder {
     let content = temp_dir(&format!("{name}-seed")).join("content");
     std::fs::create_dir_all(&content).unwrap();
@@ -146,7 +141,6 @@ impl Reply {
     }
 }
 
-/// A minimal HTTP/1.1 client: one request per connection.
 async fn http(addr: SocketAddr, method: &str, path: &str, extra: &[(&str, &str)]) -> Reply {
     let host = format!("{addr}");
     let mut request = format!("{method} {path} HTTP/1.1\r\nConnection: close\r\n");
@@ -197,7 +191,6 @@ async fn serves_the_chosen_file_with_ranges_from_a_local_peer() {
     let url = engine.open(&request(&seeder)).await.unwrap();
     assert_eq!(url.host_str(), Some("127.0.0.1"));
     let path = url.path().to_owned();
-    // The largest video, not the larger text file.
     assert!(
         path.ends_with(&format!("/{}/{}", seeder.info_hash, seeder.film_index)),
         "{path}"
@@ -350,8 +343,6 @@ async fn leftover_torrent_data_is_deleted_at_start() {
     engine.shutdown().await;
 }
 
-/// Regression: closing the app right after Play waited a fixed second in
-/// librqbit's `Session::stop` (a grace sleep after cancelling).
 #[tokio::test(flavor = "multi_thread")]
 async fn shutdown_while_waiting_for_metadata_is_quick() {
     let options = EngineOptions {
@@ -360,7 +351,6 @@ async fn shutdown_while_waiting_for_metadata_is_quick() {
         ..EngineOptions::new(temp_dir("quick-shutdown-cache"))
     };
     let engine = std::sync::Arc::new(Engine::start(options).await.unwrap());
-    // Nobody seeds this hash: `open` waits for metadata.
     let waiting = {
         let engine = std::sync::Arc::clone(&engine);
         tokio::spawn(async move {
@@ -384,8 +374,6 @@ async fn shutdown_while_waiting_for_metadata_is_quick() {
     assert!(took < Duration::from_millis(500), "shutdown took {took:?}");
 }
 
-/// Seeds `torrent` from `content` on loopback, uploading at most
-/// `upload_bps` bytes per second if given.
 async fn seed_limited(
     content: &Path,
     torrent: &[u8],
@@ -431,9 +419,6 @@ async fn seed_limited(
     (session, addr)
 }
 
-/// Regression: librqbit asked one peer per piece, so a slow peer holding
-/// one of the first pieces held back the start (about 5 s here, against
-/// under 0.1 s with our librqbit fork's patch: urgent pieces get helper peers).
 #[tokio::test(flavor = "multi_thread")]
 async fn a_slow_peer_does_not_hold_back_the_start() {
     let content = temp_dir("slow-peer-seed").join("content");
@@ -453,7 +438,6 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
     .await
     .unwrap();
     let bytes = torrent.as_bytes().unwrap().to_vec();
-    // 4 s per piece from the slow peer.
     let (_slow_session, slow) = seed_limited(&content, &bytes, Some(128 * 1024)).await;
     let (_fast_session, fast) = seed_limited(&content, &bytes, None).await;
 

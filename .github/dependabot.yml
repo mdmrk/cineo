@@ -4,8 +4,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Wait a week before taking a new release: compromised versions are
-    # usually pulled within days (zizmor dependabot-cooldown).
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5

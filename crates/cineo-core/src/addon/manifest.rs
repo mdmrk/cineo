@@ -1,7 +1,4 @@
 //! Addon manifest: parsing, validation and resource filtering.
-//!
-//! Filtering semantics intentionally match the reference client; see
-//! `docs/ADDON_PROTOCOL.md#resource-filtering`.
 
 use std::collections::HashSet;
 
@@ -46,9 +43,7 @@ pub struct Resource {
 /// Which content ids a resource answers for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IdFilter {
-    /// No `idPrefixes` declared, or an empty list: every id matches.
     Any,
-    /// The id must start with one of these prefixes. Never empty.
     Prefixes(Vec<String>),
 }
 
@@ -142,12 +137,6 @@ pub struct BehaviorHints {
 
 impl Manifest {
     /// Whether this addon should be asked for `path`.
-    ///
-    /// * `catalog` / `addon_catalog`: a declared catalog with the same type and
-    ///   id must accept the extra values. The `resources` list is not consulted
-    ///   (reference-client behavior).
-    /// * other resources: the resource must be declared, the type must be one
-    ///   of its types and the id must match its id filter.
     pub fn supports(&self, path: &ResourcePath) -> bool {
         let catalog_match = |catalogs: &[CatalogDef]| {
             catalogs.iter().any(|c| {
@@ -189,9 +178,6 @@ pub enum ManifestError {
 }
 
 /// Parses and validates a manifest document.
-///
-/// Fails only when a required field (`id`, `version`, `name`, `types`,
-/// `resources`) is missing or unusable. Everything else degrades to a warning.
 pub fn parse_manifest(bytes: &[u8]) -> Result<Parsed<Manifest>, ManifestError> {
     let root: Value = serde_json::from_slice(bytes)?;
     let Value::Object(obj) = root else {
@@ -297,7 +283,6 @@ fn required_string(obj: &Object, key: &'static str) -> Result<String, ManifestEr
     }
 }
 
-/// Parses a list of content types, skipping invalid entries.
 fn content_types(obj: &Object, key: &str, loc: &str, warnings: &mut Warnings) -> Vec<ContentType> {
     json::string_list(obj, key, loc, warnings)
         .unwrap_or_default()
@@ -324,14 +309,12 @@ fn parse_resources(
     for (i, item) in items.iter().enumerate() {
         let loc = format!("resources[{i}]");
         let resource = match item {
-            // Short form inherits manifest-level types and idPrefixes.
             Value::String(name) => Resource {
                 name: ResourceName::parse(name),
                 types: manifest_types.to_vec(),
                 ids: IdFilter::from_prefixes(manifest_prefixes.cloned()),
             },
-            // Full form inherits nothing: missing `types` matches no type,
-            // missing `idPrefixes` matches every id (reference behavior).
+            // Full form inherits nothing: no `types` matches no type, no `idPrefixes` matches every id (reference behavior).
             Value::Object(obj) => {
                 let Some(Value::String(name)) = obj.get("name") else {
                     warnings.skipped(loc, "resource object without a string `name`");
@@ -418,7 +401,6 @@ fn parse_catalogs(obj: &Object, key: &str, warnings: &mut Warnings) -> Vec<Catal
     catalogs
 }
 
-/// Parses `extra` (full form) or `extraRequired`/`extraSupported` (short form).
 fn parse_extra(cat: &Object, loc: &str, warnings: &mut Warnings) -> Vec<ExtraProp> {
     let mut props = match cat.get("extra") {
         Some(Value::Array(items)) => items
@@ -431,7 +413,6 @@ fn parse_extra(cat: &Object, loc: &str, warnings: &mut Warnings) -> Vec<ExtraPro
                 json::string_list(cat, "extraSupported", loc, warnings).unwrap_or_default();
             let required =
                 json::string_list(cat, "extraRequired", loc, warnings).unwrap_or_default();
-            // Reference behavior: only names listed in `extraSupported` exist.
             for name in required.iter().filter(|r| !supported.contains(r)) {
                 warnings.ignored(
                     field(loc, "extraRequired"),
@@ -476,7 +457,6 @@ fn parse_extra_prop(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<
         warnings.skipped(loc, "missing or empty `name`");
         return None;
     };
-    // Reference behavior: `skip` is always optional, single-valued, option-less.
     if name == "skip" {
         return Some(ExtraProp {
             name: name.clone(),

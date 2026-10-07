@@ -1,9 +1,4 @@
 //! The application state and its pure transition function.
-//!
-//! Shells render [`State`], send [`Action`]s to [`update`], and execute the
-//! returned [`Effect`]s, reporting results back as `*Loaded` actions. Results
-//! are matched to the request that produced them by `(addon, path)`; results
-//! nobody waits for any more (stale) are dropped.
 
 use url::Url;
 
@@ -27,7 +22,6 @@ pub struct InstalledAddon {
 pub enum Loadable<T> {
     Loading,
     Ready(T),
-    /// A user-presentable reason.
     Failed(String),
 }
 
@@ -133,7 +127,6 @@ pub struct State {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
-    /// Restore saved addon URLs (in order) and library items.
     Restore {
         addons: Vec<TransportUrl>,
         library: Vec<LibraryItem>,
@@ -141,7 +134,6 @@ pub enum Action {
     RestoreSettings(Settings),
     InstallAddon(String),
     RemoveAddon(TransportUrl),
-    /// Move the addon at `from` to position `to`.
     MoveAddon {
         from: usize,
         to: usize,
@@ -165,7 +157,6 @@ pub enum Action {
         group: usize,
         stream: usize,
     },
-    /// Reported by the player shell.
     PlaybackProgress {
         meta_id: String,
         video_id: String,
@@ -174,19 +165,15 @@ pub enum Action {
         now_ms: u64,
     },
     PlaybackFailed(String),
-    /// The player closed or reached the end (reported by the player shell).
     PlaybackStopped,
     RemoveFromLibrary(String),
     DismissNotice,
-    /// The user accepted the P2P notice; play the waiting stream.
     AcceptP2p,
-    /// The user closed the P2P notice without accepting.
     DeclineP2p,
     SetP2pEnabled(bool),
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
-        /// True if this came from a user install (vs. startup restore).
         install: bool,
     },
     CatalogLoaded {
@@ -204,7 +191,6 @@ pub enum Action {
         path: ResourcePath,
         result: Result<Vec<Stream>, String>,
     },
-    /// The engine serves the torrent at `url`.
     TorrentReady {
         info_hash: String,
         url: Url,
@@ -243,8 +229,6 @@ pub enum Effect {
     DeleteLibraryItem(String),
     SaveSettings(Settings),
     Play(PlayRequest),
-    /// Start serving a torrent, replacing any other; answer with
-    /// `TorrentReady` or `TorrentFailed`, then `TorrentStatus` updates.
     StartTorrent(TorrentRequest),
     StopTorrent,
 }
@@ -300,7 +284,6 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             if from < state.addons.len() && to < state.addons.len() && from != to {
                 let addon = state.addons.remove(from);
                 state.addons.insert(to, addon);
-                // Loaded addons trade places; the others keep their slots.
                 let mut order = state.addons.iter().map(|a| a.transport.clone());
                 for slot in &mut state.installed {
                     if state.addons.iter().any(|a| a.transport == *slot)
@@ -562,8 +545,6 @@ fn load_board(state: &mut State) -> Vec<Effect> {
         .collect()
 }
 
-/// Rebuilds the board for the loaded addons, keeping rows that are still
-/// on it and fetching only new ones.
 fn refresh_board(state: &mut State) -> Vec<Effect> {
     let mut old = std::mem::take(&mut state.board);
     let mut effects = Vec::new();
@@ -583,7 +564,6 @@ fn refresh_board(state: &mut State) -> Vec<Effect> {
     effects
 }
 
-/// Catalogs with required extras (only reachable through Discover).
 fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
     state
         .addons
@@ -603,7 +583,6 @@ fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
         .collect()
 }
 
-/// A required `genre` defaults to its first option (reference behavior).
 fn default_genre(state: &State, addon: &TransportUrl, path: &ResourcePath) -> Option<String> {
     let catalog = state
         .addons
@@ -631,7 +610,6 @@ fn discover_page(state: &mut State, skip: usize) -> Vec<Effect> {
         extra.push(ExtraValue::new("skip", skip.to_string()));
     }
     let path = target.path.clone().with_extra(extra);
-    // Never request what the addon does not declare.
     let supported = state
         .addons
         .iter()
@@ -739,7 +717,6 @@ fn catalog_loaded(
                 if skip == 0 {
                     discover.items = items;
                 } else {
-                    // Some addons repeat items across pages; keep the first.
                     for item in items {
                         if !discover.items.iter().any(|i| i.id == item.id) {
                             discover.items.push(item);
@@ -903,7 +880,6 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let content_type = detail.content_type.clone();
     let meta_id = detail.id.clone();
 
-    // Create or update the library entry; resume where the user left off.
     let start_ms = match state.library.iter_mut().find(|i| i.id == meta_id) {
         Some(item) => {
             let start = item.resume_ms(&video_id);

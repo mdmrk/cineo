@@ -36,7 +36,6 @@ fn ty(s: &str) -> ContentType {
 const BASIC: &str = "https://basic.example/manifest.json";
 const STREAMS: &str = "https://streams.example/manifest.json";
 
-/// State with both fixture addons installed via `Restore`.
 fn restored() -> (State, Vec<Effect>) {
     let mut state = State::default();
     let effects = update(
@@ -107,7 +106,6 @@ fn restore_loads_addons_in_order_then_the_board() {
         .map(|a| a.manifest.name.as_str())
         .collect();
     assert_eq!(names, vec!["Basic Fixture", "Streams Fixture"]);
-    // Browsable catalogs only: `search` requires an extra, so 2 rows.
     let titles: Vec<_> = state
         .board
         .iter()
@@ -304,7 +302,6 @@ fn meta_falls_back_to_the_next_addon_then_movie_streams_load_from_all() {
             preview: None,
         },
     );
-    // Only the basic addon serves meta, so there is no fallback.
     let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
         panic!("{effects:?}");
     };
@@ -320,12 +317,10 @@ fn meta_falls_back_to_the_next_addon_then_movie_streams_load_from_all() {
             result: Ok(Box::new(meta)),
         },
     );
-    // Movie: its own id is the video; both addons serve `stream` for `tt`.
     assert_eq!(effects.len(), 2);
     let detail = state.detail.as_ref().unwrap();
     assert_eq!(detail.selected_video.as_deref(), Some("tt0000001"));
 
-    // One addon fails, the other answers: both outcomes stay visible.
     let groups: Vec<(TransportUrl, ResourcePath)> = detail
         .streams
         .iter()
@@ -512,7 +507,6 @@ const PLAY_TORRENT: Action = Action::Play {
     stream: 1,
 };
 
-/// The detail page with the P2P notice already accepted.
 fn detail_with_p2p_accepted() -> State {
     let mut state = detail_with_streams();
     update(
@@ -578,7 +572,6 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
     update(&mut state, PLAY_TORRENT);
     let served = url::Url::parse("http://127.0.0.1:40000/token/0").unwrap();
 
-    // A late answer for another torrent is ignored.
     let stale = update(
         &mut state,
         Action::TorrentReady {

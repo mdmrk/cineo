@@ -1,20 +1,13 @@
 //! `Range` request headers (RFC 9110 §14). Only single byte ranges are
 //! served; players do not send more.
 
-/// The part of a file to send.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Span {
-    /// No `Range` header: the whole file, status 200.
     Full,
-    /// Inclusive byte offsets, status 206.
     Partial { start: u64, end: u64 },
-    /// Cannot be served from a file of this length, status 416.
     Unsatisfiable,
 }
 
-/// Interprets `header` (the `Range` value, if any) for a file of `len`
-/// bytes. Anything that is not one well-formed `bytes=` range is answered
-/// with the full file, as RFC 9110 allows for unsupported ranges.
 pub(crate) fn span(header: Option<&str>, len: u64) -> Span {
     let Some(spec) = header.and_then(|h| h.trim().strip_prefix("bytes=")) else {
         return Span::Full;
@@ -27,13 +20,11 @@ pub(crate) fn span(header: Option<&str>, len: u64) -> Span {
     };
     let parse = |s: &str| s.trim().parse::<u64>().ok();
     let (start, end) = match (first.trim().is_empty(), last.trim().is_empty()) {
-        // bytes=-N: the last N bytes.
         (true, false) => match parse(last) {
             None => return Span::Full,
             Some(0) => return Span::Unsatisfiable,
             Some(n) => (len.saturating_sub(n), len.saturating_sub(1)),
         },
-        // bytes=N-: from N to the end.
         (false, true) => match parse(first) {
             Some(start) => (start, len.saturating_sub(1)),
             None => return Span::Full,

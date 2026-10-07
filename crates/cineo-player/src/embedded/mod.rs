@@ -1,10 +1,5 @@
 //! Playback inside the host window through libmpv, loaded at runtime
 //! (ADR-0014).
-//!
-//! The same safety rules as the external process apply (docs/SECURITY.md):
-//! mpv starts with no config, scripts or ytdl; media is loaded with an
-//! argument-array `loadfile`; the title and headers are data, never options;
-//! the UI sends typed [`PlayerCommand`]s only.
 
 mod ffi;
 mod render;
@@ -44,18 +39,12 @@ impl std::fmt::Debug for Video {
 #[non_exhaustive]
 pub enum PlayerCommand {
     TogglePause,
-    /// Seek to this many seconds from the start.
     SeekTo(f64),
-    /// Seek by this many seconds (negative: backwards).
     SeekBy(f64),
-    /// Volume in percent, clamped to 0–100.
     SetVolume(f64),
     ToggleMute,
-    /// An audio track id from [`Status::tracks`]; `None` turns audio off.
     SetAudio(Option<i64>),
-    /// A subtitle track id from [`Status::tracks`]; `None` hides subtitles.
     SetSubtitle(Option<i64>),
-    /// End playback; a [`PlayerEvent::Closed`] follows.
     Stop,
 }
 
@@ -94,7 +83,6 @@ pub struct Status {
     pub tracks: Vec<Track>,
 }
 
-// Observed property ids.
 const TIME_POS: u64 = 1;
 const DURATION: u64 = 2;
 const PAUSE: u64 = 3;
@@ -110,21 +98,15 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 7] = [
     (BUFFERING, "paused-for-cache", ffi::FORMAT_FLAG),
     (VOLUME, "volume", ffi::FORMAT_DOUBLE),
     (MUTE, "mute", ffi::FORMAT_FLAG),
-    // As a string, mpv formats this list as JSON.
     (TRACK_LIST, "track-list", ffi::FORMAT_STRING),
 ];
 
-/// Under OpenGL, mpv's `auto-safe` loads its CUDA interop before trying
-/// VA-API; without an NVIDIA driver, that prints "Cannot load libcuda.so.1"
-/// straight to stderr. Trying VA-API first avoids it; `auto-safe` stays the
-/// fallback.
+// VA-API first: `auto-safe` alone loads the CUDA interop, which prints to stderr.
 #[cfg(target_os = "linux")]
 const HWDEC: &str = "vaapi,auto-safe";
 #[cfg(not(target_os = "linux"))]
 const HWDEC: &str = "auto-safe";
 
-/// Options set before mpv initializes. No user config, scripts, ytdl,
-/// input bindings or on-screen display: Cineo draws its own controls.
 const OPTIONS: &[(&str, &str)] = &[
     ("config", "no"),
     ("load-scripts", "no"),
@@ -139,7 +121,6 @@ const OPTIONS: &[(&str, &str)] = &[
     ("vo", "libmpv"),
     ("idle", "yes"),
     ("keep-open", "no"),
-    // Rendering must not wait for frame display times on the UI thread.
     ("video-timing-offset", "0"),
     ("audio-client-name", "Cineo"),
 ];
@@ -163,7 +144,6 @@ impl std::fmt::Debug for Player {
 impl Drop for Player {
     fn drop(&mut self) {
         if !self.is_finished() {
-            // The event thread sees the shutdown and lets go of the core.
             let _ = self.core.command_async(&["quit"]);
         }
     }
@@ -173,9 +153,6 @@ impl Player {
     /// Starts playing `request` with its video drawn by the returned
     /// [`Renderer`]. Events arrive on the returned channel. `notify` is
     /// called (from another thread) whenever [`Self::status`] changes.
-    ///
-    /// Call it on the thread whose OpenGL context `video` belongs to, with
-    /// that context current (see [`Renderer`]).
     pub fn start(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
@@ -209,8 +186,7 @@ impl Player {
         for (id, name, format) in OBSERVED {
             core.observe(id, name, format).map_err(fail)?;
         }
-        // The render context must exist before a file loads, or mpv finds
-        // no video output and plays audio only (VERIFIED with mpv 0.41).
+        // The render context must exist before a file loads, or mpv plays audio only.
         let renderer = video
             .map(|video| Renderer::new(Arc::clone(&core), video.get_proc_address, video.on_frame))
             .transpose()?;
@@ -285,7 +261,6 @@ impl Player {
     }
 }
 
-/// The mpv command for `command`, built only from typed values.
 fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
     let track = |id: Option<i64>| id.map_or_else(|| "no".to_owned(), |id| id.to_string());
     let args = match command {
@@ -309,14 +284,12 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],
         PlayerCommand::SetAudio(id) => vec!["set".into(), "aid".into(), track(id)],
         PlayerCommand::SetSubtitle(id) => vec!["set".into(), "sid".into(), track(id)],
-        // `quit`, not `stop`: before the file loads, mpv's end of a stopped
-        // file looks like leaving its idle state and would be ignored.
+        // `quit`, not `stop`: mpv ignores a stop before the file has loaded.
         PlayerCommand::Stop => vec!["quit".into()],
     };
     Some(args)
 }
 
-/// Parses mpv's `track-list` JSON leniently: malformed entries are skipped.
 fn parse_tracks(json: &str) -> Vec<Track> {
     let Ok(Json::Array(items)) = serde_json::from_str::<Json>(json) else {
         return Vec::new();
@@ -347,8 +320,6 @@ fn parse_tracks(json: &str) -> Vec<Track> {
         .collect()
 }
 
-/// Runs on its own thread: turns mpv events into status updates and
-/// [`PlayerEvent`]s until mpv shuts down.
 struct EventLoop {
     core: Arc<Core>,
     status: Arc<Mutex<Status>>,
@@ -358,9 +329,6 @@ struct EventLoop {
     tracker: Tracker,
 }
 
-/// The `tracing` level for an mpv log level (only `warn` and worse are
-/// requested). mpv warnings are about the media, not Cineo, and some repeat
-/// on every frame, so they are info.
 fn log_level(mpv_level: &str) -> tracing::Level {
     match mpv_level {
         "fatal" | "error" => tracing::Level::ERROR,
@@ -417,7 +385,6 @@ impl EventLoop {
                 done = true;
                 self.finished.store(true, Ordering::SeqCst);
                 (self.notify)();
-                // Shut mpv down; the loop ends at its SHUTDOWN event.
                 let _ = self.core.command_async(&["quit"]);
             }
         }

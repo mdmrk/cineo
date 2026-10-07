@@ -25,7 +25,6 @@ fn fixture(rel: &str) -> Vec<u8> {
 
 const BASIC: &str = "https://basic.example/manifest.json";
 
-/// The basic fixture addon installed, with every board row answered.
 fn board_state() -> State {
     let mut state = State::default();
     let addon = TransportUrl::parse(BASIC).unwrap();
@@ -49,7 +48,6 @@ fn board_state() -> State {
     );
     for effect in effects {
         if let Effect::FetchCatalog { addon, path } = effect {
-            // The movie row loads; the series row fails.
             let result = if path.id == "top" {
                 Ok(
                     parse_catalog_response(&fixture("basic/catalog-movie-top.json"))
@@ -73,7 +71,6 @@ fn board_state() -> State {
     state
 }
 
-/// The movie's detail page with its streams loaded.
 fn detail_state() -> State {
     let mut state = board_state();
     let effects = update(
@@ -400,7 +397,6 @@ fn discover_lists_catalogs_as_choices() {
     };
     let mut harness = harness(state, view);
     harness.get_by_label("Multi-genre Series").click();
-    // The next page's spinner keeps repainting.
     harness.run_steps(2);
     let actions = &harness.state().2;
     assert!(
@@ -461,6 +457,5 @@ fn a_wheel_notch_scrolls_about_as_far_as_in_a_browser() {
 fn torrent_streams_carry_no_kind_tag() {
     let harness = harness(detail_state(), ViewState::default());
     assert!(harness.query_by_label("TORRENT").is_none());
-    // Other kinds keep theirs.
     assert!(harness.query_all_by_label("HTTP").count() > 0);
 }

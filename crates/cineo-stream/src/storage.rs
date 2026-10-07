@@ -11,12 +11,10 @@ use anyhow::Context as _;
 use librqbit::storage::{BoxStorageFactory, StorageFactory, StorageFactoryExt, TorrentStorage};
 use librqbit::{ManagedTorrentShared, TorrentMetadata};
 
-/// A torrent's directory in the cache. `info_hash` is 40 hex characters.
 pub(crate) fn torrent_dir(cache: &Path, info_hash: &str) -> PathBuf {
     cache.join(info_hash)
 }
 
-/// Creates a [`CacheStorage`] per torrent.
 #[derive(Debug, Clone)]
 pub(crate) struct CacheStorageFactory {
     pub(crate) cache: PathBuf,
@@ -51,7 +49,6 @@ struct Inner {
     files: Vec<Slot>,
 }
 
-/// One torrent's files in the cache.
 #[derive(Clone)]
 pub(crate) struct CacheStorage {
     inner: Arc<Inner>,
@@ -85,8 +82,6 @@ impl CacheStorage {
             .with_context(|| format!("no file {file_id} in this torrent"))
     }
 
-    /// The open file, opening (and with `create`, creating) it on first use.
-    /// `None` if it does not exist and `create` is false.
     fn open(slot: &Slot, create: bool) -> anyhow::Result<MutexGuard<'_, Option<File>>> {
         let mut guard = slot
             .file
@@ -118,10 +113,6 @@ impl TorrentStorage for CacheStorage {
         crate::cache::create_private_dir(&self.inner.dir).context("cannot create the cache")
     }
 
-    /// A file never written is an error, so librqbit's initial check skips
-    /// it instead of hashing its whole length. Holes and the tail of a
-    /// written file read as zeros, so their pieces fail the hash check and
-    /// are downloaded.
     fn pread_exact(&self, file_id: usize, offset: u64, buf: &mut [u8]) -> anyhow::Result<()> {
         let slot = self.slot(file_id)?;
         let mut guard = Self::open(slot, false)?;
@@ -163,13 +154,10 @@ impl TorrentStorage for CacheStorage {
     }
 
     fn remove_directory_if_empty(&self, _path: &std::path::Path) -> anyhow::Result<()> {
-        // The engine removes the torrent's own directory when it stops;
-        // paths derived from the torrent are never touched.
         Ok(())
     }
 
     fn ensure_file_length(&self, _file_id: usize, _length: u64) -> anyhow::Result<()> {
-        // Files grow on write; unread tails read as zeros.
         Ok(())
     }
 
@@ -207,9 +195,6 @@ mod tests {
         assert!(storage.pwrite_all(2, 0, b"x").is_err(), "no such file");
     }
 
-    /// Regression: a missing file read as zeros, so librqbit's initial
-    /// check hashed every byte of every file before a torrent could start.
-    /// An error makes it skip the file.
     #[test]
     fn reading_a_file_never_written_is_an_error() {
         let root = dir("missing");

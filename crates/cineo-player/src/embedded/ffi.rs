@@ -1,9 +1,4 @@
 //! The libmpv client and render API, loaded at runtime (ADR-0014).
-//!
-//! Types and signatures are written from mpv's ISC-licensed headers
-//! (`client.h`, `render.h`, `render_gl.h`, client API 2.x). Only the
-//! functions Cineo calls are declared. Everything here is `pub(crate)` and
-//! wrapped by [`Core`], whose methods are safe.
 #![allow(unsafe_code, reason = "FFI to libmpv; ADR-0014, docs/SECURITY.md")]
 
 use std::ffi::{CStr, CString, c_char, c_int, c_ulong, c_void};
@@ -12,19 +7,16 @@ use std::sync::{Mutex, OnceLock};
 
 use tracing::{debug, info};
 
-/// `mpv_handle` (opaque).
 #[repr(C)]
 pub(crate) struct Handle {
     _private: [u8; 0],
 }
 
-/// `mpv_render_context` (opaque).
 #[repr(C)]
 pub(crate) struct RenderContext {
     _private: [u8; 0],
 }
 
-/// `mpv_event`.
 #[repr(C)]
 #[allow(dead_code, reason = "C layout; not every field is read")]
 struct RawEvent {
@@ -34,7 +26,6 @@ struct RawEvent {
     data: *mut c_void,
 }
 
-/// `mpv_event_property`.
 #[repr(C)]
 #[allow(dead_code, reason = "C layout; not every field is read")]
 struct RawProperty {
@@ -43,14 +34,12 @@ struct RawProperty {
     data: *mut c_void,
 }
 
-/// `mpv_event_end_file` (the fields we read come first).
 #[repr(C)]
 struct RawEndFile {
     reason: c_int,
     error: c_int,
 }
 
-/// `mpv_event_log_message`.
 #[repr(C)]
 #[allow(dead_code, reason = "C layout; not every field is read")]
 struct RawLogMessage {
@@ -60,14 +49,12 @@ struct RawLogMessage {
     log_level: c_int,
 }
 
-/// `mpv_render_param`.
 #[repr(C)]
 pub(crate) struct RenderParam {
     pub(crate) kind: c_int,
     pub(crate) data: *mut c_void,
 }
 
-/// `mpv_opengl_init_params`.
 #[repr(C)]
 pub(crate) struct OpenGlInitParams {
     pub(crate) get_proc_address:
@@ -75,7 +62,6 @@ pub(crate) struct OpenGlInitParams {
     pub(crate) get_proc_address_ctx: *mut c_void,
 }
 
-/// `mpv_opengl_fbo`.
 #[repr(C)]
 pub(crate) struct OpenGlFbo {
     pub(crate) fbo: c_int,
@@ -84,7 +70,6 @@ pub(crate) struct OpenGlFbo {
     pub(crate) internal_format: c_int,
 }
 
-// mpv_event_id
 const EVENT_NONE: c_int = 0;
 const EVENT_SHUTDOWN: c_int = 1;
 const EVENT_LOG_MESSAGE: c_int = 2;
@@ -92,16 +77,13 @@ const EVENT_END_FILE: c_int = 7;
 const EVENT_FILE_LOADED: c_int = 8;
 const EVENT_PROPERTY_CHANGE: c_int = 22;
 
-// mpv_format
 pub(crate) const FORMAT_STRING: c_int = 1;
 pub(crate) const FORMAT_FLAG: c_int = 3;
 pub(crate) const FORMAT_DOUBLE: c_int = 5;
 
-// mpv_end_file_reason
 const END_FILE_EOF: c_int = 0;
 const END_FILE_ERROR: c_int = 4;
 
-// mpv_render_param_type
 pub(crate) const RENDER_PARAM_INVALID: c_int = 0;
 pub(crate) const RENDER_PARAM_API_TYPE: c_int = 1;
 pub(crate) const RENDER_PARAM_OPENGL_INIT_PARAMS: c_int = 2;
@@ -109,15 +91,12 @@ pub(crate) const RENDER_PARAM_OPENGL_FBO: c_int = 3;
 pub(crate) const RENDER_PARAM_FLIP_Y: c_int = 4;
 pub(crate) const RENDER_PARAM_BLOCK_FOR_TARGET_TIME: c_int = 12;
 
-/// `MPV_RENDER_API_TYPE_OPENGL`.
 pub(crate) const RENDER_API_TYPE_OPENGL: &CStr = c"opengl";
 
-/// The client API major version we were written against (mpv 0.35+).
 const API_MAJOR: c_ulong = 2;
 
 type UpdateFn = unsafe extern "C" fn(*mut c_void);
 
-/// The libmpv functions Cineo uses, resolved once.
 pub(crate) struct Lib {
     error_string: unsafe extern "C" fn(c_int) -> *const c_char,
     create: unsafe extern "C" fn() -> *mut Handle,
@@ -138,11 +117,9 @@ pub(crate) struct Lib {
     pub(crate) render_context_render:
         unsafe extern "C" fn(*mut RenderContext, *mut RenderParam) -> c_int,
     pub(crate) render_context_free: unsafe extern "C" fn(*mut RenderContext),
-    /// Keeps the function pointers above valid. Never unloaded.
     _library: libloading::Library,
 }
 
-/// Loads libmpv once per process. The error is user-facing text.
 pub(crate) fn lib() -> Result<&'static Lib, String> {
     static LIB: OnceLock<Result<Lib, String>> = OnceLock::new();
     LIB.get_or_init(load).as_ref().map_err(Clone::clone)
@@ -157,8 +134,6 @@ const NAMES: &[&str] = &["libmpv-2.dll", "mpv-2.dll"];
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 const NAMES: &[&str] = &[];
 
-/// Where to look, in order: next to the executable (a bundled copy), then
-/// the system's library search path.
 fn candidates() -> Vec<PathBuf> {
     let beside = std::env::current_exe()
         .ok()
@@ -174,8 +149,7 @@ fn candidates() -> Vec<PathBuf> {
 fn load() -> Result<Lib, String> {
     let mut last = String::from("no library name for this platform");
     for path in candidates() {
-        // A bare name must reach the system loader as such, not as a
-        // relative path.
+        // A bare name must reach the system loader as such, not as a relative path.
         if path.components().count() > 1 && !path.exists() {
             continue;
         }
@@ -237,26 +211,20 @@ fn resolve(library: libloading::Library) -> Result<Lib, String> {
     })
 }
 
-/// A libmpv call failed. The message comes from `mpv_error_string` or
-/// describes an argument we refused to pass.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{0}")]
 pub(crate) struct MpvError(pub(crate) String);
 
-/// A property value as observed.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Value {
-    /// The property is unavailable (for example no file is loaded).
     None,
     Flag(bool),
     Double(f64),
     Text(String),
 }
 
-/// An mpv event, copied out of libmpv's memory.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Event {
-    /// `mpv_wait_event` timed out or was woken up.
     None,
     Shutdown,
     Log {
@@ -266,8 +234,6 @@ pub(crate) enum Event {
     },
     FileLoaded,
     EndFile {
-        /// `Ok(true)` at the end of the file, `Ok(false)` for a stop, quit
-        /// or redirect, `Err` with mpv's message when playback failed.
         eof: Result<bool, String>,
     },
     Property {
@@ -277,16 +243,9 @@ pub(crate) enum Event {
     Other,
 }
 
-/// An initialized-or-not mpv core with one client handle. Destroyed (with
-/// `mpv_terminate_destroy`) on drop.
-///
-/// Invariant: every render context created from this core is freed before
-/// the core is dropped; [`super::render::Renderer`] holds an `Arc<Core>` to
-/// guarantee it.
 pub(crate) struct Core {
     lib: &'static Lib,
     handle: *mut Handle,
-    /// `mpv_wait_event` must not be called by two threads at once.
     waiting: Mutex<()>,
 }
 
@@ -315,10 +274,6 @@ fn cstring(text: &str) -> Result<CString, MpvError> {
     CString::new(text).map_err(|_| MpvError("an argument contains a NUL byte".into()))
 }
 
-/// Copies a C string that may be NULL.
-///
-/// # Safety
-/// `ptr` is NULL or points to a NUL-terminated string valid for this call.
 unsafe fn text(ptr: *const c_char) -> String {
     if ptr.is_null() {
         String::new()
@@ -331,7 +286,6 @@ unsafe fn text(ptr: *const c_char) -> String {
 }
 
 impl Core {
-    /// Creates an uninitialized core.
     pub(crate) fn create(lib: &'static Lib) -> Result<Self, MpvError> {
         // SAFETY: no arguments; returns NULL on failure.
         let handle = unsafe { (lib.create)() };
@@ -361,7 +315,6 @@ impl Core {
         Err(MpvError(unsafe { text((self.lib.error_string)(code)) }))
     }
 
-    /// Sets an option before [`Self::initialize`].
     pub(crate) fn set_option(&self, name: &str, value: &str) -> Result<(), MpvError> {
         let (name, value) = (cstring(name)?, cstring(value)?);
         // SAFETY: valid handle and NUL-terminated strings that outlive the
@@ -376,7 +329,6 @@ impl Core {
         self.check(unsafe { (self.lib.initialize)(self.handle) })
     }
 
-    /// Sets a property from its string form.
     pub(crate) fn set_property(&self, name: &str, value: &str) -> Result<(), MpvError> {
         let (name, value) = (cstring(name)?, cstring(value)?);
         // SAFETY: as in `set_option`.
@@ -385,8 +337,6 @@ impl Core {
         })
     }
 
-    /// Runs a command given as separate arguments (never a command string),
-    /// waiting for it to finish.
     pub(crate) fn command(&self, args: &[&str]) -> Result<(), MpvError> {
         let (_owned, mut argv) = argv(args)?;
         // SAFETY: `argv` is a NULL-terminated array of strings owned by
@@ -394,7 +344,6 @@ impl Core {
         self.check(unsafe { (self.lib.command)(self.handle, argv.as_mut_ptr()) })
     }
 
-    /// Like [`Self::command`] without waiting; failures arrive as events.
     pub(crate) fn command_async(&self, args: &[&str]) -> Result<(), MpvError> {
         let (_owned, mut argv) = argv(args)?;
         // SAFETY: as in `command`; mpv copies the arguments before returning.
@@ -413,8 +362,6 @@ impl Core {
         self.check(unsafe { (self.lib.request_log_messages)(self.handle, level.as_ptr()) })
     }
 
-    /// Waits for the next event (`timeout` in seconds; negative waits
-    /// forever) and copies it out.
     pub(crate) fn wait_event(&self, timeout: f64) -> Event {
         let _guard = self
             .waiting
@@ -430,7 +377,6 @@ impl Core {
     }
 }
 
-/// Owned C strings plus the NULL-terminated pointer array libmpv expects.
 type Argv = (Vec<CString>, Vec<*const c_char>);
 
 fn argv(args: &[&str]) -> Result<Argv, MpvError> {
@@ -443,11 +389,6 @@ fn argv(args: &[&str]) -> Result<Argv, MpvError> {
     Ok((owned, pointers))
 }
 
-/// Copies the parts of `event` Cineo uses.
-///
-/// # Safety
-/// `event` was just returned by `mpv_wait_event`, so `data` matches
-/// `event_id` as documented in client.h.
 unsafe fn decode(lib: &Lib, event: &RawEvent) -> Event {
     match event.event_id {
         EVENT_NONE => Event::None,
@@ -490,8 +431,6 @@ unsafe fn decode(lib: &Lib, event: &RawEvent) -> Event {
     }
 }
 
-/// # Safety
-/// `property.data` is NULL or points to a value of `property.format`.
 unsafe fn property_value(property: &RawProperty) -> Value {
     if property.data.is_null() {
         return Value::None;

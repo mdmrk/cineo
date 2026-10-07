@@ -7,8 +7,6 @@ use url::Url;
 
 use super::types::{ContentType, ResourceName};
 
-/// Characters left unescaped by JavaScript's `encodeURIComponent`. Addon
-/// servers are mostly JavaScript and decode path segments accordingly.
 const URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'-')
     .remove(b'_')
@@ -23,10 +21,6 @@ const URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
 const MANIFEST_SUFFIX: &str = "/manifest.json";
 
 /// The URL of an addon's `manifest.json`, the identity of an installed addon.
-///
-/// Invariants: scheme is `http` or `https`; a host is present; no userinfo;
-/// no fragment; the path ends with `/manifest.json`. Query strings are kept
-/// and carried over to resource URLs.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TransportUrl(Url);
 
@@ -66,7 +60,6 @@ impl TransportUrl {
             .strip_suffix(MANIFEST_SUFFIX)
             .unwrap_or_default()
             .to_owned();
-        // Segments are already percent-encoded; `set_path` keeps escapes intact.
         url.set_path(&format!("{base}/{}", path.to_url_path()));
         url
     }
@@ -206,7 +199,6 @@ mod tests {
 
     #[test]
     fn encodes_extra_like_encode_uri_component() {
-        // Matches the example in the public protocol documentation.
         let path = ResourcePath::catalog(ty("series"), "top").with_extra(vec![
             ExtraValue::new("search", "game of thrones"),
             ExtraValue::new("skip", "100"),

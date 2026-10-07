@@ -3,9 +3,6 @@
 //! addresses are checked: `librqbit`'s own blocklist does not cover the
 //! connections made while fetching a magnet's metadata (VERIFIED in its
 //! 9.0.1 source and by `loopback_peers_are_blocked_unless_private_networks_are_allowed`).
-//!
-//! Only `CONNECT` to IPv4/IPv6 addresses is supported. Credentials are
-//! random per session, so other local users cannot use it.
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::Arc;
@@ -34,7 +31,6 @@ const REPLY_ADDRESS_UNSUPPORTED: u8 = 8;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Who may use the proxy and where it may connect.
 #[derive(Debug)]
 pub(crate) struct Policy {
     pub(crate) user: String,
@@ -48,7 +44,6 @@ impl Policy {
     }
 }
 
-/// Accepts connections on `listener` until the task is aborted.
 pub(crate) async fn run(listener: TcpListener, policy: Arc<Policy>) {
     loop {
         let Ok((client, _)) = listener.accept().await else {
@@ -68,25 +63,20 @@ pub(crate) async fn run(listener: TcpListener, policy: Arc<Policy>) {
     }
 }
 
-/// Compares in time independent of where the inputs differ.
 fn same(a: &[u8], b: &[u8]) -> bool {
     a.len() == b.len() && a.iter().zip(b).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 async fn reply(client: &mut TcpStream, code: u8) -> std::io::Result<()> {
-    // The bound address is not meaningful here; send 0.0.0.0:0.
     client
         .write_all(&[VERSION, code, 0, ATYP_V4, 0, 0, 0, 0, 0, 0])
         .await
 }
 
-/// Runs the SOCKS5 exchange. `Some` holds the client and the connected
-/// peer; `None` means the request was refused (and answered).
 async fn handshake(
     mut client: TcpStream,
     policy: &Policy,
 ) -> std::io::Result<Option<(TcpStream, TcpStream)>> {
-    // Greeting: VER, NMETHODS, METHODS.
     let mut head = [0u8; 2];
     client.read_exact(&mut head).await?;
     if head[0] != VERSION {
@@ -100,7 +90,6 @@ async fn handshake(
     }
     client.write_all(&[VERSION, USER_PASS]).await?;
 
-    // RFC 1929: VER(1), ULEN, UNAME, PLEN, PASSWD.
     let mut ver_len = [0u8; 2];
     client.read_exact(&mut ver_len).await?;
     let mut user = vec![0u8; usize::from(ver_len[1])];
@@ -117,7 +106,6 @@ async fn handshake(
         return Ok(None);
     }
 
-    // Request: VER, CMD, RSV, ATYP, DST.ADDR, DST.PORT.
     let mut request = [0u8; 4];
     client.read_exact(&mut request).await?;
     let ip = match request[3] {
@@ -184,8 +172,6 @@ mod tests {
         addr
     }
 
-    /// Runs a client exchange and returns the reply code to CONNECT, or
-    /// the authentication status if that failed.
     async fn connect(proxy: SocketAddr, password: &[u8], target: SocketAddr) -> u8 {
         let mut s = TcpStream::connect(proxy)
             .await

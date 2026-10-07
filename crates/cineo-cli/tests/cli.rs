@@ -117,7 +117,6 @@ fn private_network_is_refused_by_default() {
     assert!(stderr.contains("blocked by network policy"), "{stderr}");
 }
 
-/// A fresh data directory per test.
 fn data_dir(name: &str) -> String {
     let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("cli")

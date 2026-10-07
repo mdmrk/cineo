@@ -20,7 +20,6 @@ pub struct LibraryItem {
     pub updated_ms: u64,
 }
 
-/// Watched fraction above which an item counts as finished.
 const FINISHED: f64 = 0.92;
 
 impl LibraryItem {

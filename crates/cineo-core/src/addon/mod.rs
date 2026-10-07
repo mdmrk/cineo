@@ -1,10 +1,4 @@
 //! The addon protocol model.
-//!
-//! Compatibility target: the publicly documented Stremio addon protocol
-//! (HTTP transport). Every behavior here is described in
-//! `docs/ADDON_PROTOCOL.md`; deviations from the reference client are listed
-//! there explicitly. Responses are **untrusted input**: parsing is lenient
-//! per field and strict only where an invariant is required.
 
 mod catalog;
 mod json;

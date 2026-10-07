@@ -1,7 +1,4 @@
 //! Lenient accessors over `serde_json::Value` for untrusted addon documents.
-//!
-//! Each helper either returns a usable value or records a warning and returns
-//! the "absent" value. None of them fail.
 
 use serde_json::{Map, Value};
 use url::Url;
@@ -10,7 +7,6 @@ use crate::diagnostics::Warnings;
 
 pub(crate) type Object = Map<String, Value>;
 
-/// Optional string field. Empty strings count as absent (reference behavior).
 pub(crate) fn opt_string(
     obj: &Object,
     key: &str,
@@ -31,8 +27,6 @@ pub(crate) fn opt_string(
     }
 }
 
-/// Optional field that addons send either as a string or as a number
-/// (e.g. `releaseInfo: 2010`, `imdbRating: 7.5`). Normalized to a string.
 pub(crate) fn opt_string_or_number(
     obj: &Object,
     key: &str,
@@ -45,8 +39,6 @@ pub(crate) fn opt_string_or_number(
     }
 }
 
-/// Optional `http(s)` URL field, e.g. an image. Other schemes are ignored so
-/// that addon data can never point the client at `file://` and similar.
 pub(crate) fn opt_http_url(
     obj: &Object,
     key: &str,
@@ -70,7 +62,6 @@ pub(crate) fn opt_http_url(
     }
 }
 
-/// Optional boolean; anything that is not a boolean counts as `false`.
 pub(crate) fn bool_or_false(obj: &Object, key: &str, loc: &str, warnings: &mut Warnings) -> bool {
     match obj.get(key) {
         None | Some(Value::Null) => false,
@@ -85,8 +76,6 @@ pub(crate) fn bool_or_false(obj: &Object, key: &str, loc: &str, warnings: &mut W
     }
 }
 
-/// Optional array of strings. `null`/missing is empty; non-string elements
-/// are skipped with a warning.
 pub(crate) fn string_list(
     obj: &Object,
     key: &str,
@@ -140,8 +129,6 @@ pub(crate) fn kind(value: &Value) -> &'static str {
     }
 }
 
-/// Optional non-negative integer; accepts JSON numbers and numeric strings
-/// (addons send both, e.g. `"season": "1"`).
 pub(crate) fn opt_u32(obj: &Object, key: &str, loc: &str, warnings: &mut Warnings) -> Option<u32> {
     let parsed = match obj.get(key) {
         None | Some(Value::Null) => return None,
@@ -155,8 +142,6 @@ pub(crate) fn opt_u32(obj: &Object, key: &str, loc: &str, warnings: &mut Warning
     parsed
 }
 
-/// Optional URL with any scheme; used for stream sources whose playability is
-/// decided later. Invalid URLs are absent + warning.
 pub(crate) fn opt_any_url(
     obj: &Object,
     key: &str,

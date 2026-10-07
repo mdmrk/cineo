@@ -17,7 +17,6 @@ fn fixture(rel: &str) -> Vec<u8> {
     std::fs::read(&full).unwrap_or_else(|err| panic!("reading {full}: {err}"))
 }
 
-/// A fresh, empty directory per test.
 fn temp_dir(name: &str) -> PathBuf {
     let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("store")
@@ -261,12 +260,8 @@ fn doctor_reports_missing_and_healthy_databases_without_creating_one() {
     assert_eq!(report.integrity, vec!["ok".to_owned()]);
 }
 
-// --- M4 acceptance: state survives restarts; continue watching resumes ---
-
 const BASIC: &str = "https://basic.example/manifest.json";
 
-/// Starts the app from the store the way a shell does: `Restore`, then
-/// answer each manifest fetch from fixtures.
 fn start_app(store: &Store) -> State {
     let mut state = State::default();
     let effects = update(
@@ -292,8 +287,6 @@ fn start_app(store: &Store) -> State {
     state
 }
 
-/// Opens the movie, loads its streams and plays the first one, running
-/// persistence effects against `store`. Returns the requested start offset.
 fn play_movie(state: &mut State, store: &mut Store) -> u64 {
     let mut run = |state: &mut State, action| -> Vec<Effect> {
         let effects = update(state, action);
@@ -352,7 +345,6 @@ fn play_movie(state: &mut State, store: &mut Store) -> u64 {
 fn continue_watching_resumes_at_the_saved_position_after_restart() {
     let dir = temp_dir("acceptance");
 
-    // First run: install an addon, play, report progress, quit.
     {
         let mut store = Store::open_in(&dir).unwrap();
         store
@@ -374,7 +366,6 @@ fn continue_watching_resumes_at_the_saved_position_after_restart() {
         }
     }
 
-    // Second run: everything comes back from disk.
     let mut store = Store::open_in(&dir).unwrap();
     let mut state = start_app(&store);
     assert_eq!(state.addons.len(), 1);

@@ -45,7 +45,6 @@ async fn fetches_manifest_and_catalog_page() {
         fixture("addons/basic/manifest.json"),
     )
     .await;
-    // The server sees the decoded path; this proves the extra segment arrives intact.
     serve(
         &server,
         "/cfg/catalog/movie/top/genre=Action&skip=100.json",
@@ -191,7 +190,6 @@ async fn redirect_loops_are_cut_off() {
 
 #[tokio::test]
 async fn errors_do_not_leak_addon_configuration() {
-    // Port 1 is closed: reqwest's connect error normally embeds the full URL.
     let client = AddonClient::new(local_policy()).unwrap();
     let secret = TransportUrl::parse("http://127.0.0.1:1/SECRET-TOKEN/manifest.json").unwrap();
     let err = client.fetch_manifest(&secret).await.unwrap_err();
@@ -208,7 +206,6 @@ async fn fetches_meta_and_streams() {
         fixture("addons/basic/meta-series.json"),
     )
     .await;
-    // `:` in the video id is percent-encoded on the wire (encodeURIComponent).
     serve(
         &server,
         "/cfg/stream/series/tt0000010%3A1%3A1.json",

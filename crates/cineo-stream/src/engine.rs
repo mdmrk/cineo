@@ -41,7 +41,6 @@ pub struct EngineOptions {
     pub metadata_timeout: Duration,
 }
 
-/// How long [`Engine::shutdown`] lets librqbit wind down after cancelling.
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
 
 impl EngineOptions {
@@ -75,17 +74,11 @@ pub enum StreamError {
 }
 
 /// A running engine. One torrent is served at a time.
-///
-/// Invariants: the server and the proxy listen on `127.0.0.1` only; every
-/// URL served carries this engine's random token; every peer connection
-/// goes through the proxy, which enforces the address policy.
 pub struct Engine {
     session: Arc<Session>,
     ctx: Arc<Ctx>,
     options: EngineOptions,
-    /// The HTTP server and the SOCKS proxy.
     tasks: [tokio::task::JoinHandle<()>; 2],
-    /// librqbit's id and the info hash of the torrent being played.
     active: Mutex<Option<(usize, String)>>,
 }
 
@@ -118,7 +111,6 @@ impl Engine {
         .await
         .map_err(|err| StreamError::Cache(std::io::Error::other(err)))?;
         prepared.map_err(StreamError::Cache)?;
-        // Every peer connection goes through the filtering proxy.
         let proxy = TcpListener::bind((IpAddr::from([127, 0, 0, 1]), 0))
             .await
             .map_err(StreamError::Server)?;
@@ -143,7 +135,6 @@ impl Engine {
                 dht,
                 persistence: None,
                 fastresume: false,
-                // No incoming connections, so no UPnP either.
                 listen: None,
                 disable_local_service_discovery: true,
                 connect: Some(ConnectionOptions {
@@ -198,7 +189,6 @@ impl Engine {
         let magnet = magnet(&hash, &request.trackers, self.options.allow_private_network);
         let add = AddTorrentOptions {
             paused: true,
-            // Never refuse a torrent because files of it are on disk.
             overwrite: true,
             output_folder: Some(self.options.cache_dir.to_string_lossy().into_owned()),
             initial_peers: (!self.options.extra_peers.is_empty())
@@ -314,7 +304,6 @@ impl Engine {
         let dir = torrent_dir(&self.options.cache_dir, &hash);
         match tokio::task::spawn_blocking(move || cache::remove_torrent(&dir)).await {
             Ok(Ok(())) => {}
-            // Deleted at the next start instead.
             Ok(Err(err)) => warn!(%err, "deleting the torrent data failed"),
             Err(err) => warn!(%err, "deleting the torrent data failed"),
         }
@@ -324,11 +313,7 @@ impl Engine {
     /// without librqbit's 1 s grace period.
     pub async fn shutdown(self) {
         self.stop().await;
-        // librqbit 9.0.1's `Session::stop` pauses the torrents and cancels
-        // the session's tasks right away, then sleeps a fixed second
-        // ("hopefully will be enough") for them to wind down. Nothing
-        // needs that at exit: the data is deleted anyway. So it runs only
-        // long enough to cancel.
+        // `Session::stop` sleeps a fixed second after cancelling; nothing needs that at exit.
         let _ = tokio::time::timeout(SESSION_STOP_GRACE, self.session.stop()).await;
         for task in &self.tasks {
             task.abort();
@@ -336,8 +321,6 @@ impl Engine {
     }
 }
 
-/// `magnet:?xt=urn:btih:<hash>&tr=…`. Trackers on a literal non-public
-/// address are dropped unless private networks are allowed.
 fn magnet(hash: &str, trackers: &[Url], allow_private_network: bool) -> String {
     let mut out = format!("magnet:?xt=urn:btih:{hash}");
     for tracker in trackers {

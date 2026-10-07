@@ -12,20 +12,15 @@ use crate::diagnostics::{Parsed, Warnings};
 /// `externalUrl`, archive lists, `nzbUrl`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StreamSource {
-    /// A direct URL. Only `http(s)` is playable today; others (e.g. `rtmp`,
-    /// `magnet`) are kept so the UI can explain why they are not.
     Url(Url),
     YouTube {
         id: String,
     },
     Torrent {
-        /// 40 lowercase hex characters.
         info_hash: String,
         file_idx: Option<u32>,
-        /// Tracker / DHT hints (`tracker:…`, `dht:…`).
         sources: Vec<String>,
     },
-    /// To be opened in a browser, never played.
     External(Url),
     Archive {
         kind: ArchiveKind,
@@ -225,8 +220,6 @@ fn parse_source(obj: &Object, loc: &str, warnings: &mut Warnings) -> Option<Stre
     json::opt_any_url(obj, "nzbUrl", loc, warnings).map(|url| StreamSource::Nzb { url })
 }
 
-/// `proxyHeaders.request`: header names must be RFC 7230 tokens and values
-/// free of CR, LF and NUL; anything else is dropped with a warning.
 fn parse_request_headers(
     hints: &Object,
     loc: &str,

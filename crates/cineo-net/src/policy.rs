@@ -97,11 +97,6 @@ impl NetPolicy {
 }
 
 /// Whether `ip` is a globally routable unicast address.
-///
-/// Conservative: anything special-purpose (loopback, private, link-local,
-/// CGNAT, multicast, documentation, benchmarking, reserved, unspecified) is
-/// not public. IPv6 addresses embedding IPv4 (mapped, NAT64, 6to4) are judged
-/// by the embedded IPv4 address.
 pub fn is_public_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_public_v4(v4),
@@ -130,11 +125,11 @@ fn is_public_v6(ip: Ipv6Addr) -> bool {
         return is_public_v4(v4);
     }
     let seg = ip.segments();
-    // 64:ff9b::/96 NAT64: judge the embedded IPv4 address.
+    // NAT64: judge the embedded IPv4 address.
     if seg[0] == 0x64 && seg[1] == 0xff9b && seg[2..6] == [0, 0, 0, 0] {
         return is_public_v4(embedded_v4(seg[6], seg[7]));
     }
-    // 2002::/16 6to4: judge the embedded IPv4 address.
+    // 6to4: judge the embedded IPv4 address.
     if seg[0] == 0x2002 {
         return is_public_v4(embedded_v4(seg[1], seg[2]));
     }

@@ -79,13 +79,11 @@ pub struct ViewState {
     pub focus_search: bool,
 }
 
-/// Seconds of no typing before a search runs.
 const SEARCH_DEBOUNCE: f64 = 0.45;
 /// Draws the whole window and returns the actions to dispatch.
 pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     let mut out = Vec::new();
     if theme::ensure(ui.ctx()) {
-        // Text laid out now would not find the theme's fonts yet.
         ui.ctx().request_discard("theme applied");
         return out;
     }
@@ -128,7 +126,6 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     out
 }
 
-/// Opens `page`, leaving the detail page if one is open.
 fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     if state.detail.is_some() {
         out.push(Action::CloseDetail);
@@ -149,8 +146,6 @@ fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     view.page = page;
 }
 
-/// Keyboard and mouse shortcuts: Ctrl+F or `/` searches, Ctrl+1…6 switch
-/// pages, Escape, Alt+Left or the mouse back button leave a detail page.
 fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let typing = ui.ctx().egui_wants_keyboard_input();
     let modal = state.p2p_prompt.is_some();
@@ -236,8 +231,6 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
         });
 }
 
-/// The mark (an amber crescent "C", a lens catching light) and the serif
-/// wordmark.
 fn logo(ui: &mut Ui, compact: bool) {
     ui.horizontal(|ui| {
         if !compact {
@@ -266,8 +259,6 @@ fn logo(ui: &mut Ui, compact: bool) {
     });
 }
 
-/// A sidebar entry: icon and small-caps label, or the icon alone when
-/// `compact`. Accessible as a button labelled with the page name.
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
@@ -349,7 +340,6 @@ fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
         });
 }
 
-/// The notice shown before the first torrent plays (ADR-0012).
 fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
     let modal = Modal::new(egui::Id::new("p2p_prompt"))
         .frame(
@@ -487,7 +477,6 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
         }
     });
     ui.add_space(theme::GAP);
-    // Infinite scroll: the next page loads as soon as the end comes into view.
     let (end, _) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::hover());
     if discover.pending.is_some() {
         paint_spinner(ui, end.center(), 24.0, theme::TEXT_DIM);
@@ -535,7 +524,6 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         field.request_focus();
         view.focus_search = false;
     }
-    // Search as you type, once typing pauses; Enter searches right away.
     let now = ui.input(|i| i.time);
     if field.changed() {
         view.search_edited_at = Some(now);
@@ -678,7 +666,6 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                             .font(theme::strong())
                             .color(theme::TEXT_BRIGHT),
                     );
-                    // The full URL can carry configuration; show the host only.
                     if let Some(host) = addon.transport.as_url().host_str() {
                         ui.label(faint(host));
                     }
@@ -816,8 +803,6 @@ fn detail_page(
     let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
     let background = preview.and_then(|p| p.background.as_ref());
 
-    // A full-width backdrop fading into the page; the content overlaps its
-    // lower part.
     let height = if background.is_some() {
         theme::BACKDROP_HEIGHT
     } else {
@@ -914,8 +899,6 @@ fn detail_page(
     });
 }
 
-/// The journal header: title and year, credits, facts, synopsis, genres
-/// and cast.
 fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&Meta>) {
     let mut job = LayoutJob::default();
     job.append(
@@ -978,7 +961,6 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
     }
 }
 
-/// Runtime and rating (with a star), from what the addon provided.
 fn facts(preview: Option<&MetaPreview>, meta: Option<&Meta>) -> Option<LayoutJob> {
     let runtime = meta.and_then(|m| m.runtime.as_deref());
     let rating = preview.and_then(|p| p.imdb_rating.as_deref());
@@ -1047,8 +1029,6 @@ fn episodes(
     }
 }
 
-/// A full-width clickable row with an optional leading number, separated by
-/// a rule. Accessible as a button labelled with `text`.
 fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Response {
     let height = 32.0;
     let (rect, response) =
@@ -1105,7 +1085,6 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// One addon's streams as cards. Torrents are left out when P2P is off.
 fn stream_group(
     ui: &mut Ui,
     index: usize,
@@ -1165,10 +1144,6 @@ fn stream_group(
     ui.add_space(theme::GAP);
 }
 
-/// One stream as a card: a round play button, the release title after
-/// small resolution and HDR tags, and the addon's details with their emoji
-/// as amber icons. The whole card plays when the stream is playable.
-/// Returns true if it was clicked.
 fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     let playable = stream.source.is_playable();
     let mut lines = stream
@@ -1280,8 +1255,6 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
     play.clicked() || response.clicked()
 }
 
-/// A round amber button with a play icon, greyed when the source cannot be
-/// played. Accessible as a button labelled "Play".
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
@@ -1302,7 +1275,6 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
             };
             let painter = ui.painter();
             painter.circle_filled(rect.center(), 15.0 + hover, fill);
-            // The triangle's visual center sits right of its box's center.
             paint_icon(
                 painter,
                 Icon::Play,
@@ -1322,7 +1294,6 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
     .inner
 }
 
-/// Small tags for the resolution, colored by tier, and its HDR flags.
 fn quality_tags(ui: &mut Ui, quality: &Quality) {
     let (fill, ink, stroke) = match quality.tier {
         Tier::Ultra => (theme::ACCENT, theme::ON_ACCENT, Stroke::NONE),
@@ -1345,8 +1316,6 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
     }
 }
 
-/// A small boxed caps label, painted at its text's height so it never
-/// grows with the row around it. Accessible as a label.
 fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
     let galley =
         ui.painter()
@@ -1371,8 +1340,6 @@ enum Tier {
     Cam,
 }
 
-/// A stream's resolution and HDR flags, read from the words of its name or,
-/// failing that, its description (e.g. `Torrentio\n4k DV | HDR`).
 #[derive(Debug, PartialEq, Eq)]
 struct Quality {
     label: &'static str,
@@ -1397,7 +1364,6 @@ impl Quality {
     }
 }
 
-/// Lowercase ASCII words of `text`.
 fn words(text: &str) -> impl Iterator<Item = String> + '_ {
     text.split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|w| !w.is_empty())
@@ -1416,7 +1382,6 @@ fn resolution(text: &str) -> Option<(&'static str, Tier)> {
     })
 }
 
-/// The side margin of pages: smaller on narrow windows.
 fn page_margin(ui: &Ui) -> f32 {
     if ui.available_width() < 900.0 {
         16.0
@@ -1425,8 +1390,6 @@ fn page_margin(ui: &Ui) -> f32 {
     }
 }
 
-/// Lays `add` out in a centered column at most
-/// [`theme::CONTENT_MAX_WIDTH`] wide, with the page margin on narrow windows.
 fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     let available = ui.available_rect_before_wrap();
     let margin = page_margin(ui);
@@ -1443,7 +1406,6 @@ fn column<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> R {
     .inner
 }
 
-/// A page's serif heading, with an optional dek under it.
 fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
     ui.label(
         RichText::new(text)
@@ -1456,8 +1418,6 @@ fn page_title(ui: &mut Ui, text: &str, dek: Option<&str>) {
     ui.add_space(theme::GAP * 1.5);
 }
 
-/// A small-caps section head over a thin rule, with `right` laid out at its
-/// right end.
 fn section(ui: &mut Ui, title: &str, right: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         ui.label(caps(title, theme::section(), theme::TEXT_DIM));
@@ -1477,8 +1437,6 @@ fn rule(ui: &mut Ui) {
     );
 }
 
-/// A catalog row. With `see_all`, its header links to the whole catalog
-/// on the Discover page.
 fn catalog_row(
     ui: &mut Ui,
     salt: (&str, usize),
@@ -1527,7 +1485,6 @@ fn catalog_row(
     ui.add_space(theme::SECTION_GAP);
 }
 
-/// Placeholder posters while a row loads, so the page does not jump.
 fn skeleton_row(ui: &mut Ui) {
     let size = card_size(theme::CARD_WIDTH, PosterShape::Poster);
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), size.y), Sense::hover());
@@ -1542,9 +1499,6 @@ fn skeleton_row(ui: &mut Ui) {
     }
 }
 
-/// A horizontally scrolling row of posters with page arrows that show on
-/// hover. The mouse wheel keeps scrolling the page; Shift+wheel, a
-/// touchpad or the arrows scroll the row.
 fn poster_strip(
     ui: &mut Ui,
     salt: impl std::hash::Hash + std::fmt::Debug,
@@ -1584,7 +1538,6 @@ fn poster_strip(
     }
 }
 
-/// A tall arrow button over a row's edge.
 fn pager(ui: &mut Ui, center: Pos2, right: bool, opacity: f32) -> Response {
     let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
     let label = if right { "Scroll right" } else { "Scroll left" };
@@ -1622,15 +1575,12 @@ fn poster_grid(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
     });
 }
 
-/// The card width that fills `available` exactly with as many columns as
-/// fit between the theme's min and max card widths.
 fn grid_card_width(available: f32) -> f32 {
     let gap = theme::CARD_GAP;
     let columns = ((available + gap) / (theme::GRID_CARD_MIN + gap))
         .floor()
         .max(1.0);
     let width = (available - gap * (columns - 1.0)) / columns;
-    // Rounding down keeps the last column from wrapping.
     width.min(theme::GRID_CARD_MAX).floor()
 }
 
@@ -1667,9 +1617,6 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Actio
     }
 }
 
-/// A clickable poster like a printed card, with an optional progress bar.
-/// On hover it gets an amber outline and a band with the title and year.
-/// Accessible as a button labelled with the title.
 fn card(
     ui: &mut Ui,
     width: f32,
@@ -1733,7 +1680,6 @@ fn card(
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// A soft drop shadow under `rect`, at `strength` (0–1).
 fn shadow(ui: &Ui, rect: Rect, strength: f32) {
     let shadow = egui::Shadow {
         offset: [0, 8],
@@ -1745,8 +1691,6 @@ fn shadow(ui: &Ui, rect: Rect, strength: f32) {
         .add(shadow.as_shape(rect, CornerRadius::same(theme::POSTER_RADIUS)));
 }
 
-/// A poster image cropped to `rect`, or the title in serif on a plain card
-/// when there is none, with the printed-card edge.
 fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
     let radius = CornerRadius::same(theme::POSTER_RADIUS);
     let painter = ui.painter();
@@ -1774,16 +1718,11 @@ fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
     );
 }
 
-/// Smooth downscaling for posters and backdrops shown smaller than their
-/// source.
 pub(crate) const IMAGE_FILTER: egui::TextureOptions = egui::TextureOptions {
     mipmap_mode: Some(egui::TextureFilter::Linear),
     ..egui::TextureOptions::LINEAR
 };
 
-/// Paints the image at `src` filling `rect`, cropping instead of
-/// stretching. `focus_y` (0 = top, 1 = bottom) picks which part of a tall
-/// image stays visible. Nothing is drawn until it has loaded.
 fn paint_cover(ui: &Ui, src: &str, rect: Rect, radius: CornerRadius, tint: Color32, focus_y: f32) {
     let image = Image::new(src)
         .corner_radius(radius)
@@ -1802,8 +1741,6 @@ fn paint_cover(ui: &Ui, src: &str, rect: Rect, radius: CornerRadius, tint: Color
         .paint_at(ui, rect);
 }
 
-/// The part of an image of `image` size to show in `target` so it covers
-/// the target without distortion.
 fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
     let full = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     if image.x <= 0.0 || image.y <= 0.0 || target.x <= 0.0 || target.y <= 0.0 {
@@ -1822,8 +1759,6 @@ fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
     }
 }
 
-/// Paints a gradient over `rect` from `from` at its min edge to `to` at its
-/// max edge: left to right if `horizontal`, else top to bottom.
 pub(crate) fn gradient(ui: &Ui, rect: Rect, from: Color32, to: Color32, horizontal: bool) {
     let (tl, tr, br, bl) = if horizontal {
         (from, to, to, from)
@@ -1840,7 +1775,6 @@ pub(crate) fn gradient(ui: &Ui, rect: Rect, from: Color32, to: Color32, horizont
     ui.painter().add(mesh);
 }
 
-/// A card's size: `width` wide, in the poster's shape.
 fn card_size(width: f32, shape: PosterShape) -> Vec2 {
     let height = match shape {
         PosterShape::Poster => width * 1.5,
@@ -1850,7 +1784,6 @@ fn card_size(width: f32, shape: PosterShape) -> Vec2 {
     vec2(width, height)
 }
 
-/// The primary action button: amber with dark text.
 fn primary_button(text: &str) -> Button<'_> {
     Button::new(
         RichText::new(text)
@@ -1860,14 +1793,12 @@ fn primary_button(text: &str) -> Button<'_> {
     .fill(theme::ACCENT)
 }
 
-/// Adds a primary button, brightened on hover.
 fn primary(ui: &mut Ui, enabled: bool, text: &str) -> Response {
     let response = ui.add_enabled(enabled, primary_button(text));
     hover_glow(ui, &response);
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// Brightens a filled button under the pointer.
 fn hover_glow(ui: &Ui, response: &Response) {
     if response.hovered() && response.enabled() {
         ui.painter().rect_filled(
@@ -1878,7 +1809,6 @@ fn hover_glow(ui: &Ui, response: &Response) {
     }
 }
 
-/// A selectable small-caps tab. Accessible as a button labelled `text`.
 fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     let ink = if selected {
         theme::ON_ACCENT
@@ -1905,8 +1835,6 @@ fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// A settings row: `label` with an on/off switch at its right end.
-/// Accessible as a checkbox labelled `label`.
 fn toggle_row(ui: &mut Ui, on: bool, label: &str) -> Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
     response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
@@ -1949,7 +1877,6 @@ fn badge(ui: &mut Ui, text: &str, color: Color32) {
     );
 }
 
-/// Small boxed tags, as genres and cast are shown.
 fn tags(ui: &mut Ui, items: &[String]) {
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(5.0);
@@ -1965,7 +1892,6 @@ fn tags(ui: &mut Ui, items: &[String]) {
     });
 }
 
-/// The icons in use, drawn from the Tabler set (via `iconflow`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Icon {
     Home,
@@ -1983,7 +1909,6 @@ pub(crate) enum Icon {
     Alert,
     Play,
     Pause,
-    /// Any other Tabler icon, by name (the emoji stand-ins).
     Named(&'static str),
 }
 
@@ -2028,7 +1953,6 @@ impl Icon {
         }
     }
 
-    /// The glyph and the font family that draws it.
     pub(crate) fn glyph(self) -> Option<(char, egui::FontFamily)> {
         let icon = iconflow::try_icon(
             iconflow::Pack::Tabler,
@@ -2046,7 +1970,6 @@ impl Icon {
     }
 }
 
-/// Paints `icon` centered at `c`, `size` points tall.
 pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
     if let Some((glyph, family)) = icon.glyph() {
         painter.text(
@@ -2059,8 +1982,6 @@ pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32
     }
 }
 
-/// Emoji that addons put in stream and addon text (seeders, size, source,
-/// quality …) and the Tabler icon drawn in their place.
 const EMOJI_ICONS: &[(char, &str)] = &[
     ('👤', "user"),
     ('👥', "users"),
@@ -2105,15 +2026,11 @@ const EMOJI_ICONS: &[(char, &str)] = &[
     ('★', "star"),
 ];
 
-/// The regional-indicator letter (`🇦` … `🇿` → `A` … `Z`), if `c` is one.
 fn regional_letter(c: char) -> Option<char> {
     let offset = u32::from(c).checked_sub(0x1F1E6)?;
     (offset < 26).then(|| char::from(b'A' + u8::try_from(offset).unwrap_or(0)))
 }
 
-/// Emoji blocks (misc. technical, symbols, dingbats, pictographs) and
-/// emoji joiners/variation selectors: what only egui's emoji fonts would
-/// draw. Arrows and geometric shapes are left alone; Inter has them.
 fn is_emoji(c: char) -> bool {
     matches!(
         u32::from(c),
@@ -2126,9 +2043,6 @@ fn is_emoji(c: char) -> bool {
     )
 }
 
-/// Addon text laid out with its emoji drawn as Tabler icons. Flags become
-/// their two-letter region code; other emoji are left out, so nothing
-/// falls back to egui's emoji fonts. The text is otherwise shown as is.
 fn addon_text(text: &str, font: &FontId, color: Color32, icon_color: Color32) -> LayoutJob {
     let format = TextFormat {
         font_id: font.clone(),
@@ -2161,7 +2075,6 @@ fn addon_text(text: &str, font: &FontId, color: Color32, icon_color: Color32) ->
     job
 }
 
-/// Appends `icon` to `job` as a glyph `size` points tall.
 fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Color32) {
     if let Some((glyph, family)) = icon.glyph() {
         job.append(
@@ -2177,22 +2090,16 @@ fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Color32) {
     }
 }
 
-/// A rotating Tabler loader in its own slot.
 fn spinner(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::hover());
     paint_spinner(ui, rect.center(), 18.0, theme::TEXT_DIM);
 }
 
-/// A spinner on its own line, centered across the available width.
 fn centered_spinner(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 48.0), Sense::hover());
     paint_spinner(ui, rect.center(), 24.0, theme::TEXT_DIM);
 }
 
-/// Paints the Tabler loader `size` points tall, turning about `center`
-/// once per second, and keeps repainting while it is visible. The pivot is
-/// the glyph's inked box, not its text box: a glyph's line box is not
-/// centered on its shape, so turning about it would wobble.
 pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32, color: Color32) {
     if !ui.is_rect_visible(Rect::from_center_size(center, Vec2::splat(size))) {
         return;
@@ -2219,8 +2126,6 @@ pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32, color: Color32) {
     ui.ctx().request_repaint();
 }
 
-/// A framed button with an icon before its small-caps label. Accessible
-/// as a button labelled `label`.
 fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui.interact(rect, ui.id().with(label), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
@@ -2249,7 +2154,6 @@ fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// Uppercase, letter-spaced text for section heads, nav and labels.
 fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.append(
@@ -2265,7 +2169,6 @@ fn caps(text: &str, font: FontId, color: Color32) -> LayoutJob {
     job
 }
 
-/// [`caps`] in the caption size.
 fn caps_text(text: &str, color: Color32) -> LayoutJob {
     caps(text, theme::caption(), color)
 }
@@ -2328,7 +2231,6 @@ fn open_detail(item: &MetaPreview) -> Action {
     }
 }
 
-/// The genre options of the Discover catalog, and whether one is required.
 fn genre_options(state: &State) -> Option<(&[String], bool)> {
     let target = state.discover.target.as_ref()?;
     let genre = state
@@ -2486,7 +2388,6 @@ mod tests {
             let used = columns * width + (columns - 1.0) * theme::CARD_GAP;
             assert!(used <= available, "{available}: {used}");
         }
-        // A window narrower than one card still gets one column.
         assert_eq!(grid_card_width(100.0), 100.0);
     }
 }

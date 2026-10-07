@@ -1,11 +1,5 @@
 //! Plays streams with libmpv, loaded at runtime and drawing into the host
 //! window ([`embedded`], ADR-0014).
-//!
-//! Safety rules (docs/SECURITY.md): only `http(s)` URLs; media is loaded with
-//! an argument-array `loadfile` (never a command string); mpv starts without
-//! user config, scripts or ytdl; header names/values were validated by the
-//! core parser and are re-checked here. `unsafe` is confined to
-//! `embedded::ffi` and `embedded::render`.
 
 pub mod embedded;
 mod tracker;
@@ -13,13 +7,9 @@ mod tracker;
 /// What the player reports back to the shell.
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerEvent {
-    /// Playback position, throttled to at most one every 5 seconds.
     Progress { time_ms: u64, duration_ms: u64 },
-    /// The file played to the end.
     Ended { time_ms: u64, duration_ms: u64 },
-    /// mpv could not play the file.
     Failed(String),
-    /// The user stopped playback, or mpv shut down.
     Closed { time_ms: u64, duration_ms: u64 },
 }
 
@@ -37,8 +27,6 @@ pub enum PlayerError {
     Render(String),
 }
 
-/// A header mpv may send: the name is an RFC 7230 token and the value has
-/// no CR, LF or NUL.
 pub(crate) fn is_header_safe(name: &str, value: &str) -> bool {
     !name.is_empty()
         && name

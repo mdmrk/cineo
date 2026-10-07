@@ -68,12 +68,9 @@ fn full_resource_uses_only_its_own_filters() {
     let m = parse_manifest(&fixture("basic/manifest.json"))
         .unwrap()
         .value;
-    // stream declares its own prefixes, overriding the manifest's ["tt"].
     assert!(m.supports(&path("stream", "series", "kitsu:123")));
-    // subtitles declares types but no idPrefixes: every id matches.
     assert!(m.supports(&path("subtitles", "movie", "anything")));
     assert!(!m.supports(&path("subtitles", "series", "tt1")));
-    // Undeclared resource.
     assert!(!m.supports(&path("addon_catalog", "movie", "top")));
 }
 
@@ -162,9 +159,7 @@ fn quirky_manifest_parses_with_expected_warnings() {
     assert!(!m.behavior_hints.adult);
     assert!(m.behavior_hints.p2p);
 
-    // Full-form resource without `types` matches nothing.
     assert!(!m.supports(&path("stream", "movie", "tt1")));
-    // Empty idPrefixes list matches every id.
     let meta = m
         .resources
         .iter()
@@ -172,7 +167,6 @@ fn quirky_manifest_parses_with_expected_warnings() {
         .unwrap();
     assert_eq!(meta.ids, IdFilter::Any);
 
-    // Short-form extras: only `extraSupported` names exist; `year` is dropped.
     let legacy = m.catalog(&ty("movie"), "legacy").unwrap();
     let names: Vec<_> = legacy
         .extra
@@ -182,7 +176,6 @@ fn quirky_manifest_parses_with_expected_warnings() {
     assert_eq!(names, vec![("search", true), ("genre", false)]);
     assert_eq!(legacy.name, None, "duplicate catalog dropped, first kept");
 
-    // `skip` is normalized; duplicates keep the first; optionsLimit 0 -> 1.
     let dupes = m.catalog(&ty("movie"), "dupes").unwrap();
     let skip = dupes.extra.iter().find(|e| e.name == "skip").unwrap();
     assert!(!skip.is_required && skip.options.is_empty());
@@ -293,7 +286,6 @@ fn series_meta_parses_and_sorts_videos() {
             "tt0000010:2:1"
         ]
     );
-    // `name` is the reference-client alias of `title`; `description` backs `overview`.
     assert_eq!(meta.videos[3].title, "Second Season Opener");
     assert_eq!(meta.videos[1].overview.as_deref(), Some("It begins."));
     assert_eq!(meta.seasons(), vec![1, 2, 0], "specials last");

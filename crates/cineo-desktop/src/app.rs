@@ -1,11 +1,5 @@
 //! The imperative shell (ADR-0001, ADR-0011): owns the [`State`], runs the
 //! effects [`update`] returns, and feeds IO results back as actions.
-//!
-//! - Addon fetches and playback run on the tokio runtime; their results come
-//!   back through a channel that is drained before each frame.
-//! - Store writes go, in order, to one dedicated thread.
-//! - The torrent engine starts with the first torrent played (ADR-0012).
-//! - Rendering ([`crate::view`]) performs no IO.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -97,50 +91,35 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             )))
         }),
     );
-    // Every store sender is gone once the window closes; wait for the last
-    // writes (e.g. the final playback position).
     if writer.join().is_err() {
         error!("the store thread panicked");
     }
-    // Everything that must finish has: the store thread above, the engine
-    // in `on_exit`. Dropping the runtime would instead wait for every
-    // blocking task, such as a DNS lookup for a tracker.
+    // Dropping the runtime would wait for every blocking task, such as a tracker DNS lookup.
     runtime.shutdown_background();
     result.map_err(|err| anyhow::anyhow!("the window failed: {err}"))
 }
 
-/// What background work reports back to the UI thread.
 #[derive(Debug)]
 pub(crate) enum Msg {
     Action(Action),
-    /// A problem outside the core's vocabulary (e.g. a failed save).
     Notice(String),
 }
 
-/// Everything the shell needs to run effects.
 pub(crate) struct Io {
     pub(crate) runtime: tokio::runtime::Handle,
     pub(crate) client: Arc<AddonClient>,
-    /// Resolves OpenGL functions in the window's context, for the embedded
-    /// player (set once the window exists).
     pub(crate) gl: Option<ProcAddress>,
     pub(crate) engine: EngineOptions,
 }
 
-/// How often the status of a streaming torrent is reported.
 const TORRENT_STATUS_INTERVAL: Duration = Duration::from_secs(1);
 
-/// The running playback: mpv drawing into this window (ADR-0014).
 struct Embedded {
     player: Player,
-    /// Shared with the paint callback. Dropped on the UI thread, where the
-    /// GL context is current, before `player`.
     renderer: Arc<Mutex<Option<Renderer>>>,
     title: String,
     logo: Option<String>,
     controls: Controls,
-    /// Forwards the player's events as actions. Aborted when the playback
-    /// is replaced; `None` once it ended, so its last events still arrive.
     forward: Option<tokio::task::AbortHandle>,
 }
 
@@ -163,23 +142,16 @@ pub(crate) struct CineoApp {
     ctx: egui::Context,
     results_tx: Sender<Msg>,
     results_rx: Receiver<Msg>,
-    /// Taken on exit so the store thread can finish its last writes.
     store_tx: Option<Sender<Effect>>,
     playback: Option<Box<Embedded>>,
-    /// The player screen's controls while a torrent is being prepared.
     connecting_controls: Controls,
-    /// The engine, once a torrent has been played.
     engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
-    /// Bumped by every start or stop, so stale torrent work gives up.
     torrent_generation: Arc<AtomicU64>,
-    /// Opens the current torrent, then reports its status.
     torrent_task: Option<tokio::task::AbortHandle>,
     seq: u64,
 }
 
 impl CineoApp {
-    /// Creates the app and dispatches `restore` (the saved addons, library
-    /// and settings).
     pub(crate) fn new(
         ctx: egui::Context,
         io: Io,
@@ -294,9 +266,6 @@ impl CineoApp {
         }
     }
 
-    /// Starts the engine if needed, opens `request`'s torrent, answers with
-    /// `TorrentReady` or `TorrentFailed`, then reports its status until a
-    /// newer start or stop.
     fn start_torrent(&mut self, request: TorrentRequest) {
         let generation = self.next_torrent_generation();
         let current = Arc::clone(&self.torrent_generation);
@@ -346,14 +315,12 @@ impl CineoApp {
         self.torrent_task = Some(task.abort_handle());
     }
 
-    /// Stops the current torrent; its data stays in the cache.
     fn stop_torrent(&mut self) {
         let generation = self.next_torrent_generation();
         let current = Arc::clone(&self.torrent_generation);
         let engine = Arc::clone(&self.engine);
         self.io.runtime.spawn(async move {
             let engine = engine.lock().await;
-            // A newer start replaces the torrent itself.
             if current.load(Ordering::SeqCst) == generation
                 && let Some(engine) = engine.as_ref()
             {
@@ -362,7 +329,6 @@ impl CineoApp {
         });
     }
 
-    /// Cancels the running torrent task and returns the new generation.
     fn next_torrent_generation(&mut self) -> u64 {
         if let Some(task) = self.torrent_task.take() {
             task.abort();
@@ -370,7 +336,6 @@ impl CineoApp {
         self.torrent_generation.fetch_add(1, Ordering::SeqCst) + 1
     }
 
-    /// Runs `task` and dispatches the action it returns.
     fn spawn(&self, task: impl Future<Output = Action> + Send + 'static) {
         let tx = self.results_tx.clone();
         let ctx = self.ctx.clone();
@@ -380,8 +345,6 @@ impl CineoApp {
         });
     }
 
-    /// Plays `request` in the window, replacing any running playback, and
-    /// reports its progress.
     fn play(&mut self, request: &PlayRequest) {
         self.playback = None;
         match self.start_player(request) {
@@ -422,7 +385,6 @@ impl CineoApp {
         })
     }
 
-    /// Sends an action to the UI thread and wakes it.
     fn sender(&self) -> impl Fn(Action) + Send + Sync + 'static {
         let tx = self.results_tx.clone();
         let ctx = self.ctx.clone();
@@ -432,8 +394,6 @@ impl CineoApp {
         }
     }
 
-    /// While a torrent is prepared for playback, shows the player screen
-    /// with its pulsing logo, so Play goes straight to the player. Back cancels.
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
         let Some((title, logo)) = self
             .state
@@ -466,14 +426,11 @@ impl CineoApp {
         true
     }
 
-    /// Draws the embedded player over the whole window. Returns `false`
-    /// when there is none (or it just ended).
     fn show_player(&mut self, ui: &mut egui::Ui) -> bool {
         let Some(embedded) = &mut self.playback else {
             return false;
         };
         if embedded.player.is_finished() {
-            // The forwarding task ends by itself after the last event.
             embedded.forward = None;
             self.playback = None;
             player::leave_fullscreen(&self.ctx);
@@ -515,8 +472,6 @@ impl CineoApp {
     }
 }
 
-/// Turns player events into progress, stop and failure actions until the
-/// playback ends.
 async fn forward_events(
     events: &mut tokio::sync::mpsc::UnboundedReceiver<PlayerEvent>,
     meta_id: String,
@@ -579,7 +534,6 @@ impl eframe::App for CineoApp {
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         self.store_tx = None;
-        // The GL context is current here, as the renderer requires.
         self.playback = None;
         self.next_torrent_generation();
         let engine = Arc::clone(&self.engine);
@@ -588,8 +542,6 @@ impl eframe::App for CineoApp {
                 engine.shutdown().await;
             }
         };
-        // Bounded: data is already on disk, so a slow shutdown is not worth
-        // keeping the window around for.
         let _ = self
             .io
             .runtime
@@ -597,8 +549,6 @@ impl eframe::App for CineoApp {
     }
 }
 
-/// Opens `request` on the engine in `slot`, starting it first if needed.
-/// Errors are user-facing text.
 async fn open_torrent(
     slot: &mut Option<Engine>,
     options: EngineOptions,
@@ -620,9 +570,6 @@ fn now_ms() -> u64 {
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
-/// Applies persistence effects in order on their own thread. The thread
-/// ends, after the last write, when every sender is dropped; join it before
-/// exiting.
 pub(crate) fn spawn_store_writer(
     mut store: Store,
     results: Sender<Msg>,

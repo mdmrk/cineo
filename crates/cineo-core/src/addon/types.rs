@@ -3,9 +3,6 @@
 use std::fmt;
 
 /// A content type such as `movie`, `series`, `channel` or `tv`.
-///
-/// The protocol allows arbitrary types; the well-known ones have constants.
-/// Invariant: non-empty and free of surrounding whitespace.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ContentType(String);
 

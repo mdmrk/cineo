@@ -56,7 +56,6 @@ fn inspect(path: &Path, report: &mut Report) -> rusqlite::Result<()> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     report.schema_version = Some(user_version(&conn)?);
     let count = |table: &str| -> Option<i64> {
-        // Table names are constants below, never input.
         conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |row| {
             row.get(0)
         })

@@ -63,7 +63,6 @@ impl TorrentRequest {
     /// serves it.
     pub fn magnet(&self) -> Url {
         let raw = format!("magnet:?xt=urn:btih:{}", self.info_hash);
-        // The hash is 40 hex characters, so this always parses.
         Url::parse(&raw).unwrap_or_else(|_| unreachable_magnet())
     }
 }
@@ -75,8 +74,6 @@ fn unreachable_magnet() -> Url {
     Url::parse("magnet:?xt=urn:btih:").unwrap()
 }
 
-/// Trackers from `sources` entries (`tracker:<url>`). `dht:` entries add
-/// nothing (DHT is always used); other schemes and junk are dropped.
 fn trackers(sources: &[String]) -> Vec<Url> {
     let mut out: Vec<Url> = Vec::new();
     for source in sources {
@@ -111,9 +108,6 @@ const VIDEO_EXTENSIONS: &[&str] = &[
 /// Picks the file to play: `fileIdx` if it names a file; else the file whose
 /// name equals the `filename` hint (ignoring case and folders); else the
 /// largest video file; else the largest file. `None` for an empty torrent.
-///
-/// The fallback order is INFERRED from the SDK's `stream.md` (`fileIdx`
-/// defaults to the largest file) plus the `filename` hint.
 pub fn choose_file(
     files: &[TorrentFile<'_>],
     file_idx: Option<u32>,
@@ -155,14 +149,11 @@ fn is_video(path: &str) -> bool {
 /// What the engine reports about the torrent being streamed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TorrentStatus {
-    /// Looking for peers and metadata.
     Starting,
     Streaming {
         peers: u32,
         download_bytes_per_sec: u64,
-        /// Bytes of the chosen file downloaded so far.
         downloaded: u64,
-        /// Size of the chosen file.
         size: u64,
     },
 }
@@ -172,8 +163,6 @@ pub enum TorrentStatus {
 pub struct TorrentPlayback {
     pub info_hash: String,
     pub status: TorrentStatus,
-    /// Sent to the player once the engine serves the file; its URL is the
-    /// magnet until then.
     pub(crate) pending: Option<PlayRequest>,
 }
 
@@ -185,8 +174,6 @@ impl TorrentPlayback {
     }
 }
 
-/// Whether `url` is one the engine may hand to the player: `http` on a
-/// loopback address (SECURITY.md §Player).
 pub(crate) fn is_engine_url(url: &Url) -> bool {
     url.scheme() == "http"
         && match url.host() {

@@ -169,7 +169,6 @@ impl AddonClient {
         .await
     }
 
-    /// GETs `url` and returns the decoded body, enforcing the size limit.
     async fn get(&self, url: Url) -> Result<Vec<u8>, FetchError> {
         self.get_limited(url, self.policy.max_body_bytes, "application/json")
             .await
@@ -213,8 +212,6 @@ impl AddonClient {
     }
 }
 
-/// Resolves hostnames and drops every address the policy forbids, so the
-/// connection can only go to an address that was checked (no DNS rebinding).
 #[derive(Debug)]
 struct PolicyResolver {
     policy: Arc<NetPolicy>,
@@ -244,8 +241,6 @@ impl Resolve for PolicyResolver {
     }
 }
 
-/// Maps a reqwest error to a [`FetchError`], surfacing policy blocks raised
-/// inside the resolver or the redirect policy.
 fn classify(err: &reqwest::Error) -> FetchError {
     let mut source: Option<&(dyn StdError + 'static)> = Some(err);
     while let Some(current) = source {
@@ -263,7 +258,6 @@ fn classify(err: &reqwest::Error) -> FetchError {
     }
 }
 
-/// Renders an error and its sources without the request URL.
 fn error_chain(err: &reqwest::Error) -> String {
     let mut out = match err.url() {
         Some(url) => err.to_string().replace(url.as_str(), "<url>"),
@@ -278,8 +272,6 @@ fn error_chain(err: &reqwest::Error) -> String {
     out
 }
 
-/// `scheme://host[:port]` only: addon paths often embed user configuration
-/// (API keys, tokens) and must not reach logs.
 fn origin(url: &Url) -> String {
     url.origin().ascii_serialization()
 }
@@ -306,7 +298,6 @@ mod tests {
         let resolver = PolicyResolver {
             policy: Arc::new(NetPolicy::default()),
         };
-        // `localhost` resolves offline via the hosts file.
         let Err(err) = resolver.resolve(Name::from_str("localhost").unwrap()).await else {
             panic!("localhost must not resolve under the default policy");
         };

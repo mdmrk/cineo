@@ -7,7 +7,6 @@ use std::time::Duration;
 
 use super::*;
 
-/// Tests run without a window or sound card.
 const AUDIO_ONLY: &[(&str, &str)] = &[("ao", "null"), ("vo", "null")];
 
 fn request(url: &str) -> PlayRequest {
@@ -27,9 +26,6 @@ fn request(url: &str) -> PlayRequest {
     }
 }
 
-/// Regression: `auto-safe` alone tried mpv's CUDA interop first under
-/// OpenGL; without an NVIDIA driver that printed "Cannot load
-/// libcuda.so.1" straight to stderr.
 #[test]
 #[cfg(target_os = "linux")]
 fn linux_tries_vaapi_before_the_other_hardware_decoders() {
@@ -37,8 +33,6 @@ fn linux_tries_vaapi_before_the_other_hardware_decoders() {
     assert_eq!(hwdec, Some(&("hwdec", "vaapi,auto-safe")));
 }
 
-/// mpv warnings are about the media (for example a Dolby Vision warning on
-/// every frame), so they show with `-v`; errors always show.
 #[test]
 fn mpv_warnings_log_as_info_and_errors_as_errors() {
     assert_eq!(log_level("fatal"), tracing::Level::ERROR);
@@ -122,7 +116,6 @@ fn non_http_urls_are_refused_before_loading_libmpv() {
     assert!(err.to_string().contains("only http(s)"), "{err}");
 }
 
-/// `seconds` of 8 kHz mono silence.
 fn wav(seconds: u32) -> Vec<u8> {
     let samples = 8000 * seconds;
     let mut out = Vec::new();
@@ -142,7 +135,6 @@ fn wav(seconds: u32) -> Vec<u8> {
     out
 }
 
-/// Serves `body` to every connection and reports each request head.
 fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/film.wav", listener.local_addr().unwrap());
@@ -167,7 +159,6 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
     (url, rx)
 }
 
-/// Needs libmpv installed. Run with `cargo test -p cineo-player -- --ignored`.
 #[test]
 #[ignore = "needs libmpv"]
 fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
@@ -182,7 +173,6 @@ fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
     );
     assert!(!head.contains("evil"), "{head}");
 
-    // Polls: the status is a snapshot, so watch it while events arrive.
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let mut saw_audio_track = false;
     let last = loop {
@@ -212,7 +202,6 @@ fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
     drop(player);
 }
 
-/// Waits up to 10 s for the first non-progress event.
 fn next_end(
     events: &mut mpsc::UnboundedReceiver<PlayerEvent>,
     player: &Player,
@@ -257,8 +246,6 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
     assert!(player.is_finished(), "mpv shut down after the stop");
 }
 
-/// Accepts connections and reports each request head, but never answers:
-/// a stream that is still connecting (a torrent without peers yet).
 fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/film.wav", listener.local_addr().unwrap());

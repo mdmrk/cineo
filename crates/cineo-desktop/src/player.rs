@@ -13,30 +13,21 @@ use eframe::egui::{
 use crate::theme;
 use crate::view::{IMAGE_FILTER, Icon, gradient, paint_icon, paint_spinner};
 
-/// Seconds without input before the controls hide during playback.
 const HIDE_AFTER: f64 = 2.5;
-/// Seconds per seek-key press.
 const SEEK_STEP: f64 = 10.0;
-/// Volume percent per key press.
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
-/// Largest size of the logo shown while the file loads.
 const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
-/// Seconds per fade in and out of the loading logo or title.
 const PULSE_PERIOD: f64 = 1.6;
 
 /// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
 pub struct Controls {
-    /// egui time of the last pointer or key activity.
     last_activity: f64,
     last_pointer: Option<Pos2>,
-    /// The track menu that is open.
     menu: Option<TrackKind>,
-    /// Seek-bar position being dragged, as a fraction.
     seek_drag: Option<f64>,
-    /// Volume being dragged, in percent.
     volume_drag: Option<f64>,
 }
 
@@ -52,7 +43,6 @@ pub fn show(
 ) -> Vec<PlayerCommand> {
     let mut out = Vec::new();
     if theme::ensure(ui.ctx()) {
-        // Text laid out now would not find the theme's fonts yet.
         ui.ctx().request_discard("theme applied");
         return out;
     }
@@ -60,7 +50,6 @@ pub fn show(
     track_activity(ui, controls, now);
     shortcuts(ui, status, &mut out);
 
-    // Clicking the video toggles pause; a double click, fullscreen.
     let video = ui.interact(rect, ui.id().with("video"), Sense::click());
     if video.double_clicked() {
         toggle_fullscreen(ui);
@@ -93,7 +82,6 @@ pub fn show(
     }
 
     top_bar(ui, rect, title, &mut out);
-    // Position, volume and tracks mean nothing until the file has loaded.
     if status.loaded {
         bottom_bar(ui, rect, status, controls, &mut out);
     }
@@ -145,7 +133,6 @@ fn shortcuts(ui: &Ui, status: &Status, out: &mut Vec<PlayerCommand>) {
             toggle_full = true;
         }
         if key(Key::Escape) {
-            // Escape leaves fullscreen first, then the player.
             if fullscreen {
                 toggle_full = true;
             } else {
@@ -174,10 +161,6 @@ pub fn leave_fullscreen(ctx: &egui::Context) {
     }
 }
 
-/// While the file loads, the item's logo art at the center of `rect`, its
-/// opacity pulsing as in Stremio. Without a logo, or if it fails to load,
-/// the title in the display serif pulses instead; nothing is drawn while
-/// the logo is still downloading.
 fn loading_art(ui: &Ui, rect: Rect, title: &str, logo: Option<&str>) {
     let opacity = pulse_opacity(ui.input(|i| i.time));
     ui.ctx().request_repaint();
@@ -214,8 +197,6 @@ fn loading_art(ui: &Ui, rect: Rect, title: &str, logo: Option<&str>) {
     ui.painter().galley(pos, galley, color);
 }
 
-/// The loading logo's or title's opacity at egui `time`: faint at the start of each
-/// [`PULSE_PERIOD`], fully opaque halfway through.
 fn pulse_opacity(time: f64) -> f32 {
     let phase = 0.5 - 0.5 * (time * std::f64::consts::TAU / PULSE_PERIOD).cos();
     #[expect(clippy::cast_possible_truncation, reason = "a factor in 0..=1")]
@@ -270,7 +251,6 @@ fn bottom_bar(
         Color32::from_black_alpha(210),
         false,
     );
-    // Swallow clicks on the bar so they do not reach the video.
     let _ = ui.interact(bar, ui.id().with("bar"), Sense::click());
 
     let margin = 20.0;
@@ -330,7 +310,6 @@ fn bottom_bar(
             .wrap_mode(egui::TextWrapMode::Extend),
     );
 
-    // Right side, from the right edge.
     let mut x = bar.right() - margin - BUTTON / 2.0 + 6.0;
     let mut slot = |step: f32| {
         let c = pos2(x, y);
@@ -380,7 +359,6 @@ fn bottom_bar(
     }
 }
 
-/// `label` in `rect`, left-aligned and vertically centered.
 fn left_label(ui: &mut Ui, rect: Rect, label: Label) {
     ui.scope_builder(
         UiBuilder::new()
@@ -498,7 +476,6 @@ fn volume_slider(
     }
 }
 
-/// A list of `kind` tracks above `anchor`; subtitles can be turned off.
 fn track_menu(
     ui: &mut Ui,
     anchor: Rect,
@@ -581,7 +558,6 @@ fn track_menu(
     }
 }
 
-/// "English · Commentary", falling back to "Track 2".
 fn track_label(track: &Track, number: usize) -> String {
     let parts: Vec<&str> = [track.lang.as_deref(), track.title.as_deref()]
         .into_iter()
@@ -590,13 +566,11 @@ fn track_label(track: &Track, number: usize) -> String {
     if parts.is_empty() {
         format!("Track {number}")
     } else {
-        // Media text: one line, bounded.
         let label = parts.join(" · ").replace(['\n', '\r'], " ");
         label.chars().take(60).collect()
     }
 }
 
-/// A round icon button over the video, accessible as `label`.
 fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui
         .interact(rect, ui.id().with(label), Sense::click())
@@ -613,7 +587,6 @@ fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     response
 }
 
-/// `m:ss`, or `h:mm:ss` when `scale` (the duration) reaches an hour.
 fn clock(seconds: f64, scale: f64) -> String {
     #[expect(
         clippy::cast_possible_truncation,

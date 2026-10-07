@@ -1,8 +1,4 @@
 //! `cineo` — headless shell over the Cineo core.
-//!
-//! It is the first end-to-end front end and the main debugging tool for
-//! addon behavior (see `docs/DEVELOPMENT.md`, Debugging). Output goes to stdout; logs go to
-//! stderr and are controlled by `-v` or `RUST_LOG`.
 
 // The CLI's job is printing.
 #![allow(clippy::print_stdout)]
@@ -23,17 +19,12 @@ use tracing_subscriber::EnvFilter;
 #[derive(Debug, Parser)]
 #[command(name = "cineo", version, about = "Cineo media center (headless shell)")]
 struct Cli {
-    /// Increase log verbosity (-v debug, -vv trace). `RUST_LOG` overrides.
     #[arg(short, long, global = true, action = clap::ArgAction::Count)]
     verbose: u8,
 
-    /// Allow requests to loopback and private-network addresses
-    /// (self-hosted addons). Off by default; see docs/SECURITY.md.
     #[arg(long, global = true)]
     allow_private_network: bool,
 
-    /// Directory holding the database. Defaults to the platform data
-    /// directory (e.g. `~/.local/share/cineo`).
     #[arg(long, global = true, value_name = "DIR")]
     data_dir: Option<PathBuf>,
 
@@ -43,52 +34,30 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Work with addons.
     #[command(subcommand)]
     Addon(AddonCommand),
-    /// Fetch one page of a catalog and list its items.
     Catalog(CatalogArgs),
-    /// List items to continue watching, most recent first.
     Library {
-        /// List every library item, including finished and unstarted ones.
         #[arg(long)]
         all: bool,
     },
-    /// Check the database: location, schema version, row counts, integrity.
     Doctor,
 }
 
 #[derive(Debug, Subcommand)]
 enum AddonCommand {
-    /// Fetch, validate and summarize an addon manifest.
-    Inspect {
-        /// URL of the addon's manifest.json.
-        url: String,
-    },
-    /// Validate an addon's manifest and install it at the end of the list.
-    Add {
-        /// URL of the addon's manifest.json.
-        url: String,
-    },
-    /// Uninstall an addon.
-    Remove {
-        /// URL of the addon's manifest.json, as shown by `addon list`.
-        url: String,
-    },
-    /// List installed addons in order.
+    Inspect { url: String },
+    Add { url: String },
+    Remove { url: String },
     List,
 }
 
 #[derive(Debug, Args)]
 struct CatalogArgs {
-    /// URL of the addon's manifest.json.
     url: String,
-    /// Content type, e.g. `movie` or `series`.
     #[arg(value_name = "TYPE")]
     content_type: String,
-    /// Catalog id as declared in the manifest.
     id: String,
-    /// Extra argument `name=value`, repeatable (e.g. `--extra search=matrix`).
     #[arg(long = "extra", value_name = "NAME=VALUE", value_parser = parse_extra)]
     extra: Vec<ExtraValue>,
 }
@@ -110,7 +79,6 @@ async fn main() -> ExitCode {
     match run(cli).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            // `{:#}` prints the whole context chain on one line.
             tracing::error!("{err:#}");
             eprintln_error(&err);
             ExitCode::FAILURE
@@ -256,7 +224,6 @@ fn open_store(dir: &Path) -> Result<Store> {
     Store::open_in(dir).with_context(|| format!("cannot open the database in {}", dir.display()))
 }
 
-/// `id  video  position/duration  name`, tab-separated.
 fn render_library_item(item: &LibraryItem) -> String {
     format!(
         "{}\t{}\t{}/{}\t{}",
@@ -268,7 +235,6 @@ fn render_library_item(item: &LibraryItem) -> String {
     )
 }
 
-/// `h:mm:ss`.
 fn clock(ms: u64) -> String {
     let s = ms / 1000;
     format!("{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
@@ -277,7 +243,6 @@ fn clock(ms: u64) -> String {
 fn render_report(report: &Report) -> String {
     let mut out = String::new();
     let shown = |value: Option<i64>| value.map_or_else(|| "-".to_owned(), |v| v.to_string());
-    // Writing to a String cannot fail.
     let _ = writeln!(out, "database: {}", report.path.display());
     if !report.exists {
         let _ = writeln!(out, "status: not created yet (created on first use)");
@@ -301,7 +266,6 @@ fn render_report(report: &Report) -> String {
 
 fn render_manifest(manifest: &Manifest, warnings: &[Warning]) -> String {
     let mut out = String::new();
-    // Writing to a String cannot fail.
     let _ = writeln!(
         out,
         "{} {} ({})",

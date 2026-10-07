@@ -1,8 +1,4 @@
 //! Non-fatal findings produced while interpreting untrusted input.
-//!
-//! Addon data in the wild is frequently malformed. Instead of failing a whole
-//! response, parsers drop or default the offending part and record a
-//! [`Warning`] so the problem stays observable (logs, `cineo addon inspect`).
 
 use std::fmt;
 
@@ -24,11 +20,8 @@ pub struct Warning {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum WarningKind {
-    /// A field had an unusable value and was treated as absent.
     IgnoredField { reason: String },
-    /// An array element could not be interpreted and was skipped.
     SkippedItem { reason: String },
-    /// A duplicate entry was dropped; the first occurrence is kept.
     Duplicate { key: String },
 }
 
@@ -48,7 +41,6 @@ impl fmt::Display for Warning {
     }
 }
 
-/// Collects warnings while a parser walks a document.
 #[derive(Debug, Default)]
 pub(crate) struct Warnings(Vec<Warning>);
 

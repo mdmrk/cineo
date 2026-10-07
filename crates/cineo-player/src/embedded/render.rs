@@ -17,17 +17,9 @@ pub type ProcAddress = Arc<dyn Fn(&CStr) -> *const c_void + Send + Sync>;
 pub type OnFrame = Box<dyn Fn() + Send + Sync>;
 
 /// mpv's OpenGL renderer for one playback.
-///
-/// Thread contract: create, use and drop it only on the thread whose OpenGL
-/// context `get_proc_address` belongs to, with that context current (in
-/// eframe: inside `App::ui`/`logic`, a paint callback or `on_exit`). It is
-/// `Send` so it can live in a paint callback; it must not actually be used
-/// from another thread.
 pub struct Renderer {
-    /// Freed in `drop`, before `core` can be destroyed.
     context: *mut RenderContext,
     core: Arc<Core>,
-    /// Passed to mpv as callback data; must outlive `context`.
     _proc: Box<ProcAddress>,
     _on_frame: Box<OnFrame>,
 }
@@ -136,7 +128,6 @@ impl Renderer {
             h,
             internal_format: 0,
         };
-        // The window's framebuffer has its origin at the bottom left.
         let mut flip: c_int = c_int::from(fbo == 0);
         let mut block: c_int = 0;
         let mut params = [

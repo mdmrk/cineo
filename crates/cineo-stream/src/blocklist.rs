@@ -2,14 +2,9 @@
 //! unless the user allowed private networks (ADR-0012, SECURITY.md
 //! §Streaming engine). Enforced by the SOCKS proxy ([`crate::socks`]) and
 //! the tracker filter.
-//!
-//! The list mirrors `cineo-net`'s `is_public_ip` (ADR-0006). IO crates do
-//! not depend on each other (ADR-0002), so it is repeated here; the
-//! `addresses_match_the_net_policy_examples` test pins the same examples.
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-/// IPv4 ranges that are not public, as (network, prefix length).
 const V4: &[(Ipv4Addr, u8)] = &[
     (Ipv4Addr::new(0, 0, 0, 0), 8),       // "this network"
     (Ipv4Addr::new(10, 0, 0, 0), 8),      // private
@@ -27,8 +22,6 @@ const V4: &[(Ipv4Addr, u8)] = &[
     (Ipv4Addr::new(240, 0, 0, 0), 4),     // reserved, broadcast
 ];
 
-/// IPv6 ranges that are not public. Ranges embedding IPv4 addresses
-/// (mapped, NAT64, 6to4) are added per IPv4 range in [`v6_ranges`].
 const V6: &[(Ipv6Addr, u8)] = &[
     (Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 96), // unspecified, loopback, v4-compatible
     (Ipv6Addr::new(0xfc00, 0, 0, 0, 0, 0, 0, 0), 7), // unique local
@@ -50,9 +43,6 @@ fn v6_bounds((net, prefix): (Ipv6Addr, u8)) -> (u128, u128) {
     (start, start | !mask)
 }
 
-/// Every blocked IPv6 range: [`V6`] plus each IPv4 range embedded as
-/// IPv4-mapped (`::ffff:a.b.c.d`), NAT64 (`64:ff9b::a.b.c.d`) and 6to4
-/// (`2002:aabb:ccdd::/48`).
 fn v6_ranges() -> Vec<(u128, u128)> {
     let mut out: Vec<(u128, u128)> = V6.iter().copied().map(v6_bounds).collect();
     for &range in V4 {
@@ -71,7 +61,6 @@ fn v6_ranges() -> Vec<(u128, u128)> {
     out
 }
 
-/// Whether BitTorrent traffic to `ip` is blocked by default.
 pub(crate) fn is_blocked(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => {

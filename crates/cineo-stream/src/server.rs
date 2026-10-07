@@ -27,28 +27,22 @@ use crate::range::{Span, span};
 
 type Body = BoxBody<Bytes, std::io::Error>;
 
-/// The file being served.
 pub(crate) struct Served {
-    /// 40 lowercase hex characters.
     pub(crate) info_hash: String,
     pub(crate) file: usize,
     pub(crate) len: u64,
-    /// The file's name inside the torrent; only its extension is used.
     pub(crate) name: String,
     pub(crate) torrent: Arc<ManagedTorrent>,
 }
 
-/// What the server currently serves; replaced when another torrent opens.
 pub(crate) type Current = Arc<RwLock<Option<Arc<Served>>>>;
 
-/// Shared request context.
 pub(crate) struct Ctx {
     pub(crate) token: String,
     pub(crate) addr: SocketAddr,
     pub(crate) current: Current,
 }
 
-/// Accepts connections on `listener` until the task is aborted.
 pub(crate) async fn run(listener: TcpListener, ctx: Arc<Ctx>) {
     loop {
         let (stream, _) = match listener.accept().await {
@@ -68,7 +62,6 @@ pub(crate) async fn run(listener: TcpListener, ctx: Arc<Ctx>) {
                 .serve_connection(TokioIo::new(stream), service)
                 .await
             {
-                // Players close connections mid-body when they seek.
                 debug!(%err, "player connection ended");
             }
         });
@@ -81,7 +74,6 @@ fn empty(status: StatusCode) -> Response<Body> {
     response
 }
 
-/// Whether the `Host` header names this server by a loopback name.
 fn host_ok(req: &Request<Incoming>, addr: SocketAddr) -> bool {
     let Some(host) = req.headers().get(HOST).and_then(|h| h.to_str().ok()) else {
         return false;
@@ -90,7 +82,6 @@ fn host_ok(req: &Request<Incoming>, addr: SocketAddr) -> bool {
     host == format!("{}:{port}", addr.ip()) || host == format!("localhost:{port}")
 }
 
-/// Compares in time independent of where the inputs differ.
 fn same(a: &str, b: &str) -> bool {
     a.len() == b.len()
         && a.bytes()
@@ -121,7 +112,6 @@ async fn handle(ctx: &Ctx, req: Request<Incoming>) -> Response<Body> {
     if !host_ok(&req, ctx.addr) {
         return empty(StatusCode::FORBIDDEN);
     }
-    // /<token>/<info hash>/<file index>
     let mut parts = req.uri().path().trim_start_matches('/').split('/');
     let (Some(token), Some(hash), Some(file), None) =
         (parts.next(), parts.next(), parts.next(), parts.next())

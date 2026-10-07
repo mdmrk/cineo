@@ -11,12 +11,9 @@ use crate::diagnostics::{Parsed, Warnings};
 /// Aspect ratio hint for a poster image.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PosterShape {
-    /// 1:0.675 (the default when absent or unknown).
     #[default]
     Poster,
-    /// 1:1.
     Square,
-    /// 1:1.77.
     Landscape,
 }
 
@@ -45,9 +42,6 @@ pub struct CatalogResponse {
 }
 
 /// Parses a catalog response.
-///
-/// Fails only if the body is not a JSON object or lacks `metas`. `"metas": null`
-/// is an empty catalog. Invalid entries are skipped with a warning.
 pub fn parse_catalog_response(bytes: &[u8]) -> Result<Parsed<CatalogResponse>, ResponseError> {
     let root: Value = serde_json::from_slice(bytes)?;
     let Value::Object(obj) = root else {

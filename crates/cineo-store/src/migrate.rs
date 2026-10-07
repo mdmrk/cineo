@@ -5,11 +5,7 @@ use tracing::info;
 
 use crate::store::StoreError;
 
-/// `MIGRATIONS[n]` upgrades schema version `n` to `n + 1`. Append only: a
-/// released migration is never edited, and each released version gets a
-/// fixture in `tests/fixtures/store/`.
 pub(crate) const MIGRATIONS: &[&str] = &[
-    // v1
     "CREATE TABLE addons (
         position INTEGER PRIMARY KEY,
         transport_url TEXT NOT NULL UNIQUE
@@ -24,14 +20,12 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         duration_ms INTEGER NOT NULL,
         updated_ms INTEGER NOT NULL
     ) STRICT;",
-    // v2 (M9): user settings as key/value pairs; missing keys mean defaults.
     "CREATE TABLE settings (
         key TEXT PRIMARY KEY NOT NULL,
         value TEXT NOT NULL
     ) STRICT;",
 ];
 
-/// The schema version this build reads and writes.
 #[expect(
     clippy::cast_possible_wrap,
     reason = "a handful of migrations, far below i64::MAX"
@@ -42,12 +36,8 @@ pub(crate) fn user_version(conn: &Connection) -> rusqlite::Result<i64> {
     conn.pragma_query_value(None, "user_version", |row| row.get(0))
 }
 
-/// Brings `conn` to `migrations.len()`. All steps run in one transaction, so
-/// a failure leaves the database at its previous version.
 pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), StoreError> {
     let latest = i64::try_from(migrations.len()).unwrap_or(i64::MAX);
-    // Reading the header also detects a file that is not a database, before
-    // anything is written.
     if user_version(conn)? == latest {
         return Ok(());
     }

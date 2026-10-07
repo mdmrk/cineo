@@ -6,7 +6,6 @@ use std::path::Path;
 
 use tracing::{info, warn};
 
-/// Creates `dir` and missing parents, private to the user on Unix.
 pub(crate) fn create_private_dir(dir: &Path) -> io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
@@ -19,7 +18,6 @@ fn is_info_hash(name: &str) -> bool {
     name.len() == 40 && name.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-/// Deletes one torrent's directory. A missing one is not an error.
 pub(crate) fn remove_torrent(dir: &Path) -> io::Result<()> {
     match std::fs::remove_dir_all(dir) {
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
@@ -27,8 +25,6 @@ pub(crate) fn remove_torrent(dir: &Path) -> io::Result<()> {
     }
 }
 
-/// Deletes every torrent directory in `cache`: data left by a run that did
-/// not stop cleanly. Only directories named like an info hash are touched.
 pub(crate) fn remove_all(cache: &Path) -> io::Result<()> {
     let entries = match std::fs::read_dir(cache) {
         Ok(entries) => entries,

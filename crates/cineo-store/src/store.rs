@@ -15,8 +15,6 @@ use crate::migrate::{MIGRATIONS, migrate};
 /// File name of the database inside the data directory.
 pub const DB_FILE: &str = "cineo.db";
 
-/// How long a write waits for another process (e.g. the CLI next to the GUI)
-/// holding the database lock.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, thiserror::Error)]
@@ -78,9 +76,6 @@ fn app_strategy() -> Option<impl AppStrategy> {
 }
 
 /// An open, migrated Cineo database.
-///
-/// Invariant: the schema is at [`crate::SCHEMA_VERSION`]. Calls are
-/// blocking; async shells run them off the runtime's worker threads.
 #[derive(Debug)]
 pub struct Store {
     conn: Connection,
@@ -262,12 +257,10 @@ impl Store {
 const P2P_ENABLED: &str = "p2p_enabled";
 const P2P_ACKNOWLEDGED: &str = "p2p_acknowledged";
 
-/// Millisecond values above `i64::MAX` (~292 million years) saturate.
 fn to_sql_int(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
 }
 
-/// Reads one row; `Err((id, reason))` for rows breaking a domain invariant.
 fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'static str)>> {
     let id: String = row.get(0)?;
     let content_type: String = row.get(1)?;
@@ -286,7 +279,6 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
     let Some(content_type) = ContentType::new(content_type) else {
         return Ok(Err((id, "invalid content type")));
     };
-    // Same rule as addon images: http(s) only; anything else is dropped.
     let poster = poster
         .and_then(|raw| Url::parse(&raw).ok())
         .filter(|url| matches!(url.scheme(), "http" | "https"));
@@ -302,8 +294,6 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
     }))
 }
 
-/// Creates `dir` and missing parents; on Unix the new directories are
-/// readable only by the user, since the library is private.
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);

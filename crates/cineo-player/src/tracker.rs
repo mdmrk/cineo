@@ -7,7 +7,6 @@ use crate::PlayerEvent;
 
 const PROGRESS_INTERVAL: Duration = Duration::from_secs(5);
 
-/// One mpv event, independent of how it arrived.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Input {
     TimePos(f64),
@@ -16,27 +15,20 @@ pub(crate) enum Input {
     EndFile(EndReason),
 }
 
-/// Why mpv stopped playing a file.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum EndReason {
     Eof,
     Error(String),
-    /// `stop`, `quit` or `redirect`: the user closed it or mpv replaced it.
     Other,
 }
 
-/// What the backend does after an input.
 #[derive(Debug, Default, PartialEq)]
 pub(crate) struct Step {
-    /// Forward this to the shell.
     pub(crate) event: Option<PlayerEvent>,
-    /// Seek to this position (seconds, absolute) to resume playback.
     pub(crate) seek_to: Option<f64>,
-    /// The session is over; `event` is its last event.
     pub(crate) done: bool,
 }
 
-/// The position, duration and lifecycle of one playback.
 #[derive(Debug)]
 pub(crate) struct Tracker {
     start_ms: u64,
@@ -47,7 +39,6 @@ pub(crate) struct Tracker {
 }
 
 impl Tracker {
-    /// A tracker that resumes at `start_ms` once the file has loaded.
     pub(crate) fn new(start_ms: u64) -> Self {
         Self {
             start_ms,
@@ -58,7 +49,6 @@ impl Tracker {
         }
     }
 
-    /// Applies `input` received at `now`.
     pub(crate) fn on(&mut self, input: Input, now: Instant) -> Step {
         match input {
             Input::TimePos(seconds) => {
@@ -88,13 +78,11 @@ impl Tracker {
             Input::EndFile(EndReason::Error(detail)) => finish(PlayerEvent::Failed(format!(
                 "mpv could not play the stream: {detail}"
             ))),
-            // Before the file loaded this is mpv replacing its idle state.
             Input::EndFile(EndReason::Other) if self.started => finish(self.closed()),
             Input::EndFile(EndReason::Other) => Step::default(),
         }
     }
 
-    /// The last event when mpv goes away without ending the file.
     pub(crate) fn closed(&self) -> PlayerEvent {
         PlayerEvent::Closed {
             time_ms: self.time_ms,

@@ -10,17 +10,12 @@ use tracing_subscriber::EnvFilter;
 #[derive(Debug, Parser)]
 #[command(name = "cineo-desktop", version, about = "Cineo media center")]
 struct Cli {
-    /// Increase log verbosity (-v debug, -vv trace). `RUST_LOG` overrides.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
-    /// Allow addons, images and torrent peers on loopback and
-    /// private-network addresses (self-hosted addons). Off by default; see docs/SECURITY.md.
     #[arg(long)]
     allow_private_network: bool,
-    /// Directory holding the database (default: the platform data directory).
     #[arg(long, value_name = "DIR")]
     data_dir: Option<PathBuf>,
-    /// Directory for torrent data (default: the platform cache directory).
     #[arg(long, value_name = "DIR")]
     cache_dir: Option<PathBuf>,
 }

@@ -16,20 +16,12 @@ use eframe::egui::{
 use image::imageops::FilterType;
 use url::Url;
 
-/// Largest image download accepted.
 pub(crate) const MAX_IMAGE_BYTES: usize = 4 * 1024 * 1024;
-/// Largest width or height accepted, checked from the header before
-/// decoding (decompression bombs).
 pub(crate) const MAX_IMAGE_SIDE: u32 = 4096;
-/// Images are decoded at up to this multiple of the size first asked for,
-/// so the same poster still looks sharp in a larger slot.
 const SIZE_HEADROOM: f32 = 2.0;
 
 type Entry = Poll<Result<Arc<ColorImage>, String>>;
 
-/// An [`ImageLoader`] for `http(s)` images under the network policy.
-/// Decoding runs on the tokio blocking pool, and images are downscaled to
-/// what the UI shows.
 pub(crate) struct NetImageLoader {
     client: Arc<AddonClient>,
     runtime: tokio::runtime::Handle,
@@ -54,7 +46,6 @@ impl ImageLoader for NetImageLoader {
     }
 
     fn load(&self, ctx: &egui::Context, uri: &str, size_hint: SizeHint) -> ImageLoadResult {
-        // egui appends a frame index to `.webp`/`.gif` URIs.
         let source = egui::decode_animated_image_uri(uri).map_or(uri, |(source, _)| source);
         let Some(url) = Url::parse(source)
             .ok()
@@ -93,8 +84,7 @@ impl ImageLoader for NetImageLoader {
                 tracing::debug!(origin = %url.origin().ascii_serialization(), %err, "image not loaded");
             }
             let result = result.map(Arc::new);
-            // Released before repainting: egui may hold its own lock while
-            // asking this cache (see `has_pending`).
+            // Released before repainting: egui may hold its own lock while asking this cache.
             cache.lock().insert(uri, Poll::Ready(result));
             ctx.request_repaint();
         });
@@ -125,8 +115,6 @@ impl ImageLoader for NetImageLoader {
     }
 }
 
-/// Decodes `bytes` after [`check_dimensions`], downscaled to
-/// [`decoded_size`].
 pub(crate) fn decode(bytes: &[u8], hint: SizeHint) -> Result<ColorImage, String> {
     check_dimensions(bytes)?;
     let image =
@@ -142,9 +130,6 @@ pub(crate) fn decode(bytes: &[u8], hint: SizeHint) -> Result<ColorImage, String>
     Ok(ColorImage::from_rgba_unmultiplied(size, rgba.as_raw()))
 }
 
-/// The size to decode a `width`×`height` image at: large enough to cover
-/// `hint` with [`SIZE_HEADROOM`] to spare, keeping the aspect ratio, and
-/// never larger than the original.
 #[expect(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
@@ -170,8 +155,6 @@ pub(crate) fn decoded_size(width: u32, height: u32, hint: SizeHint) -> (u32, u32
     (side(w), side(h))
 }
 
-/// Accepts only jpeg, png or webp images whose header declares at most
-/// [`MAX_IMAGE_SIDE`] pixels per side.
 pub(crate) fn check_dimensions(bytes: &[u8]) -> Result<(), String> {
     let (width, height) = image::ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
@@ -219,7 +202,6 @@ mod tests {
             maintain_aspect_ratio: true,
         };
         assert_eq!(decoded_size(1000, 1500, hint), (256, 384));
-        // A wide image covers the height; the sides get cropped.
         assert_eq!(decoded_size(3000, 1500, hint), (768, 384));
         let decoded = decode(&png(1000, 1500), hint).unwrap();
         assert_eq!(decoded.size, [256, 384]);
@@ -248,7 +230,6 @@ mod tests {
     #[test]
     fn non_images_and_disabled_formats_are_rejected() {
         assert!(check_dimensions(b"<svg xmlns='http://www.w3.org/2000/svg'/>").is_err());
-        // GIF magic: the format exists, but its decoder is not compiled in.
         assert!(check_dimensions(b"GIF89a\x01\x00\x01\x00\x00\x00\x00;").is_err());
     }
 }

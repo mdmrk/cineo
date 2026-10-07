@@ -86,7 +86,6 @@ strip = "debuginfo"
 [profile.dev.package."*"]
 opt-level = 2
 
-# librqbit with our streaming patch: branch fix/urgent-piece-helpers of
-# the owner's fork, pinned to a commit (ADR-0016).
+# Branch fix/urgent-piece-helpers (ADR-0016).
 [patch.crates-io]
 librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "be52c57a0d6c85d6d35467a2c8d5d60f66924aea" }

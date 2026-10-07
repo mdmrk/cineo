@@ -73,6 +73,9 @@ updated `Cargo.lock`.
   just to silence the borrow checker.
 - Public API: keep items `pub(crate)` unless another crate needs them. Each
   public type gets a doc comment stating its invariants.
+- Comments: few. A short line only where the code cannot say it: `SAFETY`,
+  security, a non-obvious external behavior, or an `#[allow]` reason.
+  Doc comments on public items stay one short paragraph.
 - Domain types enforce invariants in constructors (`new`/`parse` returning
   `Option`/`Result`). Do not pass raw `String`s for ids, types or URLs
   across modules.
