@@ -1358,13 +1358,6 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> bool {
             lerp_color(theme::PANEL, theme::SURFACE, hover),
         ),
     );
-    if hover > 0.0 {
-        ui.painter().rect_filled(
-            Rect::from_min_size(rect.min, vec2(3.0, rect.height())),
-            radius,
-            theme::ACCENT.gamma_multiply(hover),
-        );
-    }
     let response = if playable {
         response.on_hover_cursor(egui::CursorIcon::PointingHand)
     } else {
