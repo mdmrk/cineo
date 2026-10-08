@@ -10,10 +10,11 @@ use eframe::egui::{
     TextFormat, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
+use crate::brand;
 use crate::theme;
 use crate::view::{
     Icon, P2P_NOTICE, ViewState, append_icon, compact, dim, lerp_color, page_title, paint_icon,
-    primary, section,
+    paint_loading, primary, section,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -330,6 +331,14 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 TextFormat::simple(theme::body(), theme::ACCENT),
             );
             ui.hyperlink_to(job, "https://github.com/mdmrk/cineo");
+            ui.add_space(theme::GAP);
+            ui.label(dim("Cineo is free software under the MIT License."));
+            ui.label(dim("Made with Rust, egui, mpv and librqbit."));
+            ui.add_space(theme::SECTION_GAP * 2.0);
+            let height = theme::LOADING_WIDTH * brand::LOADING_SIZE.y / brand::LOADING_SIZE.x;
+            let (rect, _) =
+                ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
+            paint_loading(ui, rect.center(), theme::LOADING_WIDTH, theme::TEXT_FAINT);
         }
     }
 }

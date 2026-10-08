@@ -642,7 +642,11 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
 fn open_section(harness: &mut Harness<'_, Ui>, name: &str) {
     harness.get_by_role_and_label(Role::Button, name).click();
     harness.run_steps(30);
-    harness.run();
+}
+
+/// Settles the settings page, whose About animation repaints forever.
+fn settle(harness: &mut Harness<'_, Ui>) {
+    harness.run_steps(4);
 }
 
 fn settings_page() -> ViewState {
@@ -657,17 +661,17 @@ fn resetting_settings_asks_first() {
     let mut harness = harness(State::default(), settings_page());
     open_section(&mut harness, "Data");
     harness.get_by_label("Reset…").click();
-    harness.run();
+    settle(&mut harness);
     harness.get_by_label("Reset all settings?");
     harness.get_by_label("Cancel").click();
-    harness.run();
+    settle(&mut harness);
     assert!(harness.query_by_label("Reset all settings?").is_none());
     assert!(harness.state().2.is_empty());
 
     harness.get_by_label("Reset…").click();
-    harness.run();
+    settle(&mut harness);
     harness.get_by_label("Reset").click();
-    harness.run();
+    settle(&mut harness);
     assert_eq!(harness.state().2, vec![Action::ResetSettings]);
 }
 
@@ -689,7 +693,7 @@ fn the_settings_index_jumps_to_a_section() {
     assert!(about(&harness) > 500.0, "About starts below the window");
     harness.get_by_role_and_label(Role::Button, "About").click();
     harness.run_steps(30);
-    harness.run();
+    settle(&mut harness);
     let top = about(&harness);
     assert!(top < 500.0, "About is scrolled into view: {top}");
 }
@@ -800,9 +804,9 @@ fn clearing_watch_history_asks_first() {
     let mut harness = harness(State::default(), settings_page());
     open_section(&mut harness, "Data");
     harness.get_by_label("Clear…").click();
-    harness.run();
+    settle(&mut harness);
     harness.get_by_label("Clear watch history?");
     harness.get_by_label("Clear").click();
-    harness.run();
+    settle(&mut harness);
     assert_eq!(harness.state().2, vec![Action::ClearLibrary]);
 }
