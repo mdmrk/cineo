@@ -704,7 +704,7 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             .font(FontId::new(15.0, egui::FontFamily::Proportional))
             .margin(Margin {
                 left: 34,
-                right: 10,
+                right: 32,
                 top: 7,
                 bottom: 7,
             })
@@ -733,11 +733,12 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         field.request_focus();
         view.focus_search = false;
     }
+    let cleared = clear_button(ui, &field, &mut view.search_input);
     let now = ui.input(|i| i.time);
     if field.changed() {
         view.search_edited_at = Some(now);
     }
-    let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
+    let submitted = cleared || field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
     let due = view
         .search_edited_at
         .is_some_and(|edited| now - edited >= SEARCH_DEBOUNCE);
@@ -820,9 +821,15 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         let field = ui.add(
             TextEdit::singleline(&mut view.addon_input)
                 .hint_text("https://…/manifest.json")
-                .margin(Margin::symmetric(8, 5))
+                .margin(Margin {
+                    left: 8,
+                    right: 30,
+                    top: 5,
+                    bottom: 5,
+                })
                 .desired_width(field_width),
         );
+        clear_button(ui, &field, &mut view.addon_input);
         let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
         if primary(ui, !busy, "Install").clicked() || (submitted && !busy) {
             out.push(Action::InstallAddon(view.addon_input.clone()));
@@ -1320,12 +1327,13 @@ fn stream_filters(
             .hint_text("Search streams")
             .margin(Margin {
                 left: 30,
-                right: 10,
+                right: 30,
                 top: 6,
                 bottom: 6,
             })
             .desired_width(ui.available_width().min(360.0)),
     );
+    clear_button(ui, &field, &mut filter.query);
     paint_icon(
         ui.painter(),
         Icon::Search,
@@ -1987,6 +1995,31 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     if response.clicked() {
         out.push(Action::Resume(item.id.clone()));
     }
+}
+
+/// An X at the right end of a text field that empties it; true when clicked.
+fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
+    if text.is_empty() {
+        return false;
+    }
+    let center = pos2(field.rect.max.x - 15.0, field.rect.center().y);
+    let rect = Rect::from_center_size(center, Vec2::splat(22.0));
+    let response = ui
+        .interact(rect, field.id.with("clear"), Sense::click())
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, "Clear"));
+    let ink = if response.hovered() {
+        theme::TEXT_BRIGHT
+    } else {
+        theme::TEXT_DIM
+    };
+    paint_icon(ui.painter(), Icon::Named("x"), center, 14.0, ink);
+    if !response.clicked() {
+        return false;
+    }
+    text.clear();
+    field.request_focus();
+    true
 }
 
 fn card_button(

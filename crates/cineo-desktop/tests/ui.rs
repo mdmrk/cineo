@@ -520,6 +520,26 @@ fn settings_pick_a_subtitle_language() {
 }
 
 #[test]
+fn the_clear_button_empties_the_search_and_searches_at_once() {
+    let view = ViewState {
+        page: Page::Search,
+        ..ViewState::default()
+    };
+    let mut harness = harness(board_state(), view);
+    assert!(
+        harness.query_by_label("Clear").is_none(),
+        "nothing to clear"
+    );
+    harness.state_mut().1.search_input = "example".into();
+    harness.run();
+    harness.get_by_label("Clear").click();
+    harness.run();
+    assert!(harness.state().1.search_input.is_empty());
+    assert_eq!(harness.state().2, vec![Action::Search(String::new())]);
+    assert!(harness.query_by_label("Clear").is_none());
+}
+
+#[test]
 fn search_runs_once_typing_pauses() {
     let view = ViewState {
         page: Page::Search,
