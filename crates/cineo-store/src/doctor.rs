@@ -1,6 +1,3 @@
-//! A read-only health report for `cineo doctor`. It never creates, migrates
-//! or repairs the database.
-
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OpenFlags};

@@ -1,7 +1,3 @@
-//! Torrent playback decisions (ADR-0010, ADR-0012): what the engine is asked
-//! to serve and which file of a torrent to play. The engine (`cineo-stream`)
-//! does the IO.
-
 use url::Url;
 
 use super::state::PlayRequest;
@@ -49,8 +45,7 @@ impl TorrentRequest {
 
 #[cold]
 fn unreachable_magnet() -> Url {
-    // A fixed, valid URL; only reached if the info hash invariant is broken.
-    #[allow(clippy::unwrap_used)] // a literal that parses
+    #[expect(clippy::unwrap_used, reason = "a literal that parses")]
     Url::parse("magnet:?xt=urn:btih:").unwrap()
 }
 

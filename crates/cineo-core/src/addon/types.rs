@@ -1,5 +1,3 @@
-//! Small protocol value types with invariants.
-
 use std::fmt;
 
 /// A content type such as `movie`, `series`, `channel` or `tv`.

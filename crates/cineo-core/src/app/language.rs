@@ -1,7 +1,3 @@
-//! Audio and subtitle languages the user can prefer, and matching them against the
-//! language tags addons and media files use (ISO 639-2 B/T, ISO 639-1,
-//! optionally with a region such as `pt-BR`).
-
 /// A language Cineo offers: one byte, an index into its table.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Language(u8);
@@ -87,9 +83,10 @@ impl Language {
 
     /// Whether a track or addon language tag means this language.
     pub fn matches(&self, tag: &str) -> bool {
-        let tag = tag.trim().to_ascii_lowercase();
+        let tag = tag.trim();
         let base = tag.split(['-', '_']).next().unwrap_or_default();
-        self.codes().any(|c| c == tag || c == base)
+        self.codes()
+            .any(|c| c.eq_ignore_ascii_case(tag) || c.eq_ignore_ascii_case(base))
     }
 
     /// Every tag this language goes by, its code first.

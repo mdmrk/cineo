@@ -1,8 +1,11 @@
 //! The engine against a local seeder: no internet, no DHT. The seeder is a
 //! second `librqbit` session on loopback that already has the files.
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::num::NonZeroU32;

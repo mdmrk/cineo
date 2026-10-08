@@ -1,5 +1,3 @@
-//! HTTP client for addon resources.
-
 use std::error::Error as StdError;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -209,7 +207,10 @@ impl AddonClient {
             return Err(FetchError::TooLarge { limit });
         }
         // Count decoded bytes: this also bounds gzip/brotli expansion.
-        let mut body = Vec::new();
+        let capacity = response
+            .content_length()
+            .map_or(0, |len| usize::try_from(len).unwrap_or(limit));
+        let mut body = Vec::with_capacity(capacity);
         while let Some(chunk) = response.chunk().await.map_err(|err| classify(&err))? {
             if body.len() + chunk.len() > limit {
                 return Err(FetchError::TooLarge { limit });

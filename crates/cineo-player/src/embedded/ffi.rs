@@ -1,4 +1,3 @@
-//! The libmpv client and render API, loaded at runtime (ADR-0014).
 #![allow(unsafe_code, reason = "FFI to libmpv; ADR-0014, docs/SECURITY.md")]
 
 use std::ffi::{CStr, CString, c_char, c_int, c_ulong, c_void};

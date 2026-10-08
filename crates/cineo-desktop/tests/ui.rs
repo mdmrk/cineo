@@ -2,8 +2,11 @@
 //! rendered headlessly. They check what is shown and which actions clicks
 //! produce; behavior itself is tested in `cineo-core`.
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use cineo_core::addon::{
     ContentType, TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,

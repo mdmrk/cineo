@@ -4,6 +4,7 @@
 //! the tracker filter.
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::sync::LazyLock;
 
 const V4: &[(Ipv4Addr, u8)] = &[
     (Ipv4Addr::new(0, 0, 0, 0), 8),       // "this network"
@@ -43,6 +44,8 @@ fn v6_bounds((net, prefix): (Ipv6Addr, u8)) -> (u128, u128) {
     (start, start | !mask)
 }
 
+static V6_RANGES: LazyLock<Vec<(u128, u128)>> = LazyLock::new(v6_ranges);
+
 fn v6_ranges() -> Vec<(u128, u128)> {
     let mut out: Vec<(u128, u128)> = V6.iter().copied().map(v6_bounds).collect();
     for &range in V4 {
@@ -71,9 +74,9 @@ pub(crate) fn is_blocked(ip: IpAddr) -> bool {
         }
         IpAddr::V6(v6) => {
             let bits = v6.to_bits();
-            v6_ranges()
-                .into_iter()
-                .any(|(start, end)| (start..=end).contains(&bits))
+            V6_RANGES
+                .iter()
+                .any(|&(start, end)| (start..=end).contains(&bits))
         }
     }
 }

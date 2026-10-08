@@ -1,6 +1,3 @@
-//! Turns mpv's playback events into [`PlayerEvent`]s. Shared by the IPC and
-//! embedded backends so both report progress, ends and failures alike.
-
 use std::time::{Duration, Instant};
 
 use crate::PlayerEvent;

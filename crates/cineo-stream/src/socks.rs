@@ -13,6 +13,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tracing::debug;
 
 use crate::blocklist;
+use crate::server::same;
 
 const VERSION: u8 = 5;
 const USER_PASS: u8 = 2;
@@ -61,10 +62,6 @@ pub(crate) async fn run(listener: TcpListener, policy: Arc<Policy>) {
             }
         });
     }
-}
-
-fn same(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 async fn reply(client: &mut TcpStream, code: u8) -> std::io::Result<()> {

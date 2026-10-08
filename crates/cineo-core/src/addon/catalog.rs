@@ -1,10 +1,8 @@
-//! Catalog responses: `{ "metas": [MetaPreview, ...] }`.
-
 use serde_json::Value;
 use url::Url;
 
 use super::ResponseError;
-use super::json::{self, kind};
+use super::json;
 use super::types::ContentType;
 use crate::diagnostics::{Parsed, Warnings};
 
@@ -43,25 +41,11 @@ pub struct CatalogResponse {
 
 /// Parses a catalog response.
 pub fn parse_catalog_response(bytes: &[u8]) -> Result<Parsed<CatalogResponse>, ResponseError> {
-    let root: Value = serde_json::from_slice(bytes)?;
-    let Value::Object(obj) = root else {
-        return Err(ResponseError::NotAnObject);
-    };
-    let mut warnings = Warnings::default();
-    let metas = match obj.get("metas") {
-        None => return Err(ResponseError::MissingField("metas")),
-        Some(Value::Null) => Vec::new(),
-        Some(Value::Array(items)) => items
-            .iter()
-            .enumerate()
-            .filter_map(|(i, item)| parse_meta_preview(item, &format!("metas[{i}]"), &mut warnings))
-            .collect(),
-        Some(other) => {
-            warnings.ignored("metas", format!("expected array, got {}", kind(other)));
-            Vec::new()
-        }
-    };
-    Ok(warnings.finish(CatalogResponse { metas }))
+    let Parsed { value, warnings } = json::response_list(bytes, "metas", parse_meta_preview)?;
+    Ok(Parsed {
+        value: CatalogResponse { metas: value },
+        warnings,
+    })
 }
 
 pub(super) fn parse_meta_preview(
@@ -69,25 +53,9 @@ pub(super) fn parse_meta_preview(
     loc: &str,
     warnings: &mut Warnings,
 ) -> Option<MetaPreview> {
-    let Value::Object(obj) = item else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
-        return None;
-    };
-    let id = match obj.get("id") {
-        Some(Value::String(id)) if !id.is_empty() => id.clone(),
-        _ => {
-            warnings.skipped(loc, "missing or empty `id`");
-            return None;
-        }
-    };
-    let content_type = match obj.get("type") {
-        Some(Value::String(t)) => ContentType::new(t.clone()),
-        _ => None,
-    };
-    let Some(content_type) = content_type else {
-        warnings.skipped(loc, "missing or invalid `type`");
-        return None;
-    };
+    let obj = json::object(item, loc, warnings)?;
+    let id = json::id(obj, loc, warnings)?;
+    let content_type = json::content_type(obj, loc, warnings)?;
     let poster_shape = match json::opt_string(obj, "posterShape", loc, warnings).as_deref() {
         None | Some("poster") => PosterShape::Poster,
         Some("square") => PosterShape::Square,

@@ -1,5 +1,4 @@
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, reason = "test helpers panic on purpose")]
 
 use cineo_core::app::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit, Percent,

@@ -133,22 +133,20 @@ impl StreamSort {
         }
     }
 
-    /// Indexes into `streams` in display order: larger values first, streams
-    /// without a value last, ties in addon order.
     fn order(self, streams: &[Stream]) -> Vec<usize> {
-        let key = |stream: &Stream| -> Option<u64> {
-            match self {
-                Self::AddonOrder => Some(0),
-                Self::Quality => Quality::of(stream).and_then(|q| {
+        let mut order: Vec<usize> = (0..streams.len()).collect();
+        let key = match self {
+            Self::AddonOrder => return order,
+            Self::Quality => |stream: &Stream| {
+                Quality::of(stream).and_then(|q| {
                     let rank = QUALITIES.iter().position(|l| *l == q.label)?;
                     u64::try_from(QUALITIES.len() - rank).ok()
-                }),
-                Self::Seeders => seeders(stream),
-                Self::Size => size_bytes(stream),
-            }
+                })
+            },
+            Self::Seeders => seeders,
+            Self::Size => size_bytes,
         };
-        let mut order: Vec<usize> = (0..streams.len()).collect();
-        order.sort_by_key(|&i| std::cmp::Reverse(key(&streams[i])));
+        order.sort_by_cached_key(|&i| std::cmp::Reverse(key(&streams[i])));
         order
     }
 }
@@ -159,20 +157,17 @@ fn stream_text(stream: &Stream) -> impl Iterator<Item = &str> {
         .flatten()
 }
 
-/// The count after `👤`, a common way for torrent addons to show seeders.
 fn seeders(stream: &Stream) -> Option<u64> {
     stream_text(stream).find_map(|text| {
         let (_, after) = text.split_once('👤')?;
-        let digits: String = after
-            .trim_start()
-            .chars()
-            .take_while(char::is_ascii_digit)
-            .collect();
-        digits.parse().ok()
+        let after = after.trim_start();
+        let end = after
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(after.len());
+        after[..end].parse().ok()
     })
 }
 
-/// `behaviorHints.videoSize`, else the first size like `4.35 GB` in the text.
 fn size_bytes(stream: &Stream) -> Option<u64> {
     stream
         .video_size
@@ -180,24 +175,27 @@ fn size_bytes(stream: &Stream) -> Option<u64> {
 }
 
 fn size_in_text(text: &str) -> Option<u64> {
-    let tokens: Vec<&str> = text.split_whitespace().collect();
-    tokens.windows(2).find_map(|pair| {
-        let value: f64 = pair[0].parse().ok()?;
-        let unit: f64 = match pair[1].trim_end_matches(|c: char| !c.is_ascii_alphabetic()) {
-            "KB" | "KiB" => 1024.0,
-            "MB" | "MiB" => 1024.0 * 1024.0,
-            "GB" | "GiB" => 1024.0 * 1024.0 * 1024.0,
-            "TB" | "TiB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
-            _ => return None,
-        };
-        let bytes = value * unit;
-        #[expect(
-            clippy::cast_possible_truncation,
-            clippy::cast_sign_loss,
-            reason = "a finite, non-negative size"
-        )]
-        (bytes.is_finite() && bytes >= 0.0).then_some(bytes as u64)
-    })
+    let tokens = text.split_whitespace();
+    tokens
+        .clone()
+        .zip(tokens.skip(1))
+        .find_map(|(value, unit)| {
+            let value: f64 = value.parse().ok()?;
+            let unit: f64 = match unit.trim_end_matches(|c: char| !c.is_ascii_alphabetic()) {
+                "KB" | "KiB" => 1024.0,
+                "MB" | "MiB" => 1024.0 * 1024.0,
+                "GB" | "GiB" => 1024.0 * 1024.0 * 1024.0,
+                "TB" | "TiB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
+                _ => return None,
+            };
+            let bytes = value * unit;
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                reason = "a finite, non-negative size"
+            )]
+            (bytes.is_finite() && bytes >= 0.0).then_some(bytes as u64)
+        })
 }
 
 impl StreamFilter {
@@ -209,15 +207,15 @@ impl StreamFilter {
         if self.quality.is_some() && Quality::of(stream).map(|q| q.label) != self.quality {
             return false;
         }
-        let text = [stream.name.as_deref(), stream.description.as_deref()]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-            .join(" ")
-            .to_lowercase();
-        self.query
-            .split_whitespace()
-            .all(|word| text.contains(&word.to_lowercase()))
+        let mut words = self.query.split_whitespace().peekable();
+        if words.peek().is_none() {
+            return true;
+        }
+        let text: Vec<String> = stream_text(stream).map(str::to_lowercase).collect();
+        words.all(|word| {
+            let word = word.to_lowercase();
+            text.iter().any(|t| t.contains(&word))
+        })
     }
 }
 
@@ -1638,31 +1636,40 @@ impl Quality {
         let (label, tier) = resolution(name).or_else(|| resolution(description))?;
         let mut flags = Vec::new();
         let all = || words(name).chain(words(description));
-        if all().any(|w| w.starts_with("hdr")) {
+        if all().any(|w| w.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("hdr"))) {
             flags.push("HDR");
         }
-        if all().any(|w| w == "dv" || w == "dovi") {
+        if all().any(|w| w.eq_ignore_ascii_case("dv") || w.eq_ignore_ascii_case("dovi")) {
             flags.push("DV");
         }
         Some(Self { label, tier, flags })
     }
 }
 
-fn words(text: &str) -> impl Iterator<Item = String> + '_ {
+fn words(text: &str) -> impl Iterator<Item = &str> + Clone {
     text.split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|w| !w.is_empty())
-        .map(str::to_ascii_lowercase)
 }
 
+const RESOLUTIONS: &[(&[&str], &str, Tier)] = &[
+    (&["2160p", "4k", "uhd"], "4K", Tier::Ultra),
+    (&["1440p", "2k"], "1440p", Tier::High),
+    (&["1080p", "fhd"], "1080p", Tier::High),
+    (&["720p"], "720p", Tier::Standard),
+    (&["576p", "480p", "360p", "sd"], "SD", Tier::Low),
+    (
+        &["cam", "hdcam", "camrip", "telesync", "hdts"],
+        "CAM",
+        Tier::Cam,
+    ),
+];
+
 fn resolution(text: &str) -> Option<(&'static str, Tier)> {
-    words(text).find_map(|word| match word.as_str() {
-        "2160p" | "4k" | "uhd" => Some(("4K", Tier::Ultra)),
-        "1440p" | "2k" => Some(("1440p", Tier::High)),
-        "1080p" | "fhd" => Some(("1080p", Tier::High)),
-        "720p" => Some(("720p", Tier::Standard)),
-        "576p" | "480p" | "360p" | "sd" => Some(("SD", Tier::Low)),
-        "cam" | "hdcam" | "camrip" | "telesync" | "hdts" => Some(("CAM", Tier::Cam)),
-        _ => None,
+    words(text).find_map(|word| {
+        RESOLUTIONS
+            .iter()
+            .find(|(names, ..)| names.iter().any(|n| word.eq_ignore_ascii_case(n)))
+            .map(|&(_, label, tier)| (label, tier))
     })
 }
 
@@ -2411,7 +2418,10 @@ fn addon_text(text: &str, font: &FontId, color: Color32, icon_color: Color32) ->
             }
             continue;
         }
-        if let Some(&(_, name)) = EMOJI_ICONS.iter().find(|(emoji, _)| *emoji == c) {
+        if let Some(&(_, name)) = (!c.is_ascii())
+            .then(|| EMOJI_ICONS.iter().find(|(emoji, _)| *emoji == c))
+            .flatten()
+        {
             job.append(&std::mem::take(&mut plain), 0.0, format.clone());
             append_icon(&mut job, Icon::Named(name), font.size, icon_color);
             continue;

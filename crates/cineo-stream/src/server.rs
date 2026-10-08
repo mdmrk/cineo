@@ -68,8 +68,14 @@ pub(crate) async fn run(listener: TcpListener, ctx: Arc<Ctx>) {
     }
 }
 
+const CHUNK: usize = 64 * 1024;
+
+fn empty_body() -> Body {
+    Full::new(Bytes::new()).map_err(|n| match n {}).boxed()
+}
+
 fn empty(status: StatusCode) -> Response<Body> {
-    let mut response = Response::new(Full::new(Bytes::new()).map_err(|n| match n {}).boxed());
+    let mut response = Response::new(empty_body());
     *response.status_mut() = status;
     response
 }
@@ -82,12 +88,8 @@ fn host_ok(req: &Request<Incoming>, addr: SocketAddr) -> bool {
     host == format!("{}:{port}", addr.ip()) || host == format!("localhost:{port}")
 }
 
-fn same(a: &str, b: &str) -> bool {
-    a.len() == b.len()
-        && a.bytes()
-            .zip(b.bytes())
-            .fold(0, |acc, (x, y)| acc | (x ^ y))
-            == 0
+pub(crate) fn same(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 fn content_type(name: &str) -> &'static str {
@@ -118,7 +120,7 @@ async fn handle(ctx: &Ctx, req: Request<Incoming>) -> Response<Body> {
     else {
         return empty(StatusCode::NOT_FOUND);
     };
-    if !same(token, &ctx.token) {
+    if !same(token.as_bytes(), ctx.token.as_bytes()) {
         return empty(StatusCode::NOT_FOUND);
     }
     let served = ctx.current.read().ok().and_then(|c| c.clone());
@@ -144,7 +146,7 @@ async fn handle(ctx: &Ctx, req: Request<Incoming>) -> Response<Body> {
     let length = if served.len == 0 { 0 } else { end - start + 1 };
 
     let body = if req.method() == Method::HEAD || length == 0 {
-        Full::new(Bytes::new()).map_err(|n| match n {}).boxed()
+        empty_body()
     } else {
         match Arc::clone(&served.torrent).stream(served.file).await {
             Ok(mut stream) => {
@@ -153,7 +155,8 @@ async fn handle(ctx: &Ctx, req: Request<Incoming>) -> Response<Body> {
                     return empty(StatusCode::INTERNAL_SERVER_ERROR);
                 }
                 let reader = stream.take(length);
-                StreamBody::new(ReaderStream::new(reader).map_ok(Frame::data)).boxed()
+                StreamBody::new(ReaderStream::with_capacity(reader, CHUNK).map_ok(Frame::data))
+                    .boxed()
             }
             Err(err) => {
                 warn!(%err, "opening the torrent stream failed");
@@ -185,10 +188,10 @@ mod tests {
 
     #[test]
     fn token_comparison_needs_equal_strings() {
-        assert!(same("abc", "abc"));
-        assert!(!same("abc", "abd"));
-        assert!(!same("abc", "ab"));
-        assert!(!same("", "a"));
+        assert!(same(b"abc", b"abc"));
+        assert!(!same(b"abc", b"abd"));
+        assert!(!same(b"abc", b"ab"));
+        assert!(!same(b"", b"a"));
     }
 
     #[test]

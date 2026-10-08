@@ -1,6 +1,4 @@
-//! Addon transport URLs and resource request paths.
-
-use std::fmt;
+use std::fmt::{self, Write as _};
 
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use url::Url;
@@ -142,22 +140,16 @@ impl ResourcePath {
     /// each component encoded like `encodeURIComponent`. The extra segment is
     /// `name=value` pairs joined by `&`, with `=` and `&` left literal.
     pub fn to_url_path(&self) -> String {
-        let enc = |s: &str| utf8_percent_encode(s, URI_COMPONENT).to_string();
+        let enc = |s| utf8_percent_encode(s, URI_COMPONENT);
         let mut out = format!(
             "{}/{}/{}",
             enc(self.resource.as_str()),
             enc(self.content_type.as_str()),
             enc(&self.id)
         );
-        if !self.extra.is_empty() {
-            let extra = self
-                .extra
-                .iter()
-                .map(|e| format!("{}={}", enc(&e.name), enc(&e.value)))
-                .collect::<Vec<_>>()
-                .join("&");
-            out.push('/');
-            out.push_str(&extra);
+        for (i, e) in self.extra.iter().enumerate() {
+            let separator = if i == 0 { '/' } else { '&' };
+            let _ = write!(out, "{separator}{}={}", enc(&e.name), enc(&e.value));
         }
         out.push_str(".json");
         out

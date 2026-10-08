@@ -1,6 +1,3 @@
-//! `Range` request headers (RFC 9110 §14). Only single byte ranges are
-//! served; players do not send more.
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Span {
     Full,

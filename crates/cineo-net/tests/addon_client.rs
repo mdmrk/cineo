@@ -2,8 +2,11 @@
 //! most tests opt into `allow_private_networks`; one test proves the default
 //! policy refuses it.
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use std::time::Duration;
 

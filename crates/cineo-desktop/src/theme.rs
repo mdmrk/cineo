@@ -1,6 +1,3 @@
-//! The one place that defines how Cineo looks (ADR-0011). Widgets read these
-//! values; they never hardcode colors or sizes.
-
 use eframe::egui::{
     self, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Margin, Stroke,
     TextStyle, Visuals,

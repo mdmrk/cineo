@@ -1,10 +1,8 @@
-//! Stream and subtitle responses: `{ "streams": [...] }`, `{ "subtitles": [...] }`.
-
 use serde_json::{Map, Value};
 use url::Url;
 
 use super::ResponseError;
-use super::json::{self, Object, field, kind};
+use super::json::{self, Object, field};
 use crate::diagnostics::{Parsed, Warnings};
 
 /// Where a stream's bytes come from. The variant is chosen by which field is
@@ -103,12 +101,12 @@ pub struct Subtitle {
 /// Parses a stream response. Missing `streams` is an error, `null` is empty,
 /// and streams with no recognizable source are skipped with a warning.
 pub fn parse_stream_response(bytes: &[u8]) -> Result<Parsed<Vec<Stream>>, ResponseError> {
-    parse_list(bytes, "streams", parse_stream)
+    json::response_list(bytes, "streams", parse_stream)
 }
 
 /// Parses a subtitles response (`{ "subtitles": [...] }`).
 pub fn parse_subtitles_response(bytes: &[u8]) -> Result<Parsed<Vec<Subtitle>>, ResponseError> {
-    parse_list(bytes, "subtitles", parse_subtitle)
+    json::response_list(bytes, "subtitles", parse_subtitle)
 }
 
 pub fn parse_stream_json(value: &Value) -> Option<Stream> {
@@ -176,37 +174,8 @@ pub fn stream_to_json(stream: &Stream) -> Option<Value> {
     Some(obj.into())
 }
 
-fn parse_list<T>(
-    bytes: &[u8],
-    key: &'static str,
-    parse_item: fn(&Value, &str, &mut Warnings) -> Option<T>,
-) -> Result<Parsed<Vec<T>>, ResponseError> {
-    let root: Value = serde_json::from_slice(bytes)?;
-    let Value::Object(obj) = root else {
-        return Err(ResponseError::NotAnObject);
-    };
-    let mut warnings = Warnings::default();
-    let items = match obj.get(key) {
-        None => return Err(ResponseError::MissingField(key)),
-        Some(Value::Null) => Vec::new(),
-        Some(Value::Array(items)) => items
-            .iter()
-            .enumerate()
-            .filter_map(|(i, item)| parse_item(item, &format!("{key}[{i}]"), &mut warnings))
-            .collect(),
-        Some(other) => {
-            warnings.ignored(key, format!("expected array, got {}", kind(other)));
-            Vec::new()
-        }
-    };
-    Ok(warnings.finish(items))
-}
-
 fn parse_stream(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<Stream> {
-    let Value::Object(obj) = item else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
-        return None;
-    };
+    let obj = json::object(item, loc, warnings)?;
     let Some(source) = parse_source(obj, loc, warnings) else {
         warnings.skipped(loc, "no recognizable stream source");
         return None;
@@ -288,6 +257,15 @@ fn parse_source(obj: &Object, loc: &str, warnings: &mut Warnings) -> Option<Stre
     json::opt_any_url(obj, "nzbUrl", loc, warnings).map(|url| StreamSource::Nzb { url })
 }
 
+/// Whether `name` is an HTTP token and `value` has no CR, LF or NUL.
+pub fn is_safe_header(name: &str, value: &str) -> bool {
+    !name.is_empty()
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
+        && !value.bytes().any(|b| matches!(b, b'\r' | b'\n' | 0))
+}
+
 fn parse_request_headers(
     hints: &Object,
     loc: &str,
@@ -302,31 +280,18 @@ fn parse_request_headers(
     let loc = format!("{loc}.proxyHeaders.request");
     request
         .iter()
-        .filter_map(|(name, value)| {
-            let valid_name = !name.is_empty()
-                && name
-                    .bytes()
-                    .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b));
-            match value {
-                Value::String(v)
-                    if valid_name && !v.bytes().any(|b| matches!(b, b'\r' | b'\n' | 0)) =>
-                {
-                    Some((name.clone(), v.clone()))
-                }
-                _ => {
-                    warnings.ignored(field(&loc, name), "invalid header name or value");
-                    None
-                }
+        .filter_map(|(name, value)| match value {
+            Value::String(v) if is_safe_header(name, v) => Some((name.clone(), v.clone())),
+            _ => {
+                warnings.ignored(field(&loc, name), "invalid header name or value");
+                None
             }
         })
         .collect()
 }
 
 fn parse_subtitle(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<Subtitle> {
-    let Value::Object(obj) = item else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
-        return None;
-    };
+    let obj = json::object(item, loc, warnings)?;
     let Some(url) = json::opt_http_url(obj, "url", loc, warnings) else {
         warnings.skipped(loc, "missing or unusable `url`");
         return None;
@@ -338,4 +303,18 @@ fn parse_subtitle(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<Su
         lang,
         label: json::opt_string(obj, "label", loc, warnings),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_safe_header;
+
+    #[test]
+    fn only_token_names_and_single_line_values_are_safe() {
+        assert!(is_safe_header("User-Agent", "Cineo, with comma"));
+        assert!(!is_safe_header("", "x"));
+        assert!(!is_safe_header("Bad Name", "x"));
+        assert!(!is_safe_header("X-Inject", "a\r\nHost: evil"));
+        assert!(!is_safe_header("X-Nul", "a\0b"));
+    }
 }

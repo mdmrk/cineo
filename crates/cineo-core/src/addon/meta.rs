@@ -1,11 +1,9 @@
-//! Meta responses: `{ "meta": Meta }`.
-
 use serde_json::Value;
 use url::Url;
 
 use super::ResponseError;
 use super::catalog::{MetaPreview, parse_meta_preview};
-use super::json::{self, kind};
+use super::json;
 use crate::diagnostics::{Parsed, Warnings};
 
 /// Detailed metadata for one item.
@@ -40,15 +38,6 @@ pub struct Video {
 }
 
 impl Meta {
-    /// The ids to request streams for: the videos, or the meta id itself.
-    pub fn video_ids(&self) -> Vec<&str> {
-        if self.videos.is_empty() {
-            vec![self.preview.id.as_str()]
-        } else {
-            self.videos.iter().map(|v| v.id.as_str()).collect()
-        }
-    }
-
     /// Distinct season numbers in ascending order; season 0 (specials) last.
     pub fn seasons(&self) -> Vec<u32> {
         let mut seasons: Vec<u32> = self.videos.iter().filter_map(|v| v.season).collect();
@@ -62,10 +51,7 @@ impl Meta {
 /// valid `id`/`type`. Videos are sorted by season, then episode; invalid
 /// videos are skipped with a warning.
 pub fn parse_meta_response(bytes: &[u8]) -> Result<Parsed<Meta>, ResponseError> {
-    let root: Value = serde_json::from_slice(bytes)?;
-    let Value::Object(obj) = root else {
-        return Err(ResponseError::NotAnObject);
-    };
+    let obj = json::root(bytes)?;
     let Some(meta) = obj.get("meta").filter(|m| !m.is_null()) else {
         return Err(ResponseError::MissingField("meta"));
     };
@@ -77,21 +63,7 @@ pub fn parse_meta_response(bytes: &[u8]) -> Result<Parsed<Meta>, ResponseError> 
         return Err(ResponseError::NotAnObject);
     };
 
-    let mut videos: Vec<Video> = match meta.get("videos") {
-        None | Some(Value::Null) => Vec::new(),
-        Some(Value::Array(items)) => items
-            .iter()
-            .enumerate()
-            .filter_map(|(i, item)| parse_video(item, &format!("meta.videos[{i}]"), &mut warnings))
-            .collect(),
-        Some(other) => {
-            warnings.ignored(
-                "meta.videos",
-                format!("expected array, got {}", kind(other)),
-            );
-            Vec::new()
-        }
-    };
+    let mut videos = json::list(meta, "videos", "meta", &mut warnings, parse_video);
     videos.sort_by_key(|v| (v.season, v.episode));
 
     let default_video_id = match meta.get("behaviorHints") {
@@ -113,17 +85,8 @@ pub fn parse_meta_response(bytes: &[u8]) -> Result<Parsed<Meta>, ResponseError> 
 }
 
 fn parse_video(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<Video> {
-    let Value::Object(obj) = item else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
-        return None;
-    };
-    let id = match obj.get("id") {
-        Some(Value::String(id)) if !id.is_empty() => id.clone(),
-        _ => {
-            warnings.skipped(loc, "missing or empty `id`");
-            return None;
-        }
-    };
+    let obj = json::object(item, loc, warnings)?;
+    let id = json::id(obj, loc, warnings)?;
     let title = json::opt_string(obj, "title", loc, warnings)
         .or_else(|| json::opt_string(obj, "name", loc, warnings))
         .unwrap_or_default();

@@ -159,10 +159,9 @@ fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
         (
             i.pointer.latest_pos(),
             i.pointer.any_down()
-                || !i.events.is_empty()
-                    && i.events.iter().any(|e| {
-                        matches!(e, egui::Event::Key { .. } | egui::Event::MouseWheel { .. })
-                    }),
+                || i.events
+                    .iter()
+                    .any(|e| matches!(e, egui::Event::Key { .. } | egui::Event::MouseWheel { .. })),
         )
     });
     let moved = pointer.is_some() && pointer != controls.last_pointer;
@@ -808,7 +807,6 @@ fn track_label(track: &Track, number: usize) -> String {
     }
 }
 
-/// One line, at most 60 characters: text from media files and addons.
 fn plain_text(text: &str) -> String {
     text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }

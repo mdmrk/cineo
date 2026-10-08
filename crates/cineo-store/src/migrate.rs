@@ -1,5 +1,3 @@
-//! Schema migrations, versioned by SQLite's `user_version` header field.
-
 use rusqlite::{Connection, TransactionBehavior};
 use tracing::info;
 
@@ -44,7 +42,6 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), 
         return Ok(());
     }
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    // Re-read under the write lock: another process may have migrated.
     let found = user_version(&tx)?;
     if found > latest || found < 0 {
         return Err(StoreError::UnsupportedVersion {
@@ -68,8 +65,7 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), 
 
 #[cfg(test)]
 mod tests {
-    // Test helpers panic on purpose: a panic is a failed assertion.
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
 

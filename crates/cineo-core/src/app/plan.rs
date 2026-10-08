@@ -1,8 +1,5 @@
-//! Which addons to ask for what. Pure functions over the installed addons,
-//! in user order (the order is significant: earlier addons win ties).
-
 use super::state::InstalledAddon;
-use crate::addon::{ContentType, ExtraValue, ResourceName, ResourcePath, TransportUrl};
+use crate::addon::{CatalogDef, ContentType, ExtraValue, ResourceName, ResourcePath, TransportUrl};
 
 /// A catalog request with a display title.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,12 +20,7 @@ pub fn board_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
                 .catalogs
                 .iter()
                 .filter(|c| c.is_browsable())
-                .map(move |c| CatalogTarget {
-                    addon: addon.transport.clone(),
-                    addon_name: addon.manifest.name.clone(),
-                    path: ResourcePath::catalog(c.content_type.clone(), c.id.clone()),
-                    title: title(c.name.as_deref(), &c.id, &c.content_type),
-                })
+                .map(move |c| catalog_target(addon, c, title(c)))
         })
         .collect()
 }
@@ -47,12 +39,10 @@ pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarg
                     c.extra.iter().any(|e| e.name == "search")
                         && c.extra.iter().all(|e| !e.is_required || e.name == "search")
                 })
-                .map(move |c| CatalogTarget {
-                    addon: addon.transport.clone(),
-                    addon_name: addon.manifest.name.clone(),
-                    path: ResourcePath::catalog(c.content_type.clone(), c.id.clone())
-                        .with_extra(vec![ExtraValue::new("search", query)]),
-                    title: title(c.name.as_deref(), &c.id, &c.content_type),
+                .map(move |c| {
+                    let mut target = catalog_target(addon, c, title(c));
+                    target.path.extra = vec![ExtraValue::new("search", query)];
+                    target
                 })
         })
         .collect()
@@ -106,13 +96,29 @@ fn targets(
         .collect()
 }
 
-fn title(name: Option<&str>, id: &str, content_type: &ContentType) -> String {
-    let type_label = match content_type.as_str() {
+pub(super) fn catalog_target(
+    addon: &InstalledAddon,
+    catalog: &CatalogDef,
+    title: String,
+) -> CatalogTarget {
+    CatalogTarget {
+        addon: addon.transport.clone(),
+        addon_name: addon.manifest.name.clone(),
+        path: ResourcePath::catalog(catalog.content_type.clone(), catalog.id.clone()),
+        title,
+    }
+}
+
+fn title(catalog: &CatalogDef) -> String {
+    let type_label = match catalog.content_type.as_str() {
         ContentType::MOVIE => "Movies",
         ContentType::SERIES => "Series",
         ContentType::CHANNEL => "Channels",
         ContentType::TV => "TV",
         other => other,
     };
-    format!("{} {type_label}", name.unwrap_or(id))
+    format!(
+        "{} {type_label}",
+        catalog.name.as_deref().unwrap_or(&catalog.id)
+    )
 }

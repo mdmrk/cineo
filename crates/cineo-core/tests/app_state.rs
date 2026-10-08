@@ -1,8 +1,11 @@
 //! The application state machine (ADR-0001), driven by actions and fake IO
 //! results. Asserts on state and on the effects requested.
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use cineo_core::addon::{
     ContentType, Manifest, MetaPreview, ResourcePath, TransportUrl, parse_catalog_response,

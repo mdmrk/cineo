@@ -174,8 +174,7 @@ pub(crate) fn check_dimensions(bytes: &[u8]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    // Test helpers panic on purpose: a panic is a failed assertion.
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
 

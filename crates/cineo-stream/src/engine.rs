@@ -1,6 +1,5 @@
-//! The torrent engine: a `librqbit` session plus the loopback server.
-
 use std::collections::HashSet;
+use std::fmt::Write as _;
 use std::net::{IpAddr, SocketAddr};
 use std::num::NonZeroU32;
 use std::path::PathBuf;
@@ -104,7 +103,10 @@ impl std::fmt::Debug for Engine {
 fn random_token() -> Result<String, StreamError> {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).map_err(|err| StreamError::Start(err.to_string()))?;
-    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+    Ok(bytes.iter().fold(String::with_capacity(32), |mut out, b| {
+        let _ = write!(out, "{b:02x}");
+        out
+    }))
 }
 
 impl Engine {
@@ -292,7 +294,6 @@ impl Engine {
             None => TorrentStatus::Starting,
             Some(live) => TorrentStatus::Streaming {
                 peers: live.snapshot.peer_stats.live,
-                // `mbps` is MiB per second.
                 #[expect(
                     clippy::cast_possible_truncation,
                     clippy::cast_sign_loss,
@@ -323,10 +324,12 @@ impl Engine {
             warn!(error = %format!("{err:#}"), "stopping the torrent failed");
         }
         let dir = torrent_dir(&self.options.cache_dir, &hash);
-        match tokio::task::spawn_blocking(move || cache::remove_torrent(&dir)).await {
-            Ok(Ok(())) => {}
-            Ok(Err(err)) => warn!(%err, "deleting the torrent data failed"),
-            Err(err) => warn!(%err, "deleting the torrent data failed"),
+        let removed = tokio::task::spawn_blocking(move || cache::remove_torrent(&dir))
+            .await
+            .map_err(std::io::Error::other)
+            .and_then(|result| result);
+        if let Err(err) = removed {
+            warn!(%err, "deleting the torrent data failed");
         }
     }
 

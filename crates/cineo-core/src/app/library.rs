@@ -1,6 +1,3 @@
-//! Local library and watch progress. Time is always passed in (ms since the
-//! Unix epoch) so this stays deterministic.
-
 use serde_json::{Map, Value};
 use url::Url;
 

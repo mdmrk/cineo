@@ -1,5 +1,3 @@
-//! The database handle and its queries.
-
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -216,7 +214,7 @@ impl Store {
             let (key, value) = row?;
             match Setting::parse(&key, &value) {
                 Ok(setting) => settings.set(setting),
-                Err(SettingError::UnknownKey) => {} // written by a newer version
+                Err(SettingError::UnknownKey) => {}
                 Err(_) => warn!(key, "ignoring an unreadable setting"),
             }
         }

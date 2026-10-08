@@ -26,25 +26,3 @@ pub enum PlayerError {
     #[error("cannot show video in the window: {0}")]
     Render(String),
 }
-
-pub(crate) fn is_header_safe(name: &str, value: &str) -> bool {
-    !name.is_empty()
-        && name
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&b))
-        && !value.bytes().any(|b| matches!(b, b'\r' | b'\n' | 0))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::is_header_safe;
-
-    #[test]
-    fn only_token_names_and_single_line_values_are_sent() {
-        assert!(is_header_safe("User-Agent", "Cineo, with comma"));
-        assert!(!is_header_safe("", "x"));
-        assert!(!is_header_safe("Bad Name", "x"));
-        assert!(!is_header_safe("X-Inject", "a\r\nHost: evil"));
-        assert!(!is_header_safe("X-Nul", "a\0b"));
-    }
-}

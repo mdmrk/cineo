@@ -1,11 +1,96 @@
-//! Lenient accessors over `serde_json::Value` for untrusted addon documents.
-
 use serde_json::{Map, Value};
 use url::Url;
 
-use crate::diagnostics::Warnings;
+use super::ResponseError;
+use super::types::ContentType;
+use crate::diagnostics::{Parsed, Warnings};
 
 pub(crate) type Object = Map<String, Value>;
+
+pub(crate) fn object<'a>(
+    item: &'a Value,
+    loc: &str,
+    warnings: &mut Warnings,
+) -> Option<&'a Object> {
+    if let Value::Object(obj) = item {
+        Some(obj)
+    } else {
+        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
+        None
+    }
+}
+
+pub(crate) fn id(obj: &Object, loc: &str, warnings: &mut Warnings) -> Option<String> {
+    match obj.get("id") {
+        Some(Value::String(id)) if !id.is_empty() => Some(id.clone()),
+        _ => {
+            warnings.skipped(loc, "missing or empty `id`");
+            None
+        }
+    }
+}
+
+pub(crate) fn content_type(
+    obj: &Object,
+    loc: &str,
+    warnings: &mut Warnings,
+) -> Option<ContentType> {
+    let parsed = obj
+        .get("type")
+        .and_then(Value::as_str)
+        .and_then(ContentType::new);
+    if parsed.is_none() {
+        warnings.skipped(loc, "missing or invalid `type`");
+    }
+    parsed
+}
+
+pub(crate) fn list<T>(
+    obj: &Object,
+    key: &str,
+    loc: &str,
+    warnings: &mut Warnings,
+    parse_item: impl Fn(&Value, &str, &mut Warnings) -> Option<T>,
+) -> Vec<T> {
+    match obj.get(key) {
+        None | Some(Value::Null) => Vec::new(),
+        Some(Value::Array(items)) => items
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                parse_item(item, &format!("{}[{i}]", field(loc, key)), warnings)
+            })
+            .collect(),
+        Some(other) => {
+            warnings.ignored(
+                field(loc, key),
+                format!("expected array, got {}", kind(other)),
+            );
+            Vec::new()
+        }
+    }
+}
+
+pub(crate) fn root(bytes: &[u8]) -> Result<Object, ResponseError> {
+    match serde_json::from_slice(bytes)? {
+        Value::Object(obj) => Ok(obj),
+        _ => Err(ResponseError::NotAnObject),
+    }
+}
+
+pub(crate) fn response_list<T>(
+    bytes: &[u8],
+    key: &'static str,
+    parse_item: impl Fn(&Value, &str, &mut Warnings) -> Option<T>,
+) -> Result<Parsed<Vec<T>>, ResponseError> {
+    let obj = root(bytes)?;
+    if !obj.contains_key(key) {
+        return Err(ResponseError::MissingField(key));
+    }
+    let mut warnings = Warnings::default();
+    let items = list(&obj, key, "", &mut warnings, parse_item);
+    Ok(warnings.finish(items))
+}
 
 pub(crate) fn opt_string(
     obj: &Object,

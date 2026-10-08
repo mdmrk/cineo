@@ -1,7 +1,6 @@
 //! `cineo` — headless shell over the Cineo core.
 
-// The CLI's job is printing.
-#![allow(clippy::print_stdout)]
+#![allow(clippy::print_stdout, reason = "the CLI's job is printing")]
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -111,14 +110,16 @@ async fn run(cli: Cli) -> Result<()> {
             .as_deref()
             .context("the platform reports no home directory; pass --data-dir")
     };
-    let client = AddonClient::new(NetPolicy {
-        allow_private_networks: cli.allow_private_network,
-        ..NetPolicy::default()
-    })?;
+    let client = || {
+        AddonClient::new(NetPolicy {
+            allow_private_networks: cli.allow_private_network,
+            ..NetPolicy::default()
+        })
+    };
     match cli.command {
         Command::Addon(AddonCommand::Inspect { url }) => {
             let addon = TransportUrl::parse(&url).context("invalid addon URL")?;
-            let manifest = client
+            let manifest = client()?
                 .fetch_manifest(&addon)
                 .await
                 .context("failed to load addon manifest")?;
@@ -131,7 +132,7 @@ async fn run(cli: Cli) -> Result<()> {
             if addons.contains(&addon) {
                 bail!("this addon is already installed");
             }
-            let manifest = client
+            let manifest = client()?
                 .fetch_manifest(&addon)
                 .await
                 .context("failed to load addon manifest")?;
@@ -186,6 +187,7 @@ async fn run(cli: Cli) -> Result<()> {
             let addon = TransportUrl::parse(&args.url).context("invalid addon URL")?;
             let content_type = ContentType::new(args.content_type.as_str())
                 .context("content type must be non-empty without surrounding spaces")?;
+            let client = client()?;
             let manifest = client
                 .fetch_manifest(&addon)
                 .await

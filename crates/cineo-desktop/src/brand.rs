@@ -1,5 +1,3 @@
-//! Cineo's own artwork, embedded in the binary.
-
 use eframe::egui::{self, ColorImage, IconData, TextureHandle};
 
 const LOGO: &[u8] = include_bytes!("../assets/brand/logo.png");

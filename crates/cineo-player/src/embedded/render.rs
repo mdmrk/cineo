@@ -1,5 +1,3 @@
-//! Drawing mpv's video with OpenGL into the host's framebuffer (libmpv
-//! render API, `render_gl.h`).
 #![allow(unsafe_code, reason = "FFI to libmpv; ADR-0014, docs/SECURITY.md")]
 
 use std::ffi::{CStr, c_char, c_int, c_void};

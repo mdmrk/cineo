@@ -1,5 +1,3 @@
-//! Addon manifest: parsing, validation and resource filtering.
-
 use std::collections::HashSet;
 
 use serde_json::Value;
@@ -314,7 +312,6 @@ fn parse_resources(
                 types: manifest_types.to_vec(),
                 ids: IdFilter::from_prefixes(manifest_prefixes.cloned()),
             },
-            // Full form inherits nothing: no `types` matches no type, no `idPrefixes` matches every id (reference behavior).
             Value::Object(obj) => {
                 let Some(Value::String(name)) = obj.get("name") else {
                     warnings.skipped(loc, "resource object without a string `name`");
@@ -367,24 +364,14 @@ fn parse_catalogs(obj: &Object, key: &str, warnings: &mut Warnings) -> Vec<Catal
     let mut catalogs = Vec::with_capacity(items.len());
     for (i, item) in items.iter().enumerate() {
         let loc = format!("{key}[{i}]");
-        let Value::Object(cat) = item else {
-            warnings.skipped(loc, format!("expected object, got {}", kind(item)));
+        let Some(cat) = json::object(item, &loc, warnings) else {
             continue;
         };
-        let content_type = match cat.get("type") {
-            Some(Value::String(t)) => ContentType::new(t.clone()),
-            _ => None,
-        };
-        let Some(content_type) = content_type else {
-            warnings.skipped(loc, "missing or invalid `type`");
+        let Some(content_type) = json::content_type(cat, &loc, warnings) else {
             continue;
         };
-        let id = match cat.get("id") {
-            Some(Value::String(id)) if !id.is_empty() => id.clone(),
-            _ => {
-                warnings.skipped(loc, "missing or empty `id`");
-                continue;
-            }
+        let Some(id) = json::id(cat, &loc, warnings) else {
+            continue;
         };
         let key_pair = (content_type.clone(), id.clone());
         if !seen.insert(key_pair) {
@@ -449,10 +436,7 @@ fn parse_extra(cat: &Object, loc: &str, warnings: &mut Warnings) -> Vec<ExtraPro
 }
 
 fn parse_extra_prop(item: &Value, loc: &str, warnings: &mut Warnings) -> Option<ExtraProp> {
-    let Value::Object(obj) = item else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
-        return None;
-    };
+    let obj = json::object(item, loc, warnings)?;
     let Some(Value::String(name)) = obj.get("name").filter(|n| n.as_str() != Some("")) else {
         warnings.skipped(loc, "missing or empty `name`");
         return None;

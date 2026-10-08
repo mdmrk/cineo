@@ -1,6 +1,3 @@
-//! The imperative shell (ADR-0001, ADR-0011): owns the [`State`], runs the
-//! effects [`update`] returns, and feeds IO results back as actions.
-
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -138,8 +135,6 @@ struct Embedded {
     controls: Controls,
     forward: Option<tokio::task::AbortHandle>,
     subtitle_files: SubtitleFiles,
-    /// The preferred languages, until a subtitle in one is on or the user
-    /// picks one.
     auto_subtitle: Vec<Language>,
     volume: Option<f64>,
     minimized: bool,
@@ -309,13 +304,8 @@ impl CineoApp {
         let current = Arc::clone(&self.torrent_generation);
         let engine = Arc::clone(&self.engine);
         let options = engine_options(&self.io.engine, &self.state.settings);
-        let tx = self.results_tx.clone();
-        let ctx = self.ctx.clone();
+        let send = self.sender();
         let task = self.io.runtime.spawn(async move {
-            let send = |action| {
-                let _ = tx.send(Msg::Action(action));
-                ctx.request_repaint();
-            };
             let info_hash = request.info_hash.clone();
             let opened = {
                 let mut engine = engine.lock().await;
@@ -375,12 +365,8 @@ impl CineoApp {
     }
 
     fn spawn(&self, task: impl Future<Output = Action> + Send + 'static) {
-        let tx = self.results_tx.clone();
-        let ctx = self.ctx.clone();
-        self.io.runtime.spawn(async move {
-            let _ = tx.send(Msg::Action(task.await));
-            ctx.request_repaint();
-        });
+        let send = self.sender();
+        self.io.runtime.spawn(async move { send(task.await) });
     }
 
     fn play(&mut self, request: &PlayRequest) {
@@ -446,12 +432,10 @@ impl CineoApp {
             return;
         }
         let client = Arc::clone(&self.io.client);
-        let tx = self.results_tx.clone();
-        let ctx = self.ctx.clone();
+        let post = self.post();
         self.io.runtime.spawn(async move {
             let result = client.fetch_subtitle(&url).await.map_err(|e| e.to_string());
-            let _ = tx.send(Msg::SubtitleFetched { url, result });
-            ctx.request_repaint();
+            post(Msg::SubtitleFetched { url, result });
         });
     }
 
@@ -478,7 +462,6 @@ impl CineoApp {
         }
     }
 
-    /// The menu title and language of an offered addon subtitle.
     fn find_subtitle(&self, url: &url::Url) -> Option<(String, String)> {
         self.state.subtitles.iter().find_map(|g| {
             g.subtitles
@@ -492,13 +475,18 @@ impl CineoApp {
         })
     }
 
-    fn sender(&self) -> impl Fn(Action) + Send + Sync + 'static {
+    fn post(&self) -> impl Fn(Msg) + Send + Sync + 'static {
         let tx = self.results_tx.clone();
         let ctx = self.ctx.clone();
-        move |action| {
-            let _ = tx.send(Msg::Action(action));
+        move |msg| {
+            let _ = tx.send(msg);
             ctx.request_repaint();
         }
+    }
+
+    fn sender(&self) -> impl Fn(Action) + Send + Sync + 'static {
+        let post = self.post();
+        move |action| post(Msg::Action(action))
     }
 
     fn end_playback(&mut self) {

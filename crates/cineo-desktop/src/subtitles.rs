@@ -20,7 +20,6 @@ pub(crate) struct SubtitleFiles {
 }
 
 impl SubtitleFiles {
-    /// Starts empty, deleting files a previous run left in `dir`.
     pub(crate) fn new(dir: PathBuf) -> Self {
         remove_dir(&dir);
         Self {
@@ -51,7 +50,6 @@ impl SubtitleFiles {
         Ok(path)
     }
 
-    /// The menu entries: every ready addon subtitle once, in group order.
     pub(crate) fn entries(&self, groups: &[SubtitleGroup], tracks: &[Track]) -> Vec<AddonSubtitle> {
         let selected_file = tracks
             .iter()
@@ -75,13 +73,10 @@ impl SubtitleFiles {
     }
 }
 
-/// What to do about the preferred subtitle language once the file loaded.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum AutoPick {
-    /// A subtitle in the language is on: nothing more to do.
     Done,
     Load(Url),
-    /// Nothing in the language yet; addons may still answer.
     Wait,
 }
 

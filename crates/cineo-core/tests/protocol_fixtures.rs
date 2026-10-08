@@ -2,8 +2,11 @@
 //! Each test names the documented behavior it protects
 //! (`docs/ADDON_PROTOCOL.md`).
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use cineo_core::addon::{
     ContentType, ExtraError, ExtraValue, IdFilter, ManifestError, PosterShape, ResourceName,
@@ -294,7 +297,7 @@ fn movie_meta_without_videos_has_its_own_id_as_video() {
     let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
         .unwrap()
         .value;
-    assert_eq!(meta.video_ids(), vec!["tt0000001"]);
+    assert!(meta.videos.is_empty());
     assert_eq!(meta.runtime.as_deref(), Some("120"));
     assert_eq!(meta.default_video_id.as_deref(), Some("tt0000001"));
 }

@@ -1,7 +1,10 @@
 //! End-to-end: the `cineo` binary against a local mock addon.
 
-// Test helpers panic on purpose: a panic is a failed assertion.
-#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    reason = "test helpers panic on purpose"
+)]
 
 use std::process::Command;
 

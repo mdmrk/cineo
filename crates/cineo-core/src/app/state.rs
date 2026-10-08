@@ -1,5 +1,3 @@
-//! The application state and its pure transition function.
-
 use url::Url;
 
 use super::library::{LibraryItem, SavedStream};
@@ -36,6 +34,15 @@ impl<T> Loadable<T> {
 
     pub fn is_loading(&self) -> bool {
         matches!(self, Self::Loading)
+    }
+}
+
+impl<T> From<Result<T, String>> for Loadable<T> {
+    fn from(result: Result<T, String>) -> Self {
+        match result {
+            Ok(value) => Self::Ready(value),
+            Err(err) => Self::Failed(err),
+        }
     }
 }
 
@@ -375,18 +382,9 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 state.search.clear();
                 return Vec::new();
             }
-            state.search = plan::search_targets(&state.addons, &query)
-                .into_iter()
-                .map(|target| Row {
-                    target,
-                    items: Loadable::Loading,
-                })
-                .collect();
-            state
-                .search
-                .iter()
-                .map(|r| fetch_catalog(&r.target))
-                .collect()
+            let effects;
+            (state.search, effects) = loading_rows(plan::search_targets(&state.addons, &query));
+            effects
         }
         Action::OpenDetail {
             content_type,
@@ -428,15 +426,11 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
-            let mut effects = stop_torrent(state);
-            effects.extend(playback_ended(state, Some(reason)));
-            effects
+            playback_ended(state, Some(reason))
         }
         Action::PlaybackStopped => {
             state.subtitles.clear();
-            let mut effects = stop_torrent(state);
-            effects.extend(playback_ended(state, None));
-            effects
+            playback_ended(state, None)
         }
         Action::SubtitlesLoaded {
             addon,
@@ -448,13 +442,12 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .iter_mut()
                 .find(|g| g.addon == addon && g.path.as_ref() == Some(&path))
             {
-                group.subtitles = match result {
-                    Ok(mut subtitles) => {
+                group.subtitles = result
+                    .map(|mut subtitles| {
                         dedup_by_url(&mut subtitles);
-                        Loadable::Ready(subtitles)
-                    }
-                    Err(err) => Loadable::Failed(err),
-                };
+                        subtitles
+                    })
+                    .into();
             }
             Vec::new()
         }
@@ -526,10 +519,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                     .iter_mut()
                     .find(|g| g.addon == addon && g.path == path)
             }) {
-                group.streams = match result {
-                    Ok(streams) => Loadable::Ready(streams),
-                    Err(err) => Loadable::Failed(err),
-                };
+                group.streams = result.into();
             }
             Vec::new()
         }
@@ -546,12 +536,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .as_ref()
                 .is_some_and(|t| t.info_hash == info_hash)
             {
-                let mut effects = stop_torrent(state);
-                effects.extend(playback_ended(
+                playback_ended(
                     state,
                     Some(format!("The torrent could not be played: {reason}")),
-                ));
-                effects
+                )
             } else {
                 Vec::new()
             }
@@ -578,7 +566,7 @@ fn stop_torrent(state: &mut State) -> Vec<Effect> {
 
 fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
     let Some(torrent) = state.torrent.as_mut().filter(|t| t.info_hash == info_hash) else {
-        return Vec::new(); // stale
+        return Vec::new();
     };
     if !is_engine_url(&url) {
         state.notice = Some("The torrent engine returned an unexpected address".into());
@@ -613,19 +601,22 @@ fn fetch_catalog(target: &CatalogTarget) -> Effect {
     }
 }
 
-fn load_board(state: &mut State) -> Vec<Effect> {
-    state.board = plan::board_targets(&state.addons)
+fn loading_rows(targets: Vec<CatalogTarget>) -> (Vec<Row>, Vec<Effect>) {
+    let effects = targets.iter().map(fetch_catalog).collect();
+    let rows = targets
         .into_iter()
         .map(|target| Row {
             target,
             items: Loadable::Loading,
         })
         .collect();
-    state
-        .board
-        .iter()
-        .map(|r| fetch_catalog(&r.target))
-        .collect()
+    (rows, effects)
+}
+
+fn load_board(state: &mut State) -> Vec<Effect> {
+    let effects;
+    (state.board, effects) = loading_rows(plan::board_targets(&state.addons));
+    effects
 }
 
 fn refresh_board(state: &mut State) -> Vec<Effect> {
@@ -656,11 +647,8 @@ fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
                 .catalogs
                 .iter()
                 .filter(|c| !c.is_browsable())
-                .map(move |c| CatalogTarget {
-                    addon: a.transport.clone(),
-                    addon_name: a.manifest.name.clone(),
-                    path: ResourcePath::catalog(c.content_type.clone(), c.id.clone()),
-                    title: c.name.clone().unwrap_or_else(|| c.id.clone()),
+                .map(move |c| {
+                    plan::catalog_target(a, c, c.name.clone().unwrap_or_else(|| c.id.clone()))
                 })
         })
         .collect()
@@ -719,7 +707,7 @@ fn manifest_loaded(
     let was_loading = state.addons_loading.contains(transport);
     state.addons_loading.retain(|t| t != transport);
     if !install && !was_loading {
-        return Vec::new(); // removed while loading
+        return Vec::new();
     }
     match result {
         Ok(manifest) => {
@@ -768,13 +756,9 @@ fn catalog_loaded(
     path: &ResourcePath,
     result: Result<Vec<MetaPreview>, String>,
 ) {
-    let as_loadable = |result: &Result<Vec<MetaPreview>, String>| match result {
-        Ok(items) => Loadable::Ready(items.clone()),
-        Err(err) => Loadable::Failed(err.clone()),
-    };
     for row in state.board.iter_mut().chain(state.search.iter_mut()) {
         if &row.target.addon == addon && &row.target.path == path {
-            row.items = as_loadable(&result);
+            row.items = result.clone().into();
         }
     }
     let discover = &mut state.discover;
@@ -822,7 +806,7 @@ fn meta_loaded(
         return Vec::new();
     };
     if detail.meta_request.as_ref() != Some(&(addon.clone(), path.clone())) {
-        return Vec::new(); // stale
+        return Vec::new();
     }
     match result {
         Ok(meta) => {
@@ -862,11 +846,7 @@ fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
     detail.streams = plan::stream_targets(addons, &detail.content_type, &video_id)
         .into_iter()
         .map(|(addon, path)| StreamGroup {
-            addon_name: addons
-                .iter()
-                .find(|a| a.transport == addon)
-                .map(|a| a.manifest.name.clone())
-                .unwrap_or_default(),
+            addon_name: addon_name(addons, &addon),
             addon,
             path,
             streams: Loadable::Loading,
@@ -1037,7 +1017,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let subtitles = subtitle_groups(
         state,
         &detail.content_type,
-        Some((&source_group.addon, &source_group.addon_name)),
+        (&source_group.addon, &source_group.addon_name),
         stream,
         &video_id,
     );
@@ -1127,11 +1107,11 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
         return open_detail(state, item.content_type.clone(), item.id.clone(), None);
     };
     let video_id = item.video_id.clone();
-    let addon_name = addon_name(state, &saved.addon);
+    let source_name = addon_name(&state.addons, &saved.addon);
     let subtitles = subtitle_groups(
         state,
         &item.content_type,
-        Some((&saved.addon, &addon_name)),
+        (&saved.addon, &source_name),
         &saved.stream,
         &video_id,
     );
@@ -1158,12 +1138,9 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
     start_playback(state, request, torrent, subtitles)
 }
 
-/// Ends the current playback. A resumed stream that failed before it
-/// progressed opens the detail page; an item that never played and is not a
-/// favourite is forgotten.
 fn playback_ended(state: &mut State, failure: Option<String>) -> Vec<Effect> {
+    let mut effects = stop_torrent(state);
     let playing = state.playing.take();
-    let mut effects = Vec::new();
     if let Some(playing) = &playing
         && let Some(index) = state
             .library
@@ -1226,20 +1203,15 @@ fn start_playback(
     effects
 }
 
-/// The stream's own subtitles plus one request per subtitles addon, with
-/// the stream's `videoHash`, `videoSize` and `filename` hints as extras in
-/// the reference client's order.
 fn subtitle_groups(
     state: &State,
     content_type: &ContentType,
-    source: Option<(&TransportUrl, &str)>,
+    (addon, addon_name): (&TransportUrl, &str),
     stream: &Stream,
     video_id: &str,
 ) -> Vec<SubtitleGroup> {
     let mut groups = Vec::new();
-    if let Some((addon, addon_name)) = source
-        && !stream.subtitles.is_empty()
-    {
+    if !stream.subtitles.is_empty() {
         let mut subtitles = stream.subtitles.clone();
         dedup_by_url(&mut subtitles);
         groups.push(SubtitleGroup {
@@ -1261,7 +1233,7 @@ fn subtitle_groups(
         plan::subtitle_targets(&state.addons, content_type, video_id)
             .into_iter()
             .map(|(addon, path)| SubtitleGroup {
-                addon_name: addon_name(state, &addon),
+                addon_name: self::addon_name(&state.addons, &addon),
                 addon,
                 path: Some(path.with_extra(extra.clone())),
                 subtitles: Loadable::Loading,
@@ -1270,9 +1242,8 @@ fn subtitle_groups(
     groups
 }
 
-fn addon_name(state: &State, addon: &TransportUrl) -> String {
-    state
-        .addons
+fn addon_name(addons: &[InstalledAddon], addon: &TransportUrl) -> String {
+    addons
         .iter()
         .find(|a| a.transport == *addon)
         .map(|a| a.manifest.name.clone())

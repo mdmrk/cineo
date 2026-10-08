@@ -1,5 +1,3 @@
-//! Network policy: which destinations Cineo may contact.
-
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
 

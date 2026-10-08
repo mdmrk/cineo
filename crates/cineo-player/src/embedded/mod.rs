@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
+use cineo_core::addon::is_safe_header;
 use cineo_core::app::{AudioOutput, Language, PlayRequest, Settings, SubtitleFont};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
@@ -17,7 +18,6 @@ use tracing::{debug, error, info, warn};
 pub use render::{OnFrame, ProcAddress, Renderer};
 
 use self::ffi::{Core, Event, Value};
-use crate::is_header_safe;
 use crate::tracker::{EndReason, Input, Tracker};
 use crate::{PlayerError, PlayerEvent};
 
@@ -209,7 +209,7 @@ impl Player {
             .map(|video| Renderer::new(Arc::clone(&core), video.get_proc_address, video.on_frame))
             .transpose()?;
         for (name, value) in &request.headers {
-            if is_header_safe(name, value) {
+            if is_safe_header(name, value) {
                 // `append` adds exactly one item: no list parsing of the value.
                 core.command(&[
                     "change-list",
