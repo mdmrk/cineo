@@ -146,7 +146,7 @@ impl Store {
     pub fn library(&self) -> Result<Vec<LibraryItem>, StoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, content_type, name, poster, video_id,
-                    time_offset_ms, duration_ms, updated_ms, stream
+                    time_offset_ms, duration_ms, updated_ms, stream, favorite
              FROM library_items ORDER BY updated_ms DESC, id",
         )?;
         let rows = stmt.query_map([], read_item)?;
@@ -165,8 +165,8 @@ impl Store {
         self.conn.execute(
             "INSERT INTO library_items
                  (id, content_type, name, poster, video_id,
-                  time_offset_ms, duration_ms, updated_ms, stream)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                  time_offset_ms, duration_ms, updated_ms, stream, favorite)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
              ON CONFLICT (id) DO UPDATE SET
                  content_type = excluded.content_type,
                  name = excluded.name,
@@ -175,7 +175,8 @@ impl Store {
                  time_offset_ms = excluded.time_offset_ms,
                  duration_ms = excluded.duration_ms,
                  updated_ms = excluded.updated_ms,
-                 stream = excluded.stream",
+                 stream = excluded.stream,
+                 favorite = excluded.favorite",
             params![
                 item.id,
                 item.content_type.as_str(),
@@ -186,6 +187,7 @@ impl Store {
                 to_sql_int(item.duration_ms),
                 to_sql_int(item.updated_ms),
                 item.stream.as_ref().and_then(|s| s.to_json()),
+                to_sql_int(item.favorited.unwrap_or(0)),
             ],
         )?;
         Ok(())
@@ -289,6 +291,9 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
         time_offset_ms,
         duration_ms,
         updated_ms,
+        favorited: u64::try_from(row.get::<_, i64>(9)?)
+            .ok()
+            .filter(|&order| order > 0),
         stream,
     }))
 }

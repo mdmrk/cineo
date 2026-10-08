@@ -20,7 +20,7 @@ pub use settings::{
     WatchedAt,
 };
 pub use state::{
-    Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Row, State,
+    Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Playing, Row, State,
     StreamGroup, SubtitleGroup, update,
 };
 pub use torrent::{TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file};

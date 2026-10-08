@@ -43,6 +43,7 @@ fn item(id: &str, time_offset_ms: u64, updated_ms: u64) -> LibraryItem {
         time_offset_ms,
         duration_ms: 6_000_000,
         updated_ms,
+        favorited: None,
         stream: None,
     }
 }
@@ -107,6 +108,7 @@ fn library_items_upsert_and_delete() {
     store.save_library_item(&item("tt2", 5, 2)).unwrap();
     let updated = LibraryItem {
         poster: None,
+        favorited: Some(3),
         ..item("tt1", 42_000, 3)
     };
     store.save_library_item(&updated).unwrap();

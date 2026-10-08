@@ -20,6 +20,8 @@ pub struct LibraryItem {
     pub time_offset_ms: u64,
     pub duration_ms: u64,
     pub updated_ms: u64,
+    /// Set when favourited: a number that grows with each new favourite.
+    pub favorited: Option<u64>,
     /// The stream `video_id` was last played from.
     pub stream: Option<Box<SavedStream>>,
 }
@@ -83,6 +85,15 @@ impl LibraryItem {
         #[expect(clippy::cast_possible_truncation, reason = "clamped to 0..=1")]
         let p = p.clamp(0.0, 1.0) as f32;
         p
+    }
+
+    /// Playback progressed at least once.
+    pub fn was_played(&self) -> bool {
+        self.updated_ms > 0
+    }
+
+    pub fn is_favorite(&self) -> bool {
+        self.favorited.is_some()
     }
 
     pub fn is_finished(&self, watched_at: WatchedAt) -> bool {

@@ -150,25 +150,137 @@ fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
     );
 }
 
-#[test]
-fn a_continue_watching_card_resumes_the_item() {
-    let mut state = board_state();
-    state.library.push(LibraryItem {
-        id: "tt0000001".into(),
+fn half_watched(id: &str, name: &str, favorited: Option<u64>) -> LibraryItem {
+    LibraryItem {
+        id: id.into(),
         content_type: ContentType::new("movie").unwrap(),
-        name: "Half Watched".into(),
+        name: name.into(),
         poster: None,
-        video_id: "tt0000001".into(),
+        video_id: id.into(),
         time_offset_ms: 60_000,
         duration_ms: 600_000,
         updated_ms: 1,
+        favorited,
         stream: None,
-    });
+    }
+}
+
+#[test]
+fn a_continue_watching_card_resumes_favorites_or_dismisses_the_item() {
+    let mut state = board_state();
+    state
+        .library
+        .push(half_watched("tt0000001", "Half Watched", None));
     let mut harness = harness(state, ViewState::default());
     harness.get_by_label("Continue watching");
-    harness.get_by_label("Half Watched").click();
+    for label in [
+        "Half Watched",
+        "Add to favourites",
+        "Remove from continue watching",
+    ] {
+        harness.get_by_label(label).click();
+        harness.run();
+    }
+    assert_eq!(
+        harness.state().2,
+        vec![
+            Action::Resume("tt0000001".into()),
+            Action::SetFavorite {
+                id: "tt0000001".into(),
+                favorite: true,
+            },
+            Action::DismissContinueWatching("tt0000001".into()),
+        ]
+    );
+}
+
+#[test]
+fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
+    let state = State {
+        library: vec![
+            half_watched("a", "Liked", Some(1)),
+            half_watched("b", "Plain", None),
+            half_watched("c", "Loved", Some(2)),
+        ],
+        ..State::default()
+    };
+    let view = ViewState {
+        page: Page::Library,
+        ..ViewState::default()
+    };
+    let mut harness = harness(state, view);
+    let top = |h: &Harness<'_, Ui>, label: &str| h.get_by_label(label).rect().top();
+    let left = |h: &Harness<'_, Ui>, label: &str| h.get_by_label(label).rect().left();
+    assert!(top(&harness, "Favourites") < top(&harness, "Liked"));
+    assert!(
+        left(&harness, "Loved") < left(&harness, "Liked"),
+        "newest first"
+    );
+    assert!(top(&harness, "Liked") < top(&harness, "Recently played"));
+    assert!(top(&harness, "Recently played") < top(&harness, "Plain"));
+    harness
+        .get_all_by_label("Remove from favourites")
+        .last()
+        .unwrap()
+        .click();
     harness.run();
-    assert_eq!(harness.state().2, vec![Action::Resume("tt0000001".into())]);
+    assert_eq!(
+        harness.state().2,
+        vec![Action::SetFavorite {
+            id: "a".into(),
+            favorite: false,
+        }]
+    );
+    assert_eq!(
+        harness.get_all_by_label("Remove from library").count(),
+        3,
+        "played items can be removed"
+    );
+}
+
+#[test]
+fn a_favourite_never_played_has_no_remove_button() {
+    let mut unplayed = half_watched("a", "Liked", Some(1));
+    unplayed.time_offset_ms = 0;
+    unplayed.updated_ms = 0;
+    let state = State {
+        library: vec![unplayed],
+        ..State::default()
+    };
+    let view = ViewState {
+        page: Page::Library,
+        ..ViewState::default()
+    };
+    let harness = harness(state, view);
+    harness.get_by_label("Remove from favourites");
+    assert!(harness.query_by_label("Remove from library").is_none());
+}
+
+#[test]
+fn the_detail_page_adds_and_removes_a_favourite() {
+    let mut harness = harness(detail_state(), ViewState::default());
+    harness.get_by_label("Add to favourites").click();
+    harness.run();
+    let favorite = harness.state().2.last().cloned().unwrap();
+    assert_eq!(
+        favorite,
+        Action::SetFavorite {
+            id: "tt0000001".into(),
+            favorite: true,
+        }
+    );
+    let state = &mut harness.state_mut().0;
+    update(state, favorite);
+    harness.run();
+    harness.get_by_label("Remove from favourites").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2.last(),
+        Some(&Action::SetFavorite {
+            id: "tt0000001".into(),
+            favorite: false,
+        })
+    );
 }
 
 #[test]

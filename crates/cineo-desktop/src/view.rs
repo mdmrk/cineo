@@ -163,7 +163,18 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
                 .auto_shrink(false)
                 .show(ui, |ui| {
                     if let Some(detail) = &state.detail {
-                        detail_page(ui, detail, state.settings.p2p_enabled, view, &mut out);
+                        let favorite = state
+                            .library
+                            .iter()
+                            .any(|i| i.id == detail.id && i.is_favorite());
+                        detail_page(
+                            ui,
+                            detail,
+                            state.settings.p2p_enabled,
+                            favorite,
+                            view,
+                            &mut out,
+                        );
                     } else {
                         ui.add_space(theme::PAGE_MARGIN);
                         column(ui, |ui| match view.page {
@@ -468,7 +479,7 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
         section(ui, "Continue watching", |_| {});
         poster_strip(ui, "continue", |ui| {
             for item in resume {
-                library_card(ui, theme::CARD_WIDTH, item, out);
+                library_card(ui, theme::CARD_WIDTH, item, Shelf::ContinueWatching, out);
             }
         });
         ui.add_space(theme::SECTION_GAP);
@@ -643,33 +654,42 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
 
 fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     page_title(ui, "Library", None);
+    let mut favorites: Vec<&LibraryItem> =
+        state.library.iter().filter(|i| i.is_favorite()).collect();
+    favorites.sort_by_key(|i| std::cmp::Reverse(i.favorited));
+    let mut rest: Vec<&LibraryItem> = state
+        .library
+        .iter()
+        .filter(|i| !i.is_favorite() && i.was_played())
+        .collect();
+    rest.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
+    if !favorites.is_empty() {
+        section(ui, "Favourites", |ui| {
+            ui.label(faint(&count_label(favorites.len(), "title", "titles")));
+        });
+        library_grid(ui, "favorites", &favorites, out);
+        ui.add_space(theme::SECTION_GAP);
+    }
     section(ui, "Recently played", |ui| {
-        if !state.library.is_empty() {
-            ui.label(faint(&count_label(state.library.len(), "title", "titles")));
+        if !rest.is_empty() {
+            ui.label(faint(&count_label(rest.len(), "title", "titles")));
         }
     });
-    if state.library.is_empty() {
+    if rest.is_empty() {
         empty(ui, "Anything you play shows up here.");
         return;
     }
-    let mut items: Vec<&LibraryItem> = state.library.iter().collect();
-    items.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
+    library_grid(ui, "recent", &rest, out);
+}
+
+fn library_grid(ui: &mut Ui, salt: &str, items: &[&LibraryItem], out: &mut Vec<Action>) {
     let width = grid_card_width(ui.available_width());
-    poster_grid(ui, |ui| {
-        for item in items {
-            ui.vertical(|ui| {
-                ui.set_width(width);
-                ui.spacing_mut().item_spacing.y = 0.0;
-                library_card(ui, width, item, out);
-                if ui
-                    .add(Button::new(faint("Remove")).frame(false))
-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
-                    .clicked()
-                {
-                    out.push(Action::RemoveFromLibrary(item.id.clone()));
-                }
-            });
-        }
+    ui.push_id(salt, |ui| {
+        poster_grid(ui, |ui| {
+            for item in items {
+                library_card(ui, width, item, Shelf::Library, out);
+            }
+        });
     });
 }
 
@@ -822,6 +842,7 @@ fn detail_page(
     ui: &mut Ui,
     detail: &Detail,
     p2p_enabled: bool,
+    favorite: bool,
     view: &mut ViewState,
     out: &mut Vec<Action>,
 ) {
@@ -896,7 +917,14 @@ fn detail_page(
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.add_space(if background.is_some() { 16.0 } else { 0.0 });
-                about(ui, name, preview, meta);
+                about(ui, name, preview, meta, |ui| {
+                    if favorite_button(ui, favorite) {
+                        out.push(Action::SetFavorite {
+                            id: detail.id.clone(),
+                            favorite: !favorite,
+                        });
+                    }
+                });
                 match &detail.meta {
                     Loadable::Loading => {
                         centered_spinner(ui);
@@ -928,7 +956,38 @@ fn detail_page(
     });
 }
 
-fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&Meta>) {
+fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
+    let (icon, label, ink) = if favorite {
+        (Icon::Heart, "Remove from favourites", theme::ACCENT)
+    } else {
+        (
+            Icon::Named("heart"),
+            "Add to favourites",
+            theme::TEXT_BRIGHT,
+        )
+    };
+    let (rect, response) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let fill = if response.hovered() {
+        theme::SURFACE_HOVER
+    } else {
+        theme::SCRIM
+    };
+    let painter = ui.painter();
+    painter.circle_filled(rect.center(), 18.0, fill);
+    paint_icon(painter, icon, rect.center(), 18.0, ink);
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
+}
+
+fn about(
+    ui: &mut Ui,
+    name: &str,
+    preview: Option<&MetaPreview>,
+    meta: Option<&Meta>,
+    actions: impl FnOnce(&mut Ui),
+) {
     let mut job = LayoutJob::default();
     job.append(
         name,
@@ -942,7 +1001,15 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
             TextFormat::simple(theme::title_year(), theme::TEXT_DIM),
         );
     }
-    ui.add(Label::new(job).wrap());
+    let title_width = ui.available_width() - 52.0;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 16.0;
+        ui.scope(|ui| {
+            ui.set_max_width(title_width);
+            ui.add(Label::new(job).wrap());
+        });
+        actions(ui);
+    });
     if let Some(m) = meta
         && !m.director.is_empty()
     {
@@ -1714,7 +1781,13 @@ fn preview_card(ui: &mut Ui, width: f32, item: &MetaPreview) -> Response {
     )
 }
 
-fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Action>) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Shelf {
+    ContinueWatching,
+    Library,
+}
+
+fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: &mut Vec<Action>) {
     let progress = (item.time_offset_ms > 0).then(|| item.progress());
     let response = card(
         ui,
@@ -1725,14 +1798,14 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Actio
         PosterShape::Poster,
         progress,
     );
-    if item.stream.is_some() && ui.is_rect_visible(response.rect) {
-        let hover = ui.ctx().animate_bool_with_time(
-            response.id.with("play"),
-            response.hovered() || response.has_focus(),
-            theme::ANIM,
-        );
-        let center = response.rect.center();
-        let radius = (response.rect.width() / 6.0).clamp(18.0, 28.0);
+    let rect = response.rect;
+    let active = ui.rect_contains_pointer(rect) || response.has_focus();
+    let hover = ui
+        .ctx()
+        .animate_bool_with_time(response.id.with("hover"), active, theme::ANIM);
+    if item.stream.is_some() && ui.is_rect_visible(rect) {
+        let center = rect.center();
+        let radius = (rect.width() / 6.0).clamp(18.0, 28.0);
         let fill = lerp_color(Color32::from_black_alpha(160), theme::ACCENT, hover);
         let ink = lerp_color(theme::TEXT_BRIGHT, theme::ON_ACCENT, hover);
         let painter = ui.painter();
@@ -1745,9 +1818,69 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Actio
             ink,
         );
     }
+    let corner = 20.0;
+    let (heart, label) = if item.is_favorite() {
+        (Icon::Heart, "Remove from favourites")
+    } else {
+        (Icon::Named("heart"), "Add to favourites")
+    };
+    let favorite = rect.left_top() + vec2(corner, corner);
+    let shown = if item.is_favorite() { 1.0 } else { hover };
+    if card_button(ui, item, favorite, heart, label, shown) {
+        out.push(Action::SetFavorite {
+            id: item.id.clone(),
+            favorite: !item.is_favorite(),
+        });
+    }
+    let remove = rect.right_top() + vec2(-corner, corner);
+    let (label, action) = match shelf {
+        Shelf::ContinueWatching => (
+            "Remove from continue watching",
+            Action::DismissContinueWatching(item.id.clone()),
+        ),
+        Shelf::Library => (
+            "Remove from library",
+            Action::RemoveFromLibrary(item.id.clone()),
+        ),
+    };
+    let removable = shelf == Shelf::ContinueWatching || item.was_played();
+    if removable && card_button(ui, item, remove, Icon::Named("x"), label, hover) {
+        out.push(action);
+    }
     if response.clicked() {
         out.push(Action::Resume(item.id.clone()));
     }
+}
+
+fn card_button(
+    ui: &mut Ui,
+    item: &LibraryItem,
+    center: Pos2,
+    icon: Icon,
+    label: &str,
+    shown: f32,
+) -> bool {
+    let rect = Rect::from_center_size(center, vec2(28.0, 28.0));
+    let response = ui
+        .interact(rect, ui.id().with((&item.id, label)), Sense::click())
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    if shown > 0.0 && ui.is_rect_visible(rect) {
+        let painter = ui.painter();
+        let fill = if response.hovered() {
+            Color32::from_black_alpha(220)
+        } else {
+            Color32::from_black_alpha(150)
+        };
+        painter.circle_filled(center, 14.0, fill.gamma_multiply(shown));
+        let ink = if matches!(icon, Icon::Heart) {
+            theme::ACCENT
+        } else {
+            theme::TEXT_BRIGHT
+        };
+        paint_icon(painter, icon, center, 16.0, ink.gamma_multiply(shown));
+    }
+    response.clicked()
 }
 
 fn card(
@@ -2015,12 +2148,13 @@ pub(crate) enum Icon {
     Alert,
     Play,
     Pause,
+    Heart,
     Named(&'static str),
 }
 
 impl Icon {
     #[cfg(test)]
-    const ALL: [Self; 15] = [
+    const ALL: [Self; 16] = [
         Self::Home,
         Self::Compass,
         Self::Search,
@@ -2036,6 +2170,7 @@ impl Icon {
         Self::Alert,
         Self::Play,
         Self::Pause,
+        Self::Heart,
     ];
 
     fn name(self) -> &'static str {
@@ -2055,6 +2190,7 @@ impl Icon {
             Self::Alert => "alert-circle",
             Self::Play => "player-play",
             Self::Pause => "player-pause",
+            Self::Heart => "heart",
             Self::Named(name) => name,
         }
     }
@@ -2063,7 +2199,7 @@ impl Icon {
         let icon = iconflow::try_icon(
             iconflow::Pack::Tabler,
             self.name(),
-            if matches!(self, Self::Star | Self::Play | Self::Pause) {
+            if matches!(self, Self::Star | Self::Play | Self::Pause | Self::Heart) {
                 iconflow::Style::Filled
             } else {
                 iconflow::Style::Regular

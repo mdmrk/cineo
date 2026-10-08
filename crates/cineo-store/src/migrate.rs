@@ -25,6 +25,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         value TEXT NOT NULL
     ) STRICT;",
     "ALTER TABLE library_items ADD COLUMN stream TEXT;",
+    "ALTER TABLE library_items ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;",
 ];
 
 #[expect(

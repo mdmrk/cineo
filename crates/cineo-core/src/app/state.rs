@@ -139,8 +139,18 @@ pub struct State {
     pub torrent: Option<TorrentPlayback>,
     /// Addon subtitles for the current playback, stream subtitles first.
     pub subtitles: Vec<SubtitleGroup>,
-    /// The meta id when the current playback replays a saved stream.
-    pub resumed: Option<String>,
+    pub playing: Option<Playing>,
+}
+
+/// The playback in progress, until it stops or fails.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Playing {
+    pub meta_id: String,
+    /// Replays a saved stream that has not progressed yet; if it fails, the
+    /// detail page opens instead.
+    pub resumed: bool,
+    /// Saved on the item once playback progresses.
+    pub stream: Option<Box<SavedStream>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -187,6 +197,11 @@ pub enum Action {
     PlaybackFailed(String),
     PlaybackStopped,
     RemoveFromLibrary(String),
+    DismissContinueWatching(String),
+    SetFavorite {
+        id: String,
+        favorite: bool,
+    },
     ClearLibrary,
     DismissNotice,
     AcceptP2p,
@@ -392,9 +407,17 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             duration_ms,
             now_ms,
         } => {
+            let mut stream = None;
+            if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_id == meta_id) {
+                playing.resumed = false;
+                stream = playing.stream.take();
+            }
             let Some(item) = state.library.iter_mut().find(|i| i.id == meta_id) else {
                 return Vec::new();
             };
+            if stream.is_some() {
+                item.stream = stream;
+            }
             item.video_id = video_id;
             item.time_offset_ms = time_ms;
             if duration_ms > 0 {
@@ -406,13 +429,14 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
             let mut effects = stop_torrent(state);
-            effects.extend(resume_failed(state, reason));
+            effects.extend(playback_ended(state, Some(reason)));
             effects
         }
         Action::PlaybackStopped => {
             state.subtitles.clear();
-            state.resumed = None;
-            stop_torrent(state)
+            let mut effects = stop_torrent(state);
+            effects.extend(playback_ended(state, None));
+            effects
         }
         Action::SubtitlesLoaded {
             addon,
@@ -454,9 +478,17 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.settings = state.settings.reset();
             settings_changed(state)
         }
+        Action::SetFavorite { id, favorite } => set_favorite(state, id, favorite),
         Action::RemoveFromLibrary(id) => {
             state.library.retain(|i| i.id != id);
             vec![Effect::DeleteLibraryItem(id)]
+        }
+        Action::DismissContinueWatching(id) => {
+            let Some(item) = state.library.iter_mut().find(|i| i.id == id) else {
+                return Vec::new();
+            };
+            item.time_offset_ms = 0;
+            vec![Effect::SaveLibraryItem(item.clone())]
         }
         Action::ClearLibrary => {
             state.library.clear();
@@ -515,9 +547,9 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .is_some_and(|t| t.info_hash == info_hash)
             {
                 let mut effects = stop_torrent(state);
-                effects.extend(resume_failed(
+                effects.extend(playback_ended(
                     state,
-                    format!("The torrent could not be played: {reason}"),
+                    Some(format!("The torrent could not be played: {reason}")),
                 ));
                 effects
             } else {
@@ -851,6 +883,50 @@ fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
         .collect()
 }
 
+fn set_favorite(state: &mut State, id: String, favorite: bool) -> Vec<Effect> {
+    let next = state
+        .library
+        .iter()
+        .filter_map(|i| i.favorited)
+        .max()
+        .unwrap_or(0)
+        + 1;
+    if let Some(index) = state.library.iter().position(|i| i.id == id) {
+        let item = &mut state.library[index];
+        if !favorite && !item.was_played() {
+            state.library.remove(index);
+            return vec![Effect::DeleteLibraryItem(id)];
+        }
+        if favorite == item.is_favorite() {
+            return Vec::new();
+        }
+        item.favorited = favorite.then_some(next);
+        return vec![Effect::SaveLibraryItem(item.clone())];
+    }
+    let Some(detail) = state.detail.as_ref().filter(|d| favorite && d.id == id) else {
+        return Vec::new();
+    };
+    let preview = detail
+        .meta
+        .ready()
+        .map(|m| &m.preview)
+        .or(detail.preview.as_ref());
+    let item = LibraryItem {
+        id: id.clone(),
+        content_type: detail.content_type.clone(),
+        name: preview.map_or_else(|| id.clone(), |p| p.name.clone()),
+        poster: preview.and_then(|p| p.poster.clone()),
+        video_id: id,
+        time_offset_ms: 0,
+        duration_ms: 0,
+        updated_ms: 0,
+        favorited: Some(next),
+        stream: None,
+    };
+    state.library.push(item.clone());
+    vec![Effect::SaveLibraryItem(item)]
+}
+
 fn open_detail(
     state: &mut State,
     content_type: ContentType,
@@ -999,7 +1075,6 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
                 item.time_offset_ms = 0;
                 item.duration_ms = 0;
             }
-            item.stream = Some(Box::new(saved));
             start
         }
         None => {
@@ -1012,7 +1087,8 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
                 time_offset_ms: 0,
                 duration_ms: 0,
                 updated_ms: 0,
-                stream: Some(Box::new(saved)),
+                favorited: None,
+                stream: None,
             });
             0
         }
@@ -1021,7 +1097,11 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     if let Some(item) = state.library.iter().find(|i| i.id == meta_id) {
         effects.push(Effect::SaveLibraryItem(item.clone()));
     }
-    state.resumed = None;
+    state.playing = Some(Playing {
+        meta_id,
+        resumed: false,
+        stream: Some(Box::new(saved)),
+    });
     effects.extend(start_playback(
         state,
         PlayRequest {
@@ -1070,24 +1150,45 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
         meta_id: item.id.clone(),
         video_id,
     };
-    state.resumed = Some(item.id.clone());
+    state.playing = Some(Playing {
+        meta_id: item.id.clone(),
+        resumed: true,
+        stream: None,
+    });
     start_playback(state, request, torrent, subtitles)
 }
 
-fn resume_failed(state: &mut State, reason: String) -> Vec<Effect> {
-    let item = state
-        .resumed
-        .take()
-        .and_then(|id| state.library.iter().find(|i| i.id == id))
+/// Ends the current playback. A resumed stream that failed before it
+/// progressed opens the detail page; an item that never played and is not a
+/// favourite is forgotten.
+fn playback_ended(state: &mut State, failure: Option<String>) -> Vec<Effect> {
+    let playing = state.playing.take();
+    let mut effects = Vec::new();
+    if let Some(playing) = &playing
+        && let Some(index) = state
+            .library
+            .iter()
+            .position(|i| i.id == playing.meta_id && !i.was_played() && !i.is_favorite())
+    {
+        state.library.remove(index);
+        effects.push(Effect::DeleteLibraryItem(playing.meta_id.clone()));
+    }
+    let Some(reason) = failure else {
+        return effects;
+    };
+    let resumed = playing
+        .filter(|p| p.resumed)
+        .and_then(|p| state.library.iter().find(|i| i.id == p.meta_id))
         .map(|i| (i.content_type.clone(), i.id.clone()));
-    let Some((content_type, id)) = item else {
+    let Some((content_type, id)) = resumed else {
         state.notice = Some(reason);
-        return Vec::new();
+        return effects;
     };
     state.notice = Some(format!(
         "The last stream could not be played, pick another one. {reason}"
     ));
-    open_detail(state, content_type, id, None)
+    effects.extend(open_detail(state, content_type, id, None));
+    effects
 }
 
 fn start_playback(
