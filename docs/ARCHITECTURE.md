@@ -142,6 +142,9 @@ Implemented in M5 (`cineo-desktop`):
   last progress write lands. mpv events become `PlaybackProgress` actions.
 - Images: `images::NetImageLoader` (an egui `ImageLoader`) fetches through
   `cineo-net`, then decodes and downscales on the tokio blocking pool.
+- Text (ADR-0017): `i18n` holds one Fluent bundle per locale, built from
+  `assets/locales/*.ftl`. The locale is set from the `ui_language` setting
+  every frame. Core returns `Problem` and `Notice` values, never prose.
 
 ### Platform abstraction
 
@@ -199,6 +202,8 @@ sequenceDiagram
 - **Errors and logs never contain full addon URLs.** Addon paths often embed
   user configuration or API keys, so only the origin and the resource path
   are logged.
+- `cineo-core` reports user-facing failures as typed `Problem` and `Notice`
+  values; the desktop words them in the user's language (ADR-0017).
 - Partial failure is normal. Aggregations return per-addon results, never one
   combined error.
 

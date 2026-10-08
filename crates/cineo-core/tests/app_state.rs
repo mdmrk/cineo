@@ -8,13 +8,21 @@
 )]
 
 use cineo_core::addon::{
-    ContentType, Manifest, MetaPreview, ResourcePath, TransportUrl, parse_catalog_response,
-    parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
+    ContentType, Manifest, MetaPreview, ResourcePath, SourceKind, TransportUrl,
+    parse_catalog_response, parse_manifest, parse_meta_response, parse_stream_response,
+    parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, SavedStream, Setting, Settings, State,
-    TorrentRequest, TorrentStatus, WatchedAt, continue_watching, update,
+    Action, Effect, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, SavedStream,
+    Setting, Settings, State, TorrentRequest, TorrentStatus, WatchedAt, continue_watching, update,
 };
+
+fn player_failed(reason: &str, pick_another: bool) -> Notice {
+    Notice::PlaybackFailed {
+        failure: PlaybackFailure::Player(reason.into()),
+        pick_another,
+    }
+}
 
 fn fixture(path: &str) -> Vec<u8> {
     let full = format!("{}/../../tests/addons/{path}", env!("CARGO_MANIFEST_DIR"));
@@ -107,12 +115,15 @@ fn restore_loads_addons_in_order_then_the_board() {
         .map(|a| a.manifest.name.as_str())
         .collect();
     assert_eq!(names, vec!["Basic Fixture", "Streams Fixture"]);
-    let titles: Vec<_> = state
+    let catalogs: Vec<_> = state
         .board
         .iter()
-        .map(|r| r.target.title.as_str())
+        .map(|r| (r.target.name.as_str(), r.target.path.content_type.as_str()))
         .collect();
-    assert_eq!(titles, vec!["Top Movies Movies", "Multi-genre Series"]);
+    assert_eq!(
+        catalogs,
+        vec![("Top Movies", "movie"), ("Multi-genre", "series")]
+    );
     assert_eq!(board.len(), 2);
     assert!(
         board
@@ -220,7 +231,10 @@ fn install_validates_and_rejects_duplicates() {
     assert!(matches!(state.install, Some(Loadable::Failed(_))));
 
     assert!(update(&mut state, Action::InstallAddon(BASIC.into())).is_empty());
-    assert!(matches!(&state.install, Some(Loadable::Failed(m)) if m.contains("already")));
+    assert_eq!(
+        state.install,
+        Some(Loadable::Failed(Problem::AlreadyInstalled))
+    );
 
     let effects = update(
         &mut state,
@@ -239,7 +253,10 @@ fn install_validates_and_rejects_duplicates() {
         },
     );
     assert!(effects.is_empty());
-    assert_eq!(state.install, Some(Loadable::Failed("HTTP 404".into())));
+    assert_eq!(
+        state.install,
+        Some(Loadable::Failed(Problem::Request("HTTP 404".into())))
+    );
     assert_eq!(state.addons.len(), 2, "failed install adds nothing");
 }
 
@@ -349,7 +366,7 @@ fn meta_falls_back_to_the_next_addon_then_movie_streams_load_from_all() {
     let detail = state.detail.as_ref().unwrap();
     assert_eq!(
         detail.streams[0].streams,
-        Loadable::Failed("timed out".into())
+        Loadable::Failed(Problem::Request("timed out".into()))
     );
     assert_eq!(detail.streams[1].streams.ready().map(Vec::len), Some(6));
 }
@@ -698,7 +715,7 @@ fn a_resume_that_played_does_not_fall_back_to_the_detail_page() {
     );
     update(&mut state, Action::PlaybackFailed("connection lost".into()));
     assert!(state.detail.is_none());
-    assert_eq!(state.notice.as_deref(), Some("connection lost"));
+    assert_eq!(state.notice, Some(player_failed("connection lost", false)));
 }
 
 #[test]
@@ -785,12 +802,12 @@ fn a_saved_stream_that_fails_opens_the_detail_page_with_a_notice() {
     let effects = update(&mut state, Action::PlaybackFailed("HTTP 403".into()));
     assert!(matches!(effects.as_slice(), [Effect::FetchMeta { .. }]));
     assert_eq!(state.detail.as_ref().unwrap().id, "tt0000001");
-    assert!(state.notice.as_deref().unwrap().contains("HTTP 403"));
+    assert_eq!(state.notice, Some(player_failed("HTTP 403", true)));
 
     update(&mut state, Action::CloseDetail);
     update(&mut state, Action::PlaybackFailed("HTTP 500".into()));
     assert!(state.detail.is_none(), "only a resumed playback goes back");
-    assert_eq!(state.notice.as_deref(), Some("HTTP 500"));
+    assert_eq!(state.notice, Some(player_failed("HTTP 500", false)));
 }
 
 #[test]
@@ -822,8 +839,8 @@ fn unsupported_sources_are_explained_not_played() {
     );
     assert!(effects.is_empty());
     assert_eq!(
-        state.notice.as_deref(),
-        Some("YouTube streams are not supported yet")
+        state.notice,
+        Some(Notice::UnsupportedSource(SourceKind::YouTube))
     );
 }
 
@@ -989,8 +1006,11 @@ fn an_engine_failure_is_shown_and_stops_the_torrent() {
         ]
     );
     assert_eq!(
-        state.notice.as_deref(),
-        Some("The torrent could not be played: no peers found")
+        state.notice,
+        Some(Notice::PlaybackFailed {
+            failure: PlaybackFailure::Torrent("no peers found".into()),
+            pick_another: false,
+        })
     );
 }
 
@@ -1009,10 +1029,7 @@ fn turning_p2p_off_blocks_torrents_and_stops_a_running_one() {
     assert!(state.torrent.is_none());
 
     assert!(update(&mut state, PLAY_TORRENT).is_empty());
-    assert_eq!(
-        state.notice.as_deref(),
-        Some("Torrent streams are turned off in Settings")
-    );
+    assert_eq!(state.notice, Some(Notice::TorrentsOff));
 }
 
 #[test]

@@ -8,6 +8,8 @@ milestone table) and `docs/COMPATIBILITY.md`.
 - Dependency direction: shells → IO crates → `cineo-core`. **`cineo-core`
   does no IO**: no network, filesystem, clock or async runtime. Time and IO
   results are inputs; effects are returned as data (ADR-0001).
+- `cineo-core` returns typed messages, never user-visible prose; the shell
+  words them (ADR-0017).
 - New crate = new IO/dependency boundary only (ADR-0002). A new concept is a
   module.
 - Addon data is untrusted. Lenient field parsing with recorded warnings →

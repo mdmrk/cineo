@@ -2,7 +2,7 @@ use cineo_core::app::{
     Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit,
     SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
     SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    UploadLimit, WatchedAt,
+    UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Label, Layout, Margin,
@@ -11,9 +11,10 @@ use eframe::egui::{
 };
 
 use crate::brand;
+use crate::i18n::{Locale, t};
 use crate::theme;
 use crate::view::{
-    Icon, P2P_NOTICE, ViewState, append_icon, compact, dim, lerp_color, page_title, paint_icon,
+    Icon, Page, ViewState, append_icon, compact, dim, lerp_color, page_title, paint_icon,
     paint_loading, primary, section,
 };
 
@@ -43,17 +44,17 @@ impl Section {
         Self::About,
     ];
 
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            Self::Interface => "Interface",
-            Self::Player => "Player",
-            Self::Languages => "Languages",
-            Self::Subtitles => "Subtitles",
-            Self::Audio => "Audio",
-            Self::Torrents => "Torrents",
-            Self::Data => "Data",
-            Self::Keyboard => "Keyboard",
-            Self::About => "About",
+            Self::Interface => t!("section-interface"),
+            Self::Player => t!("section-player"),
+            Self::Languages => t!("section-languages"),
+            Self::Subtitles => t!("section-subtitles"),
+            Self::Audio => t!("section-audio"),
+            Self::Torrents => t!("section-torrents"),
+            Self::Data => t!("section-data"),
+            Self::Keyboard => t!("section-keyboard"),
+            Self::About => t!("section-about"),
         }
     }
 }
@@ -100,12 +101,12 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                     )),
                     |ui| {
                         ui.set_width(width);
-                        page_title(ui, "Settings", None);
+                        page_title(ui, &t!("page-settings"), None);
                         let mut last_top = 0.0;
                         for part in Section::ALL {
                             let top = ui.cursor().min.y;
                             last_top = top;
-                            section(ui, part.label(), |_| {});
+                            section(ui, &part.label(), |_| {});
                             ui.add_space(theme::GAP / 2.0);
                             if jump == Some(part) {
                                 ui.scroll_to_rect(
@@ -133,7 +134,7 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
         ui.scope_builder(UiBuilder::new().max_rect(nav), |ui| {
             ui.add_space(theme::GAP * 4.0);
             for part in Section::ALL {
-                if nav_item(ui, part.label(), part == jump.unwrap_or(current)).clicked() {
+                if nav_item(ui, &part.label(), part == jump.unwrap_or(current)).clicked() {
                     view.settings_jump = Some(part);
                 }
             }
@@ -146,11 +147,22 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
     let s = &state.settings;
     match section {
         Section::Interface => {
+            let system = view.system_locale;
             pick(
                 ui,
                 out,
-                "Interface size",
-                "Makes text, posters and controls larger or smaller.",
+                &t!("ui-language"),
+                &t!("ui-language-help"),
+                s.ui_language,
+                UiLanguage::ALL,
+                |language| ui_language_name(language, system),
+                Setting::UiLanguage,
+            );
+            pick(
+                ui,
+                out,
+                &t!("interface-size"),
+                &t!("interface-size-help"),
                 s.interface_scale,
                 InterfaceScale::ALL,
                 scale_name,
@@ -159,8 +171,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             pick(
                 ui,
                 out,
-                "Start page",
-                "Shown when Cineo opens.",
+                &t!("start-page"),
+                &t!("start-page-help"),
                 s.start_page,
                 StartPage::ALL,
                 start_name,
@@ -171,16 +183,16 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             switch(
                 ui,
                 out,
-                "Hardware decoding",
-                HWDEC_HELP,
+                &t!("hardware-decoding"),
+                &t!("hardware-decoding-help"),
                 s.hardware_decoding,
                 Setting::HardwareDecoding,
             );
             pick(
                 ui,
                 out,
-                "Seek step",
-                "How far ←/→ and the seek buttons jump.",
+                &t!("seek-step"),
+                &t!("seek-step-help"),
                 s.seek_step,
                 SeekStep::ALL,
                 seek_name,
@@ -189,8 +201,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             pick(
                 ui,
                 out,
-                "Short seek step",
-                "How far Shift+←/→ jump.",
+                &t!("short-seek-step"),
+                &t!("short-seek-step-help"),
                 s.short_seek_step,
                 ShortSeekStep::ALL,
                 short_seek_name,
@@ -199,8 +211,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             pick(
                 ui,
                 out,
-                "Hide controls after",
-                "Without mouse or key input while playing.",
+                &t!("hide-controls"),
+                &t!("hide-controls-help"),
                 s.hide_controls,
                 HideControls::ALL,
                 hide_name,
@@ -209,15 +221,15 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             switch(
                 ui,
                 out,
-                "Esc leaves fullscreen first",
-                "When off, Esc leaves the player at once.",
+                &t!("escape-fullscreen"),
+                &t!("escape-fullscreen-help"),
                 s.escape_leaves_fullscreen,
                 Setting::EscapeLeavesFullscreen,
             );
             switch(
                 ui,
                 out,
-                "Pause when minimized",
+                &t!("pause-minimized"),
                 "",
                 s.pause_on_minimize,
                 Setting::PauseOnMinimize,
@@ -225,8 +237,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             switch(
                 ui,
                 out,
-                "Remember volume",
-                "Each video starts at the volume the last one ended with.",
+                &t!("remember-volume"),
+                &t!("remember-volume-help"),
                 s.remember_volume,
                 Setting::RememberVolume,
             );
@@ -235,32 +247,32 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             language(
                 ui,
                 out,
-                "Audio language",
-                AUDIO_HELP,
+                &t!("audio-language"),
+                &t!("audio-language-help"),
                 s.audio_language,
                 Setting::AudioLanguage,
             );
             language(
                 ui,
                 out,
-                "Second audio language",
-                "Used when the file has no audio in the first.",
+                &t!("audio-language-second"),
+                &t!("audio-language-second-help"),
                 s.secondary_audio_language,
                 Setting::SecondaryAudioLanguage,
             );
             language(
                 ui,
                 out,
-                "Subtitle language",
-                SUBTITLE_HELP,
+                &t!("subtitle-language"),
+                &t!("subtitle-language-help"),
                 s.subtitle_language,
                 Setting::SubtitleLanguage,
             );
             language(
                 ui,
                 out,
-                "Second subtitle language",
-                "Used when no subtitle is in the first.",
+                &t!("subtitle-language-second"),
+                &t!("subtitle-language-second-help"),
                 s.secondary_subtitle_language,
                 Setting::SecondarySubtitleLanguage,
             );
@@ -270,8 +282,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             pick(
                 ui,
                 out,
-                "Audio output",
-                "Stereo mixes surround sound down to two speakers or headphones.",
+                &t!("audio-output"),
+                &t!("audio-output-help"),
                 s.audio_output,
                 AudioOutput::ALL,
                 output_name,
@@ -280,8 +292,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             switch(
                 ui,
                 out,
-                "Passthrough",
-                PASSTHROUGH_HELP,
+                &t!("passthrough"),
+                &t!("passthrough-help"),
                 s.audio_passthrough,
                 Setting::AudioPassthrough,
             );
@@ -291,29 +303,24 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             pick(
                 ui,
                 out,
-                "Count as watched at",
-                "Watched videos start over and leave Continue Watching.",
+                &t!("watched-at"),
+                &t!("watched-at-help"),
                 s.watched_at,
                 WatchedAt::ALL,
                 watched_name,
                 Setting::WatchedAt,
             );
+            row(ui, &t!("clear-history"), &t!("clear-history-help"), |ui| {
+                if ui.button(t!("clear-ellipsis")).clicked() {
+                    view.confirm = Some(Confirm::ClearLibrary);
+                }
+            });
             row(
                 ui,
-                "Clear watch history",
-                "Empties the Library and Continue Watching.",
+                &t!("reset-settings"),
+                &t!("reset-settings-help"),
                 |ui| {
-                    if ui.button("Clear…").clicked() {
-                        view.confirm = Some(Confirm::ClearLibrary);
-                    }
-                },
-            );
-            row(
-                ui,
-                "Reset all settings",
-                "Every setting on this page goes back to its default.",
-                |ui| {
-                    if ui.button("Reset…").clicked() {
+                    if ui.button(t!("reset-ellipsis")).clicked() {
                         view.confirm = Some(Confirm::ResetSettings);
                     }
                 },
@@ -321,7 +328,7 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
         }
         Section::Keyboard => keyboard(ui),
         Section::About => {
-            ui.label(dim(&format!("Cineo v{}", env!("CARGO_PKG_VERSION"))));
+            ui.label(dim(&t!("app-version", version = env!("CARGO_PKG_VERSION"))));
             ui.add_space(theme::GAP);
             let mut job = LayoutJob::default();
             append_icon(&mut job, Icon::Named("brand-github"), 18.0, theme::ACCENT);
@@ -332,8 +339,8 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             );
             ui.hyperlink_to(job, "https://github.com/mdmrk/cineo");
             ui.add_space(theme::GAP);
-            ui.label(dim("Cineo is free software under the MIT License."));
-            ui.label(dim("Made with Rust, egui, mpv and librqbit."));
+            ui.label(dim(&t!("about-license")));
+            ui.label(dim(&t!("about-credits")));
             ui.add_space(theme::SECTION_GAP * 2.0);
             let height = theme::LOADING_WIDTH * brand::LOADING_SIZE.y / brand::LOADING_SIZE.x;
             let (rect, _) =
@@ -342,12 +349,6 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
         }
     }
 }
-
-const HWDEC_HELP: &str = "Lets the graphics card decode video, which saves power. \
-Turn it off if videos show artifacts or a black picture.";
-const AUDIO_HELP: &str = "The file's track in this language plays; otherwise its default track.";
-const SUBTITLE_HELP: &str = "Turned on when a video starts: from the file if it has \
-them, otherwise from a subtitles addon.";
 
 fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     preview(ui, s);
@@ -360,7 +361,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        "Size",
+        &t!("subtitle-size"),
         "",
         size.get(),
         (SubtitleSize::MIN, SubtitleSize::MAX, 5),
@@ -369,18 +370,25 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        "Font",
+        &t!("subtitle-font"),
         "",
         s.subtitle_font,
         SubtitleFont::ALL,
         font_name,
         Setting::SubtitleFont,
     );
-    switch(ui, out, "Bold", "", s.subtitle_bold, Setting::SubtitleBold);
+    switch(
+        ui,
+        out,
+        &t!("subtitle-bold"),
+        "",
+        s.subtitle_bold,
+        Setting::SubtitleBold,
+    );
     pick(
         ui,
         out,
-        "Text color",
+        &t!("subtitle-color"),
         "",
         s.subtitle_color,
         SubtitleColor::ALL,
@@ -391,7 +399,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        "Text opacity",
+        &t!("subtitle-opacity"),
         "",
         opacity.get(),
         (SubtitleOpacity::MIN, SubtitleOpacity::MAX, 5),
@@ -400,8 +408,8 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        "Outline",
-        "Not drawn when there is a background.",
+        &t!("subtitle-outline"),
+        &t!("subtitle-outline-help"),
         s.subtitle_outline,
         SubtitleOutline::ALL,
         outline_name,
@@ -410,7 +418,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        "Background",
+        &t!("subtitle-background"),
         "",
         s.subtitle_background,
         SubtitleBackground::ALL,
@@ -421,8 +429,8 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        "Raise from the bottom",
-        "Percent of the picture's height.",
+        &t!("subtitle-raise"),
+        &t!("subtitle-raise-help"),
         position.get(),
         (SubtitlePosition::MIN, SubtitlePosition::MAX, 1),
         |v| Setting::SubtitlePosition(SubtitlePosition::new(v)),
@@ -430,15 +438,12 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     switch(
         ui,
         out,
-        "Keep the look of styled subtitles",
-        STYLED_HELP,
+        &t!("subtitle-keep-styles"),
+        &t!("subtitle-keep-styles-help"),
         s.keep_subtitle_styles,
         Setting::KeepSubtitleStyles,
     );
 }
-
-const STYLED_HELP: &str = "Styled (ASS) subtitles, common for anime, bring their own fonts, \
-colors and positions. When off, the settings above replace them.";
 
 fn preview(ui: &mut Ui, s: &Settings) {
     let width = ui.available_width();
@@ -466,7 +471,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     let alpha = u8::try_from(s.subtitle_opacity.get() * 255 / 100).unwrap_or(u8::MAX);
     let ink = Color32::from_rgba_unmultiplied(r, g, b, alpha);
     let galley = painter.layout_no_wrap(
-        "Subtitles look like this.".to_owned(),
+        t!("subtitle-preview"),
         FontId::new(22.0 * scale, family),
         ink,
     );
@@ -501,70 +506,67 @@ fn preview(ui: &mut Ui, s: &Settings) {
     painter.text(
         rect.left_top() + vec2(10.0, 8.0),
         Align2::LEFT_TOP,
-        "PREVIEW",
+        t!("subtitle-preview-badge"),
         theme::caption(),
         theme::TEXT_FAINT,
     );
 }
 
-fn font_name(font: SubtitleFont) -> &'static str {
+fn font_name(font: SubtitleFont) -> String {
     match font {
-        SubtitleFont::Sans => "Sans-serif",
-        SubtitleFont::Serif => "Serif",
-        SubtitleFont::Mono => "Monospace",
+        SubtitleFont::Sans => t!("font-sans"),
+        SubtitleFont::Serif => t!("font-serif"),
+        SubtitleFont::Mono => t!("font-mono"),
     }
 }
 
-fn color_name(color: SubtitleColor) -> &'static str {
+fn color_name(color: SubtitleColor) -> String {
     match color {
-        SubtitleColor::White => "White",
-        SubtitleColor::Yellow => "Yellow",
-        SubtitleColor::Cyan => "Cyan",
-        SubtitleColor::Green => "Green",
+        SubtitleColor::White => t!("color-white"),
+        SubtitleColor::Yellow => t!("color-yellow"),
+        SubtitleColor::Cyan => t!("color-cyan"),
+        SubtitleColor::Green => t!("color-green"),
     }
 }
 
-fn outline_name(outline: SubtitleOutline) -> &'static str {
+fn outline_name(outline: SubtitleOutline) -> String {
     match outline {
-        SubtitleOutline::Black => "Black",
-        SubtitleOutline::Gray => "Gray",
-        SubtitleOutline::None => "No outline",
+        SubtitleOutline::Black => t!("outline-black"),
+        SubtitleOutline::Gray => t!("outline-gray"),
+        SubtitleOutline::None => t!("outline-none"),
     }
 }
 
-fn background_name(background: SubtitleBackground) -> &'static str {
+fn background_name(background: SubtitleBackground) -> String {
     match background {
-        SubtitleBackground::None => "No background",
-        SubtitleBackground::Black => "Black box",
-        SubtitleBackground::Gray => "Gray box",
+        SubtitleBackground::None => t!("background-none"),
+        SubtitleBackground::Black => t!("background-black"),
+        SubtitleBackground::Gray => t!("background-gray"),
     }
 }
-
-const PASSTHROUGH_HELP: &str = "Sends Dolby and DTS audio undecoded to a receiver over \
-HDMI or S/PDIF. Leave off unless your receiver decodes them, or you may hear silence.";
 
 fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     switch(
         ui,
         out,
-        "Show and play torrent streams",
-        P2P_NOTICE,
+        &t!("p2p-enabled"),
+        &t!("p2p-notice"),
         s.p2p_enabled,
         Setting::P2pEnabled,
     );
     switch(
         ui,
         out,
-        "Upload to other peers",
-        UPLOAD_HELP,
+        &t!("torrent-upload"),
+        &t!("torrent-upload-help"),
         s.torrent_upload,
         Setting::TorrentUpload,
     );
     pick(
         ui,
         out,
-        "Download limit",
-        NEXT_TORRENT,
+        &t!("download-limit"),
+        &t!("next-torrent"),
         s.download_limit,
         DownloadLimit::ALL,
         download_name,
@@ -573,8 +575,8 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     pick(
         ui,
         out,
-        "Upload limit",
-        NEXT_TORRENT,
+        &t!("upload-limit"),
+        &t!("next-torrent"),
         s.upload_limit,
         UploadLimit::ALL,
         upload_name,
@@ -583,8 +585,8 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     pick(
         ui,
         out,
-        "Peers per torrent",
-        "More peers can be faster but use more connections.",
+        &t!("peer-limit"),
+        &t!("peer-limit-help"),
         s.peer_limit,
         PeerLimit::ALL,
         peer_name,
@@ -593,119 +595,96 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     switch(
         ui,
         out,
-        "Find peers through the DHT",
-        DHT_HELP,
+        &t!("dht"),
+        &t!("dht-help"),
         s.torrent_dht,
         Setting::TorrentDht,
     );
     switch(
         ui,
         out,
-        "Allow local network addresses",
-        PRIVATE_HELP,
+        &t!("private-network"),
+        &t!("private-network-help"),
         s.allow_private_network,
         Setting::AllowPrivateNetwork,
     );
 }
 
-const NEXT_TORRENT: &str = "Applies from the next torrent you play.";
-const UPLOAD_HELP: &str = "When off, Cineo only downloads. Some peers then send less, \
-so torrents can be slower. Your IP address is still visible to peers.";
-const DHT_HELP: &str = "Finds peers without trackers. Off means fewer peers for many torrents.";
-const PRIVATE_HELP: &str = "Lets addons, images and torrent peers on 127.0.0.1 or your \
-home network be reached, for self-hosted addons. Off is safer. Takes effect after \
-restarting Cineo.";
+fn ui_language_name(language: UiLanguage, system: Locale) -> String {
+    match language {
+        UiLanguage::System => t!("ui-language-system", language = system.endonym()),
+        UiLanguage::English => Locale::English.endonym().to_owned(),
+        UiLanguage::Spanish => Locale::Spanish.endonym().to_owned(),
+    }
+}
 
-fn output_name(output: AudioOutput) -> &'static str {
+fn output_name(output: AudioOutput) -> String {
     match output {
-        AudioOutput::Auto => "Automatic (surround)",
-        AudioOutput::Stereo => "Stereo",
+        AudioOutput::Auto => t!("output-auto"),
+        AudioOutput::Stereo => t!("output-stereo"),
     }
 }
 
-fn download_name(limit: DownloadLimit) -> &'static str {
+fn download_name(limit: DownloadLimit) -> String {
     match limit {
-        DownloadLimit::Unlimited => "No limit",
-        DownloadLimit::M1 => "1 MB/s",
-        DownloadLimit::M2 => "2 MB/s",
-        DownloadLimit::M5 => "5 MB/s",
-        DownloadLimit::M10 => "10 MB/s",
-        DownloadLimit::M20 => "20 MB/s",
+        DownloadLimit::Unlimited => t!("no-limit"),
+        DownloadLimit::M1 => "1 MB/s".to_owned(),
+        DownloadLimit::M2 => "2 MB/s".to_owned(),
+        DownloadLimit::M5 => "5 MB/s".to_owned(),
+        DownloadLimit::M10 => "10 MB/s".to_owned(),
+        DownloadLimit::M20 => "20 MB/s".to_owned(),
     }
 }
 
-fn upload_name(limit: UploadLimit) -> &'static str {
+fn upload_name(limit: UploadLimit) -> String {
     match limit {
-        UploadLimit::Unlimited => "No limit",
-        UploadLimit::K100 => "100 kB/s",
-        UploadLimit::K500 => "500 kB/s",
-        UploadLimit::M1 => "1 MB/s",
-        UploadLimit::M5 => "5 MB/s",
+        UploadLimit::Unlimited => t!("no-limit"),
+        UploadLimit::K100 => "100 kB/s".to_owned(),
+        UploadLimit::K500 => "500 kB/s".to_owned(),
+        UploadLimit::M1 => "1 MB/s".to_owned(),
+        UploadLimit::M5 => "5 MB/s".to_owned(),
     }
 }
 
-fn peer_name(limit: PeerLimit) -> &'static str {
+fn peer_name(limit: PeerLimit) -> String {
     match limit {
         PeerLimit::P50 => "50",
         PeerLimit::P128 => "128",
         PeerLimit::P200 => "200",
     }
+    .to_owned()
 }
 
-fn scale_name(scale: InterfaceScale) -> &'static str {
-    match scale {
-        InterfaceScale::S75 => "75 %",
-        InterfaceScale::S90 => "90 %",
-        InterfaceScale::S100 => "100 %",
-        InterfaceScale::S110 => "110 %",
-        InterfaceScale::S125 => "125 %",
-        InterfaceScale::S150 => "150 %",
-        InterfaceScale::S175 => "175 %",
-        InterfaceScale::S200 => "200 %",
-    }
+fn scale_name(scale: InterfaceScale) -> String {
+    format!("{} %", scale.percent())
 }
 
-fn start_name(page: StartPage) -> &'static str {
-    match page {
-        StartPage::Home => "Home",
-        StartPage::Discover => "Discover",
-        StartPage::Library => "Library",
-    }
+fn start_name(page: StartPage) -> String {
+    Page::from(page).label()
 }
 
-fn watched_name(at: WatchedAt) -> &'static str {
-    match at {
-        WatchedAt::P80 => "80 % played",
-        WatchedAt::P85 => "85 % played",
-        WatchedAt::P90 => "90 % played",
-        WatchedAt::P92 => "92 % played",
-        WatchedAt::P95 => "95 % played",
-    }
+#[expect(clippy::cast_possible_truncation, reason = "a whole percentage")]
+fn watched_name(at: WatchedAt) -> String {
+    t!(
+        "watched-percent",
+        percent = (at.fraction() * 100.0).round() as u32
+    )
 }
 
-fn seek_name(step: SeekStep) -> &'static str {
-    match step {
-        SeekStep::S5 => "5 seconds",
-        SeekStep::S10 => "10 seconds",
-        SeekStep::S15 => "15 seconds",
-        SeekStep::S30 => "30 seconds",
-    }
+fn seconds(count: f64) -> String {
+    t!("seconds", count = count)
 }
 
-fn short_seek_name(step: ShortSeekStep) -> &'static str {
-    match step {
-        ShortSeekStep::S1 => "1 second",
-        ShortSeekStep::S3 => "3 seconds",
-        ShortSeekStep::S5 => "5 seconds",
-    }
+fn seek_name(step: SeekStep) -> String {
+    seconds(step.seconds())
 }
 
-fn hide_name(after: HideControls) -> &'static str {
-    match after {
-        HideControls::Short => "1.5 seconds",
-        HideControls::Normal => "2.5 seconds",
-        HideControls::Long => "5 seconds",
-    }
+fn short_seek_name(step: ShortSeekStep) -> String {
+    seconds(step.seconds())
+}
+
+fn hide_name(after: HideControls) -> String {
+    seconds(after.seconds())
 }
 
 fn switch(
@@ -734,7 +713,7 @@ fn pick<T: Copy + PartialEq>(
     help: &str,
     current: T,
     options: &[T],
-    name: fn(T) -> &'static str,
+    name: impl Fn(T) -> String,
     setting: fn(T) -> Setting,
 ) {
     row(ui, title, help, |ui| {
@@ -822,6 +801,29 @@ fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32
     (new != value).then_some(new)
 }
 
+fn sort_key(name: &str) -> String {
+    name.chars()
+        .flat_map(char::to_lowercase)
+        .map(|c| match c {
+            'á' | 'à' | 'â' | 'ä' => 'a',
+            'é' | 'è' | 'ê' | 'ë' => 'e',
+            'í' | 'ì' | 'î' | 'ï' => 'i',
+            'ó' | 'ò' | 'ô' | 'ö' => 'o',
+            'ú' | 'ù' | 'û' | 'ü' => 'u',
+            'ñ' => 'n',
+            'ç' => 'c',
+            other => other,
+        })
+        .collect()
+}
+
+fn language_name(language: Option<Language>) -> String {
+    language.map_or_else(
+        || t!("language-none"),
+        |l| t!(&format!("language-{}", l.code())),
+    )
+}
+
 fn language(
     ui: &mut Ui,
     out: &mut Vec<Action>,
@@ -831,10 +833,10 @@ fn language(
     setting: fn(Option<Language>) -> Setting,
 ) {
     row(ui, title, help, |ui| {
-        let options = std::iter::once(None).chain(Language::all().map(Some));
-        if let Some(value) = select(ui, title, current, options, |l| {
-            l.map_or("None", Language::name)
-        }) {
+        let mut languages: Vec<Language> = Language::all().collect();
+        languages.sort_by_cached_key(|l| sort_key(&language_name(Some(*l))));
+        let options = std::iter::once(None).chain(languages.into_iter().map(Some));
+        if let Some(value) = select(ui, title, current, options, language_name) {
             out.push(Action::ChangeSetting(setting(value)));
         }
     });
@@ -898,7 +900,7 @@ fn select<T: Copy + PartialEq>(
     label: &str,
     current: T,
     options: impl IntoIterator<Item = T>,
-    name: impl Fn(T) -> &'static str,
+    name: impl Fn(T) -> String,
 ) -> Option<T> {
     let (rect, response) = ui.allocate_exact_size(
         vec2(ui.available_width().min(CONTROL_WIDTH), 30.0),
@@ -906,7 +908,7 @@ fn select<T: Copy + PartialEq>(
     );
     response.widget_info(|| {
         let mut info = WidgetInfo::labeled(WidgetType::ComboBox, ui.is_enabled(), label);
-        info.current_text_value = Some(name(current).to_owned());
+        info.current_text_value = Some(name(current));
         info
     });
     if ui.is_rect_visible(rect) {
@@ -986,23 +988,24 @@ fn keyboard(ui: &mut Ui) {
         .show(ui, |ui| {
             let key = TextFormat::simple(theme::body(), theme::TEXT_BRIGHT);
             let plain = |text: &str| LayoutJob::single_section(text.to_owned(), key.clone());
+            let or = |a: &str, b: &str| plain(&t!("key-or", a = a, b = b));
             let mut back = plain("Esc  ·  Alt+");
             append_icon(&mut back, Icon::ArrowLeft, 15.0, theme::TEXT_BRIGHT);
-            back.append("  ·  mouse back", 0.0, key.clone());
+            back.append(&format!("  ·  {}", t!("key-mouse-back")), 0.0, key.clone());
             let rows = [
-                (plain("Ctrl+F  or  /"), "Search"),
-                (plain("Ctrl+1 … Ctrl+6"), "Switch page"),
-                (back, "Leave a detail page"),
-                (plain("Shift+wheel"), "Scroll a row sideways"),
-                (plain("Space  or  K"), "Play or pause"),
-                (plain("←/→  or  J/L"), "Seek by the seek step"),
-                (plain("Shift+←/→"), "Seek by the short seek step"),
-                (plain("↑/↓  ·  M"), "Volume  ·  mute"),
-                (plain("F  or  F11"), "Fullscreen"),
+                (or("Ctrl+F", "/"), t!("shortcut-search")),
+                (plain("Ctrl+1 … Ctrl+6"), t!("shortcut-switch-page")),
+                (back, t!("shortcut-leave-detail")),
+                (plain(&t!("key-shift-wheel")), t!("shortcut-scroll-row")),
+                (or(&t!("key-space"), "K"), t!("shortcut-play-pause")),
+                (or("←/→", "J/L"), t!("shortcut-seek")),
+                (plain("Shift+←/→"), t!("shortcut-short-seek")),
+                (plain("↑/↓  ·  M"), t!("shortcut-volume")),
+                (or("F", "F11"), t!("shortcut-fullscreen")),
             ];
             for (keys, what) in rows {
                 ui.label(keys);
-                ui.label(dim(what));
+                ui.label(dim(&what));
                 ui.end_row();
             }
         });
@@ -1014,15 +1017,15 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
     };
     let (title, text, button, action) = match question {
         Confirm::ResetSettings => (
-            "Reset all settings?",
-            "Every setting goes back to its default. Your addons and library are kept.",
-            "Reset",
+            t!("reset-confirm-title"),
+            t!("reset-confirm-text"),
+            t!("reset"),
             Action::ResetSettings,
         ),
         Confirm::ClearLibrary => (
-            "Clear watch history?",
-            "Every item and its progress leaves the Library. This cannot be undone.",
-            "Clear",
+            t!("clear-confirm-title"),
+            t!("clear-confirm-text"),
+            t!("clear"),
             Action::ClearLibrary,
         ),
     };
@@ -1039,19 +1042,35 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
             ui.set_max_width(420.0);
             ui.label(RichText::new(title).font(theme::heading()));
             ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(text)).wrap());
+            ui.add(Label::new(dim(&text)).wrap());
             ui.add_space(theme::GAP * 1.5);
             ui.horizontal(|ui| {
-                if primary(ui, true, button).clicked() {
+                if primary(ui, true, &button).clicked() {
                     out.push(action);
                     done = true;
                 }
-                if ui.button("Cancel").clicked() {
+                if ui.button(t!("cancel")).clicked() {
                     done = true;
                 }
             });
         });
     if done || modal.should_close() {
         view.confirm = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::i18n::{self, Locale};
+
+    #[test]
+    fn languages_sort_by_their_translated_name_ignoring_accents() {
+        i18n::set(Locale::Spanish);
+        let mut names: Vec<String> = cineo_core::app::Language::all()
+            .map(|l| super::language_name(Some(l)))
+            .collect();
+        names.sort_by_cached_key(|n| super::sort_key(n));
+        assert_eq!(names.first().map(String::as_str), Some("Alemán"));
+        assert_eq!(names.get(1).map(String::as_str), Some("Árabe"));
     }
 }

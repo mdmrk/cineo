@@ -10,7 +10,7 @@
 
 use cineo_core::addon::{
     ContentType, ExtraError, ExtraValue, IdFilter, ManifestError, PosterShape, ResourceName,
-    ResourcePath, ResponseError, StreamSource, parse_catalog_response, parse_manifest,
+    ResourcePath, ResponseError, SourceKind, StreamSource, parse_catalog_response, parse_manifest,
     parse_meta_response, parse_stream_json, parse_stream_response, parse_subtitles_response,
     stream_to_json,
 };
@@ -321,11 +321,16 @@ fn stream_sources_are_recognized_in_reference_order() {
     let parsed = parse_stream_response(&fixture("basic/streams-movie.json")).unwrap();
     assert_eq!(parsed.warnings, vec![]);
     let streams = parsed.value;
-    let kinds: Vec<_> = streams.iter().map(|s| s.source.kind_label()).collect();
+    let kinds: Vec<_> = streams.iter().map(|s| s.source.kind()).collect();
     assert_eq!(
         kinds,
-        vec![
-            "HTTP", "Torrent", "YouTube", "External", "Archive", "Usenet"
+        [
+            SourceKind::Http,
+            SourceKind::Torrent,
+            SourceKind::YouTube,
+            SourceKind::External,
+            SourceKind::Archive,
+            SourceKind::Usenet,
         ]
     );
     let playable: Vec<bool> = streams.iter().map(|s| s.source.is_playable()).collect();

@@ -16,7 +16,7 @@ pub use manifest::{
 pub use meta::{Meta, Video, parse_meta_response};
 pub use request::{ExtraValue, ResourcePath, TransportUrl, TransportUrlError};
 pub use stream::{
-    ArchiveKind, Stream, StreamSource, Subtitle, is_safe_header, parse_stream_json,
+    ArchiveKind, SourceKind, Stream, StreamSource, Subtitle, is_safe_header, parse_stream_json,
     parse_stream_response, parse_subtitles_response, stream_to_json,
 };
 pub use types::{ContentType, ResourceName};

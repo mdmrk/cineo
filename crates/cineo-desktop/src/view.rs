@@ -4,10 +4,10 @@
 
 use std::time::Duration;
 
-use cineo_core::addon::{Meta, MetaPreview, PosterShape, Stream};
+use cineo_core::addon::{ContentType, Meta, MetaPreview, PosterShape, SourceKind, Stream};
 use cineo_core::app::{
-    Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Row, StartPage, State,
-    StreamGroup, board_targets, continue_watching,
+    Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Notice, PlaybackFailure,
+    Problem, Row, StartPage, State, StreamGroup, board_targets, continue_watching,
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
@@ -18,11 +18,12 @@ use eframe::egui::{
 use url::Url;
 
 use crate::brand;
+use crate::i18n::{self, Locale, t};
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
 
 /// The top-level pages in the sidebar.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Page {
     #[default]
     Board,
@@ -43,14 +44,14 @@ impl Page {
         Self::Settings,
     ];
 
-    fn label(self) -> &'static str {
+    pub(crate) fn label(self) -> String {
         match self {
-            Self::Board => "Home",
-            Self::Discover => "Discover",
-            Self::Search => "Search",
-            Self::Library => "Library",
-            Self::Addons => "Addons",
-            Self::Settings => "Settings",
+            Self::Board => t!("page-home"),
+            Self::Discover => t!("page-discover"),
+            Self::Search => t!("page-search"),
+            Self::Library => t!("page-library"),
+            Self::Addons => t!("page-addons"),
+            Self::Settings => t!("page-settings"),
         }
     }
 
@@ -92,6 +93,7 @@ pub struct ViewState {
     pub settings_jump: Option<Section>,
     pub confirm: Option<Confirm>,
     pub streams: StreamFilter,
+    pub system_locale: Locale,
 }
 
 impl ViewState {
@@ -124,12 +126,12 @@ pub enum StreamSort {
 impl StreamSort {
     const ALL: [Self; 4] = [Self::AddonOrder, Self::Quality, Self::Seeders, Self::Size];
 
-    fn label(self) -> &'static str {
+    fn label(self) -> String {
         match self {
-            Self::AddonOrder => "Addon order",
-            Self::Quality => "Quality",
-            Self::Seeders => "Seeders",
-            Self::Size => "Size",
+            Self::AddonOrder => t!("sort-addon-order"),
+            Self::Quality => t!("sort-quality"),
+            Self::Seeders => t!("sort-seeders"),
+            Self::Size => t!("sort-size"),
         }
     }
 
@@ -223,6 +225,10 @@ const SEARCH_DEBOUNCE: f64 = 0.45;
 /// Draws the whole window and returns the actions to dispatch.
 pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     let mut out = Vec::new();
+    i18n::set(Locale::resolve(
+        state.settings.ui_language,
+        view.system_locale,
+    ));
     if theme::ensure(ui.ctx()) {
         ui.ctx().request_discard("theme applied");
         return out;
@@ -239,11 +245,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     egui::CentralPanel::default()
         .frame(Frame::new().fill(theme::BG))
         .show(ui, |ui| {
-            let salt = if state.detail.is_some() {
-                "detail"
-            } else {
-                view.page.label()
-            };
+            let salt = state.detail.is_none().then_some(view.page);
             if state.detail.is_none() && view.page == Page::Settings {
                 settings::page(ui, state, view, &mut out);
                 return;
@@ -386,7 +388,7 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 }
             }
             ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
-                let version = faint(concat!("Cineo v", env!("CARGO_PKG_VERSION")));
+                let version = faint(&t!("app-version", version = env!("CARGO_PKG_VERSION")));
                 if compact {
                     ui.vertical_centered(|ui| ui.label(version));
                 } else {
@@ -403,7 +405,7 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                         ui.add_space(8.0);
                         spinner(ui);
                         if !compact {
-                            ui.label(faint("Loading addons…"));
+                            ui.label(faint(&t!("loading-addons")));
                         }
                     });
                 }
@@ -479,7 +481,7 @@ const LOGO_FADE_ROWS: u32 = 24;
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, &label));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()
@@ -515,7 +517,8 @@ fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response 
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
+fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
+    let notice = notice_text(notice);
     egui::Panel::top("notice")
         .show_separator_line(false)
         .frame(
@@ -540,9 +543,9 @@ fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
                         18.0,
                         theme::WARNING,
                     );
-                    ui.label(RichText::new(notice).color(theme::TEXT_BRIGHT));
+                    ui.label(RichText::new(&notice).color(theme::TEXT_BRIGHT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if ui.button("Dismiss").clicked() {
+                        if ui.button(t!("dismiss")).clicked() {
                             out.push(Action::DismissNotice);
                         }
                     });
@@ -562,15 +565,15 @@ fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
         )
         .show(ui.ctx(), |ui| {
             ui.set_max_width(480.0);
-            ui.label(RichText::new("Peer-to-peer streaming").font(theme::heading()));
+            ui.label(RichText::new(t!("p2p-title")).font(theme::heading()));
             ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(P2P_NOTICE)).wrap());
+            ui.add(Label::new(dim(&t!("p2p-notice"))).wrap());
             ui.add_space(theme::GAP * 1.5);
             ui.horizontal(|ui| {
-                if primary(ui, true, "Accept and play").clicked() {
+                if primary(ui, true, &t!("p2p-accept")).clicked() {
                     out.push(Action::AcceptP2p);
                 }
-                if ui.button("Cancel").clicked() {
+                if ui.button(t!("cancel")).clicked() {
                     out.push(Action::DeclineP2p);
                 }
             });
@@ -580,15 +583,10 @@ fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
     }
 }
 
-pub(crate) const P2P_NOTICE: &str = "Torrent streams come from other people's computers. While one \
-plays, your IP address is visible to the peers and trackers it connects to, and Cineo \
-uploads the parts it has already downloaded to those peers. Downloaded data is kept in \
-a local cache. You can turn peer-to-peer streaming off in Settings.";
-
 fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let resume = continue_watching(&state.library, state.settings.watched_at);
     if !resume.is_empty() {
-        section(ui, "Continue watching", |_| {});
+        section(ui, &t!("continue-watching"), |_| {});
         poster_strip(ui, "continue", |ui| {
             for item in resume {
                 library_card(ui, theme::CARD_WIDTH, item, Shelf::ContinueWatching, out);
@@ -597,12 +595,9 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
         ui.add_space(theme::SECTION_GAP);
     }
     if state.installed.is_empty() {
-        page_title(ui, "Home", None);
-        empty(
-            ui,
-            "No addons installed. Catalogs show up here once you add one by its manifest URL.",
-        );
-        if primary(ui, true, "Open Addons").clicked() {
+        page_title(ui, &t!("page-home"), None);
+        empty(ui, &t!("home-empty"));
+        if primary(ui, true, &t!("open-addons")).clicked() {
             go(Page::Addons, state, view, out);
         }
     }
@@ -614,9 +609,9 @@ fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Ac
 fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     let targets = board_targets(&state.addons);
     let discover = &state.discover;
-    page_title(ui, "Discover", None);
+    page_title(ui, &t!("page-discover"), None);
     if targets.is_empty() {
-        empty(ui, "No installed addon has a browsable catalog.");
+        empty(ui, &t!("discover-empty"));
         return;
     }
     let several_addons = targets.iter().any(|t| t.addon != targets[0].addon);
@@ -627,7 +622,7 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
             let label = if several_addons {
                 target_label(target)
             } else {
-                target.title.clone()
+                catalog_title(target)
             };
             if chip(ui, &label, selected).clicked() && !selected {
                 out.push(Action::OpenDiscover {
@@ -640,7 +635,8 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     if let Some((options, required)) = genre_options(state) {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
-            let current = discover.genre.as_deref().unwrap_or("All genres");
+            let all = t!("all-genres");
+            let current = discover.genre.as_deref().unwrap_or(&all);
             ComboBox::from_id_salt("genre")
                 .icon(|ui, rect, visuals, _open| {
                     paint_icon(
@@ -657,7 +653,7 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                 .show_ui(ui, |ui| {
                     if !required
                         && ui
-                            .selectable_label(discover.genre.is_none(), "All genres")
+                            .selectable_label(discover.genre.is_none(), &all)
                             .clicked()
                     {
                         out.push(Action::SetDiscoverGenre(None));
@@ -673,7 +669,7 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     }
     ui.add_space(theme::GAP);
     if let Some(error) = &discover.error {
-        ui.label(RichText::new(error).color(theme::DANGER));
+        ui.label(RichText::new(problem_text(error)).color(theme::DANGER));
     }
     let width = grid_card_width(ui.available_width());
     poster_grid(ui, |ui| {
@@ -695,12 +691,12 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
 }
 
 fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    page_title(ui, "Search", None);
+    page_title(ui, &t!("page-search"), None);
     let width = ui.available_width().min(640.0);
     let field = ui.add(
         TextEdit::singleline(&mut view.search_input)
             .id_salt("search")
-            .hint_text("Search movies and series")
+            .hint_text(t!("search-hint"))
             .font(FontId::new(15.0, egui::FontFamily::Proportional))
             .margin(Margin {
                 left: 34,
@@ -753,14 +749,11 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
     }
     ui.add_space(theme::SECTION_GAP);
     if state.search_query.is_empty() {
-        empty(
-            ui,
-            "Results come from every installed addon that supports search.",
-        );
+        empty(ui, &t!("search-help"));
         return;
     }
     if state.search.is_empty() {
-        empty(ui, "No installed addon supports search.");
+        empty(ui, &t!("search-unsupported"));
     }
     for (index, row) in state.search.iter().enumerate() {
         catalog_row(ui, ("search", index), row, None, out);
@@ -768,26 +761,26 @@ fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
 }
 
 fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
-    page_title(ui, "Library", None);
+    page_title(ui, &t!("page-library"), None);
     let mut favorites: Vec<&LibraryItem> =
         state.library.iter().filter(|i| i.is_favorite()).collect();
     favorites.sort_by_key(|i| std::cmp::Reverse(i.favorited));
     let mut rest: Vec<&LibraryItem> = state.library.iter().filter(|i| i.was_played()).collect();
     rest.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
     if !favorites.is_empty() {
-        section(ui, "Favourites", |ui| {
-            ui.label(faint(&count_label(favorites.len(), "title", "titles")));
+        section(ui, &t!("favourites"), |ui| {
+            ui.label(faint(&t!("count-titles", count = favorites.len())));
         });
         library_grid(ui, "favorites", Shelf::Favorites, &favorites, out);
         ui.add_space(theme::SECTION_GAP);
     }
-    section(ui, "Recently played", |ui| {
+    section(ui, &t!("recently-played"), |ui| {
         if !rest.is_empty() {
-            ui.label(faint(&count_label(rest.len(), "title", "titles")));
+            ui.label(faint(&t!("count-titles", count = rest.len())));
         }
     });
     if rest.is_empty() {
-        empty(ui, "Anything you play shows up here.");
+        empty(ui, &t!("library-empty"));
         return;
     }
     library_grid(ui, "recent", Shelf::Library, &rest, out);
@@ -811,12 +804,8 @@ fn library_grid(
 }
 
 fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    page_title(
-        ui,
-        "Addons",
-        Some("When two addons return the same item, the one higher in the list wins."),
-    );
-    section(ui, "Install an addon", |_| {});
+    page_title(ui, &t!("page-addons"), Some(&t!("addons-dek")));
+    section(ui, &t!("addons-install"), |_| {});
     ui.horizontal(|ui| {
         let busy = state.install.as_ref().is_some_and(Loadable::is_loading);
         let field_width = (ui.available_width() - 110.0).clamp(160.0, 560.0);
@@ -833,7 +822,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         );
         clear_button(ui, &field, &mut view.addon_input);
         let submitted = field.lost_focus() && ui.input(|i| i.key_pressed(Key::Enter));
-        if primary(ui, !busy, "Install").clicked() || (submitted && !busy) {
+        if primary(ui, !busy, &t!("install")).clicked() || (submitted && !busy) {
             out.push(Action::InstallAddon(view.addon_input.clone()));
         }
     });
@@ -841,27 +830,29 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         Some(Loadable::Loading) => {
             ui.horizontal(|ui| {
                 spinner(ui);
-                ui.label(dim("Installing…"));
+                ui.label(dim(&t!("installing")));
             });
         }
         Some(Loadable::Ready(name)) => {
-            ui.label(RichText::new(format!("Installed {name}")).color(theme::SUCCESS));
+            ui.label(
+                RichText::new(t!("installed-addon", name = name.as_str())).color(theme::SUCCESS),
+            );
         }
         Some(Loadable::Failed(err)) => {
-            ui.label(RichText::new(err).color(theme::DANGER));
+            ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
         }
         None => {}
     }
     ui.add_space(theme::SECTION_GAP);
     let count = state.addons.len();
     let unavailable = state.unavailable_addons();
-    section(ui, "Installed", |ui| {
+    section(ui, &t!("addons-installed"), |ui| {
         if count > 0 {
-            ui.label(faint(&count_label(count, "addon", "addons")));
+            ui.label(faint(&t!("count-addons", count = count)));
         }
     });
     if state.installed.is_empty() {
-        empty(ui, "Nothing installed yet.");
+        empty(ui, &t!("addons-none"));
     }
     for (index, addon) in state.addons.iter().enumerate() {
         let manifest = &addon.manifest;
@@ -896,26 +887,28 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                 if hints.adult || hints.p2p || hints.configuration_required {
                     ui.horizontal(|ui| {
                         if hints.adult {
-                            badge(ui, "Adult content", theme::WARNING);
+                            badge(ui, &t!("badge-adult"), theme::WARNING);
                         }
                         if hints.p2p {
-                            badge(ui, "Peer-to-peer", theme::WARNING);
+                            badge(ui, &t!("badge-p2p"), theme::WARNING);
                         }
                         if hints.configuration_required {
-                            badge(ui, "Needs configuration", theme::WARNING);
+                            badge(ui, &t!("badge-configure"), theme::WARNING);
                         }
                     });
                 }
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if ui
-                    .add(Button::new(RichText::new("Remove").color(theme::DANGER)))
+                    .add(Button::new(
+                        RichText::new(t!("remove")).color(theme::DANGER),
+                    ))
                     .clicked()
                 {
                     out.push(Action::RemoveAddon(addon.transport.clone()));
                 }
                 if ui
-                    .add_enabled(index + 1 < count, Button::new("Move down"))
+                    .add_enabled(index + 1 < count, Button::new(t!("move-down")))
                     .clicked()
                 {
                     out.push(Action::MoveAddon {
@@ -923,7 +916,10 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                         to: index + 1,
                     });
                 }
-                if ui.add_enabled(index > 0, Button::new("Move up")).clicked() {
+                if ui
+                    .add_enabled(index > 0, Button::new(t!("move-up")))
+                    .clicked()
+                {
                     out.push(Action::MoveAddon {
                         from: index,
                         to: index - 1,
@@ -938,20 +934,23 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             let url = transport.as_url();
+            let unnamed = t!("addon-unnamed");
             ui.label(
-                RichText::new(url.host_str().unwrap_or("Addon"))
+                RichText::new(url.host_str().unwrap_or(&unnamed))
                     .font(theme::strong())
                     .color(theme::TEXT_BRIGHT),
             );
-            badge(ui, "Could not load", theme::DANGER);
+            badge(ui, &t!("badge-unavailable"), theme::DANGER);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if ui
-                    .add(Button::new(RichText::new("Remove").color(theme::DANGER)))
+                    .add(Button::new(
+                        RichText::new(t!("remove")).color(theme::DANGER),
+                    ))
                     .clicked()
                 {
                     out.push(Action::RemoveAddon(transport.clone()));
                 }
-                if ui.button("Retry").clicked() {
+                if ui.button(t!("retry")).clicked() {
                     out.push(Action::InstallAddon(url.as_str().to_owned()));
                 }
             });
@@ -1009,7 +1008,7 @@ fn detail_page(
         );
     }
     let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(76.0, 30.0));
-    if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
+    if icon_button(ui, back, Icon::ArrowLeft, &t!("back")).clicked() {
         out.push(Action::CloseDetail);
         view.leave_detail();
     }
@@ -1057,7 +1056,7 @@ fn detail_page(
                     Loadable::Loading if preview.is_none() => loading_screen(ui),
                     Loadable::Loading => centered_spinner(ui),
                     Loadable::Failed(err) => {
-                        ui.label(RichText::new(err).color(theme::DANGER));
+                        ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
                     }
                     Loadable::Ready(meta) if !meta.videos.is_empty() => {
                         ui.add_space(theme::SECTION_GAP);
@@ -1067,9 +1066,9 @@ fn detail_page(
                 }
                 if detail.selected_video.is_some() {
                     ui.add_space(theme::SECTION_GAP);
-                    section(ui, "Where to watch", |_| {});
+                    section(ui, &t!("where-to-watch"), |_| {});
                     if detail.streams.is_empty() {
-                        empty(ui, "No installed addon provides streams for this item.");
+                        empty(ui, &t!("streams-unavailable"));
                     }
                     stream_filters(ui, &detail.streams, p2p_enabled, &mut view.streams);
                     for (index, group) in detail.streams.iter().enumerate() {
@@ -1087,20 +1086,20 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
     let (icon, text, label, ink) = if favorite {
         (
             Icon::Heart,
-            "Favourited",
-            "Remove from favourites",
+            t!("favourited"),
+            t!("favourite-remove"),
             theme::ACCENT,
         )
     } else {
         (
             Icon::Named("heart"),
-            "Favourite",
-            "Add to favourites",
+            t!("favourite"),
+            t!("favourite-add"),
             theme::TEXT_BRIGHT,
         )
     };
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -1108,7 +1107,7 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
     };
     let painter = ui.painter();
     painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-    let galley = painter.layout_no_wrap(text.to_owned(), theme::body(), theme::TEXT_BRIGHT);
+    let galley = painter.layout_no_wrap(text, theme::body(), theme::TEXT_BRIGHT);
     let left = rect.center().x - (16.0 + 6.0 + galley.size().x) / 2.0;
     paint_icon(painter, icon, pos2(left + 8.0, rect.center().y), 16.0, ink);
     painter.galley(
@@ -1141,7 +1140,7 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
     {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 5.0;
-            ui.label(dim("Directed by"));
+            ui.label(dim(&t!("directed-by")));
             ui.label(
                 RichText::new(m.director.join(", "))
                     .font(theme::strong())
@@ -1171,14 +1170,14 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
         && !p.genres.is_empty()
     {
         ui.add_space(theme::SECTION_GAP);
-        section(ui, "Genres", |_| {});
+        section(ui, &t!("genres"), |_| {});
         tags(ui, &p.genres);
     }
     if let Some(m) = meta
         && !m.cast.is_empty()
     {
         ui.add_space(theme::SECTION_GAP);
-        section(ui, "Cast", |_| {});
+        section(ui, &t!("cast"), |_| {});
         tags(ui, &m.cast);
     }
 }
@@ -1204,7 +1203,11 @@ fn facts(preview: Option<&MetaPreview>, meta: Option<&Meta>) -> Option<LayoutJob
             job.append("  ·  ", 0.0, format.clone());
         }
         append_icon(&mut job, Icon::Star, 14.0, theme::ACCENT);
-        job.append(&format!(" {rating} IMDb"), 0.0, format);
+        job.append(
+            &format!(" {}", t!("rating-imdb", rating = rating)),
+            0.0,
+            format,
+        );
     }
     Some(job)
 }
@@ -1221,7 +1224,7 @@ fn episodes(
         .season
         .filter(|s| seasons.contains(s))
         .or_else(|| seasons.first().copied());
-    section(ui, "Episodes", |_| {});
+    section(ui, &t!("episodes"), |_| {});
     if seasons.len() > 1 {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = Vec2::splat(6.0);
@@ -1326,7 +1329,7 @@ fn stream_filters(
     let field = ui.add(
         TextEdit::singleline(&mut filter.query)
             .id_salt("stream-search")
-            .hint_text("Search streams")
+            .hint_text(t!("streams-search"))
             .margin(Margin {
                 left: 30,
                 right: 30,
@@ -1357,7 +1360,7 @@ fn stream_filters(
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
         if chip(
             ui,
-            "All",
+            &t!("streams-all"),
             filter.quality.is_none() && filter.addon.is_none(),
         )
         .clicked()
@@ -1383,9 +1386,9 @@ fn stream_filters(
     ui.add_space(6.0);
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
-        ui.label(faint("Sort by"));
+        ui.label(faint(&t!("sort-by")));
         for sort in StreamSort::ALL {
-            if chip(ui, sort.label(), filter.sort == sort).clicked() {
+            if chip(ui, &sort.label(), filter.sort == sort).clicked() {
                 filter.sort = sort;
             }
         }
@@ -1411,7 +1414,7 @@ fn stream_group(
         if let Loadable::Ready(streams) = &group.streams
             && !streams.is_empty()
         {
-            ui.label(faint(&count_label(streams.len(), "stream", "streams")));
+            ui.label(faint(&t!("count-streams", count = streams.len())));
         }
     });
     match &group.streams {
@@ -1419,10 +1422,10 @@ fn stream_group(
             centered_spinner(ui);
         }
         Loadable::Failed(err) => {
-            ui.label(RichText::new(err).color(theme::DANGER));
+            ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
         }
         Loadable::Ready(streams) if streams.is_empty() => {
-            ui.label(faint("No streams"));
+            ui.label(faint(&t!("streams-empty")));
         }
         Loadable::Ready(streams) => {
             ui.spacing_mut().item_spacing.y = 4.0;
@@ -1457,13 +1460,10 @@ fn stream_group(
                 }
             }
             if shown == 0 && filter.is_active() {
-                ui.label(faint("No matching streams"));
+                ui.label(faint(&t!("streams-no-match")));
             }
             if hidden > 0 {
-                ui.label(faint(&format!(
-                    "{} hidden: peer-to-peer is off in Settings",
-                    count_label(hidden, "torrent stream", "torrent streams")
-                )));
+                ui.label(faint(&t!("streams-hidden", count = hidden)));
             }
         }
     }
@@ -1507,7 +1507,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
                                     quality_tags(ui, quality);
                                 }
                                 if !stream.source.is_p2p() {
-                                    badge(ui, stream.source.kind_label(), theme::TEXT_DIM);
+                                    badge(ui, &source_name(stream.source.kind()), theme::TEXT_DIM);
                                 }
                                 if let Some(title) = &title {
                                     ui.add_space(3.0);
@@ -1581,7 +1581,8 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
-        response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), "Play"));
+        response
+            .widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), t!("play")));
         if ui.is_rect_visible(rect) {
             let hover = ui.ctx().animate_bool_with_time(
                 response.id,
@@ -1772,10 +1773,10 @@ fn catalog_row(
     see_all: Option<&mut ViewState>,
     out: &mut Vec<Action>,
 ) {
-    section(ui, &row.target.title, |ui| {
+    section(ui, &catalog_title(&row.target), |ui| {
         if let Some(view) = see_all
             && ui
-                .add(Button::new(RichText::new("See all").color(theme::TEXT_DIM)).frame(false))
+                .add(Button::new(RichText::new(t!("see-all")).color(theme::TEXT_DIM)).frame(false))
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
                 .clicked()
         {
@@ -1793,12 +1794,12 @@ fn catalog_row(
         }
         Loadable::Failed(err) => {
             ui.horizontal(|ui| {
-                ui.label(faint("Could not load:"));
-                ui.label(RichText::new(err).color(theme::DANGER));
+                ui.label(faint(&t!("catalog-failed")));
+                ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
             });
         }
         Loadable::Ready(items) if items.is_empty() => {
-            ui.label(faint("Nothing in this catalog."));
+            ui.label(faint(&t!("catalog-empty")));
         }
         Loadable::Ready(items) => {
             poster_strip(ui, salt, |ui| {
@@ -1876,9 +1877,13 @@ fn poster_strip(
 
 fn pager(ui: &mut Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> Response {
     let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
-    let label = if right { "Scroll right" } else { "Scroll left" };
-    let response = ui.interact(rect, strip.with(label), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let label = if right {
+        t!("scroll-right")
+    } else {
+        t!("scroll-left")
+    };
+    let response = ui.interact(rect, strip.with(right), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -1968,13 +1973,13 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     }
     let corner = 20.0;
     let (heart, label) = if item.is_favorite() {
-        (Icon::Heart, "Remove from favourites")
+        (Icon::Heart, t!("favourite-remove"))
     } else {
-        (Icon::Named("heart"), "Add to favourites")
+        (Icon::Named("heart"), t!("favourite-add"))
     };
     let favorite = rect.left_top() + vec2(corner, corner);
     let shown = if item.is_favorite() { 1.0 } else { hover };
-    if card_button(ui, item, favorite, heart, label, shown) {
+    if card_button(ui, item, ("favorite", favorite), heart, &label, shown) {
         out.push(Action::SetFavorite {
             id: item.id.clone(),
             favorite: !item.is_favorite(),
@@ -1983,16 +1988,25 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     let remove = rect.right_top() + vec2(-corner, corner);
     let (label, action) = match shelf {
         Shelf::ContinueWatching => (
-            "Remove from continue watching",
+            t!("remove-continue"),
             Action::DismissContinueWatching(item.id.clone()),
         ),
         Shelf::Favorites | Shelf::Library => (
-            "Remove from library",
+            t!("remove-library"),
             Action::RemoveFromLibrary(item.id.clone()),
         ),
     };
     let removable = shelf == Shelf::ContinueWatching || item.was_played();
-    if removable && card_button(ui, item, remove, Icon::Named("x"), label, hover) {
+    if removable
+        && card_button(
+            ui,
+            item,
+            ("remove", remove),
+            Icon::Named("x"),
+            &label,
+            hover,
+        )
+    {
         out.push(action);
     }
     if response.clicked() && shelf == Shelf::Favorites {
@@ -2024,7 +2038,7 @@ fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
     let response = ui
         .interact(rect, field.id.with("clear"), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, "Clear"));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, t!("clear-field")));
     let ink = if response.hovered() {
         theme::TEXT_BRIGHT
     } else {
@@ -2042,14 +2056,14 @@ fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
 fn card_button(
     ui: &mut Ui,
     item: &LibraryItem,
-    center: Pos2,
+    (role, center): (&str, Pos2),
     icon: Icon,
     label: &str,
     shown: f32,
 ) -> bool {
     let rect = Rect::from_center_size(center, vec2(28.0, 28.0));
     let response = ui
-        .interact(rect, ui.id().with((&item.id, label)), Sense::click())
+        .interact(rect, ui.id().with((&item.id, role)), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     if shown > 0.0 && ui.is_rect_visible(rect) {
@@ -2638,20 +2652,85 @@ fn faint(text: &str) -> RichText {
     RichText::new(text).small().color(theme::TEXT_FAINT)
 }
 
-fn count_label(count: usize, one: &str, many: &str) -> String {
-    format!("{count} {}", if count == 1 { one } else { many })
-}
-
 fn season_label(season: u32) -> String {
     if season == 0 {
-        "Specials".to_owned()
+        t!("specials")
     } else {
-        format!("Season {season}")
+        t!("season", number = season)
     }
 }
 
+fn catalog_title(target: &CatalogTarget) -> String {
+    let content_type = &target.path.content_type;
+    let kind = match content_type.as_str() {
+        ContentType::MOVIE => t!("type-movie"),
+        ContentType::SERIES => t!("type-series"),
+        ContentType::CHANNEL => t!("type-channel"),
+        ContentType::TV => t!("type-tv"),
+        other => other.to_owned(),
+    };
+    t!("catalog-title", name = target.name.as_str(), kind = kind)
+}
+
 fn target_label(target: &CatalogTarget) -> String {
-    format!("{} — {}", target.title, target.addon_name)
+    format!("{} — {}", catalog_title(target), target.addon_name)
+}
+
+fn source_name(kind: SourceKind) -> String {
+    match kind {
+        SourceKind::Http => t!("source-http"),
+        SourceKind::OtherUrl => t!("source-url"),
+        SourceKind::YouTube => t!("source-youtube"),
+        SourceKind::Torrent => t!("source-torrent"),
+        SourceKind::External => t!("source-external"),
+        SourceKind::Archive => t!("source-archive"),
+        SourceKind::Usenet => t!("source-usenet"),
+    }
+}
+
+fn problem_text(problem: &Problem) -> String {
+    match problem {
+        Problem::AlreadyInstalled => t!("problem-already-installed"),
+        Problem::InvalidAddonUrl(detail) => t!("problem-invalid-url", detail = detail.as_str()),
+        Problem::NoMetaAddon => t!("problem-no-meta"),
+        Problem::UnsupportedFilter => t!("problem-unsupported-filter"),
+        Problem::Request(detail) => detail.clone(),
+    }
+}
+
+fn notice_text(notice: &Notice) -> String {
+    match notice {
+        Notice::AddonUnavailable(detail) => {
+            t!("notice-addon-unavailable", detail = detail.as_str())
+        }
+        Notice::UnsupportedScheme(scheme) => {
+            t!("notice-unsupported-scheme", scheme = scheme.as_str())
+        }
+        Notice::TorrentsOff => t!("notice-torrents-off"),
+        Notice::UnsupportedSource(kind) => {
+            t!("notice-unsupported-source", kind = source_name(*kind))
+        }
+        Notice::PlaybackFailed {
+            failure,
+            pick_another,
+        } => {
+            let reason = match failure {
+                PlaybackFailure::Player(detail) => detail.clone(),
+                PlaybackFailure::Torrent(detail) => {
+                    t!("notice-torrent-failed", detail = detail.as_str())
+                }
+            };
+            if *pick_another {
+                t!("notice-pick-another", reason = reason)
+            } else {
+                reason
+            }
+        }
+        Notice::UnexpectedEngineAddress => t!("notice-engine-address"),
+        Notice::SubtitleFailed(detail) => t!("notice-subtitle-failed", detail = detail.as_str()),
+        Notice::SaveFailed(detail) => t!("notice-save-failed", detail = detail.as_str()),
+        Notice::StoreClosed => t!("notice-store-closed"),
+    }
 }
 
 fn open_detail(item: &MetaPreview) -> Action {

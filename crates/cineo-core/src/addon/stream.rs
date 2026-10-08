@@ -38,6 +38,18 @@ pub enum ArchiveKind {
     Tar,
 }
 
+/// The kind of a stream source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceKind {
+    Http,
+    OtherUrl,
+    YouTube,
+    Torrent,
+    External,
+    Archive,
+    Usenet,
+}
+
 impl StreamSource {
     /// Whether Cineo can play this source today (see COMPATIBILITY.md):
     /// `http(s)` URLs, and torrents through the streaming engine.
@@ -54,16 +66,15 @@ impl StreamSource {
         matches!(self, Self::Torrent { .. })
     }
 
-    /// Short human label for the source kind.
-    pub fn kind_label(&self) -> &'static str {
+    pub fn kind(&self) -> SourceKind {
         match self {
-            Self::Url(url) if matches!(url.scheme(), "http" | "https") => "HTTP",
-            Self::Url(_) => "URL",
-            Self::YouTube { .. } => "YouTube",
-            Self::Torrent { .. } => "Torrent",
-            Self::External(_) => "External",
-            Self::Archive { .. } => "Archive",
-            Self::Nzb { .. } => "Usenet",
+            Self::Url(url) if matches!(url.scheme(), "http" | "https") => SourceKind::Http,
+            Self::Url(_) => SourceKind::OtherUrl,
+            Self::YouTube { .. } => SourceKind::YouTube,
+            Self::Torrent { .. } => SourceKind::Torrent,
+            Self::External(_) => SourceKind::External,
+            Self::Archive { .. } => SourceKind::Archive,
+            Self::Nzb { .. } => SourceKind::Usenet,
         }
     }
 }

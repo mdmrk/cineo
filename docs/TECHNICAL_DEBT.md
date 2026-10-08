@@ -170,6 +170,20 @@ Format:
 - Instead: `State.notice` reports the addon that failed to load.
 - Exit: store the last good manifest and restore from it (v0.x caching).
 
+### Desktop UI: only Latin-script, left-to-right UI languages
+- Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
+  [assets/locales](../crates/cineo-desktop/assets/locales)
+- Gap: the UI is offered in English and Spanish only. Right-to-left
+  languages and scripts outside the bundled fonts cannot be added yet.
+  Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
+  Technical details from IO layers stay in English inside a translated
+  sentence.
+- Why: egui does not shape right-to-left text, the bundled fonts are
+  Latin-only, and `fluent-bundle` does not format numbers per locale.
+- Instead: other system locales fall back to English.
+- Exit: bundle fonts for more scripts, wait for bidi support in egui, and
+  give IO errors typed kinds that the UI can word.
+
 ### Desktop UI: the font licenses are not packaged in tagged releases
 - Where: [release.yml](../.github/workflows/release.yml),
   [assets/fonts](../crates/cineo-desktop/assets/fonts)

@@ -4,7 +4,7 @@ use cineo_core::app::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit, Percent,
     SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage, SubtitleBackground,
     SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    UploadLimit, WatchedAt,
+    UiLanguage, UploadLimit, WatchedAt,
 };
 
 #[test]
@@ -45,6 +45,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::AllowPrivateNetwork(true),
         Setting::InterfaceScale(InterfaceScale::S125),
         Setting::StartPage(StartPage::Library),
+        Setting::UiLanguage(UiLanguage::Spanish),
         Setting::WatchedAt(WatchedAt::P80),
     ] {
         settings.set(setting);
@@ -110,6 +111,7 @@ fn saved_keys_never_change() {
             "allow_private_network",
             "interface_scale",
             "start_page",
+            "ui_language",
             "watched_at",
         ]
     );

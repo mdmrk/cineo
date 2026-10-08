@@ -270,6 +270,10 @@ choice! {
 }
 
 choice! {
+    UiLanguage { System = "system", English = "en", Spanish = "es", }
+}
+
+choice! {
     WatchedAt { P80 = "80", P85 = "85", P90 = "90", P92 = "92", P95 = "95", }
 }
 
@@ -393,6 +397,7 @@ settings! {
     allow_private_network: bool = false => AllowPrivateNetwork("allow_private_network"),
     interface_scale: InterfaceScale = InterfaceScale::S100 => InterfaceScale("interface_scale"),
     start_page: StartPage = StartPage::Home => StartPage("start_page"),
+    ui_language: UiLanguage = UiLanguage::System => UiLanguage("ui_language"),
     watched_at: WatchedAt = WatchedAt::P92 => WatchedAt("watched_at"),
 }
 

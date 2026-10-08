@@ -440,6 +440,9 @@ Re-check them when adding.
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
 | `tokio-util` (`io`) | 0.7.19 | `ReaderStream` from a torrent file reader (stream) | MIT |
 | `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
+| `fluent-bundle` | 0.16.0 | UI message catalogs and plural rules (desktop, ADR-0017) | MIT/Apache |
+| `unic-langid` (`macros`) | 0.9.6 | Compile-time locale ids for `fluent-bundle` (desktop) | MIT/Apache |
+| `sys-locale` | 0.3.2 | The OS locale for the default UI language (desktop) | MIT/Apache |
 | `libloading` | 0.9.0 | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC |
 
 `tokio` features `io-util` and `sync` were added for the mpv player (M3);

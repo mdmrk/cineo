@@ -14,8 +14,9 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, DownloadLimit, Effect, InterfaceScale, Language, LibraryItem, SeekStep, Setting,
-    Settings, StartPage, State, SubtitleColor, SubtitleSize, update,
+    Settings, StartPage, State, SubtitleColor, SubtitleSize, UiLanguage, update,
 };
+use cineo_desktop::i18n::Locale;
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;
 use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
@@ -495,6 +496,75 @@ fn notices_are_shown_and_can_be_dismissed() {
 }
 
 #[test]
+fn the_interface_follows_the_language_setting_and_the_system() {
+    let mut state = board_state();
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::UiLanguage(UiLanguage::Spanish)),
+    );
+    let chosen = harness(state, ViewState::default());
+    chosen.get_by_label("Biblioteca");
+    chosen.get_by_label("Top Movies · Películas");
+    chosen.get_by_label("Ajustes");
+
+    let system = ViewState {
+        system_locale: Locale::Spanish,
+        ..ViewState::default()
+    };
+    let followed = harness(board_state(), system);
+    followed.get_by_label("Biblioteca");
+
+    let mut english = board_state();
+    update(
+        &mut english,
+        Action::ChangeSetting(Setting::UiLanguage(UiLanguage::English)),
+    );
+    let system = ViewState {
+        system_locale: Locale::Spanish,
+        ..ViewState::default()
+    };
+    let overridden = harness(english, system);
+    overridden.get_by_label("Library");
+}
+
+#[test]
+fn spanish_notices_wrap_the_technical_detail() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::UiLanguage(UiLanguage::Spanish)),
+    );
+    update(&mut state, Action::InstallAddon("not a url".into()));
+    let view = ViewState {
+        page: Page::Addons,
+        ..ViewState::default()
+    };
+    let harness = harness(state, view);
+    harness.get_by_label_contains("URL de complemento no válida: ");
+}
+
+#[test]
+fn the_interface_language_is_picked_in_settings() {
+    let view = ViewState {
+        system_locale: Locale::Spanish,
+        ..settings_page()
+    };
+    let mut harness = harness(State::default(), view);
+    settle(&mut harness);
+    harness.get_by_label("Idioma").click();
+    settle(&mut harness);
+    harness.get_by_label("Sistema (Español)");
+    harness.get_by_label("English").click();
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().2,
+        vec![Action::ChangeSetting(Setting::UiLanguage(
+            UiLanguage::English
+        ))]
+    );
+}
+
+#[test]
 fn turning_p2p_off_hides_torrent_streams() {
     let mut state = detail_state();
     update(
@@ -556,6 +626,7 @@ fn settings_pick_a_subtitle_language() {
         ..ViewState::default()
     };
     let mut harness = harness(State::default(), view);
+    open_section(&mut harness, "Languages");
     harness.get_by_label("Subtitle language").click();
     harness.run();
     harness.get_by_label("English").click();

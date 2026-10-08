@@ -32,6 +32,7 @@ old one *Superseded by NNNN*.
 | [0014](0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted |
 | [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016) |
 | [0016](0016-librqbit-from-a-fork.md) | librqbit from the owner's fork instead of a vendored copy | Accepted |
+| [0017](0017-localization-with-fluent.md) | Localization: Fluent catalogs in the desktop shell; core reports typed messages | Accepted |
 
 ## What we took from the reference projects
 

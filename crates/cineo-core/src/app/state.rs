@@ -1,6 +1,7 @@
 use url::Url;
 
 use super::library::{LibraryItem, SavedStream};
+use super::message::{Notice, PlaybackFailure, Problem};
 use super::plan::{self, CatalogTarget};
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
@@ -21,7 +22,7 @@ pub struct InstalledAddon {
 pub enum Loadable<T> {
     Loading,
     Ready(T),
-    Failed(String),
+    Failed(Problem),
 }
 
 impl<T> Loadable<T> {
@@ -41,7 +42,7 @@ impl<T> From<Result<T, String>> for Loadable<T> {
     fn from(result: Result<T, String>) -> Self {
         match result {
             Ok(value) => Self::Ready(value),
-            Err(err) => Self::Failed(err),
+            Err(err) => Self::Failed(Problem::Request(err)),
         }
     }
 }
@@ -61,7 +62,7 @@ pub struct Discover {
     pub items: Vec<MetaPreview>,
     /// The page request in flight, if any.
     pub pending: Option<ResourcePath>,
-    pub error: Option<String>,
+    pub error: Option<Problem>,
     /// `skip` value of the next page, if the catalog supports paging and the
     /// last page was not empty.
     pub next_skip: Option<usize>,
@@ -138,7 +139,7 @@ pub struct State {
     pub detail: Option<Detail>,
     pub library: Vec<LibraryItem>,
     /// Last playback problem to show to the user.
-    pub notice: Option<String>,
+    pub notice: Option<Notice>,
     pub settings: Settings,
     /// A torrent stream (`group`, `stream`) waiting for the user to accept
     /// the P2P notice.
@@ -311,7 +312,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 if state.addons.iter().any(|a| a.transport == transport)
                     || state.addons_loading.contains(&transport) =>
             {
-                state.install = Some(Loadable::Failed("This addon is already installed".into()));
+                state.install = Some(Loadable::Failed(Problem::AlreadyInstalled));
                 Vec::new()
             }
             Ok(transport) => {
@@ -322,7 +323,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 }]
             }
             Err(err) => {
-                state.install = Some(Loadable::Failed(format!("Invalid addon URL: {err}")));
+                state.install = Some(Loadable::Failed(Problem::InvalidAddonUrl(err.to_string())));
                 Vec::new()
             }
         },
@@ -426,7 +427,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
-            playback_ended(state, Some(reason))
+            playback_ended(state, Some(PlaybackFailure::Player(reason)))
         }
         Action::PlaybackStopped => {
             state.subtitles.clear();
@@ -548,10 +549,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .as_ref()
                 .is_some_and(|t| t.info_hash == info_hash)
             {
-                playback_ended(
-                    state,
-                    Some(format!("The torrent could not be played: {reason}")),
-                )
+                playback_ended(state, Some(PlaybackFailure::Torrent(reason)))
             } else {
                 Vec::new()
             }
@@ -581,7 +579,7 @@ fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
         return Vec::new();
     };
     if !is_engine_url(&url) {
-        state.notice = Some("The torrent engine returned an unexpected address".into());
+        state.notice = Some(Notice::UnexpectedEngineAddress);
         return stop_torrent(state);
     }
     match torrent.pending.take() {
@@ -659,9 +657,7 @@ fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
                 .catalogs
                 .iter()
                 .filter(|c| !c.is_browsable())
-                .map(move |c| {
-                    plan::catalog_target(a, c, c.name.clone().unwrap_or_else(|| c.id.clone()))
-                })
+                .map(move |c| plan::catalog_target(a, c))
         })
         .collect()
 }
@@ -699,7 +695,7 @@ fn discover_page(state: &mut State, skip: usize) -> Vec<Effect> {
         .find(|a| a.transport == target.addon)
         .is_some_and(|a| a.manifest.supports(&path));
     if !supported {
-        state.discover.error = Some("This catalog does not support that filter".into());
+        state.discover.error = Some(Problem::UnsupportedFilter);
         return Vec::new();
     }
     state.discover.error = None;
@@ -753,9 +749,9 @@ fn manifest_loaded(
         }
         Err(err) => {
             if install {
-                state.install = Some(Loadable::Failed(err));
+                state.install = Some(Loadable::Failed(Problem::Request(err)));
             } else {
-                state.notice = Some(format!("An addon could not be loaded: {err}"));
+                state.notice = Some(Notice::AddonUnavailable(err));
             }
             Vec::new()
         }
@@ -803,7 +799,7 @@ fn catalog_loaded(
                     }
                 }
             }
-            Err(err) => discover.error = Some(err),
+            Err(err) => discover.error = Some(Problem::Request(err)),
         }
     }
 }
@@ -838,7 +834,7 @@ fn meta_loaded(
         }
         Err(err) => {
             if detail.meta_fallbacks.is_empty() {
-                detail.meta = Loadable::Failed(err);
+                detail.meta = Loadable::Failed(Problem::Request(err));
                 detail.meta_request = None;
                 Vec::new()
             } else {
@@ -935,7 +931,7 @@ fn open_detail(
         meta: if first.is_some() {
             Loadable::Loading
         } else {
-            Loadable::Failed("No installed addon provides details for this item".into())
+            Loadable::Failed(Problem::NoMetaAddon)
         },
         content_type,
         id,
@@ -953,7 +949,7 @@ fn open_detail(
 enum Source {
     Play(Url, Option<TorrentRequest>),
     NeedsConsent,
-    Refused(String),
+    Refused(Notice),
     Unusable,
 }
 
@@ -961,20 +957,17 @@ fn resolve(settings: &Settings, stream: &Stream) -> Source {
     match &stream.source {
         StreamSource::Url(url) if stream.source.is_playable() => Source::Play(url.clone(), None),
         StreamSource::Url(url) => {
-            Source::Refused(format!("Unsupported stream scheme `{}`", url.scheme()))
+            Source::Refused(Notice::UnsupportedScheme(url.scheme().to_owned()))
         }
         StreamSource::Torrent { .. } if !settings.p2p_enabled => {
-            Source::Refused("Torrent streams are turned off in Settings".into())
+            Source::Refused(Notice::TorrentsOff)
         }
         StreamSource::Torrent { .. } if !settings.p2p_acknowledged => Source::NeedsConsent,
         StreamSource::Torrent { .. } => match TorrentRequest::from_stream(stream) {
             Some(request) => Source::Play(request.magnet(), Some(request)),
             None => Source::Unusable,
         },
-        _ => Source::Refused(format!(
-            "{} streams are not supported yet",
-            stream.source.kind_label()
-        )),
+        _ => Source::Refused(Notice::UnsupportedSource(stream.source.kind())),
     }
 }
 
@@ -1150,7 +1143,7 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
     start_playback(state, request, torrent, subtitles)
 }
 
-fn playback_ended(state: &mut State, failure: Option<String>) -> Vec<Effect> {
+fn playback_ended(state: &mut State, failure: Option<PlaybackFailure>) -> Vec<Effect> {
     let mut effects = stop_torrent(state);
     let playing = state.playing.take();
     if let Some(playing) = &playing
@@ -1162,7 +1155,7 @@ fn playback_ended(state: &mut State, failure: Option<String>) -> Vec<Effect> {
         state.library.remove(index);
         effects.push(Effect::DeleteLibraryItem(playing.meta_id.clone()));
     }
-    let Some(reason) = failure else {
+    let Some(failure) = failure else {
         return effects;
     };
     let resumed = playing
@@ -1170,12 +1163,16 @@ fn playback_ended(state: &mut State, failure: Option<String>) -> Vec<Effect> {
         .and_then(|p| state.library.iter().find(|i| i.id == p.meta_id))
         .map(|i| (i.content_type.clone(), i.id.clone()));
     let Some((content_type, id)) = resumed else {
-        state.notice = Some(reason);
+        state.notice = Some(Notice::PlaybackFailed {
+            failure,
+            pick_another: false,
+        });
         return effects;
     };
-    state.notice = Some(format!(
-        "The last stream could not be played, pick another one. {reason}"
-    ));
+    state.notice = Some(Notice::PlaybackFailed {
+        failure,
+        pick_another: true,
+    });
     effects.extend(open_detail(state, content_type, id, None));
     effects
 }

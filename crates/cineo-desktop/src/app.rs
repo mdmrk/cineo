@@ -7,8 +7,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
 use cineo_core::app::{
-    Action, Effect, Language, Percent, PlayRequest, Setting, Settings, State, TorrentRequest,
-    update,
+    Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
+    TorrentRequest, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
@@ -20,6 +20,7 @@ use eframe::egui;
 use tracing::{debug, error, warn};
 
 use crate::brand;
+use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
 use crate::player::{self, Controls, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
@@ -110,7 +111,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
 #[derive(Debug)]
 pub(crate) enum Msg {
     Action(Action),
-    Notice(String),
+    Notice(Notice),
     SubtitleFetched {
         url: url::Url,
         result: Result<Vec<u8>, String>,
@@ -178,7 +179,10 @@ impl CineoApp {
     ) -> Self {
         let mut app = Self {
             state: State::default(),
-            view: ViewState::default(),
+            view: ViewState {
+                system_locale: Locale::system(),
+                ..ViewState::default()
+            },
             io,
             ctx,
             results_tx,
@@ -290,7 +294,7 @@ impl CineoApp {
                     .as_ref()
                     .is_some_and(|tx| tx.send(effect).is_ok());
                 if !sent {
-                    self.state.notice = Some("Changes can no longer be saved".into());
+                    self.state.notice = Some(Notice::StoreClosed);
                 }
             }
             Effect::Play(request) => self.play(&request),
@@ -458,7 +462,7 @@ impl CineoApp {
         });
         if let Err(err) = loaded {
             warn!(%err, "addon subtitle failed");
-            self.state.notice = Some(format!("Could not load the subtitle: {err}"));
+            self.state.notice = Some(Notice::SubtitleFailed(err));
         }
     }
 
@@ -686,6 +690,10 @@ impl eframe::App for CineoApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        i18n::set(Locale::resolve(
+            self.state.settings.ui_language,
+            self.view.system_locale,
+        ));
         if self.show_player(ui) || self.show_connecting(ui) {
             return;
         }
@@ -781,7 +789,7 @@ pub(crate) fn spawn_store_writer(
             for effect in rx {
                 if let Err(err) = store.apply(&effect) {
                     error!(error = %err, "saving failed");
-                    let _ = results.send(Msg::Notice(format!("Could not save changes: {err}")));
+                    let _ = results.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
                 }
             }
         })?;

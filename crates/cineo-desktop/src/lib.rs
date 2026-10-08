@@ -2,6 +2,7 @@
 
 mod app;
 mod brand;
+pub mod i18n;
 mod images;
 pub mod player;
 pub mod settings;

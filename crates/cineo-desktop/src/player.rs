@@ -13,6 +13,7 @@ use eframe::egui::{
 
 use url::Url;
 
+use crate::i18n::t;
 use crate::settings::subtitle_controls;
 use crate::theme;
 use crate::view::{
@@ -307,7 +308,7 @@ fn top_bar(ui: &mut Ui, rect: Rect, title: &str, out: &mut Vec<PlayerCommand>) {
         pos2(bar.left() + 32.0, bar.top() + 30.0),
         egui::Vec2::splat(BUTTON),
     );
-    if icon_button(ui, back, Icon::ArrowLeft, "Back").clicked() {
+    if icon_button(ui, back, Icon::ArrowLeft, &t!("back")).clicked() {
         out.push(PlayerCommand::Stop);
     }
     let text = Rect::from_min_max(
@@ -362,18 +363,18 @@ fn bottom_bar(
         Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
     };
     let (icon, label) = if status.paused {
-        (Icon::Play, "Play")
+        (Icon::Play, t!("play"))
     } else {
-        (Icon::Pause, "Pause")
+        (Icon::Pause, t!("pause"))
     };
-    if icon_button(ui, slot(BUTTON + 4.0), icon, label).clicked() {
+    if icon_button(ui, slot(BUTTON + 4.0), icon, &label).clicked() {
         out.push(PlayerCommand::TogglePause);
     }
     if icon_button(
         ui,
         slot(BUTTON + 4.0),
         Icon::Named(back_icon),
-        &format!("Seek back {seconds} seconds"),
+        &t!("seek-back", seconds = seconds),
     )
     .clicked()
     {
@@ -383,7 +384,7 @@ fn bottom_bar(
         ui,
         slot(BUTTON + 12.0),
         Icon::Named(forward_icon),
-        &format!("Seek forward {seconds} seconds"),
+        &t!("seek-forward", seconds = seconds),
     )
     .clicked()
     {
@@ -411,19 +412,26 @@ fn bottom_bar(
         Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
     };
     let (icon, label) = if is_fullscreen(ui) {
-        ("minimize", "Exit fullscreen")
+        ("minimize", t!("exit-fullscreen"))
     } else {
-        ("maximize", "Fullscreen")
+        ("maximize", t!("fullscreen"))
     };
-    if icon_button(ui, slot(BUTTON + 4.0), Icon::Named(icon), label).clicked() {
+    if icon_button(ui, slot(BUTTON + 4.0), Icon::Named(icon), &label).clicked() {
         toggle_fullscreen(ui);
     }
     let subtitles = slot(BUTTON + 4.0);
-    if icon_button(ui, subtitles, Icon::Named("badge-cc"), "Subtitles").clicked() {
+    if icon_button(
+        ui,
+        subtitles,
+        Icon::Named("badge-cc"),
+        &t!("player-subtitles"),
+    )
+    .clicked()
+    {
         controls.menu = toggle(controls.menu, TrackKind::Subtitle);
     }
     let audio = slot(BUTTON + 12.0);
-    if icon_button(ui, audio, Icon::Named("language"), "Audio").clicked() {
+    if icon_button(ui, audio, Icon::Named("language"), &t!("player-audio")).clicked() {
         controls.menu = toggle(controls.menu, TrackKind::Audio);
     }
     let volume = Rect::from_min_max(
@@ -436,11 +444,11 @@ fn bottom_bar(
         egui::Vec2::splat(BUTTON),
     );
     let (icon, label) = if status.muted || status.volume <= 0.0 {
-        ("volume-off", "Unmute")
+        ("volume-off", t!("unmute"))
     } else {
-        ("volume", "Mute")
+        ("volume", t!("mute"))
     };
-    if icon_button(ui, mute, Icon::Named(icon), label).clicked() {
+    if icon_button(ui, mute, Icon::Named(icon), &label).clicked() {
         out.push(PlayerCommand::ToggleMute);
     }
 
@@ -485,7 +493,7 @@ fn seek_bar(
     out: &mut Vec<PlayerCommand>,
 ) {
     let response = ui.interact(rect, ui.id().with("seek"), Sense::click_and_drag());
-    response.widget_info(|| WidgetInfo::slider(true, status.position_s, "Position"));
+    response.widget_info(|| WidgetInfo::slider(true, status.position_s, t!("position")));
     let seekable = status.duration_s > 0.0;
     let fraction_at = |pos: Pos2| f64::from(((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0));
     if seekable {
@@ -543,7 +551,7 @@ fn volume_slider(
     out: &mut Vec<PlayerCommand>,
 ) {
     let response = ui.interact(rect, ui.id().with("volume"), Sense::click_and_drag());
-    response.widget_info(|| WidgetInfo::slider(true, status.volume, "Volume"));
+    response.widget_info(|| WidgetInfo::slider(true, status.volume, t!("volume")));
     if let Some(pos) = response.interact_pointer_pos()
         && (response.dragged() || response.clicked())
     {
@@ -595,7 +603,7 @@ fn track_menu(
     if kind == TrackKind::Subtitle {
         entries.push((
             Entry::Track(None),
-            "Off".into(),
+            t!("subtitles-off"),
             !tracks.iter().any(|t| t.selected),
         ));
     }
@@ -615,7 +623,7 @@ fn track_menu(
         )
     }));
     if entries.is_empty() {
-        entries.push((Entry::Empty, "No audio tracks".into(), false));
+        entries.push((Entry::Empty, t!("no-audio-tracks"), false));
     }
     let row = 30.0;
     let width = 240.0;
@@ -735,19 +743,19 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
     let ms = controls.subtitle_delay_ms;
     ui.horizontal(|ui| {
         ui.label(
-            RichText::new("Delay")
+            RichText::new(t!("delay"))
                 .font(theme::strong())
                 .color(theme::TEXT_BRIGHT),
         );
-        ui.label(dim("This video only.").small());
+        ui.label(dim(&t!("delay-help")).small());
     });
     ui.add_space(6.0);
     let cells = [
-        (-1000, "−1 s", "Subtitles 1 s earlier"),
-        (-100, "−0.1 s", "Subtitles 0.1 s earlier"),
-        (0, "", ""),
-        (100, "+0.1 s", "Subtitles 0.1 s later"),
-        (1000, "+1 s", "Subtitles 1 s later"),
+        (-1000, "−1 s", t!("subtitles-earlier", amount = "1 s")),
+        (-100, "−0.1 s", t!("subtitles-earlier", amount = "0.1 s")),
+        (0, "", String::new()),
+        (100, "+0.1 s", t!("subtitles-later", amount = "0.1 s")),
+        (1000, "+1 s", t!("subtitles-later", amount = "1 s")),
     ];
     let gap = 4.0;
     let (strip, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
@@ -763,9 +771,9 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
         let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
         response.widget_info(|| {
             let label = if middle {
-                format!("Subtitle delay {}, reset", delay_label(ms))
+                t!("delay-reset", delay = delay_label(ms))
             } else {
-                label.to_owned()
+                label.clone()
             };
             WidgetInfo::labeled(WidgetType::Button, enabled, label)
         });
@@ -807,7 +815,7 @@ fn track_label(track: &Track, number: usize) -> String {
         .flatten()
         .collect();
     if parts.is_empty() {
-        format!("Track {number}")
+        t!("track", number = number)
     } else {
         plain_text(&parts.join(" · "))
     }

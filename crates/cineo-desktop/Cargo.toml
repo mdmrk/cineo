@@ -21,11 +21,14 @@ cineo-store.workspace = true
 cineo-stream.workspace = true
 clap.workspace = true
 eframe.workspace = true
+fluent-bundle.workspace = true
 iconflow.workspace = true
 image.workspace = true
+sys-locale.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+unic-langid.workspace = true
 url.workspace = true
 
 [dev-dependencies]

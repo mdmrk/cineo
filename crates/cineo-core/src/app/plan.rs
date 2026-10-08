@@ -1,13 +1,13 @@
 use super::state::InstalledAddon;
 use crate::addon::{CatalogDef, ContentType, ExtraValue, ResourceName, ResourcePath, TransportUrl};
 
-/// A catalog request with a display title.
+/// A catalog request; `name` falls back to the catalog id.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogTarget {
     pub addon: TransportUrl,
     pub addon_name: String,
     pub path: ResourcePath,
-    pub title: String,
+    pub name: String,
 }
 
 /// Board rows: every catalog that needs no user input (no required extra).
@@ -20,7 +20,7 @@ pub fn board_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
                 .catalogs
                 .iter()
                 .filter(|c| c.is_browsable())
-                .map(move |c| catalog_target(addon, c, title(c)))
+                .map(move |c| catalog_target(addon, c))
         })
         .collect()
 }
@@ -40,7 +40,7 @@ pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarg
                         && c.extra.iter().all(|e| !e.is_required || e.name == "search")
                 })
                 .map(move |c| {
-                    let mut target = catalog_target(addon, c, title(c));
+                    let mut target = catalog_target(addon, c);
                     target.path.extra = vec![ExtraValue::new("search", query)];
                     target
                 })
@@ -96,29 +96,11 @@ fn targets(
         .collect()
 }
 
-pub(super) fn catalog_target(
-    addon: &InstalledAddon,
-    catalog: &CatalogDef,
-    title: String,
-) -> CatalogTarget {
+pub(super) fn catalog_target(addon: &InstalledAddon, catalog: &CatalogDef) -> CatalogTarget {
     CatalogTarget {
         addon: addon.transport.clone(),
         addon_name: addon.manifest.name.clone(),
         path: ResourcePath::catalog(catalog.content_type.clone(), catalog.id.clone()),
-        title,
+        name: catalog.name.clone().unwrap_or_else(|| catalog.id.clone()),
     }
-}
-
-fn title(catalog: &CatalogDef) -> String {
-    let type_label = match catalog.content_type.as_str() {
-        ContentType::MOVIE => "Movies",
-        ContentType::SERIES => "Series",
-        ContentType::CHANNEL => "Channels",
-        ContentType::TV => "TV",
-        other => other,
-    };
-    format!(
-        "{} {type_label}",
-        catalog.name.as_deref().unwrap_or(&catalog.id)
-    )
 }
