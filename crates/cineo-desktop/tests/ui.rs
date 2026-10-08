@@ -242,6 +242,32 @@ fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
 }
 
 #[test]
+fn favourites_open_their_page_and_recently_played_resumes() {
+    let state = State {
+        library: vec![
+            half_watched("a", "Liked", Some(1)),
+            half_watched("b", "Plain", None),
+        ],
+        ..State::default()
+    };
+    let view = ViewState {
+        page: Page::Library,
+        ..ViewState::default()
+    };
+    let mut harness = harness(state, view);
+    harness.get_by_label("Liked").click();
+    harness.run();
+    harness.get_by_label("Plain").click();
+    harness.run();
+    let actions = &harness.state().2;
+    assert!(
+        matches!(&actions[0], Action::OpenDetail { id, preview: Some(p), .. } if id == "a" && p.name == "Liked"),
+        "{actions:?}"
+    );
+    assert_eq!(actions[1], Action::Resume("b".into()));
+}
+
+#[test]
 fn a_favourite_never_played_has_no_remove_button() {
     let mut unplayed = half_watched("a", "Liked", Some(1));
     unplayed.time_offset_ms = 0;

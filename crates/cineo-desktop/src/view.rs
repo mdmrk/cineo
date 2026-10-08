@@ -782,7 +782,7 @@ fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
         section(ui, "Favourites", |ui| {
             ui.label(faint(&count_label(favorites.len(), "title", "titles")));
         });
-        library_grid(ui, "favorites", &favorites, out);
+        library_grid(ui, "favorites", Shelf::Favorites, &favorites, out);
         ui.add_space(theme::SECTION_GAP);
     }
     section(ui, "Recently played", |ui| {
@@ -794,15 +794,21 @@ fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
         empty(ui, "Anything you play shows up here.");
         return;
     }
-    library_grid(ui, "recent", &rest, out);
+    library_grid(ui, "recent", Shelf::Library, &rest, out);
 }
 
-fn library_grid(ui: &mut Ui, salt: &str, items: &[&LibraryItem], out: &mut Vec<Action>) {
+fn library_grid(
+    ui: &mut Ui,
+    salt: &str,
+    shelf: Shelf,
+    items: &[&LibraryItem],
+    out: &mut Vec<Action>,
+) {
     let width = grid_card_width(ui.available_width());
     ui.push_id(salt, |ui| {
         poster_grid(ui, |ui| {
             for item in items {
-                library_card(ui, width, item, Shelf::Library, out);
+                library_card(ui, width, item, shelf, out);
             }
         });
     });
@@ -1929,6 +1935,7 @@ fn preview_card(ui: &mut Ui, width: f32, item: &MetaPreview) -> Response {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Shelf {
     ContinueWatching,
+    Favorites,
     Library,
 }
 
@@ -1948,7 +1955,7 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     let hover = ui
         .ctx()
         .animate_bool_with_time(response.id.with("hover"), active, theme::ANIM);
-    if item.stream.is_some() && ui.is_rect_visible(rect) {
+    if shelf != Shelf::Favorites && item.stream.is_some() && ui.is_rect_visible(rect) {
         let center = rect.center();
         let radius = (rect.width() / 6.0).clamp(18.0, 28.0);
         let fill = lerp_color(Color32::from_black_alpha(160), theme::ACCENT, hover);
@@ -1983,7 +1990,7 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
             "Remove from continue watching",
             Action::DismissContinueWatching(item.id.clone()),
         ),
-        Shelf::Library => (
+        Shelf::Favorites | Shelf::Library => (
             "Remove from library",
             Action::RemoveFromLibrary(item.id.clone()),
         ),
@@ -1992,7 +1999,21 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     if removable && card_button(ui, item, remove, Icon::Named("x"), label, hover) {
         out.push(action);
     }
-    if response.clicked() {
+    if response.clicked() && shelf == Shelf::Favorites {
+        out.push(open_detail(&MetaPreview {
+            id: item.id.clone(),
+            content_type: item.content_type.clone(),
+            name: item.name.clone(),
+            poster: item.poster.clone(),
+            poster_shape: PosterShape::Poster,
+            background: None,
+            logo: None,
+            description: None,
+            release_info: None,
+            imdb_rating: None,
+            genres: Vec::new(),
+        }));
+    } else if response.clicked() {
         out.push(Action::Resume(item.id.clone()));
     }
 }
