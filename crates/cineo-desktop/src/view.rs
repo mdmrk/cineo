@@ -1017,28 +1017,31 @@ fn detail_page(
                 theme::DETAIL_POSTER_WIDTH
             };
             let poster_size = vec2(poster_width, poster_width * 1.5);
-            let (poster_rect, _) = ui.allocate_exact_size(poster_size, Sense::hover());
             let name = preview.map_or(detail.id.as_str(), |p| p.name.as_str());
-            shadow(ui, poster_rect, 1.0);
-            poster(
-                ui,
-                poster_rect,
-                name,
-                preview.and_then(|p| p.poster.as_ref()),
-            );
+            ui.vertical(|ui| {
+                ui.set_width(poster_width);
+                let (poster_rect, _) = ui.allocate_exact_size(poster_size, Sense::hover());
+                shadow(ui, poster_rect, 1.0);
+                poster(
+                    ui,
+                    poster_rect,
+                    name,
+                    preview.and_then(|p| p.poster.as_ref()),
+                );
+                ui.add_space(6.0);
+                if favorite_button(ui, favorite) {
+                    out.push(Action::SetFavorite {
+                        id: detail.id.clone(),
+                        favorite: !favorite,
+                    });
+                }
+            });
 
             let width = ui.available_width() - ui.spacing().item_spacing.x;
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.add_space(if background.is_some() { 16.0 } else { 0.0 });
-                about(ui, name, preview, meta, |ui| {
-                    if favorite_button(ui, favorite) {
-                        out.push(Action::SetFavorite {
-                            id: detail.id.clone(),
-                            favorite: !favorite,
-                        });
-                    }
-                });
+                about(ui, name, preview, meta);
                 match &detail.meta {
                     Loadable::Loading if preview.is_none() => loading_screen(ui),
                     Loadable::Loading => centered_spinner(ui),
@@ -1070,37 +1073,44 @@ fn detail_page(
 }
 
 fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
-    let (icon, label, ink) = if favorite {
-        (Icon::Heart, "Remove from favourites", theme::ACCENT)
+    let (icon, text, label, ink) = if favorite {
+        (
+            Icon::Heart,
+            "Favourited",
+            "Remove from favourites",
+            theme::ACCENT,
+        )
     } else {
         (
             Icon::Named("heart"),
+            "Favourite",
             "Add to favourites",
             theme::TEXT_BRIGHT,
         )
     };
-    let (rect, response) = ui.allocate_exact_size(vec2(36.0, 36.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
-        theme::SCRIM
+        theme::SURFACE
     };
     let painter = ui.painter();
-    painter.circle_filled(rect.center(), 18.0, fill);
-    paint_icon(painter, icon, rect.center(), 18.0, ink);
+    painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
+    let galley = painter.layout_no_wrap(text.to_owned(), theme::body(), theme::TEXT_BRIGHT);
+    let left = rect.center().x - (16.0 + 6.0 + galley.size().x) / 2.0;
+    paint_icon(painter, icon, pos2(left + 8.0, rect.center().y), 16.0, ink);
+    painter.galley(
+        pos2(left + 22.0, rect.center().y - galley.size().y / 2.0),
+        galley,
+        theme::TEXT_BRIGHT,
+    );
     response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
         .clicked()
 }
 
-fn about(
-    ui: &mut Ui,
-    name: &str,
-    preview: Option<&MetaPreview>,
-    meta: Option<&Meta>,
-    actions: impl FnOnce(&mut Ui),
-) {
+fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&Meta>) {
     let mut job = LayoutJob::default();
     job.append(
         name,
@@ -1114,15 +1124,7 @@ fn about(
             TextFormat::simple(theme::title_year(), theme::TEXT_DIM),
         );
     }
-    let title_width = ui.available_width() - 52.0;
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 16.0;
-        ui.scope(|ui| {
-            ui.set_max_width(title_width);
-            ui.add(Label::new(job).wrap());
-        });
-        actions(ui);
-    });
+    ui.add(Label::new(job).wrap());
     if let Some(m) = meta
         && !m.director.is_empty()
     {
