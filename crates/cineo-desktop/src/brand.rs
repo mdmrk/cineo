@@ -1,7 +1,37 @@
-use eframe::egui::{self, ColorImage, IconData, TextureHandle};
+use eframe::egui::{
+    self, Color32, ColorImage, IconData, Rect, TextureHandle, Ui, Vec2, pos2, vec2,
+};
+
+use crate::view::IMAGE_FILTER;
 
 const LOGO: &[u8] = include_bytes!("../assets/brand/logo.png");
 const ICON: &[u8] = include_bytes!("../assets/brand/icon.png");
+const LOADING: [&[u8]; 5] = [
+    include_bytes!("../assets/brand/loading/base.png"),
+    include_bytes!("../assets/brand/loading/reel.png"),
+    include_bytes!("../assets/brand/loading/moustache-left.png"),
+    include_bytes!("../assets/brand/loading/moustache-right.png"),
+    include_bytes!("../assets/brand/loading/strip.png"),
+];
+
+pub(crate) const LOADING_SIZE: Vec2 = vec2(328.0, 309.0);
+const REEL_PIVOT: Vec2 = vec2(192.9, 192.0);
+const REEL_PERIOD: f64 = 5.0;
+const MOUSTACHE_PIVOT: Vec2 = vec2(135.0, 280.535);
+const MOUSTACHE_PERIOD: f64 = 2.5;
+const MOUSTACHE_KEYS: [(f64, f32); 6] = [
+    (0.0, 0.0),
+    (0.07, 5.0),
+    (0.15, 0.0),
+    (0.22, 5.0),
+    (0.31, 0.0),
+    (1.0, 0.0),
+];
+const STRIP_MIN: Vec2 = vec2(218.0, 134.0);
+const STRIP_SIZE: Vec2 = vec2(108.0, 164.0);
+const STRIP_FRAMES: usize = 10;
+const STRIP_COLUMNS: usize = 5;
+const STRIP_PERIOD: f64 = 1.0 / 3.0;
 
 fn decode(bytes: &[u8]) -> Option<image::RgbaImage> {
     image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
@@ -23,6 +53,103 @@ pub(crate) fn logo(ctx: &egui::Context) -> Option<TextureHandle> {
     );
     ctx.data_mut(|d| d.insert_temp(id, texture.clone()));
     Some(texture)
+}
+
+/// Paints the animated logo filling `rect`, which should have [`LOADING_SIZE`]'s aspect.
+pub(crate) fn paint_loading(ui: &Ui, rect: Rect, tint: Color32) {
+    if !ui.is_rect_visible(rect) {
+        return;
+    }
+    ui.ctx().request_repaint();
+    let id = egui::Id::new("cineo-loading");
+    let layers = match ui.ctx().data(|d| d.get_temp::<Vec<TextureHandle>>(id)) {
+        Some(layers) => layers,
+        None => {
+            let Some(layers) = LOADING
+                .iter()
+                .enumerate()
+                .map(|(index, bytes)| {
+                    let image = decode(bytes)?;
+                    let size = [image.width() as usize, image.height() as usize];
+                    Some(ui.ctx().load_texture(
+                        format!("cineo-loading-{index}"),
+                        ColorImage::from_rgba_unmultiplied(size, image.as_raw()),
+                        IMAGE_FILTER,
+                    ))
+                })
+                .collect::<Option<Vec<_>>>()
+            else {
+                return;
+            };
+            ui.ctx().data_mut(|d| d.insert_temp(id, layers.clone()));
+            layers
+        }
+    };
+    let [base, reel, left, right, strip] = &layers[..] else {
+        return;
+    };
+    let time = ui.input(|i| i.time);
+    let layer = |texture: &TextureHandle| egui::Image::from_texture(texture).tint(tint);
+    layer(base).paint_at(ui, rect);
+    layer(reel)
+        .rotate(reel_angle(time), REEL_PIVOT / LOADING_SIZE)
+        .paint_at(ui, rect);
+    let wiggle = moustache_angle(time);
+    for (texture, angle) in [(left, wiggle), (right, -wiggle)] {
+        layer(texture)
+            .rotate(angle, MOUSTACHE_PIVOT / LOADING_SIZE)
+            .paint_at(ui, rect);
+    }
+    let frame = strip_frame(time);
+    #[expect(clippy::cast_precision_loss, reason = "small frame counts")]
+    let (column, row, cell) = (
+        (frame % STRIP_COLUMNS) as f32,
+        (frame / STRIP_COLUMNS) as f32,
+        vec2(
+            1.0 / STRIP_COLUMNS as f32,
+            1.0 / STRIP_FRAMES.div_ceil(STRIP_COLUMNS) as f32,
+        ),
+    );
+    let scale = rect.width() / LOADING_SIZE.x;
+    layer(strip)
+        .uv(Rect::from_min_size(
+            pos2(column * cell.x, row * cell.y),
+            cell,
+        ))
+        .paint_at(
+            ui,
+            Rect::from_min_size(rect.min + STRIP_MIN * scale, STRIP_SIZE * scale),
+        );
+}
+
+fn reel_angle(time: f64) -> f32 {
+    #[expect(clippy::cast_possible_truncation, reason = "an angle in 0..2π")]
+    let angle = ((time / REEL_PERIOD).fract() * std::f64::consts::TAU) as f32;
+    angle
+}
+
+fn moustache_angle(time: f64) -> f32 {
+    let phase = (time / MOUSTACHE_PERIOD).fract();
+    let degrees = MOUSTACHE_KEYS
+        .windows(2)
+        .find(|keys| phase < keys[1].0)
+        .map_or(0.0, |keys| {
+            let [(t0, from), (t1, to)] = [keys[0], keys[1]];
+            #[expect(clippy::cast_possible_truncation, reason = "a factor in 0..1")]
+            let u = ((phase - t0) / (t1 - t0)) as f32;
+            from + (to - from) * u * u * (3.0 - 2.0 * u)
+        });
+    degrees.to_radians()
+}
+
+fn strip_frame(time: f64) -> usize {
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a frame index in 0..STRIP_FRAMES"
+    )]
+    let frame = ((time / STRIP_PERIOD).fract() * STRIP_FRAMES as f64) as usize;
+    frame.min(STRIP_FRAMES - 1)
 }
 
 pub(crate) fn grain(ctx: &egui::Context, size: [usize; 2]) -> TextureHandle {
@@ -93,5 +220,45 @@ mod tests {
         assert!(decode(LOGO).is_some());
         let icon = icon().expect("icon");
         assert_eq!((icon.width, icon.height), (256, 256));
+    }
+
+    #[test]
+    fn the_loading_layers_share_the_canvas() {
+        let [base, reel, left, right, strip] = LOADING.map(|bytes| decode(bytes).expect("layer"));
+        for layer in [&reel, &left, &right] {
+            assert_eq!(layer.dimensions(), base.dimensions());
+        }
+        assert_eq!(
+            base.width() as f32 / base.height() as f32,
+            LOADING_SIZE.x / LOADING_SIZE.y
+        );
+        assert_eq!(
+            strip.dimensions(),
+            (
+                (STRIP_SIZE.x * 2.0) as u32 * STRIP_COLUMNS as u32,
+                (STRIP_SIZE.y * 2.0) as u32 * STRIP_FRAMES.div_ceil(STRIP_COLUMNS) as u32
+            )
+        );
+    }
+
+    #[test]
+    fn the_moustache_twitches_twice_then_rests() {
+        let at = |phase: f64| moustache_angle(phase * MOUSTACHE_PERIOD).to_degrees();
+        assert!(at(0.0).abs() < 1e-3);
+        assert!((at(0.07) - 5.0).abs() < 1e-3);
+        assert!(at(0.15).abs() < 1e-3);
+        assert!((at(0.22) - 5.0).abs() < 1e-3);
+        assert!(at(0.11) > 0.0 && at(0.11) < 5.0);
+        assert!(at(0.5).abs() < 1e-3);
+        assert!(at(0.99).abs() < 1e-3);
+    }
+
+    #[test]
+    fn the_strip_cycles_through_every_frame() {
+        let frames: Vec<usize> = (0..STRIP_FRAMES * 2)
+            .map(|i| strip_frame((i as f64 + 0.5) * STRIP_PERIOD / STRIP_FRAMES as f64))
+            .collect();
+        let once: Vec<usize> = (0..STRIP_FRAMES).collect();
+        assert_eq!(frames, [once.clone(), once].concat());
     }
 }

@@ -15,12 +15,15 @@ use url::Url;
 
 use crate::settings::subtitle_controls;
 use crate::theme;
-use crate::view::{IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_spinner};
+use crate::view::{
+    IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_loading, paint_spinner,
+};
 
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
 const BUTTON: f32 = 36.0;
 const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
+const LOADING_WIDTH: f32 = 176.0;
 const LOADING_BACKDROP_TINT: Color32 = Color32::from_gray(70);
 const PULSE_PERIOD: f64 = 1.6;
 const MENU_MAX_HEIGHT: f32 = 320.0;
@@ -125,7 +128,9 @@ pub fn show(
     }
     if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {
         loading_art(ui, rect, title, logo);
-    } else if !status.loaded || status.buffering {
+    } else if !status.loaded {
+        paint_loading(ui, rect.center(), LOADING_WIDTH, theme::TEXT_BRIGHT);
+    } else if status.buffering {
         paint_spinner(ui, rect.center(), 44.0, theme::TEXT_BRIGHT);
     }
 

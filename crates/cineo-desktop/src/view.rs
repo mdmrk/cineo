@@ -12,8 +12,8 @@ use cineo_core::app::{
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
     Layout, Margin, Mesh, Modal, Modifiers, Pos2, Rect, Response, RichText, ScrollArea, Sense,
-    Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, WidgetType, pos2,
-    scroll_area::ScrollBarVisibility, style::ScrollAnimation, text::LayoutJob, vec2,
+    Spinner, Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, WidgetType,
+    pos2, scroll_area::ScrollBarVisibility, style::ScrollAnimation, text::LayoutJob, vec2,
 };
 use url::Url;
 
@@ -685,7 +685,9 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     });
     ui.add_space(theme::GAP);
     let (end, _) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::hover());
-    if discover.pending.is_some() {
+    if discover.pending.is_some() && discover.items.is_empty() {
+        loading_screen(ui);
+    } else if discover.pending.is_some() {
         paint_spinner(ui, end.center(), 24.0, theme::TEXT_DIM);
     } else if discover.next_skip.is_some() && ui.is_rect_visible(end) {
         out.push(Action::LoadMoreDiscover);
@@ -1038,9 +1040,8 @@ fn detail_page(
                     }
                 });
                 match &detail.meta {
-                    Loadable::Loading => {
-                        centered_spinner(ui);
-                    }
+                    Loadable::Loading if preview.is_none() => loading_screen(ui),
+                    Loadable::Loading => centered_spinner(ui),
                     Loadable::Failed(err) => {
                         ui.label(RichText::new(err).color(theme::DANGER));
                     }
@@ -2275,7 +2276,6 @@ pub(crate) enum Icon {
     ChevronRight,
     ChevronDown,
     ArrowLeft,
-    Loader,
     Star,
     Alert,
     Play,
@@ -2286,7 +2286,7 @@ pub(crate) enum Icon {
 
 impl Icon {
     #[cfg(test)]
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 15] = [
         Self::Home,
         Self::Compass,
         Self::Search,
@@ -2297,7 +2297,6 @@ impl Icon {
         Self::ChevronRight,
         Self::ChevronDown,
         Self::ArrowLeft,
-        Self::Loader,
         Self::Star,
         Self::Alert,
         Self::Play,
@@ -2317,7 +2316,6 @@ impl Icon {
             Self::ChevronRight => "chevron-right",
             Self::ChevronDown => "chevron-down",
             Self::ArrowLeft => "arrow-left",
-            Self::Loader => "loader-2",
             Self::Star => "star",
             Self::Alert => "alert-circle",
             Self::Play => "player-play",
@@ -2472,8 +2470,7 @@ pub(crate) fn append_icon(job: &mut LayoutJob, icon: Icon, size: f32, color: Col
 }
 
 fn spinner(ui: &mut Ui) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::splat(20.0), Sense::hover());
-    paint_spinner(ui, rect.center(), 18.0, theme::TEXT_DIM);
+    ui.add(Spinner::new().size(18.0).color(theme::TEXT_DIM));
 }
 
 fn centered_spinner(ui: &mut Ui) {
@@ -2482,25 +2479,19 @@ fn centered_spinner(ui: &mut Ui) {
 }
 
 pub(crate) fn paint_spinner(ui: &Ui, center: Pos2, size: f32, color: Color32) {
-    if !ui.is_rect_visible(Rect::from_center_size(center, Vec2::splat(size))) {
-        return;
-    }
-    let Some((glyph, family)) = Icon::Loader.glyph() else {
-        return;
-    };
-    let galley = ui
-        .painter()
-        .layout_no_wrap(glyph.to_string(), FontId::new(size, family), color);
-    let Some(pivot) = ink_center(&galley) else {
-        return;
-    };
-    let turns = ui.input(|i| i.time).fract();
-    #[expect(clippy::cast_possible_truncation, reason = "an angle in 0..2π")]
-    let angle = (turns * std::f64::consts::TAU) as f32;
-    let pos = center - egui::emath::Rot2::from_angle(angle) * pivot.to_vec2();
-    ui.painter()
-        .add(egui::epaint::TextShape::new(pos, galley, color).with_angle(angle));
-    ui.ctx().request_repaint();
+    Spinner::new()
+        .color(color)
+        .paint_at(ui, Rect::from_center_size(center, Vec2::splat(size)));
+}
+
+fn loading_screen(ui: &mut Ui) {
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 240.0), Sense::hover());
+    paint_loading(ui, rect.center(), theme::LOADING_WIDTH, theme::TEXT_DIM);
+}
+
+pub(crate) fn paint_loading(ui: &Ui, center: Pos2, width: f32, tint: Color32) {
+    let size = vec2(width, width * brand::LOADING_SIZE.y / brand::LOADING_SIZE.x);
+    brand::paint_loading(ui, Rect::from_center_size(center, size), tint);
 }
 
 fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {

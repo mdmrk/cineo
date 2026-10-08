@@ -65,9 +65,10 @@ unmodified and not sold on their own, as the OFL requires. Each license
 text ships next to its files and must accompany binary distributions.
 Added 2026-10-07.
 
-Cineo's logo and app icon (`crates/cineo-desktop/assets/brand/`) are the
-project's own artwork, supplied by the owner on 2026-10-07 and covered by
-the repository license.
+Cineo's logo, app icon and loading animation
+(`crates/cineo-desktop/assets/brand/`) are the project's own artwork,
+supplied by the owner on 2026-10-07 (logo updated and animation added
+2026-10-08) and covered by the repository license.
 
 | Font | Files | Source | License |
 |------|-------|--------|---------|

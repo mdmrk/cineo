@@ -483,7 +483,7 @@ about 910 KB together, all OFL-1.1 ([LEGAL.md](LEGAL.md#bundled-assets)), with
 `include_bytes!`. Icons come from `iconflow` 2.1.0 (crates.io,
 2026-10-07: MIT, MSRV 1.92, no runtime dependencies) with only the Tabler
 pack enabled, which embeds Tabler's regular and filled icon fonts (about
-1.5 MB). The other 13 packs stay off. The logo (304×360) and window icon (256×256) are PNGs in `assets/brand/`, about 180 KB together, decoded with the `image` crate already in use. egui's `default_fonts` stay enabled as the fallback for symbols and emoji.
+1.5 MB). The other 13 packs stay off. The logo (656×618) and window icon (256×256) are PNGs in `assets/brand/`, decoded with the `image` crate already in use. The loading animation's source is `assets/brand/loading.svg` (SMIL); egui cannot play SVG animation, so it is rasterized at 2× into layers in `assets/brand/loading/` (static parts, reel, each moustache half, and a 5×2 sheet of the film strip's 10 frames) that `brand::paint_loading` rotates and steps in code. All brand PNGs come to about 130 KB. egui's `default_fonts` stay enabled as the fallback for symbols and emoji.
 
 ### Planned (researched, not added)
 

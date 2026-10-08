@@ -40,6 +40,7 @@ pub(crate) const LOGO_MOUSTACHE_X: f32 = 135.0 / 328.0;
 pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-20.0, -18.0);
 pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
 pub(crate) const GRAIN_FADE: f32 = 40.0;
+pub(crate) const LOADING_WIDTH: f32 = 128.0;
 pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(158, 158, 158, 179);
 
 pub(crate) const CARD_WIDTH: f32 = 116.0;
