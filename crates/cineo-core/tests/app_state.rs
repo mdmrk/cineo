@@ -1482,3 +1482,48 @@ fn without_binge_watching_a_finished_episode_moves_continue_watching_on() {
     let videos: Vec<&str> = items.iter().map(|i| i.video_id.as_str()).collect();
     assert_eq!(videos, ["tt0000010:1:2"]);
 }
+
+#[test]
+fn an_addon_that_needs_configuration_is_configured_not_installed() {
+    let configured = url("https://addon.example/abc%20def/manifest.json?lang=es");
+    assert_eq!(
+        configured.configure_url().as_str(),
+        "https://addon.example/abc%20def/configure?lang=es"
+    );
+    let manifest = |required: bool| {
+        let json = format!(
+            r#"{{"id":"org.example","version":"1.0.0","name":"Example","resources":["stream"],"types":["movie"],"catalogs":[],"behaviorHints":{{"configurable":true,"configurationRequired":{required}}}}}"#
+        );
+        Box::new(parse_manifest(json.as_bytes()).unwrap().value)
+    };
+    let mut state = State::default();
+    let transport = url("https://addon.example/manifest.json");
+    update(&mut state, Action::InstallAddon(transport.to_string()));
+    let effects = update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: transport.clone(),
+            result: Ok(manifest(true)),
+            install: true,
+        },
+    );
+    assert!(effects.is_empty());
+    assert!(state.addons.is_empty() && state.installed.is_empty());
+    assert_eq!(
+        state.install,
+        Some(Loadable::Failed(Problem::ConfigurationRequired(
+            transport.clone()
+        )))
+    );
+
+    update(&mut state, Action::InstallAddon(transport.to_string()));
+    update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: transport.clone(),
+            result: Ok(manifest(false)),
+            install: true,
+        },
+    );
+    assert_eq!(state.installed, vec![transport]);
+}

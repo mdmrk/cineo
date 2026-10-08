@@ -323,3 +323,5 @@ links-register-help = Links to addons and pages open in Cineo. Stremio stops rec
 links-register-button = Use Cineo
 links-registered = Done
 links-register-failed = Failed: { $detail }
+configure = Configure
+problem-configuration-required = This addon must be configured before it can be installed. Configure it, then install the link it gives you.

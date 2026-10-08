@@ -323,3 +323,5 @@ links-register-help = Los enlaces a addons y páginas se abren en Cineo. Stremio
 links-register-button = Usar Cineo
 links-registered = Hecho
 links-register-failed = Error: { $detail }
+configure = Configurar
+problem-configuration-required = Este addon debe configurarse antes de instalarlo. Configúralo e instala el enlace que te dé.

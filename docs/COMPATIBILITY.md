@@ -44,7 +44,7 @@ _Last reviewed: 2026-10-06._
 | Subtitles resource | Supported | Requested from every subtitles addon with the stream's `videoHash`/`videoSize`/`filename` hints (`playing_asks_subtitle_addons_with_the_stream_hints`); listed in the Subtitles menu and loaded into mpv when picked (`addon_subtitles_are_listed_and_requested`, `real_libmpv_loads_a_subtitle_file_without_an_extension`). Not yet checked against a live subtitles addon |
 | Subtitles in stream objects | Supported | Listed first in the Subtitles menu (`playing_asks_subtitle_addons_with_the_stream_hints`, `entries_list_each_url_once_and_mark_the_loaded_selected_one`) and loaded like addon subtitles |
 | `addon_catalog` resource | Planned | v0.x |
-| Addon configuration (`config`, `configurable`) | Planned | v0.x; opens the addon's `/configure` page |
+| Addon configuration (`configurable`, `configurationRequired`) | Supported | A Configure button opens the addon's `/configure` page in the browser; an addon that requires configuration is not installed, and its install error offers Configure instead (`an_addon_that_needs_configuration_is_configured_not_installed`). The manifest's `config` list is not used: the addon's own page builds the configured URL. No UI test of the buttons |
 | `behaviorHints.adult` / `p2p` warnings | Partial | Parsed (M1, `quirky_manifest_*`); shown as badges on the GUI Addons page (no UI test yet) |
 | Response caching (`Cache-Control`) | Planned | v0.x |
 | Meta `links`, `trailers` | Planned | v0.x |

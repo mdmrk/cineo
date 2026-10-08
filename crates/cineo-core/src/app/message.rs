@@ -1,9 +1,10 @@
-use crate::addon::SourceKind;
+use crate::addon::{SourceKind, TransportUrl};
 
 /// Why a value could not load; the shell words it (ADR-0017).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
     AlreadyInstalled,
+    ConfigurationRequired(TransportUrl),
     InvalidAddonUrl(String),
     NoMetaAddon,
     UnsupportedFilter,

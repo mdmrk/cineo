@@ -4,7 +4,9 @@
 
 use std::time::Duration;
 
-use cineo_core::addon::{ContentType, Meta, MetaPreview, PosterShape, SourceKind, Stream};
+use cineo_core::addon::{
+    ContentType, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl,
+};
 use cineo_core::app::{
     Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Notice, PlaybackFailure,
     Problem, Route, Row, StartPage, State, StreamGroup, board_targets, continue_watching,
@@ -577,6 +579,13 @@ pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> 
     out
 }
 
+fn configure_button(ui: &mut Ui, transport: &TransportUrl) {
+    if ui.button(t!("configure")).clicked() {
+        ui.ctx()
+            .open_url(egui::OpenUrl::new_tab(transport.configure_url()));
+    }
+}
+
 fn link_prompt(ui: &mut Ui, url: &str, out: &mut Vec<Action>) {
     let modal = Modal::new(egui::Id::new("link_prompt"))
         .frame(
@@ -893,7 +902,12 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             );
         }
         Some(Loadable::Failed(err)) => {
-            ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
+                if let Problem::ConfigurationRequired(transport) = err {
+                    configure_button(ui, transport);
+                }
+            });
         }
         None => {}
     }
@@ -960,6 +974,9 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                     .clicked()
                 {
                     out.push(Action::RemoveAddon(addon.transport.clone()));
+                }
+                if manifest.behavior_hints.configurable {
+                    configure_button(ui, &addon.transport);
                 }
                 if ui
                     .add_enabled(index + 1 < count, Button::new(t!("move-down")))
@@ -2745,6 +2762,7 @@ fn source_name(kind: SourceKind) -> String {
 fn problem_text(problem: &Problem) -> String {
     match problem {
         Problem::AlreadyInstalled => t!("problem-already-installed"),
+        Problem::ConfigurationRequired(_) => t!("problem-configuration-required"),
         Problem::InvalidAddonUrl(detail) => t!("problem-invalid-url", detail = detail.as_str()),
         Problem::NoMetaAddon => t!("problem-no-meta"),
         Problem::UnsupportedFilter => t!("problem-unsupported-filter"),

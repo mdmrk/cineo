@@ -822,6 +822,12 @@ fn manifest_loaded(
         return Vec::new();
     }
     match result {
+        Ok(manifest) if install && manifest.behavior_hints.configuration_required => {
+            state.install = Some(Loadable::Failed(Problem::ConfigurationRequired(
+                transport.clone(),
+            )));
+            Vec::new()
+        }
         Ok(manifest) => {
             if install {
                 state.install = Some(Loadable::Ready(manifest.name.clone()));

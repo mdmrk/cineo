@@ -48,6 +48,13 @@ impl TransportUrl {
         &self.0
     }
 
+    pub fn configure_url(&self) -> Url {
+        let mut url = self.0.clone();
+        let base = url.path().strip_suffix("manifest.json").unwrap_or_default();
+        url.set_path(&format!("{base}configure"));
+        url
+    }
+
     /// Builds the URL for `path`:
     /// `{base}/{resource}/{type}/{id}[/{extra}].json[?{query}]`, where `base`
     /// is the transport URL without the trailing `/manifest.json`.

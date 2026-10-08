@@ -76,8 +76,18 @@ Unknown resource names in a manifest are preserved, not rejected.
 | `logo`, `background` | optional | invalid → absent | invalid or non-`http(s)` → absent + warning |
 | `addonCatalogs` | optional | optional | optional |
 | `behaviorHints` | optional | `adult, p2p, configurable, configurationRequired, epgProvider` | first four; `epgProvider` ignored (EPG out of scope) |
-| `config` | optional | — | ignored until configuration pages (v0.x) |
+| `config` | optional | — | ignored: the addon's `/configure` page builds the configured manifest URL |
 | `contactEmail` | optional | optional | optional |
+
+Configuration (v0.x):
+- `configurable` adds a Configure button that opens the transport URL with
+  its final `manifest.json` replaced by `configure`, query kept, in the
+  system browser. `configurationRequired` addons are not installed; the
+  install error offers Configure instead (VERIFIED-REF, stremio-web
+  `AddonDetailsModal.js`;
+  `an_addon_that_needs_configuration_is_configured_not_installed`). The
+  configured addon is then installed from the URL or `stremio://` link the
+  page gives.
 
 ### Catalog declarations
 

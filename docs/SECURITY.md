@@ -100,6 +100,8 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   addon's origin and name).
 - An addon install link maps only to `https://` and then goes through the
   normal network policy.
+- An addon's Configure page opens in the system browser only on a click,
+  and only for its own `http(s)` transport URL.
 - Implemented (ADR-0018): `parse_link` allowlists the routes; an install
   link only sets a prompt that shows the full manifest URL
   (`an_install_link_installs_nothing_until_accepted`).
