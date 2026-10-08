@@ -183,21 +183,18 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 &t!("links-register"),
                 &t!("links-register-help"),
                 |ui| {
-                    if ui.button(t!("links-register-button")).clicked() {
-                        view.register_links = true;
-                    }
-                    match &view.links_registered {
-                        Some(Ok(())) => {
-                            ui.label(RichText::new(t!("links-registered")).color(theme::TEXT_DIM));
+                    let line = vec2(ui.available_width(), ui.spacing().interact_size.y);
+                    ui.allocate_ui_with_layout(line, Layout::right_to_left(Align::Center), |ui| {
+                        if ui.button(t!("links-register-button")).clicked() {
+                            view.register_links = true;
                         }
-                        Some(Err(err)) => {
-                            ui.label(
-                                RichText::new(t!("links-register-failed", detail = err.as_str()))
-                                    .color(theme::TEXT_DIM),
-                            );
-                        }
-                        None => {}
-                    }
+                        let status = match &view.links_registered {
+                            Some(Ok(())) => t!("links-registered"),
+                            Some(Err(err)) => t!("links-register-failed", detail = err.as_str()),
+                            None => return,
+                        };
+                        ui.add(Label::new(RichText::new(status).color(theme::TEXT_DIM)).wrap());
+                    });
                 },
             );
         }
