@@ -25,6 +25,7 @@ pub enum Notice {
     SubtitleFailed(String),
     SaveFailed(String),
     StoreClosed,
+    InvalidLink,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

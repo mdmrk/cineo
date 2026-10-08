@@ -233,5 +233,8 @@ See [DEVELOPMENT.md](DEVELOPMENT.md#testing):
   ADR.
 - **Stream sources.** The "stream resolver" turns non-URL sources into
   playable URLs: `cineo-stream`, M9/M10 (ADR-0010).
-- **Deep links.** `stremio://` and `cineo://` URLs parse into typed routes
-  in the core (pure). Shells register the schemes per platform.
+- **Deep links (ADR-0018).** `stremio://` and `cineo://` URLs parse into
+  typed routes in the core (`app::parse_link`). The desktop shell opens a
+  link given on the command line, hands it to an already running window
+  (`instance.rs`), and registers the schemes per user on request
+  (`register.rs`).

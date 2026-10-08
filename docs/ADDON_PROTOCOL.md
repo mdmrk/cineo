@@ -220,7 +220,7 @@ Binge-watching (`behaviorHints.bingeGroup`, v0.x):
 | Duplicate catalogs | unspecified | first wins | reference (+ warning) |
 | The minimal example in `protocol.md` | uses `/subtitle/` in one place | `/subtitles/` | `subtitles` |
 
-## Deep links (planned, v0.x)
+## Deep links (v0.x, ADR-0018)
 
 From the SDK's `deep-links.md` (VERIFIED-DOC):
 - **Addon install:** `stremio://<host>/<path>/manifest.json`. This is the
@@ -233,7 +233,11 @@ From the SDK's `deep-links.md` (VERIFIED-DOC):
 - Deep links are untrusted input. They are parsed into typed routes, unknown
   links are rejected with a message, and nothing is installed or played
   without user action. `autoPlay` is documented as Android-TV-only;
-  Cineo's handling of it is UNKNOWN until M8.
+  Cineo ignores it.
+- Cineo accepts the same forms under `cineo://`. The scheme is matched
+  case-insensitively, a trailing `/` is allowed, and `stremio:///` alone is
+  the board. The Discover addon segment must be a percent-encoded manifest
+  URL (`links_parse_into_routes_and_anything_else_is_rejected`).
 
 ## Caching (planned, v0.x)
 

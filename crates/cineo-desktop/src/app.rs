@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
 use cineo_core::app::{
     Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
-    TorrentRequest, update,
+    TorrentRequest, parse_link, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
@@ -26,6 +26,7 @@ use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
 use crate::view::{self, ViewState};
+use crate::{instance, register};
 
 /// Startup options (command line).
 #[derive(Debug, Clone)]
@@ -37,6 +38,7 @@ pub struct Options {
     /// Allow addons, images and torrent peers on loopback/LAN addresses
     /// (docs/SECURITY.md).
     pub allow_private_network: bool,
+    pub link: Option<String>,
 }
 
 /// Opens the store, restores state and runs the window until it is closed.
@@ -83,6 +85,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         ..Default::default()
     };
     let handle = runtime.handle().clone();
+    let (data_dir, link) = (options.data_dir, options.link);
     let result = eframe::run_native(
         "Cineo",
         native,
@@ -91,13 +94,22 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
             let mut io = io;
             io.gl = cc.get_proc_address.clone();
-            Ok(Box::new(CineoApp::new(
+            let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
+            if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
+                let _ = tx.send(Msg::Link(link));
+                ctx.request_repaint();
+            }) {
+                warn!(%err, "links from other launches will not reach this window");
+            }
+            let mut app = CineoApp::new(
                 cc.egui_ctx.clone(),
                 io,
                 [restore, settings],
                 store_tx,
                 (results_tx, results_rx),
-            )))
+            );
+            app.pending_link = link;
+            Ok(Box::new(app))
         }),
     );
     if writer.join().is_err() {
@@ -116,6 +128,7 @@ pub(crate) enum Msg {
         url: url::Url,
         result: Result<Vec<u8>, String>,
     },
+    Link(String),
 }
 
 pub(crate) struct Io {
@@ -167,6 +180,7 @@ pub(crate) struct CineoApp {
     torrent_generation: Arc<AtomicU64>,
     torrent_task: Option<tokio::task::AbortHandle>,
     seq: u64,
+    pending_link: Option<String>,
 }
 
 impl CineoApp {
@@ -194,6 +208,7 @@ impl CineoApp {
             torrent_generation: Arc::default(),
             torrent_task: None,
             seq: 0,
+            pending_link: None,
         };
         for action in restore {
             app.dispatch(action);
@@ -493,6 +508,20 @@ impl CineoApp {
         move |action| post(Msg::Action(action))
     }
 
+    fn open_link(&mut self, link: &str) {
+        match parse_link(link) {
+            Ok(route) => {
+                for action in view::follow_link(route, &self.state, &mut self.view) {
+                    self.dispatch(action);
+                }
+            }
+            Err(err) => {
+                warn!(%err, "ignored a link");
+                self.state.notice = Some(Notice::InvalidLink);
+            }
+        }
+    }
+
     fn end_playback(&mut self) {
         let volume = self.playback.take().and_then(|p| p.volume);
         if let Some(volume) = volume_to_save(&self.state.settings, volume) {
@@ -703,7 +732,16 @@ impl eframe::App for CineoApp {
                 Msg::Action(action) => self.dispatch(action),
                 Msg::Notice(notice) => self.state.notice = Some(notice),
                 Msg::SubtitleFetched { url, result } => self.subtitle_fetched(&url, result),
+                Msg::Link(link) => {
+                    self.pending_link = Some(link);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                }
             }
+        }
+        if self.state.addons_loading.is_empty()
+            && let Some(link) = self.pending_link.take()
+        {
+            self.open_link(&link);
         }
     }
 
@@ -717,6 +755,10 @@ impl eframe::App for CineoApp {
         }
         for action in view::show(ui, &self.state, &mut self.view) {
             self.dispatch(action);
+        }
+        if std::mem::take(&mut self.view.register_links) {
+            self.view.links_registered =
+                Some(register::register().map_err(|err| format!("{err:#}")));
         }
     }
 

@@ -1,6 +1,7 @@
 use url::Url;
 
 use super::library::{LibraryItem, SavedStream};
+use super::link::Route;
 use super::message::{Notice, PlaybackFailure, Problem};
 use super::plan::{self, CatalogTarget};
 use super::settings::{Setting, Settings};
@@ -144,6 +145,7 @@ pub struct State {
     /// A torrent stream (`group`, `stream`) waiting for the user to accept
     /// the P2P notice.
     pub p2p_prompt: Option<(usize, usize)>,
+    pub link_prompt: Option<TransportUrl>,
     pub torrent: Option<TorrentPlayback>,
     /// Addon subtitles for the current playback, stream subtitles first.
     pub subtitles: Vec<SubtitleGroup>,
@@ -233,6 +235,9 @@ pub enum Action {
     DismissNotice,
     AcceptP2p,
     DeclineP2p,
+    OpenLink(Route),
+    AcceptLink,
+    DeclineLink,
     ChangeSetting(Setting),
     ResetSettings,
     ManifestLoaded {
@@ -504,6 +509,15 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.p2p_prompt = None;
             Vec::new()
         }
+        Action::OpenLink(route) => open_link(state, route),
+        Action::AcceptLink => match state.link_prompt.take() {
+            Some(transport) => update(state, Action::InstallAddon(transport.to_string())),
+            None => Vec::new(),
+        },
+        Action::DeclineLink => {
+            state.link_prompt = None;
+            Vec::new()
+        }
         Action::ChangeSetting(setting) => {
             state.settings.set(setting);
             settings_changed(state)
@@ -606,6 +620,44 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 Vec::new()
             }
         }
+    }
+}
+
+fn open_link(state: &mut State, route: Route) -> Vec<Effect> {
+    if let Route::InstallAddon(transport) = route {
+        state.link_prompt = Some(transport);
+        return Vec::new();
+    }
+    state.detail = None;
+    match route {
+        Route::Discover(Some(link)) => {
+            let mut effects = update(
+                state,
+                Action::OpenDiscover {
+                    addon: link.addon,
+                    path: link.path,
+                },
+            );
+            if link.genre.is_some() {
+                state.discover.genre = link.genre;
+                state.discover.items.clear();
+                effects = discover_page(state, 0);
+            }
+            effects
+        }
+        Route::Search(query) => update(state, Action::Search(query)),
+        Route::Detail {
+            content_type,
+            id,
+            video_id,
+        } => {
+            let mut effects = open_detail(state, content_type, id, None);
+            if let Some(video_id) = video_id {
+                effects.extend(select_video(state, video_id));
+            }
+            effects
+        }
+        _ => Vec::new(),
     }
 }
 

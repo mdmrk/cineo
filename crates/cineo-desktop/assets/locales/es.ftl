@@ -314,3 +314,12 @@ language-tha = Tailandés
 language-tur = Turco
 language-ukr = Ucraniano
 language-vie = Vietnamita
+
+notice-invalid-link = Cineo no puede abrir ese enlace
+link-install-title = ¿Instalar este addon?
+link-install-notice = Un enlace pide instalar el addon de abajo. Instala solo addons de confianza.
+links-register = Abrir enlaces stremio:// y cineo://
+links-register-help = Los enlaces a addons y páginas se abren en Cineo. Stremio deja de recibir los enlaces stremio://.
+links-register-button = Usar Cineo
+links-registered = Hecho
+links-register-failed = Error: { $detail }

@@ -33,6 +33,7 @@ old one *Superseded by NNNN*.
 | [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016) |
 | [0016](0016-librqbit-from-a-fork.md) | librqbit from the owner's fork instead of a vendored copy | Accepted |
 | [0017](0017-localization-with-fluent.md) | Localization: Fluent catalogs in the desktop shell; core reports typed messages | Accepted |
+| [0018](0018-deep-links-single-instance-and-scheme-registration.md) | Deep links: typed routes in core, single-instance handover, opt-in scheme registration | Accepted |
 
 ## What we took from the reference projects
 

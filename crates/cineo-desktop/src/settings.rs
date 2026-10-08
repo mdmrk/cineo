@@ -178,6 +178,28 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 start_name,
                 Setting::StartPage,
             );
+            row(
+                ui,
+                &t!("links-register"),
+                &t!("links-register-help"),
+                |ui| {
+                    if ui.button(t!("links-register-button")).clicked() {
+                        view.register_links = true;
+                    }
+                    match &view.links_registered {
+                        Some(Ok(())) => {
+                            ui.label(RichText::new(t!("links-registered")).color(theme::TEXT_DIM));
+                        }
+                        Some(Err(err)) => {
+                            ui.label(
+                                RichText::new(t!("links-register-failed", detail = err.as_str()))
+                                    .color(theme::TEXT_DIM),
+                            );
+                        }
+                        None => {}
+                    }
+                },
+            );
         }
         Section::Player => {
             switch(

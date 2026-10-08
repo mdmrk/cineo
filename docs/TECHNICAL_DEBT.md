@@ -236,3 +236,16 @@ Format:
 - Instead: if no frame runs after minimizing, the video keeps playing until
   the window is shown again, and then it pauses.
 - Exit: verify per platform; otherwise react to the window event directly.
+
+### Deep links: macOS and plain second launches
+- Where: [instance.rs](../crates/cineo-desktop/src/instance.rs),
+  [register.rs](../crates/cineo-desktop/src/register.rs)
+- Gap: macOS delivers links as Apple Events to an app bundle, so links do
+  not reach Cineo there, and registration reports it as unsupported. A
+  second launch without a link still opens a second window. The Windows
+  pipe and registration have not been run.
+- Why: Cineo has no macOS bundle before packaging (M7); only links needed a
+  handover.
+- Instead: on macOS, links open nothing; second windows share the database.
+- Exit: handle `CFBundleURLTypes` and the open-URL event in the M7 bundle;
+  run the Windows path on a Windows machine.

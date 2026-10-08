@@ -100,6 +100,15 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   addon's origin and name).
 - An addon install link maps only to `https://` and then goes through the
   normal network policy.
+- Implemented (ADR-0018): `parse_link` allowlists the routes; an install
+  link only sets a prompt that shows the full manifest URL
+  (`an_install_link_installs_nothing_until_accepted`).
+- A running Cineo accepts links from new launches on `<data dir>/cineo.sock`
+  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`)
+  or, on Windows, a named pipe that rejects remote clients. One line of at
+  most 8 KiB is read, and it is handled like any other link.
+- Registering Cineo for `stremio://` and `cineo://` is opt-in from Settings
+  and per user only.
 
 ### Streaming engine (M9/M10, ADR-0010)
 

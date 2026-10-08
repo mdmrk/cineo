@@ -18,6 +18,8 @@ struct Cli {
     data_dir: Option<PathBuf>,
     #[arg(long, value_name = "DIR")]
     cache_dir: Option<PathBuf>,
+    #[arg(value_name = "LINK")]
+    link: Option<String>,
 }
 
 fn main() -> ExitCode {
@@ -52,9 +54,15 @@ fn start(cli: Cli) -> anyhow::Result<()> {
         .cache_dir
         .or_else(cineo_store::default_cache_dir)
         .unwrap_or_else(|| data_dir.join("cache"));
+    if let Some(link) = &cli.link
+        && cineo_desktop::instance::forward(&data_dir, link)
+    {
+        return Ok(());
+    }
     cineo_desktop::run(cineo_desktop::Options {
         data_dir,
         cache_dir,
         allow_private_network: cli.allow_private_network,
+        link: cli.link,
     })
 }

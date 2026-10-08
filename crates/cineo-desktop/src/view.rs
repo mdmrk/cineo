@@ -7,7 +7,7 @@ use std::time::Duration;
 use cineo_core::addon::{ContentType, Meta, MetaPreview, PosterShape, SourceKind, Stream};
 use cineo_core::app::{
     Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Notice, PlaybackFailure,
-    Problem, Row, StartPage, State, StreamGroup, board_targets, continue_watching,
+    Problem, Route, Row, StartPage, State, StreamGroup, board_targets, continue_watching,
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
@@ -94,6 +94,8 @@ pub struct ViewState {
     pub confirm: Option<Confirm>,
     pub streams: StreamFilter,
     pub system_locale: Locale,
+    pub register_links: bool,
+    pub links_registered: Option<Result<(), String>>,
 }
 
 impl ViewState {
@@ -242,6 +244,9 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     if state.p2p_prompt.is_some() {
         p2p_prompt(ui, &mut out);
     }
+    if let Some(transport) = &state.link_prompt {
+        link_prompt(ui, &transport.to_string(), &mut out);
+    }
     egui::CentralPanel::default()
         .frame(Frame::new().fill(theme::BG))
         .show(ui, |ui| {
@@ -314,7 +319,7 @@ fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
 
 fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let typing = ui.ctx().egui_wants_keyboard_input();
-    let modal = state.p2p_prompt.is_some();
+    let modal = state.p2p_prompt.is_some() || state.link_prompt.is_some();
     let in_detail = state.detail.is_some();
     let (search, page, back) = ui.input_mut(|i| {
         let search = i.consume_key(Modifiers::COMMAND, Key::F)
@@ -548,6 +553,59 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                 });
             });
         });
+}
+
+pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> Vec<Action> {
+    let mut out = Vec::new();
+    let page = match &route {
+        Route::InstallAddon(_) => Some(Page::Addons),
+        Route::Board => Some(Page::Board),
+        Route::Discover(_) => Some(Page::Discover),
+        Route::Library => Some(Page::Library),
+        Route::Search(query) => {
+            view.search_input.clone_from(query);
+            view.search_edited_at = None;
+            Some(Page::Search)
+        }
+        Route::Detail { .. } => None,
+    };
+    match page {
+        Some(page) => go(page, state, view, &mut out),
+        None => view.leave_detail(),
+    }
+    out.push(Action::OpenLink(route));
+    out
+}
+
+fn link_prompt(ui: &mut Ui, url: &str, out: &mut Vec<Action>) {
+    let modal = Modal::new(egui::Id::new("link_prompt"))
+        .frame(
+            Frame::new()
+                .fill(theme::PANEL)
+                .stroke(Stroke::new(1.0, theme::RULE))
+                .corner_radius(CornerRadius::same(theme::RADIUS))
+                .inner_margin(Margin::same(20)),
+        )
+        .show(ui.ctx(), |ui| {
+            ui.set_max_width(480.0);
+            ui.label(RichText::new(t!("link-install-title")).font(theme::heading()));
+            ui.add_space(theme::GAP);
+            ui.add(Label::new(dim(&t!("link-install-notice"))).wrap());
+            ui.add_space(theme::GAP);
+            ui.add(Label::new(RichText::new(url).monospace().color(theme::TEXT_BRIGHT)).wrap());
+            ui.add_space(theme::GAP * 1.5);
+            ui.horizontal(|ui| {
+                if primary(ui, true, &t!("install")).clicked() {
+                    out.push(Action::AcceptLink);
+                }
+                if ui.button(t!("cancel")).clicked() {
+                    out.push(Action::DeclineLink);
+                }
+            });
+        });
+    if modal.should_close() && out.is_empty() {
+        out.push(Action::DeclineLink);
+    }
 }
 
 fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
@@ -2726,6 +2784,7 @@ fn notice_text(notice: &Notice) -> String {
         Notice::SubtitleFailed(detail) => t!("notice-subtitle-failed", detail = detail.as_str()),
         Notice::SaveFailed(detail) => t!("notice-save-failed", detail = detail.as_str()),
         Notice::StoreClosed => t!("notice-store-closed"),
+        Notice::InvalidLink => t!("notice-invalid-link"),
     }
 }
 
