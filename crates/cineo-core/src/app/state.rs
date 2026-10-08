@@ -473,6 +473,18 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::SetFavorite { id, favorite } => set_favorite(state, id, favorite),
         Action::RemoveFromLibrary(id) => {
+            if let Some(item) = state
+                .library
+                .iter_mut()
+                .find(|i| i.id == id && i.is_favorite())
+            {
+                item.video_id.clone_from(&item.id);
+                item.time_offset_ms = 0;
+                item.duration_ms = 0;
+                item.updated_ms = 0;
+                item.stream = None;
+                return vec![Effect::SaveLibraryItem(item.clone())];
+            }
             state.library.retain(|i| i.id != id);
             vec![Effect::DeleteLibraryItem(id)]
         }

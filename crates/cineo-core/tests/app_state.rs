@@ -716,11 +716,32 @@ fn dismissing_from_continue_watching_keeps_the_item_and_its_favourite() {
 
 #[test]
 fn removing_from_the_library_shows_no_notice() {
-    let mut state = with_library(vec![played_item("a", Some(1))]);
+    let mut state = with_library(vec![played_item("a", None)]);
     let effects = update(&mut state, Action::RemoveFromLibrary("a".into()));
     assert_eq!(effects, vec![Effect::DeleteLibraryItem("a".into())]);
     assert!(state.library.is_empty());
     assert!(state.notice.is_none());
+}
+
+#[test]
+fn removing_a_favourite_from_the_library_forgets_only_its_playback() {
+    let mut item = played_item("a", Some(1));
+    item.video_id = "a:1:2".into();
+    let mut state = with_library(vec![item]);
+    let effects = update(&mut state, Action::RemoveFromLibrary("a".into()));
+    let kept = &state.library[0];
+    assert!(kept.is_favorite());
+    assert!(!kept.was_played());
+    assert_eq!(
+        (
+            kept.video_id.as_str(),
+            kept.time_offset_ms,
+            kept.duration_ms
+        ),
+        ("a", 0, 0)
+    );
+    assert!(kept.stream.is_none());
+    assert_eq!(effects, vec![Effect::SaveLibraryItem(kept.clone())]);
 }
 
 #[test]
