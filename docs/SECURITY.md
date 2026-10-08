@@ -125,6 +125,13 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   replaced; the user is told (`corrupt_file_is_reported_and_left_untouched`,
   `newer_schema_is_refused_and_left_untouched`). `cineo doctor` opens it
   read-only.
+- Each library item keeps the stream it was last played from, so it can
+  resume without asking the addons again. That stream's URL and
+  `proxyHeaders` can carry addon tokens; they are stored in the private
+  database only, never logged. A saved stream is parsed back with the same
+  lenient parser as an addon response, and only playable sources are kept
+  (`playable_streams_survive_saving_and_others_are_not_saved`,
+  `an_unreadable_saved_stream_is_dropped_and_the_item_kept`).
 - Secrets (future account tokens) go to the OS keyring. They are never
   written to SQLite, logs or exports.
 

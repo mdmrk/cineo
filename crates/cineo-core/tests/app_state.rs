@@ -9,8 +9,8 @@ use cineo_core::addon::{
     parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, Setting, Settings, State, TorrentRequest,
-    TorrentStatus, WatchedAt, continue_watching, update,
+    Action, Effect, Language, LibraryItem, Loadable, SavedStream, Setting, Settings, State,
+    TorrentRequest, TorrentStatus, WatchedAt, continue_watching, update,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -489,6 +489,128 @@ fn playing_an_http_stream_records_library_and_resumes() {
     assert_eq!(play.start_ms, 60_000, "resumes");
 }
 
+fn play_effect(effects: &[Effect]) -> Option<&cineo_core::app::PlayRequest> {
+    effects.iter().find_map(|e| match e {
+        Effect::Play(play) => Some(&**play),
+        _ => None,
+    })
+}
+
+fn watched_a_minute(state: &mut State, play: Action) {
+    update(state, play);
+    update(
+        state,
+        Action::PlaybackProgress {
+            meta_id: "tt0000001".into(),
+            video_id: "tt0000001".into(),
+            time_ms: 60_000,
+            duration_ms: 600_000,
+            now_ms: 5,
+        },
+    );
+    update(state, Action::PlaybackStopped);
+    update(state, Action::CloseDetail);
+}
+
+#[test]
+fn resuming_replays_the_saved_stream_at_the_saved_position() {
+    let mut state = detail_with_streams();
+    watched_a_minute(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    let saved = state.library[0].stream.as_deref().unwrap();
+    assert_eq!(
+        SavedStream::parse(&saved.to_json().unwrap()).as_ref(),
+        Some(saved)
+    );
+
+    let effects = update(&mut state, Action::Resume("tt0000001".into()));
+    let play = play_effect(&effects).unwrap();
+    assert_eq!(play.url.as_str(), "https://media.example/v/1.mp4");
+    assert_eq!(play.start_ms, 60_000);
+    assert_eq!(play.headers.len(), 2);
+    assert_eq!(
+        play.logo.as_ref().map(url::Url::as_str),
+        Some("https://img.example/logo/tt0000001.png")
+    );
+    assert!(state.detail.is_none(), "no detail page on the way");
+    assert!(state.subtitles[0].path.is_none(), "the stream's own first");
+    let fetches = effects
+        .iter()
+        .filter(|e| matches!(e, Effect::FetchSubtitles { .. }))
+        .count();
+    assert_eq!(fetches, state.subtitles.len() - 1, "subtitle addons asked");
+}
+
+#[test]
+fn resuming_without_a_saved_stream_opens_the_detail_page() {
+    let (mut state, _) = restored();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: Vec::new(),
+            library: vec![LibraryItem {
+                id: "tt0000001".into(),
+                content_type: ty("movie"),
+                name: "Film".into(),
+                poster: None,
+                video_id: "tt0000001".into(),
+                time_offset_ms: 60_000,
+                duration_ms: 600_000,
+                updated_ms: 1,
+                stream: None,
+            }],
+        },
+    );
+    let effects = update(&mut state, Action::Resume("tt0000001".into()));
+    assert!(play_effect(&effects).is_none());
+    assert!(matches!(effects.as_slice(), [Effect::FetchMeta { .. }]));
+    assert_eq!(state.detail.as_ref().unwrap().id, "tt0000001");
+}
+
+#[test]
+fn a_saved_stream_that_fails_opens_the_detail_page_with_a_notice() {
+    let mut state = detail_with_streams();
+    watched_a_minute(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    update(&mut state, Action::Resume("tt0000001".into()));
+    let effects = update(&mut state, Action::PlaybackFailed("HTTP 403".into()));
+    assert!(matches!(effects.as_slice(), [Effect::FetchMeta { .. }]));
+    assert_eq!(state.detail.as_ref().unwrap().id, "tt0000001");
+    assert!(state.notice.as_deref().unwrap().contains("HTTP 403"));
+
+    update(&mut state, Action::CloseDetail);
+    update(&mut state, Action::PlaybackFailed("HTTP 500".into()));
+    assert!(state.detail.is_none(), "only a resumed playback goes back");
+    assert_eq!(state.notice.as_deref(), Some("HTTP 500"));
+}
+
+#[test]
+fn a_saved_torrent_opens_the_detail_page_when_p2p_is_off() {
+    let mut state = detail_with_p2p_accepted();
+    watched_a_minute(&mut state, PLAY_TORRENT);
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::P2pEnabled(false)),
+    );
+    let effects = update(&mut state, Action::Resume("tt0000001".into()));
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::StartTorrent(_) | Effect::Play(_)))
+    );
+    assert!(state.detail.is_some());
+}
+
 #[test]
 fn unsupported_sources_are_explained_not_played() {
     let mut state = detail_with_streams();
@@ -770,6 +892,7 @@ fn continue_watching_excludes_finished_and_sorts_by_recency() {
         time_offset_ms: t,
         duration_ms: d,
         updated_ms: u,
+        stream: None,
     };
     let items = vec![
         item("a", 10, 100, 1),
@@ -803,6 +926,7 @@ fn the_watched_threshold_decides_what_is_finished() {
         time_offset_ms: 86,
         duration_ms: 100,
         updated_ms: 1,
+        stream: None,
     };
     assert!(item.is_finished(WatchedAt::P85));
     assert!(!item.is_finished(WatchedAt::P90));
@@ -824,6 +948,7 @@ fn clearing_the_library_forgets_every_item() {
         time_offset_ms: 1,
         duration_ms: 100,
         updated_ms: 1,
+        stream: None,
     };
     update(
         &mut state,

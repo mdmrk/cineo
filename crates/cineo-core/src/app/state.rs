@@ -2,7 +2,7 @@
 
 use url::Url;
 
-use super::library::LibraryItem;
+use super::library::{LibraryItem, SavedStream};
 use super::plan::{self, CatalogTarget};
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
@@ -139,6 +139,8 @@ pub struct State {
     pub torrent: Option<TorrentPlayback>,
     /// Addon subtitles for the current playback, stream subtitles first.
     pub subtitles: Vec<SubtitleGroup>,
+    /// The meta id when the current playback replays a saved stream.
+    pub resumed: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -169,6 +171,8 @@ pub enum Action {
     },
     CloseDetail,
     SelectVideo(String),
+    /// Plays a library item from its saved stream, or opens its detail page.
+    Resume(String),
     Play {
         group: usize,
         stream: usize,
@@ -373,36 +377,13 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             content_type,
             id,
             preview,
-        } => {
-            let mut candidates = plan::meta_candidates(&state.addons, &content_type, &id);
-            let first = if candidates.is_empty() {
-                None
-            } else {
-                Some(candidates.remove(0))
-            };
-            state.detail = Some(Detail {
-                meta: if first.is_some() {
-                    Loadable::Loading
-                } else {
-                    Loadable::Failed("No installed addon provides details for this item".into())
-                },
-                content_type,
-                id,
-                preview: preview.map(|p| *p),
-                meta_fallbacks: candidates,
-                meta_request: first.clone(),
-                selected_video: None,
-                streams: Vec::new(),
-            });
-            first
-                .map(|(addon, path)| vec![Effect::FetchMeta { addon, path }])
-                .unwrap_or_default()
-        }
+        } => open_detail(state, content_type, id, preview.map(|p| *p)),
         Action::CloseDetail => {
             state.detail = None;
             Vec::new()
         }
         Action::SelectVideo(video_id) => select_video(state, video_id),
+        Action::Resume(meta_id) => resume(state, &meta_id),
         Action::Play { group, stream } => play(state, group, stream),
         Action::PlaybackProgress {
             meta_id,
@@ -423,12 +404,14 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             vec![Effect::SaveLibraryItem(item.clone())]
         }
         Action::PlaybackFailed(reason) => {
-            state.notice = Some(reason);
             state.subtitles.clear();
-            stop_torrent(state)
+            let mut effects = stop_torrent(state);
+            effects.extend(resume_failed(state, reason));
+            effects
         }
         Action::PlaybackStopped => {
             state.subtitles.clear();
+            state.resumed = None;
             stop_torrent(state)
         }
         Action::SubtitlesLoaded {
@@ -531,8 +514,12 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .as_ref()
                 .is_some_and(|t| t.info_hash == info_hash)
             {
-                state.notice = Some(format!("The torrent could not be played: {reason}"));
-                stop_torrent(state)
+                let mut effects = stop_torrent(state);
+                effects.extend(resume_failed(
+                    state,
+                    format!("The torrent could not be played: {reason}"),
+                ));
+                effects
             } else {
                 Vec::new()
             }
@@ -864,6 +851,65 @@ fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
         .collect()
 }
 
+fn open_detail(
+    state: &mut State,
+    content_type: ContentType,
+    id: String,
+    preview: Option<MetaPreview>,
+) -> Vec<Effect> {
+    let mut candidates = plan::meta_candidates(&state.addons, &content_type, &id);
+    let first = if candidates.is_empty() {
+        None
+    } else {
+        Some(candidates.remove(0))
+    };
+    state.detail = Some(Detail {
+        meta: if first.is_some() {
+            Loadable::Loading
+        } else {
+            Loadable::Failed("No installed addon provides details for this item".into())
+        },
+        content_type,
+        id,
+        preview,
+        meta_fallbacks: candidates,
+        meta_request: first.clone(),
+        selected_video: None,
+        streams: Vec::new(),
+    });
+    first
+        .map(|(addon, path)| vec![Effect::FetchMeta { addon, path }])
+        .unwrap_or_default()
+}
+
+enum Source {
+    Play(Url, Option<TorrentRequest>),
+    NeedsConsent,
+    Refused(String),
+    Unusable,
+}
+
+fn resolve(settings: &Settings, stream: &Stream) -> Source {
+    match &stream.source {
+        StreamSource::Url(url) if stream.source.is_playable() => Source::Play(url.clone(), None),
+        StreamSource::Url(url) => {
+            Source::Refused(format!("Unsupported stream scheme `{}`", url.scheme()))
+        }
+        StreamSource::Torrent { .. } if !settings.p2p_enabled => {
+            Source::Refused("Torrent streams are turned off in Settings".into())
+        }
+        StreamSource::Torrent { .. } if !settings.p2p_acknowledged => Source::NeedsConsent,
+        StreamSource::Torrent { .. } => match TorrentRequest::from_stream(stream) {
+            Some(request) => Source::Play(request.magnet(), Some(request)),
+            None => Source::Unusable,
+        },
+        _ => Source::Refused(format!(
+            "{} streams are not supported yet",
+            stream.source.kind_label()
+        )),
+    }
+}
+
 fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let Some(detail) = state.detail.as_ref() else {
         return Vec::new();
@@ -871,39 +917,27 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let Some(video_id) = detail.selected_video.clone() else {
         return Vec::new();
     };
-    let Some(stream) = detail
+    let Some(source_group) = detail.streams.get(group) else {
+        return Vec::new();
+    };
+    let Some(stream) = source_group
         .streams
-        .get(group)
-        .and_then(|g| g.streams.ready())
+        .ready()
         .and_then(|s| s.get(stream_index))
     else {
         return Vec::new();
     };
-    let (url, torrent) = match &stream.source {
-        StreamSource::Url(url) if stream.source.is_playable() => (url.clone(), None),
-        StreamSource::Url(url) => {
-            state.notice = Some(format!("Unsupported stream scheme `{}`", url.scheme()));
-            return Vec::new();
-        }
-        StreamSource::Torrent { .. } if !state.settings.p2p_enabled => {
-            state.notice = Some("Torrent streams are turned off in Settings".into());
-            return Vec::new();
-        }
-        StreamSource::Torrent { .. } if !state.settings.p2p_acknowledged => {
+    let (url, torrent) = match resolve(&state.settings, stream) {
+        Source::Play(url, torrent) => (url, torrent),
+        Source::NeedsConsent => {
             state.p2p_prompt = Some((group, stream_index));
             return Vec::new();
         }
-        StreamSource::Torrent { .. } => match TorrentRequest::from_stream(stream) {
-            Some(request) => (request.magnet(), Some(request)),
-            None => return Vec::new(),
-        },
-        _ => {
-            state.notice = Some(format!(
-                "{} streams are not supported yet",
-                stream.source.kind_label()
-            ));
+        Source::Refused(notice) => {
+            state.notice = Some(notice);
             return Vec::new();
         }
+        Source::Unusable => return Vec::new(),
     };
     let preview = detail
         .meta
@@ -924,17 +958,30 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         Some(ep) => format!("{name} — {ep}"),
         None => name.clone(),
     };
-    let subtitles = subtitle_groups(state, detail, group, stream, &video_id);
+    let subtitles = subtitle_groups(
+        state,
+        &detail.content_type,
+        Some((&source_group.addon, &source_group.addon_name)),
+        stream,
+        &video_id,
+    );
     let headers = if torrent.is_some() {
         Vec::new()
     } else {
         stream.request_headers.clone()
     };
+    let saved = SavedStream {
+        addon: source_group.addon.clone(),
+        title: title.clone(),
+        logo: preview.as_ref().and_then(|p| p.logo.clone()),
+        background: preview.as_ref().and_then(|p| p.background.clone()),
+        stream: stream.clone(),
+    };
     let request = PlayRequest {
         url,
         title,
-        logo: preview.as_ref().and_then(|p| p.logo.clone()),
-        background: preview.as_ref().and_then(|p| p.background.clone()),
+        logo: saved.logo.clone(),
+        background: saved.background.clone(),
         headers,
         settings: state.settings,
         start_ms: 0,
@@ -952,6 +999,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
                 item.time_offset_ms = 0;
                 item.duration_ms = 0;
             }
+            item.stream = Some(Box::new(saved));
             start
         }
         None => {
@@ -964,6 +1012,7 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
                 time_offset_ms: 0,
                 duration_ms: 0,
                 updated_ms: 0,
+                stream: Some(Box::new(saved)),
             });
             0
         }
@@ -972,10 +1021,82 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     if let Some(item) = state.library.iter().find(|i| i.id == meta_id) {
         effects.push(Effect::SaveLibraryItem(item.clone()));
     }
-    let request = PlayRequest {
-        start_ms,
-        ..request
+    state.resumed = None;
+    effects.extend(start_playback(
+        state,
+        PlayRequest {
+            start_ms,
+            ..request
+        },
+        torrent,
+        subtitles,
+    ));
+    effects
+}
+
+fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
+    let Some(item) = state.library.iter().find(|i| i.id == meta_id) else {
+        return Vec::new();
     };
+    let source = item
+        .stream
+        .as_ref()
+        .map(|saved| resolve(&state.settings, &saved.stream));
+    let (Some(saved), Some(Source::Play(url, torrent))) = (item.stream.as_deref().cloned(), source)
+    else {
+        return open_detail(state, item.content_type.clone(), item.id.clone(), None);
+    };
+    let video_id = item.video_id.clone();
+    let addon_name = addon_name(state, &saved.addon);
+    let subtitles = subtitle_groups(
+        state,
+        &item.content_type,
+        Some((&saved.addon, &addon_name)),
+        &saved.stream,
+        &video_id,
+    );
+    let request = PlayRequest {
+        url,
+        title: saved.title,
+        logo: saved.logo,
+        background: saved.background,
+        headers: if torrent.is_some() {
+            Vec::new()
+        } else {
+            saved.stream.request_headers
+        },
+        settings: state.settings,
+        start_ms: item.resume_ms(&video_id, state.settings.watched_at),
+        meta_id: item.id.clone(),
+        video_id,
+    };
+    state.resumed = Some(item.id.clone());
+    start_playback(state, request, torrent, subtitles)
+}
+
+fn resume_failed(state: &mut State, reason: String) -> Vec<Effect> {
+    let item = state
+        .resumed
+        .take()
+        .and_then(|id| state.library.iter().find(|i| i.id == id))
+        .map(|i| (i.content_type.clone(), i.id.clone()));
+    let Some((content_type, id)) = item else {
+        state.notice = Some(reason);
+        return Vec::new();
+    };
+    state.notice = Some(format!(
+        "The last stream could not be played, pick another one. {reason}"
+    ));
+    open_detail(state, content_type, id, None)
+}
+
+fn start_playback(
+    state: &mut State,
+    request: PlayRequest,
+    torrent: Option<TorrentRequest>,
+    subtitles: Vec<SubtitleGroup>,
+) -> Vec<Effect> {
+    let mut effects = Vec::new();
     let fetch_subtitles: Vec<Effect> = subtitles
         .iter()
         .filter_map(|g| {
@@ -1009,20 +1130,20 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
 /// the reference client's order.
 fn subtitle_groups(
     state: &State,
-    detail: &Detail,
-    group: usize,
+    content_type: &ContentType,
+    source: Option<(&TransportUrl, &str)>,
     stream: &Stream,
     video_id: &str,
 ) -> Vec<SubtitleGroup> {
     let mut groups = Vec::new();
-    if let Some(source) = detail.streams.get(group)
+    if let Some((addon, addon_name)) = source
         && !stream.subtitles.is_empty()
     {
         let mut subtitles = stream.subtitles.clone();
         dedup_by_url(&mut subtitles);
         groups.push(SubtitleGroup {
-            addon: source.addon.clone(),
-            addon_name: source.addon_name.clone(),
+            addon: addon.clone(),
+            addon_name: addon_name.to_owned(),
             path: None,
             subtitles: Loadable::Ready(subtitles),
         });
@@ -1036,7 +1157,7 @@ fn subtitle_groups(
     .filter_map(|(name, value)| value.map(|v| ExtraValue::new(name, v)))
     .collect();
     groups.extend(
-        plan::subtitle_targets(&state.addons, &detail.content_type, video_id)
+        plan::subtitle_targets(&state.addons, content_type, video_id)
             .into_iter()
             .map(|(addon, path)| SubtitleGroup {
                 addon_name: addon_name(state, &addon),

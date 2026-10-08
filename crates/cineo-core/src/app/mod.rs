@@ -9,7 +9,7 @@ mod state;
 mod torrent;
 
 pub use language::Language;
-pub use library::{LibraryItem, continue_watching};
+pub use library::{LibraryItem, SavedStream, continue_watching};
 pub use plan::{
     CatalogTarget, board_targets, meta_candidates, search_targets, stream_targets, subtitle_targets,
 };

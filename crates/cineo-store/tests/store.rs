@@ -43,6 +43,7 @@ fn item(id: &str, time_offset_ms: u64, updated_ms: u64) -> LibraryItem {
         time_offset_ms,
         duration_ms: 6_000_000,
         updated_ms,
+        stream: None,
     }
 }
 
@@ -395,5 +396,27 @@ fn continue_watching_resumes_at_the_saved_position_after_restart() {
         .map(|i| (i.id.as_str(), i.time_offset_ms))
         .collect();
     assert_eq!(resume, vec![("tt0000001", 754_000)]);
+    let effects = update(&mut state, Action::Resume("tt0000001".into()));
+    let Some(Effect::Play(play)) = effects.iter().find(|e| matches!(e, Effect::Play(_))) else {
+        panic!("the saved stream plays at once: {effects:?}")
+    };
+    assert_eq!(play.url.as_str(), "https://media.example/v/1.mp4");
+    assert_eq!(play.start_ms, 754_000);
+    assert!(state.detail.is_none());
+    update(&mut state, Action::PlaybackStopped);
     assert_eq!(play_movie(&mut state, &mut store), 754_000);
+}
+
+#[test]
+fn an_unreadable_saved_stream_is_dropped_and_the_item_kept() {
+    let dir = temp_dir("bad-stream");
+    let store = Store::open_in(&dir).unwrap();
+    store.save_library_item(&item("tt1", 5, 1)).unwrap();
+    drop(store);
+    rusqlite::Connection::open(dir.join("cineo.db"))
+        .unwrap()
+        .execute("UPDATE library_items SET stream = '{\"addon\":\"x\"}'", [])
+        .unwrap();
+    let store = Store::open_in(&dir).unwrap();
+    assert_eq!(store.library().unwrap(), vec![item("tt1", 5, 1)]);
 }

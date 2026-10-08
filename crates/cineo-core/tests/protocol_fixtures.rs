@@ -8,7 +8,8 @@
 use cineo_core::addon::{
     ContentType, ExtraError, ExtraValue, IdFilter, ManifestError, PosterShape, ResourceName,
     ResourcePath, ResponseError, StreamSource, parse_catalog_response, parse_manifest,
-    parse_meta_response, parse_stream_response, parse_subtitles_response,
+    parse_meta_response, parse_stream_json, parse_stream_response, parse_subtitles_response,
+    stream_to_json,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -296,6 +297,20 @@ fn movie_meta_without_videos_has_its_own_id_as_video() {
     assert_eq!(meta.video_ids(), vec!["tt0000001"]);
     assert_eq!(meta.runtime.as_deref(), Some("120"));
     assert_eq!(meta.default_video_id.as_deref(), Some("tt0000001"));
+}
+
+#[test]
+fn playable_streams_survive_saving_and_others_are_not_saved() {
+    let streams = parse_stream_response(&fixture("basic/streams-movie.json"))
+        .unwrap()
+        .value;
+    for stream in &streams {
+        match stream_to_json(stream) {
+            Some(json) => assert_eq!(parse_stream_json(&json).as_ref(), Some(stream)),
+            None => assert!(!stream.source.is_playable(), "{stream:?}"),
+        }
+    }
+    assert_eq!(streams.iter().filter_map(stream_to_json).count(), 2);
 }
 
 #[test]

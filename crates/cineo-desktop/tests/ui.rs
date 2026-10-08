@@ -10,8 +10,8 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, DownloadLimit, Effect, InterfaceScale, Language, SeekStep, Setting, Settings,
-    StartPage, State, SubtitleColor, SubtitleSize, update,
+    Action, DownloadLimit, Effect, InterfaceScale, Language, LibraryItem, SeekStep, Setting,
+    Settings, StartPage, State, SubtitleColor, SubtitleSize, update,
 };
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;
@@ -148,6 +148,27 @@ fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
         ),
         "{actions:?}"
     );
+}
+
+#[test]
+fn a_continue_watching_card_resumes_the_item() {
+    let mut state = board_state();
+    state.library.push(LibraryItem {
+        id: "tt0000001".into(),
+        content_type: ContentType::new("movie").unwrap(),
+        name: "Half Watched".into(),
+        poster: None,
+        video_id: "tt0000001".into(),
+        time_offset_ms: 60_000,
+        duration_ms: 600_000,
+        updated_ms: 1,
+        stream: None,
+    });
+    let mut harness = harness(state, ViewState::default());
+    harness.get_by_label("Continue watching");
+    harness.get_by_label("Half Watched").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::Resume("tt0000001".into())]);
 }
 
 #[test]

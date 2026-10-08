@@ -111,6 +111,71 @@ pub fn parse_subtitles_response(bytes: &[u8]) -> Result<Parsed<Vec<Subtitle>>, R
     parse_list(bytes, "subtitles", parse_subtitle)
 }
 
+pub fn parse_stream_json(value: &Value) -> Option<Stream> {
+    parse_stream(value, "stream", &mut Warnings::default())
+}
+
+pub fn stream_to_json(stream: &Stream) -> Option<Value> {
+    let mut obj = Map::new();
+    match &stream.source {
+        StreamSource::Url(url) => {
+            obj.insert("url".into(), url.as_str().into());
+        }
+        StreamSource::Torrent {
+            info_hash,
+            file_idx,
+            sources,
+        } => {
+            obj.insert("infoHash".into(), info_hash.as_str().into());
+            if let Some(idx) = file_idx {
+                obj.insert("fileIdx".into(), (*idx).into());
+            }
+            obj.insert("sources".into(), sources.clone().into());
+        }
+        _ => return None,
+    }
+    let put = |obj: &mut Map<String, Value>, key: &str, value: &Option<String>| {
+        if let Some(value) = value {
+            obj.insert(key.into(), value.as_str().into());
+        }
+    };
+    put(&mut obj, "name", &stream.name);
+    put(&mut obj, "description", &stream.description);
+    let subtitles: Vec<Value> = stream
+        .subtitles
+        .iter()
+        .map(|s| {
+            let mut sub = Map::new();
+            sub.insert("id".into(), s.id.as_str().into());
+            sub.insert("url".into(), s.url.as_str().into());
+            sub.insert("lang".into(), s.lang.as_str().into());
+            put(&mut sub, "label", &s.label);
+            sub.into()
+        })
+        .collect();
+    obj.insert("subtitles".into(), subtitles.into());
+    let mut hints = Map::new();
+    hints.insert("notWebReady".into(), stream.not_web_ready.into());
+    put(&mut hints, "bingeGroup", &stream.binge_group);
+    put(&mut hints, "filename", &stream.filename);
+    put(&mut hints, "videoHash", &stream.video_hash);
+    if let Some(size) = stream.video_size {
+        hints.insert("videoSize".into(), size.into());
+    }
+    if !stream.request_headers.is_empty() {
+        let request: Map<String, Value> = stream
+            .request_headers
+            .iter()
+            .map(|(name, value)| (name.clone(), value.as_str().into()))
+            .collect();
+        let mut proxy = Map::new();
+        proxy.insert("request".into(), request.into());
+        hints.insert("proxyHeaders".into(), proxy.into());
+    }
+    obj.insert("behaviorHints".into(), hints.into());
+    Some(obj.into())
+}
+
 fn parse_list<T>(
     bytes: &[u8],
     key: &'static str,

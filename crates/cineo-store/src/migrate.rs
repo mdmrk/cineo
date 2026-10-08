@@ -24,6 +24,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         key TEXT PRIMARY KEY NOT NULL,
         value TEXT NOT NULL
     ) STRICT;",
+    "ALTER TABLE library_items ADD COLUMN stream TEXT;",
 ];
 
 #[expect(

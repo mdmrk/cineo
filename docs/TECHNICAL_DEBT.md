@@ -235,3 +235,13 @@ Format:
   the window is shown again, and then it pauses.
 - Exit: verify per platform; otherwise react to the window event directly.
 
+
+### Library: resuming a finished episode replays it
+- Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`resume`)
+- Gap: resuming replays the saved stream of the last played video. When
+  that episode is finished, it starts again from the beginning instead of
+  moving on to the next episode.
+- Why: binge-watching (next episode, `bingeGroup` matching) is v0.x.
+- Instead: the item plays from the start; the detail page picks any other
+  episode.
+- Exit: with binge-watching, resume a finished episode with the next one.

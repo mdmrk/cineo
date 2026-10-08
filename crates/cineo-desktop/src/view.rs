@@ -1716,7 +1716,7 @@ fn preview_card(ui: &mut Ui, width: f32, item: &MetaPreview) -> Response {
 
 fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Action>) {
     let progress = (item.time_offset_ms > 0).then(|| item.progress());
-    if card(
+    let response = card(
         ui,
         width,
         &item.name,
@@ -1724,14 +1724,29 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, out: &mut Vec<Actio
         item.poster.as_ref(),
         PosterShape::Poster,
         progress,
-    )
-    .clicked()
-    {
-        out.push(Action::OpenDetail {
-            content_type: item.content_type.clone(),
-            id: item.id.clone(),
-            preview: None,
-        });
+    );
+    if item.stream.is_some() && ui.is_rect_visible(response.rect) {
+        let hover = ui.ctx().animate_bool_with_time(
+            response.id.with("play"),
+            response.hovered() || response.has_focus(),
+            theme::ANIM,
+        );
+        let center = response.rect.center();
+        let radius = (response.rect.width() / 6.0).clamp(18.0, 28.0);
+        let fill = lerp_color(Color32::from_black_alpha(160), theme::ACCENT, hover);
+        let ink = lerp_color(theme::TEXT_BRIGHT, theme::ON_ACCENT, hover);
+        let painter = ui.painter();
+        painter.circle_filled(center, radius, fill);
+        paint_icon(
+            painter,
+            Icon::Play,
+            center + vec2(1.5, 0.0),
+            radius * 0.9,
+            ink,
+        );
+    }
+    if response.clicked() {
+        out.push(Action::Resume(item.id.clone()));
     }
 }
 

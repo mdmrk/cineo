@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
-use cineo_core::app::{Effect, LibraryItem, Setting, SettingError, Settings};
+use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
 use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use rusqlite::{Connection, ErrorCode, Row, params};
 use tracing::warn;
@@ -146,7 +146,7 @@ impl Store {
     pub fn library(&self) -> Result<Vec<LibraryItem>, StoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, content_type, name, poster, video_id,
-                    time_offset_ms, duration_ms, updated_ms
+                    time_offset_ms, duration_ms, updated_ms, stream
              FROM library_items ORDER BY updated_ms DESC, id",
         )?;
         let rows = stmt.query_map([], read_item)?;
@@ -165,8 +165,8 @@ impl Store {
         self.conn.execute(
             "INSERT INTO library_items
                  (id, content_type, name, poster, video_id,
-                  time_offset_ms, duration_ms, updated_ms)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                  time_offset_ms, duration_ms, updated_ms, stream)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
              ON CONFLICT (id) DO UPDATE SET
                  content_type = excluded.content_type,
                  name = excluded.name,
@@ -174,7 +174,8 @@ impl Store {
                  video_id = excluded.video_id,
                  time_offset_ms = excluded.time_offset_ms,
                  duration_ms = excluded.duration_ms,
-                 updated_ms = excluded.updated_ms",
+                 updated_ms = excluded.updated_ms,
+                 stream = excluded.stream",
             params![
                 item.id,
                 item.content_type.as_str(),
@@ -184,6 +185,7 @@ impl Store {
                 to_sql_int(item.time_offset_ms),
                 to_sql_int(item.duration_ms),
                 to_sql_int(item.updated_ms),
+                item.stream.as_ref().and_then(|s| s.to_json()),
             ],
         )?;
         Ok(())
@@ -274,6 +276,10 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
     let poster = poster
         .and_then(|raw| Url::parse(&raw).ok())
         .filter(|url| matches!(url.scheme(), "http" | "https"));
+    let stream: Option<String> = row.get(8)?;
+    let stream = stream
+        .and_then(|raw| SavedStream::parse(&raw))
+        .map(Box::new);
     Ok(Ok(LibraryItem {
         id,
         content_type,
@@ -283,6 +289,7 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
         time_offset_ms,
         duration_ms,
         updated_ms,
+        stream,
     }))
 }
 
