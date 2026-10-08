@@ -28,17 +28,11 @@ pub(crate) fn register() -> anyhow::Result<()> {
     );
     let file = "cineo-links.desktop";
     std::fs::write(dir.join(file), entry)?;
-    let _ = Command::new("update-desktop-database").arg(&dir).status();
-    let status = Command::new("xdg-mime")
+    let _ = Command::new("update-desktop-database").arg(&dir).output();
+    run(Command::new("xdg-mime")
         .arg("default")
         .arg(file)
-        .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}")))
-        .status()
-        .context("cannot run xdg-mime")?;
-    if !status.success() {
-        bail!("xdg-mime failed ({status})");
-    }
-    Ok(())
+        .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}"))))
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
@@ -81,16 +75,21 @@ pub(crate) fn register() -> anyhow::Result<()> {
                 command.clone(),
             ],
         ] {
-            let status = Command::new("reg")
-                .arg("add")
-                .args(&args)
-                .arg("/f")
-                .status()
-                .context("cannot run reg.exe")?;
-            if !status.success() {
-                bail!("reg.exe failed ({status})");
-            }
+            run(Command::new("reg").arg("add").args(&args).arg("/f"))?;
         }
+    }
+    Ok(())
+}
+
+#[cfg(any(windows, all(unix, not(target_os = "macos"))))]
+fn run(command: &mut Command) -> anyhow::Result<()> {
+    let program = command.get_program().to_string_lossy().into_owned();
+    let output = command
+        .output()
+        .with_context(|| format!("cannot run {program}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("{program} failed ({}): {}", output.status, stderr.trim());
     }
     Ok(())
 }
