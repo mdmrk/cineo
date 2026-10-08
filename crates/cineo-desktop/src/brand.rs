@@ -45,8 +45,7 @@ fn grain_image([width, height]: [usize; 2]) -> ColorImage {
     let mut seed: u32 = 0x9e37_79b9;
     let mut pixels = Vec::with_capacity(width * height);
     for y in 0..height {
-        let fade = 1.0 - y as f32 / height.max(1) as f32;
-        let fade = fade * fade * (3.0 - 2.0 * fade);
+        let fade = fade(y as f32 / height.max(1) as f32);
         for x in 0..width {
             seed ^= seed << 13;
             seed ^= seed >> 17;
@@ -65,6 +64,12 @@ fn grain_image([width, height]: [usize; 2]) -> ColorImage {
         }
     }
     ColorImage::new([width, height], pixels)
+}
+
+/// How much of the sidebar backdrop shows at `t` (0 top, 1 bottom).
+pub(crate) fn fade(t: f32) -> f32 {
+    let fade = 1.0 - t.clamp(0.0, 1.0);
+    fade * fade * (3.0 - 2.0 * fade)
 }
 
 const GRAIN: f32 = 14.0;

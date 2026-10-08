@@ -450,9 +450,31 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
         Color32::WHITE,
     );
     if let Some(texture) = brand::logo(ui.ctx()) {
-        painter.image(texture.id(), rect, full, theme::LOGO_TINT);
+        let mut mesh = Mesh::with_texture(texture.id());
+        for row in 0..=LOGO_FADE_ROWS {
+            #[expect(clippy::cast_precision_loss, reason = "a small row count")]
+            let v = row as f32 / LOGO_FADE_ROWS as f32;
+            let y = rect.top() + v * rect.height();
+            let tint = theme::LOGO_TINT
+                .gamma_multiply(brand::fade((y - backdrop.top()) / backdrop.height()));
+            for (x, u) in [(rect.left(), 0.0), (rect.right(), 1.0)] {
+                mesh.vertices.push(egui::epaint::Vertex {
+                    pos: pos2(x, y),
+                    uv: pos2(u, v),
+                    color: tint,
+                });
+            }
+            if row > 0 {
+                let i = row * 2;
+                mesh.add_triangle(i - 2, i - 1, i + 1);
+                mesh.add_triangle(i - 2, i + 1, i);
+            }
+        }
+        painter.add(mesh);
     }
 }
+
+const LOGO_FADE_ROWS: u32 = 24;
 
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
