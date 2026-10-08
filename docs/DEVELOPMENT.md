@@ -526,37 +526,31 @@ added since are in the table above. One open question from that research:
 
 ## Releasing
 
-There are no releases yet. The pipeline exists so the first release is
-boring.
-
 - **Versioning:** SemVer. `0.x` until v1.0, and anything may change in
   `0.x`. The workspace version in the root `Cargo.toml` is the single source.
 - **Tags:** `vMAJOR.MINOR.PATCH`, with an optional pre-release suffix
   (`v0.1.0-alpha.1`). Tags containing `-` become GitHub pre-releases.
+
+`.github/workflows/release.yml` builds `cineo-desktop` for Linux x86_64,
+Windows x86_64 and macOS arm64, packages each build with the README, the
+license and the font licenses, and attests build provenance (check a file
+with `gh attestation verify <file> --repo <owner>/cineo`). The `cineo` CLI
+is not shipped. libmpv is not bundled.
 
 ### Steps
 
 1. On `main` with green CI: bump `version` in `Cargo.toml`.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
-4. `.github/workflows/release.yml`:
-   - tests and builds `cineo` for Linux x86_64, Windows x86_64 and macOS
-     arm64,
-   - packages each build with the README and licenses,
-   - attests build provenance,
-   - writes `SHA256SUMS`,
-   - creates a **draft** release.
-5. Review the draft (download, check a checksum, run
-   `gh attestation verify <file> --repo <owner>/cineo`), then publish.
+4. The workflow runs the tests, builds, and publishes the release `vX.Y.Z`
+   with notes generated from the commits since the previous tag.
 
 ### Prerelease builds
 
-`.github/workflows/prerelease.yml` runs on every push to `main` (and by
-hand). It builds `cineo` and `cineo-desktop` for the same three targets,
-packages them with the README, the license and the font licenses, attests
-provenance, writes `SHA256SUMS`, then deletes the previous `prerelease`
-GitHub release and its tag and recreates both at the pushed commit. It does
-not run tests; CI does that in parallel. libmpv is not bundled.
+Every push to `main` (or a manual run on `main`) runs the same workflow
+without tests (CI runs them in parallel). It deletes the previous
+`prerelease` GitHub release and its tag and recreates both at the pushed
+commit.
 
 ### Not yet decided (M7)
 

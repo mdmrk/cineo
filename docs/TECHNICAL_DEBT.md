@@ -184,18 +184,6 @@ Format:
 - Exit: bundle fonts for more scripts, wait for bidi support in egui, and
   give IO errors typed kinds that the UI can word.
 
-### Desktop UI: the font licenses are not packaged in tagged releases
-- Where: [release.yml](../.github/workflows/release.yml),
-  [assets/fonts](../crates/cineo-desktop/assets/fonts)
-- Gap: the OFL-1.1 texts of the bundled fonts and the Tabler MIT notice
-  from `iconflow` must ship with any `cineo-desktop` binary. The rolling
-  `prerelease` build ([prerelease.yml](../.github/workflows/prerelease.yml))
-  copies them; tagged releases still ship only the `cineo` CLI.
-- Why: desktop packaging for tagged releases is M7.
-- Instead: the licenses sit next to the font files in the source tree.
-- Exit: when tagged releases package the desktop app (M7), copy the same
-  files as `prerelease.yml` does.
-
 ### Desktop UI: no app icon on Wayland
 - Where: [brand.rs](../crates/cineo-desktop/src/brand.rs), `app::run`
 - Gap: the window icon is set through `ViewportBuilder::with_icon`.
