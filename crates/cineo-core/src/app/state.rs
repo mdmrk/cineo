@@ -7,7 +7,7 @@ use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
     ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, StreamSource,
-    Subtitle, TransportUrl,
+    Subtitle, TransportUrl, Video,
 };
 
 /// An installed addon: identity (transport URL) plus its manifest.
@@ -159,6 +159,23 @@ pub struct Playing {
     pub resumed: bool,
     /// Saved on the item once playback progresses.
     pub stream: Option<Box<SavedStream>>,
+    pub content_type: ContentType,
+    pub video_id: String,
+    pub addon: TransportUrl,
+    pub binge_group: Option<String>,
+    pub meta: Option<Meta>,
+    pub meta_request: Option<(TransportUrl, ResourcePath)>,
+    pub next: Option<NextVideo>,
+    pub next_checked: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NextVideo {
+    pub video: Video,
+    pub title: String,
+    pub image: Option<Url>,
+    pub path: Option<ResourcePath>,
+    pub stream: Option<Stream>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -204,6 +221,8 @@ pub enum Action {
     },
     PlaybackFailed(String),
     PlaybackStopped,
+    PlaybackEnded,
+    PlayNext,
     RemoveFromLibrary(String),
     DismissContinueWatching(String),
     SetFavorite {
@@ -406,13 +425,21 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             duration_ms,
             now_ms,
         } => {
+            if state
+                .playing
+                .as_ref()
+                .is_some_and(|p| p.meta_id == meta_id && p.video_id != video_id)
+            {
+                return Vec::new();
+            }
+            let mut effects = check_next(state, now_ms);
             let mut stream = None;
             if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_id == meta_id) {
                 playing.resumed = false;
                 stream = playing.stream.take();
             }
             let Some(item) = state.library.iter_mut().find(|i| i.id == meta_id) else {
-                return Vec::new();
+                return effects;
             };
             if stream.is_some() {
                 item.stream = stream;
@@ -423,7 +450,8 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 item.duration_ms = duration_ms;
             }
             item.updated_ms = now_ms;
-            vec![Effect::SaveLibraryItem(item.clone())]
+            effects.push(Effect::SaveLibraryItem(item.clone()));
+            effects
         }
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
@@ -432,6 +460,18 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::PlaybackStopped => {
             state.subtitles.clear();
             playback_ended(state, None)
+        }
+        Action::PlaybackEnded => {
+            state.subtitles.clear();
+            if state.settings.binge_watching {
+                play_next(state)
+            } else {
+                playback_ended(state, None)
+            }
+        }
+        Action::PlayNext => {
+            state.subtitles.clear();
+            play_next(state)
         }
         Action::SubtitlesLoaded {
             addon,
@@ -527,6 +567,18 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             path,
             result,
         } => {
+            if let Some(playing) = state.playing.as_mut().filter(|p| p.addon == addon)
+                && let Some(next) = playing
+                    .next
+                    .as_mut()
+                    .filter(|n| n.path.as_ref() == Some(&path))
+                && let Ok(streams) = &result
+            {
+                next.stream = streams
+                    .iter()
+                    .find(|s| s.binge_group.is_some() && s.binge_group == playing.binge_group)
+                    .cloned();
+            }
             if let Some(group) = state.detail.as_mut().and_then(|d| {
                 d.streams
                     .iter_mut()
@@ -810,6 +862,11 @@ fn meta_loaded(
     path: &ResourcePath,
     result: Result<Box<Meta>, String>,
 ) -> Vec<Effect> {
+    let request = Some((addon.clone(), path.clone()));
+    if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_request == request) {
+        playing.meta_request = None;
+        playing.meta = result.as_ref().ok().map(|m| (**m).clone());
+    }
     let Some(detail) = state.detail.as_mut() else {
         return Vec::new();
     };
@@ -971,6 +1028,17 @@ fn resolve(settings: &Settings, stream: &Stream) -> Source {
     }
 }
 
+struct Start {
+    content_type: ContentType,
+    meta_id: String,
+    meta: Option<Meta>,
+    preview: Option<MetaPreview>,
+    video_id: String,
+    addon: TransportUrl,
+    addon_name: String,
+    stream: Stream,
+}
+
 fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     let Some(detail) = state.detail.as_ref() else {
         return Vec::new();
@@ -1000,30 +1068,66 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         }
         Source::Unusable => return Vec::new(),
     };
-    let preview = detail
-        .meta
-        .ready()
-        .map(|m| m.preview.clone())
-        .or_else(|| detail.preview.clone());
-    let name = preview.as_ref().map(|p| p.name.clone()).unwrap_or_default();
-    let episode_title = detail.meta.ready().and_then(|m| {
+    let start = Start {
+        content_type: detail.content_type.clone(),
+        meta_id: detail.id.clone(),
+        meta: detail.meta.ready().cloned(),
+        preview: detail
+            .meta
+            .ready()
+            .map(|m| m.preview.clone())
+            .or_else(|| detail.preview.clone()),
+        video_id,
+        addon: source_group.addon.clone(),
+        addon_name: source_group.addon_name.clone(),
+        stream: stream.clone(),
+    };
+    start_stream(state, start, url, torrent)
+}
+
+fn episode_title(video: &Video) -> String {
+    match (video.season, video.episode) {
+        (Some(s), Some(e)) => format!("S{s:02}E{e:02} {}", video.title),
+        _ => video.title.clone(),
+    }
+}
+
+fn video_title(name: &str, meta: Option<&Meta>, video_id: &str) -> String {
+    let episode = meta.and_then(|m| {
         m.videos
             .iter()
             .find(|v| v.id == video_id)
-            .map(|v| match (v.season, v.episode) {
-                (Some(s), Some(e)) => format!("S{s:02}E{e:02} {}", v.title),
-                _ => v.title.clone(),
-            })
+            .map(episode_title)
     });
-    let title = match episode_title {
+    match episode {
         Some(ep) => format!("{name} — {ep}"),
-        None => name.clone(),
-    };
+        None => name.to_owned(),
+    }
+}
+
+fn start_stream(
+    state: &mut State,
+    start: Start,
+    url: Url,
+    torrent: Option<TorrentRequest>,
+) -> Vec<Effect> {
+    let Start {
+        content_type,
+        meta_id,
+        meta,
+        preview,
+        video_id,
+        addon,
+        addon_name,
+        stream,
+    } = start;
+    let name = preview.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let title = video_title(&name, meta.as_ref(), &video_id);
     let subtitles = subtitle_groups(
         state,
-        &detail.content_type,
-        (&source_group.addon, &source_group.addon_name),
-        stream,
+        &content_type,
+        (&addon, &addon_name),
+        &stream,
         &video_id,
     );
     let headers = if torrent.is_some() {
@@ -1031,12 +1135,13 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
     } else {
         stream.request_headers.clone()
     };
+    let binge_group = stream.binge_group.clone();
     let saved = SavedStream {
-        addon: source_group.addon.clone(),
+        addon: addon.clone(),
         title: title.clone(),
         logo: preview.as_ref().and_then(|p| p.logo.clone()),
         background: preview.as_ref().and_then(|p| p.background.clone()),
-        stream: stream.clone(),
+        stream,
     };
     let request = PlayRequest {
         url,
@@ -1046,11 +1151,9 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         headers,
         settings: state.settings,
         start_ms: 0,
-        meta_id: detail.id.clone(),
+        meta_id: meta_id.clone(),
         video_id: video_id.clone(),
     };
-    let content_type = detail.content_type.clone();
-    let meta_id = detail.id.clone();
 
     let start_ms = match state.library.iter_mut().find(|i| i.id == meta_id) {
         Some(item) => {
@@ -1065,10 +1168,10 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         None => {
             state.library.push(LibraryItem {
                 id: meta_id.clone(),
-                content_type,
+                content_type: content_type.clone(),
                 name,
                 poster: preview.and_then(|p| p.poster),
-                video_id,
+                video_id: video_id.clone(),
                 time_offset_ms: 0,
                 duration_ms: 0,
                 updated_ms: 0,
@@ -1086,6 +1189,14 @@ fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<Effect> {
         meta_id,
         resumed: false,
         stream: Some(Box::new(saved)),
+        content_type,
+        video_id,
+        addon,
+        binge_group,
+        meta,
+        meta_request: None,
+        next: None,
+        next_checked: false,
     });
     effects.extend(start_playback(
         state,
@@ -1120,6 +1231,9 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
         &saved.stream,
         &video_id,
     );
+    let meta_request = plan::meta_candidates(&state.addons, &item.content_type, &item.id)
+        .into_iter()
+        .next();
     let request = PlayRequest {
         url,
         title: saved.title,
@@ -1133,14 +1247,139 @@ fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
         settings: state.settings,
         start_ms: item.resume_ms(&video_id, state.settings.watched_at),
         meta_id: item.id.clone(),
-        video_id,
+        video_id: video_id.clone(),
     };
     state.playing = Some(Playing {
         meta_id: item.id.clone(),
         resumed: true,
         stream: None,
+        content_type: item.content_type.clone(),
+        video_id,
+        addon: saved.addon,
+        binge_group: saved.stream.binge_group,
+        meta: None,
+        meta_request: meta_request.clone(),
+        next: None,
+        next_checked: false,
     });
-    start_playback(state, request, torrent, subtitles)
+    let mut effects = start_playback(state, request, torrent, subtitles);
+    effects.extend(meta_request.map(|(addon, path)| Effect::FetchMeta { addon, path }));
+    effects
+}
+
+fn check_next(state: &mut State, now_ms: u64) -> Vec<Effect> {
+    let Some(playing) = state.playing.as_mut().filter(|p| !p.next_checked) else {
+        return Vec::new();
+    };
+    let Some(meta) = &playing.meta else {
+        return Vec::new();
+    };
+    playing.next_checked = true;
+    let Some(video) = meta.next_video(&playing.video_id, now_ms).cloned() else {
+        return Vec::new();
+    };
+    let path = playing.binge_group.as_ref().and_then(|_| {
+        plan::stream_targets(&state.addons, &playing.content_type, &video.id)
+            .into_iter()
+            .find(|(addon, _)| *addon == playing.addon)
+            .map(|(_, path)| path)
+    });
+    let effects = path
+        .iter()
+        .map(|path| Effect::FetchStreams {
+            addon: playing.addon.clone(),
+            path: path.clone(),
+        })
+        .collect();
+    playing.next = Some(NextVideo {
+        title: episode_title(&video),
+        image: video
+            .thumbnail
+            .clone()
+            .or_else(|| meta.preview.background.clone()),
+        video,
+        path,
+        stream: None,
+    });
+    effects
+}
+
+fn play_next(state: &mut State) -> Vec<Effect> {
+    let next = state.playing.as_ref().and_then(|p| {
+        Some((
+            p.content_type.clone(),
+            p.meta_id.clone(),
+            p.meta.clone()?,
+            p.next.clone()?,
+            p.addon.clone(),
+        ))
+    });
+    let mut effects = playback_ended(state, None);
+    let Some((content_type, meta_id, meta, next, addon)) = next else {
+        return effects;
+    };
+    state.detail = Some(Detail {
+        content_type: content_type.clone(),
+        id: meta_id.clone(),
+        preview: Some(meta.preview.clone()),
+        meta: Loadable::Ready(meta.clone()),
+        meta_fallbacks: Vec::new(),
+        meta_request: None,
+        selected_video: None,
+        streams: Vec::new(),
+    });
+    effects.extend(select_video(state, next.video.id.clone()));
+    let Some(stream) = next.stream else {
+        return effects;
+    };
+    match resolve(&state.settings, &stream) {
+        Source::Play(url, torrent) => {
+            let start = Start {
+                content_type,
+                meta_id,
+                preview: Some(meta.preview.clone()),
+                meta: Some(meta),
+                video_id: next.video.id,
+                addon_name: addon_name(&state.addons, &addon),
+                addon,
+                stream,
+            };
+            effects.extend(start_stream(state, start, url, torrent));
+        }
+        Source::Refused(notice) => state.notice = Some(notice),
+        Source::NeedsConsent | Source::Unusable => {}
+    }
+    effects
+}
+
+fn advance_to_next(state: &mut State, playing: &Playing) -> Option<Effect> {
+    let next = playing.next.as_ref()?;
+    let watched_at = state.settings.watched_at;
+    let item = state.library.iter_mut().find(|i| {
+        i.id == playing.meta_id
+            && i.video_id == playing.video_id
+            && i.was_played()
+            && i.is_finished(watched_at)
+    })?;
+    let meta = playing.meta.as_ref();
+    let preview = meta.map(|m| &m.preview);
+    item.stream = next
+        .stream
+        .clone()
+        .filter(|s| s.source.is_playable())
+        .map(|stream| {
+            Box::new(SavedStream {
+                addon: playing.addon.clone(),
+                title: video_title(&item.name, meta, &next.video.id),
+                logo: preview.and_then(|p| p.logo.clone()),
+                background: preview.and_then(|p| p.background.clone()),
+                stream,
+            })
+        });
+    item.video_id.clone_from(&next.video.id);
+    item.time_offset_ms = 1;
+    item.duration_ms = 0;
+    Some(Effect::SaveLibraryItem(item.clone()))
 }
 
 fn playback_ended(state: &mut State, failure: Option<PlaybackFailure>) -> Vec<Effect> {
@@ -1156,6 +1395,11 @@ fn playback_ended(state: &mut State, failure: Option<PlaybackFailure>) -> Vec<Ef
         effects.push(Effect::DeleteLibraryItem(playing.meta_id.clone()));
     }
     let Some(failure) = failure else {
+        effects.extend(
+            playing
+                .as_ref()
+                .and_then(|playing| advance_to_next(state, playing)),
+        );
         return effects;
     };
     let resumed = playing

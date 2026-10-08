@@ -182,6 +182,33 @@ Subtitles (M6):
 - The stream's own `subtitles` are listed first, then each addon's, in user
   order. Duplicate URLs within one list are dropped.
 
+Binge-watching (`behaviorHints.bingeGroup`, v0.x):
+- The next video is the one after the playing video in the meta's `videos`
+  order. It is skipped when it moves into season 0 from another season, or
+  when its `released` date is still in the future (VERIFIED-REF,
+  `types/resource/meta_item.rs` `next_video`;
+  `the_next_video_skips_specials_and_unreleased_episodes`).
+- Once the meta is known, the next video's streams are asked **only from the
+  addon of the playing stream**, and only when that stream has a
+  `bingeGroup`. The first of them with an equal `bingeGroup` is the binge
+  match; a missing group never matches (VERIFIED-REF, `models/player.rs`
+  `next_streams_update`, `types/resource/stream.rs` `is_binge_match`;
+  `an_ended_episode_plays_the_next_one_from_the_same_binge_group`).
+- When the video ends with binge-watching on (the default), the match plays
+  and the detail page opens on the next video; without a match only the
+  detail page opens. Near the end the player offers the next video
+  (35 s by default), whatever the setting (VERIFIED-REF, stremio-web
+  `Player.js` `onEnded`, `nextVideoPopupOpen`).
+- Cineo extra: with binge-watching on, the notice counts down 10 s of
+  playback and then plays the next video without input; Play and × act at
+  once. The reference client waits for the end instead (INFERRED from
+  `Player.js`; no UI test yet).
+- A finished video moves its library item on to the next video with a
+  1 ms offset, so Continue Watching offers it (VERIFIED-REF,
+  `models/player.rs` `item_state_update`, `advance_to_video`). Cineo uses its
+  "Count as watched at" setting instead of the reference 90 %
+  (`without_binge_watching_a_finished_episode_moves_continue_watching_on`).
+
 ## Doc vs reference differences
 
 | Topic | SDK docs | Reference client | Cineo follows |

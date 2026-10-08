@@ -45,6 +45,38 @@ impl Meta {
         seasons.dedup();
         seasons
     }
+
+    pub fn next_video(&self, video_id: &str, now_ms: u64) -> Option<&Video> {
+        let position = self.videos.iter().position(|v| v.id == video_id)?;
+        let next = self.videos.get(position + 1)?;
+        let season = |v: &Video| v.season.unwrap_or(0);
+        let current = season(&self.videos[position]);
+        let released = next
+            .released
+            .as_deref()
+            .and_then(epoch_ms)
+            .is_none_or(|at| at <= i64::try_from(now_ms).unwrap_or(i64::MAX));
+        ((season(next) != 0 || current == 0) && released).then_some(next)
+    }
+}
+
+fn epoch_ms(text: &str) -> Option<i64> {
+    let num = |at: usize| text.get(at..at + 2)?.parse::<i64>().ok();
+    let year: i64 = text.get(..4)?.parse().ok()?;
+    let (month, day) = (num(5)?, num(8)?);
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+    let seconds = match text.as_bytes().get(10) {
+        Some(b'T' | b' ') => num(11)? * 3600 + num(14)? * 60 + num(17).unwrap_or(0),
+        _ => 0,
+    };
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
+    let days = era * 146_097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719_468;
+    Some((days * 86_400 + seconds) * 1000)
 }
 
 /// Parses a meta response. Fails if there is no `meta` object or it lacks a

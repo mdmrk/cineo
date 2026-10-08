@@ -1359,3 +1359,126 @@ fn resetting_settings_restores_defaults_but_keeps_the_p2p_notice_accepted() {
     assert_eq!(effects, vec![Effect::SaveSettings(expected)]);
     assert_eq!(state.settings, expected);
 }
+
+fn binge_streams(file: &str) -> Vec<cineo_core::addon::Stream> {
+    let json = format!(
+        r#"{{"streams":[
+            {{"url":"https://media.example/{file}-720.mp4","behaviorHints":{{"bingeGroup":"ex-720"}}}},
+            {{"url":"https://media.example/{file}-1080.mp4","behaviorHints":{{"bingeGroup":"ex-1080"}}}}
+        ]}}"#
+    );
+    parse_stream_response(json.as_bytes()).unwrap().value
+}
+
+fn series_playing(binge_watching: bool) -> State {
+    let (mut state, _) = restored();
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::BingeWatching(binge_watching)),
+    );
+    update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("series"),
+            id: "tt0000010".into(),
+            preview: None,
+        },
+    );
+    let meta = parse_meta_response(&fixture("basic/meta-series.json"))
+        .unwrap()
+        .value;
+    let (addon, path) = state.detail.as_ref().unwrap().meta_request.clone().unwrap();
+    update(
+        &mut state,
+        Action::MetaLoaded {
+            addon,
+            path,
+            result: Ok(Box::new(meta)),
+        },
+    );
+    update(&mut state, Action::SelectVideo("tt0000010:1:1".into()));
+    let g = state.detail.as_ref().unwrap().streams[0].clone();
+    update(
+        &mut state,
+        Action::StreamsLoaded {
+            addon: g.addon,
+            path: g.path,
+            result: Ok(binge_streams("e1")),
+        },
+    );
+    update(
+        &mut state,
+        Action::Play {
+            group: 0,
+            stream: 1,
+        },
+    );
+    state
+}
+
+fn episode_progress(time_ms: u64) -> Action {
+    Action::PlaybackProgress {
+        meta_id: "tt0000010".into(),
+        video_id: "tt0000010:1:1".into(),
+        time_ms,
+        duration_ms: 1_000_000,
+        now_ms: 2_000_000_000_000,
+    }
+}
+
+#[test]
+fn the_next_video_skips_specials_and_unreleased_episodes() {
+    let meta = parse_meta_response(&fixture("basic/meta-series.json"))
+        .unwrap()
+        .value;
+    let next = |id: &str, now_ms: u64| meta.next_video(id, now_ms).map(|v| v.id.as_str());
+    assert_eq!(next("tt0000010:1:1", 0), Some("tt0000010:1:2"));
+    assert_eq!(next("tt0000010:1:2", 1_030_838_399_000), None);
+    assert_eq!(
+        next("tt0000010:1:2", 1_030_838_400_000),
+        Some("tt0000010:2:1")
+    );
+    assert_eq!(next("tt0000010:2:1", u64::MAX), None);
+}
+
+#[test]
+fn an_ended_episode_plays_the_next_one_from_the_same_binge_group() {
+    let mut state = series_playing(true);
+    let effects = update(&mut state, episode_progress(60_000));
+    let fetches: Vec<_> = effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::FetchStreams { addon, path } => Some((addon.clone(), path.clone())),
+            _ => None,
+        })
+        .collect();
+    let [(addon, path)] = fetches.as_slice() else {
+        panic!("{effects:?}");
+    };
+    assert_eq!(addon, &url(BASIC), "only the addon of the playing stream");
+    assert_eq!(path.id, "tt0000010:1:2");
+    update(
+        &mut state,
+        Action::StreamsLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(binge_streams("e2")),
+        },
+    );
+    update(&mut state, episode_progress(990_000));
+    let effects = update(&mut state, Action::PlaybackEnded);
+    let play = play_effect(&effects).expect("the next episode plays");
+    assert_eq!(play.url.as_str(), "https://media.example/e2-1080.mp4");
+    assert_eq!(play.video_id, "tt0000010:1:2");
+}
+
+#[test]
+fn without_binge_watching_a_finished_episode_moves_continue_watching_on() {
+    let mut state = series_playing(false);
+    update(&mut state, episode_progress(990_000));
+    let effects = update(&mut state, Action::PlaybackEnded);
+    assert!(play_effect(&effects).is_none());
+    let items = continue_watching(&state.library, WatchedAt::P92);
+    let videos: Vec<&str> = items.iter().map(|i| i.video_id.as_str()).collect();
+    assert_eq!(videos, ["tt0000010:1:2"]);
+}

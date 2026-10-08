@@ -76,6 +76,7 @@ fn harness_full(
                     logo: None,
                     background: None,
                     addon_subtitles: addon,
+                    next: None,
                     settings,
                 };
                 out.extend(show(ui, rect, &playback, controls));

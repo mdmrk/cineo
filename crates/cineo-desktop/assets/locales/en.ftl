@@ -240,6 +240,14 @@ dht-help = Finds peers without trackers. Off means fewer peers for many torrents
 private-network = Allow local network addresses
 private-network-help = Lets addons, images and torrent peers on 127.0.0.1 or your home network be reached, for self-hosted addons. Off is safer. Takes effect after restarting Cineo.
 
+binge-watching = Play the next episode automatically
+binge-watching-help = When an episode ends, the next one plays from the same addon, or its streams open.
+next-notice = Next episode notice
+next-notice-help = How long before the end the next episode is offered.
+next-notice-off = Off
+next-episode = Next episode
+next-episode-in = Next episode in { $seconds } s
+
 watched-at = Count as watched at
 watched-at-help = Watched videos start over and leave Continue Watching.
 watched-percent = { $percent } % played

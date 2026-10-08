@@ -1,6 +1,6 @@
 use cineo_core::app::{
-    Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit,
-    SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
+    Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice,
+    PeerLimit, SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
     SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
     UiLanguage, UploadLimit, WatchedAt,
 };
@@ -241,6 +241,24 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
                 &t!("remember-volume-help"),
                 s.remember_volume,
                 Setting::RememberVolume,
+            );
+            switch(
+                ui,
+                out,
+                &t!("binge-watching"),
+                &t!("binge-watching-help"),
+                s.binge_watching,
+                Setting::BingeWatching,
+            );
+            pick(
+                ui,
+                out,
+                &t!("next-notice"),
+                &t!("next-notice-help"),
+                s.next_video_notice,
+                NextVideoNotice::ALL,
+                notice_name,
+                Setting::NextVideoNotice,
             );
         }
         Section::Languages => {
@@ -669,6 +687,13 @@ fn watched_name(at: WatchedAt) -> String {
         "watched-percent",
         percent = (at.fraction() * 100.0).round() as u32
     )
+}
+
+fn notice_name(notice: NextVideoNotice) -> String {
+    match notice {
+        NextVideoNotice::Off => t!("next-notice-off"),
+        _ => seconds(notice.seconds()),
+    }
 }
 
 fn seconds(count: f64) -> String {

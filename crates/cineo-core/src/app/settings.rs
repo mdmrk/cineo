@@ -266,6 +266,22 @@ impl InterfaceScale {
 }
 
 choice! {
+    NextVideoNotice { Off = "0", S10 = "10", S20 = "20", S35 = "35", S60 = "60", }
+}
+
+impl NextVideoNotice {
+    pub const fn seconds(self) -> f64 {
+        match self {
+            Self::Off => 0.0,
+            Self::S10 => 10.0,
+            Self::S20 => 20.0,
+            Self::S35 => 35.0,
+            Self::S60 => 60.0,
+        }
+    }
+}
+
+choice! {
     StartPage { Home = "home", Discover = "discover", Library = "library", }
 }
 
@@ -399,6 +415,8 @@ settings! {
     start_page: StartPage = StartPage::Home => StartPage("start_page"),
     ui_language: UiLanguage = UiLanguage::System => UiLanguage("ui_language"),
     watched_at: WatchedAt = WatchedAt::P92 => WatchedAt("watched_at"),
+    binge_watching: bool = true => BingeWatching("binge_watching"),
+    next_video_notice: NextVideoNotice = NextVideoNotice::S35 => NextVideoNotice("next_video_notice"),
 }
 
 impl Settings {

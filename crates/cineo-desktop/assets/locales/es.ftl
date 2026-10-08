@@ -240,6 +240,14 @@ dht-help = Encuentra pares sin trackers. Desactivarla significa menos pares para
 private-network = Permitir direcciones de la red local
 private-network-help = Permite acceder a complementos, imágenes y pares torrent en 127.0.0.1 o en tu red doméstica, para complementos alojados por ti. Desactivado es más seguro. Se aplica al reiniciar Cineo.
 
+binge-watching = Reproducir el siguiente episodio automáticamente
+binge-watching-help = Al terminar un episodio, se reproduce el siguiente del mismo addon o se abren sus fuentes.
+next-notice = Aviso del siguiente episodio
+next-notice-help = Cuánto antes del final se ofrece el siguiente episodio.
+next-notice-off = Desactivado
+next-episode = Siguiente episodio
+next-episode-in = Siguiente episodio en { $seconds } s
+
 watched-at = Contar como visto al
 watched-at-help = Los vídeos vistos empiezan de nuevo y salen de Seguir viendo.
 watched-percent = { $percent } % reproducido

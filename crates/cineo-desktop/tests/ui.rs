@@ -847,6 +847,8 @@ fn player_and_language_settings_change_from_the_page() {
     harness.run();
     harness.get_by_label("30 seconds").click();
     harness.run();
+    harness.get_by_label("Second audio language").scroll_to_me();
+    harness.run();
     harness.get_by_label("Second audio language").click();
     harness.run();
     harness.get_by_label("Japanese").scroll_to_me();

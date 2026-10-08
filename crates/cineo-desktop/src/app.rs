@@ -22,7 +22,7 @@ use tracing::{debug, error, warn};
 use crate::brand;
 use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
-use crate::player::{self, Controls, Playback};
+use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
 use crate::view::{self, ViewState};
@@ -542,6 +542,7 @@ impl CineoApp {
                     background: background.as_ref().map(url::Url::as_str),
                     addon_subtitles: &[],
                     settings: &self.state.settings,
+                    next: None,
                 };
                 commands = player::show(ui, rect, &playback, &mut self.connecting_controls);
             });
@@ -596,9 +597,19 @@ impl CineoApp {
                     background: embedded.background.as_deref(),
                     addon_subtitles: &addon_subtitles,
                     settings: &self.state.settings,
+                    next: self
+                        .state
+                        .playing
+                        .as_ref()
+                        .and_then(|p| p.next.as_ref())
+                        .map(|n| NextUp {
+                            title: &n.title,
+                            image: n.image.as_ref().map(url::Url::as_str),
+                        }),
                 };
                 commands = player::show(ui, rect, &playback, &mut embedded.controls);
             });
+        let play_next = embedded.controls.take_next();
         let changes = embedded.controls.take_settings();
         let mut picked = embedded.controls.take_addon_subtitle();
         if picked.is_some()
@@ -632,6 +643,13 @@ impl CineoApp {
                 embedded.player.set_subtitle_style(&self.state.settings);
             }
         }
+        if play_next {
+            self.end_playback();
+            self.dispatch(Action::PlayNext);
+            if self.playback.is_none() && self.state.playing.is_none() {
+                player::leave_fullscreen(&self.ctx);
+            }
+        }
         true
     }
 }
@@ -647,15 +665,15 @@ async fn forward_events(
             PlayerEvent::Progress {
                 time_ms,
                 duration_ms,
-            } => (time_ms, duration_ms, false),
+            } => (time_ms, duration_ms, None),
             PlayerEvent::Ended {
                 time_ms,
                 duration_ms,
-            }
-            | PlayerEvent::Closed {
+            } => (time_ms, duration_ms, Some(Action::PlaybackEnded)),
+            PlayerEvent::Closed {
                 time_ms,
                 duration_ms,
-            } => (time_ms, duration_ms, true),
+            } => (time_ms, duration_ms, Some(Action::PlaybackStopped)),
             PlayerEvent::Failed(reason) => {
                 send(Action::PlaybackFailed(reason));
                 break;
@@ -670,8 +688,8 @@ async fn forward_events(
                 now_ms: now_ms(),
             });
         }
-        if last {
-            send(Action::PlaybackStopped);
+        if let Some(last) = last {
+            send(last);
             break;
         }
     }

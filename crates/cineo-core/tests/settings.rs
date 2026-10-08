@@ -1,10 +1,10 @@
 #![allow(clippy::unwrap_used, reason = "test helpers panic on purpose")]
 
 use cineo_core::app::{
-    AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, PeerLimit, Percent,
-    SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage, SubtitleBackground,
-    SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    UiLanguage, UploadLimit, WatchedAt,
+    AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice, PeerLimit,
+    Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
+    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
+    SubtitlePosition, SubtitleSize, UiLanguage, UploadLimit, WatchedAt,
 };
 
 #[test]
@@ -47,6 +47,8 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::StartPage(StartPage::Library),
         Setting::UiLanguage(UiLanguage::Spanish),
         Setting::WatchedAt(WatchedAt::P80),
+        Setting::BingeWatching(false),
+        Setting::NextVideoNotice(NextVideoNotice::Off),
     ] {
         settings.set(setting);
     }
@@ -113,6 +115,8 @@ fn saved_keys_never_change() {
             "start_page",
             "ui_language",
             "watched_at",
+            "binge_watching",
+            "next_video_notice",
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");

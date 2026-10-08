@@ -30,6 +30,8 @@ const PULSE_PERIOD: f64 = 1.6;
 const MENU_MAX_HEIGHT: f32 = 320.0;
 const STYLE_WIDTH: f32 = 420.0;
 const STYLE_MAX_HEIGHT: f32 = 520.0;
+const AUTO_NEXT_S: f64 = 10.0;
+const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
 
 /// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
@@ -42,6 +44,9 @@ pub struct Controls {
     addon_request: Option<Url>,
     subtitle_delay_ms: i32,
     settings: Vec<Action>,
+    next_dismissed: bool,
+    next_requested: bool,
+    next_shown_at: Option<f64>,
 }
 
 impl Controls {
@@ -53,6 +58,10 @@ impl Controls {
 
     pub fn take_settings(&mut self) -> Vec<Action> {
         std::mem::take(&mut self.settings)
+    }
+
+    pub fn take_next(&mut self) -> bool {
+        std::mem::take(&mut self.next_requested)
     }
 }
 
@@ -81,6 +90,13 @@ pub struct Playback<'a> {
     pub background: Option<&'a str>,
     pub addon_subtitles: &'a [AddonSubtitle],
     pub settings: &'a Settings,
+    pub next: Option<NextUp<'a>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NextUp<'a> {
+    pub title: &'a str,
+    pub image: Option<&'a str>,
 }
 
 /// Draws the controls over `rect` (the video) and returns the commands to
@@ -134,6 +150,10 @@ pub fn show(
         paint_loading(ui, rect.center(), LOADING_WIDTH, theme::TEXT_BRIGHT);
     } else if status.buffering {
         paint_spinner(ui, rect.center(), 44.0, theme::TEXT_BRIGHT);
+    }
+
+    if let Some(next) = &playback.next {
+        next_popup(ui, rect, status, settings, next, controls);
     }
 
     let idle = now - controls.last_activity;
@@ -470,6 +490,141 @@ fn bottom_bar(
         }
         _ => {}
     }
+}
+
+fn next_popup(
+    ui: &Ui,
+    rect: Rect,
+    status: &Status,
+    settings: &Settings,
+    next: &NextUp<'_>,
+    controls: &mut Controls,
+) {
+    let remaining = status.duration_s - status.position_s;
+    if !status.loaded
+        || status.duration_s <= 0.0
+        || remaining <= 0.0
+        || remaining > settings.next_video_notice.seconds()
+    {
+        controls.next_shown_at = None;
+        return;
+    }
+    if controls.next_dismissed {
+        return;
+    }
+    let shown_at = controls
+        .next_shown_at
+        .filter(|at| *at <= status.position_s)
+        .unwrap_or(status.position_s);
+    controls.next_shown_at = Some(shown_at);
+    let left = (AUTO_NEXT_S - (status.position_s - shown_at)).max(0.0);
+    let auto = settings.binge_watching;
+    if auto && left <= 0.0 {
+        controls.next_requested = true;
+    }
+    let size = NEXT_CARD.min(vec2(rect.width() - 16.0, rect.height() * 0.5));
+    let card = Rect::from_min_size(
+        pos2(
+            (rect.right() - size.x - 24.0).max(rect.left() + 8.0),
+            rect.bottom() - BAR_HEIGHT - size.y - 16.0,
+        ),
+        size,
+    );
+    egui::Area::new(ui.id().with("next-video"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(card.min)
+        .show(ui.ctx(), |ui| {
+            let radius = CornerRadius::same(theme::RADIUS);
+            ui.painter().rect_filled(card, radius, theme::PANEL);
+            if let Some(image) = next.image {
+                paint_cover(ui, image, card, radius, Color32::WHITE, 0.5, true);
+            }
+            ui.painter()
+                .rect_filled(card, radius, Color32::from_black_alpha(150));
+            let inner = card.shrink(radius.nw.into());
+            gradient(
+                ui,
+                Rect::from_min_max(pos2(card.left(), inner.center().y), inner.right_bottom()),
+                Color32::TRANSPARENT,
+                Color32::from_black_alpha(90),
+                false,
+            );
+
+            let c = card.center();
+            let caption = if auto {
+                t!("next-episode-in", seconds = left.ceil())
+            } else {
+                t!("next-episode")
+            };
+            ui.painter().text(
+                pos2(c.x, c.y - 66.0),
+                Align2::CENTER_CENTER,
+                caption,
+                theme::caption(),
+                theme::TEXT,
+            );
+            let mut job = egui::text::LayoutJob::simple(
+                plain_text(next.title),
+                theme::strong(),
+                theme::TEXT_BRIGHT,
+                (card.width() - 48.0).max(1.0),
+            );
+            job.halign = Align::Center;
+            job.wrap.max_rows = 1;
+            let galley = ui.painter().layout_job(job);
+            ui.painter()
+                .galley(pos2(c.x, c.y - 52.0), galley, theme::TEXT_BRIGHT);
+
+            let play = Rect::from_center_size(pos2(c.x, c.y + 18.0), egui::Vec2::splat(56.0));
+            let label = t!("play");
+            let response = ui
+                .interact(play, ui.id().with("next-play"), Sense::click())
+                .on_hover_cursor(CursorIcon::PointingHand);
+            response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+            let grow = ui
+                .ctx()
+                .animate_bool_with_time(response.id, response.hovered(), 0.12);
+            ui.painter().circle_filled(
+                play.center(),
+                play.width() / 2.0 + 3.0 * grow,
+                theme::ACCENT,
+            );
+            paint_icon(
+                ui.painter(),
+                Icon::Play,
+                play.center() + vec2(2.0, 0.0),
+                26.0,
+                theme::TEXT_BRIGHT,
+            );
+            if response.clicked() {
+                controls.next_requested = true;
+            }
+
+            let close = Rect::from_center_size(
+                pos2(card.right() - 22.0, card.top() + 22.0),
+                egui::Vec2::splat(32.0),
+            );
+            if icon_button(ui, close, Icon::Named("x"), &t!("dismiss")).clicked() {
+                controls.next_dismissed = true;
+            }
+
+            if auto {
+                let track = Rect::from_min_max(
+                    pos2(card.left() + 16.0, card.bottom() - 14.0),
+                    pos2(card.right() - 16.0, card.bottom() - 10.0),
+                );
+                let bar = CornerRadius::same(2);
+                ui.painter()
+                    .rect_filled(track, bar, Color32::from_white_alpha(50));
+                #[expect(clippy::cast_possible_truncation, reason = "a fraction in 0..=1")]
+                let fraction = (1.0 - left / AUTO_NEXT_S) as f32;
+                ui.painter().rect_filled(
+                    Rect::from_min_size(track.min, vec2(track.width() * fraction, track.height())),
+                    bar,
+                    theme::ACCENT,
+                );
+            }
+        });
 }
 
 fn left_label(ui: &mut Ui, rect: Rect, label: Label) {

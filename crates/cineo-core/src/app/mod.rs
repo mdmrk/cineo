@@ -16,13 +16,13 @@ pub use plan::{
     CatalogTarget, board_targets, meta_candidates, search_targets, stream_targets, subtitle_targets,
 };
 pub use settings::{
-    AudioOutput, DownloadLimit, HideControls, InterfaceScale, PeerLimit, Percent, Ranged, SeekStep,
-    Setting, SettingError, Settings, ShortSeekStep, StartPage, SubtitleBackground, SubtitleColor,
-    SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, UiLanguage,
-    UploadLimit, WatchedAt,
+    AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,
+    Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
+    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
+    SubtitlePosition, SubtitleSize, UiLanguage, UploadLimit, WatchedAt,
 };
 pub use state::{
-    Action, Detail, Discover, Effect, InstalledAddon, Loadable, PlayRequest, Playing, Row, State,
-    StreamGroup, SubtitleGroup, update,
+    Action, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest, Playing,
+    Row, State, StreamGroup, SubtitleGroup, update,
 };
 pub use torrent::{TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file};
