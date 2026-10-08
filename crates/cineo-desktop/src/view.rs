@@ -391,7 +391,7 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 let version = faint(&t!("app-version", version = env!("CARGO_PKG_VERSION")));
                 ui.horizontal(|ui| {
                     ui.add_space(9.0);
-                    ui.add_visible(!compact, egui::Label::new(version));
+                    ui.add_visible(!compact, egui::Label::new(version).truncate());
                 });
                 ui.add_space(2.0);
                 item(ui, Page::Settings);

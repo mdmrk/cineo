@@ -964,6 +964,11 @@ fn the_compact_sidebar_keeps_settings_where_the_wide_one_has_it() {
             settings.top() > library.bottom() + 200.0,
             "{width}: Settings {settings:?} sits at the bottom, below {library:?}"
         );
+        assert_eq!(
+            settings.x_range(),
+            library.x_range(),
+            "{width}: Settings lines up with the other items"
+        );
         settings.top()
     };
     assert_eq!(settings(1280.0), settings(900.0));
