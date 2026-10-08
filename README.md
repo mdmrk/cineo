@@ -3,7 +3,9 @@
 A fast, native desktop media center written in Rust. It works with
 Stremio-protocol addons.
 
-![Cineo home screen](docs/images/screenshot.png)
+![Cineo home screen](docs/images/home.png)
+
+![A movie page with its streams](docs/images/detail.png)
 
 > **Pre-alpha.** It works, but there are no installers yet.
 > See [what works](docs/COMPATIBILITY.md).
