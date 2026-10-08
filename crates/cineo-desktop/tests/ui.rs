@@ -341,6 +341,31 @@ fn stream_search_and_quality_filter_narrow_the_list_and_keep_stream_indexes() {
 }
 
 #[test]
+fn sorting_by_seeders_reorders_the_list_and_plays_the_right_stream() {
+    let body = r#"{"streams":[
+        {"name":"Example\n720p","description":"Few seeds\n👤 3 💾 700 MB","url":"https://media.example/a.mp4"},
+        {"name":"Example\n1080p","description":"Many seeds\n👤 90 💾 1.5 GB","url":"https://media.example/b.mp4"}
+    ]}"#;
+    let mut harness = harness(detail_with_streams(body.as_bytes()), ViewState::default());
+    let top = |h: &Harness<'_, Ui>, label: &str| h.get_by_label_contains(label).rect().top();
+    assert!(top(&harness, "Few seeds") < top(&harness, "Many seeds"));
+    harness
+        .get_by_role_and_label(Role::Button, "Seeders")
+        .click();
+    harness.run();
+    assert!(top(&harness, "Many seeds") < top(&harness, "Few seeds"));
+    harness.get_all_by_label("Play").next().unwrap().click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![Action::Play {
+            group: 0,
+            stream: 1
+        }]
+    );
+}
+
+#[test]
 fn addons_page_installs_from_the_typed_url_and_lists_installed_addons() {
     let view = ViewState {
         page: Page::Addons,

@@ -97,7 +97,10 @@ pub struct ViewState {
 impl ViewState {
     fn leave_detail(&mut self) {
         self.season = None;
-        self.streams = StreamFilter::default();
+        self.streams = StreamFilter {
+            sort: self.streams.sort,
+            ..StreamFilter::default()
+        };
     }
 }
 
@@ -106,6 +109,95 @@ pub struct StreamFilter {
     pub query: String,
     pub quality: Option<&'static str>,
     pub addon: Option<usize>,
+    pub sort: StreamSort,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum StreamSort {
+    #[default]
+    AddonOrder,
+    Quality,
+    Seeders,
+    Size,
+}
+
+impl StreamSort {
+    const ALL: [Self; 4] = [Self::AddonOrder, Self::Quality, Self::Seeders, Self::Size];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::AddonOrder => "Addon order",
+            Self::Quality => "Quality",
+            Self::Seeders => "Seeders",
+            Self::Size => "Size",
+        }
+    }
+
+    /// Indexes into `streams` in display order: larger values first, streams
+    /// without a value last, ties in addon order.
+    fn order(self, streams: &[Stream]) -> Vec<usize> {
+        let key = |stream: &Stream| -> Option<u64> {
+            match self {
+                Self::AddonOrder => Some(0),
+                Self::Quality => Quality::of(stream).and_then(|q| {
+                    let rank = QUALITIES.iter().position(|l| *l == q.label)?;
+                    u64::try_from(QUALITIES.len() - rank).ok()
+                }),
+                Self::Seeders => seeders(stream),
+                Self::Size => size_bytes(stream),
+            }
+        };
+        let mut order: Vec<usize> = (0..streams.len()).collect();
+        order.sort_by_key(|&i| std::cmp::Reverse(key(&streams[i])));
+        order
+    }
+}
+
+fn stream_text(stream: &Stream) -> impl Iterator<Item = &str> {
+    [stream.name.as_deref(), stream.description.as_deref()]
+        .into_iter()
+        .flatten()
+}
+
+/// The count after `👤`, a common way for torrent addons to show seeders.
+fn seeders(stream: &Stream) -> Option<u64> {
+    stream_text(stream).find_map(|text| {
+        let (_, after) = text.split_once('👤')?;
+        let digits: String = after
+            .trim_start()
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
+        digits.parse().ok()
+    })
+}
+
+/// `behaviorHints.videoSize`, else the first size like `4.35 GB` in the text.
+fn size_bytes(stream: &Stream) -> Option<u64> {
+    stream
+        .video_size
+        .or_else(|| stream_text(stream).find_map(size_in_text))
+}
+
+fn size_in_text(text: &str) -> Option<u64> {
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    tokens.windows(2).find_map(|pair| {
+        let value: f64 = pair[0].parse().ok()?;
+        let unit: f64 = match pair[1].trim_end_matches(|c: char| !c.is_ascii_alphabetic()) {
+            "KB" | "KiB" => 1024.0,
+            "MB" | "MiB" => 1024.0 * 1024.0,
+            "GB" | "GiB" => 1024.0 * 1024.0 * 1024.0,
+            "TB" | "TiB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
+            _ => return None,
+        };
+        let bytes = value * unit;
+        #[expect(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a finite, non-negative size"
+        )]
+        (bytes.is_finite() && bytes >= 0.0).then_some(bytes as u64)
+    })
 }
 
 impl StreamFilter {
@@ -1253,6 +1345,16 @@ fn stream_filters(
             }
         }
     });
+    ui.add_space(6.0);
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        ui.label(faint("Sort by"));
+        for sort in StreamSort::ALL {
+            if chip(ui, sort.label(), filter.sort == sort).clicked() {
+                filter.sort = sort;
+            }
+        }
+    });
     ui.add_space(theme::GAP);
 }
 
@@ -1291,7 +1393,8 @@ fn stream_group(
             ui.spacing_mut().item_spacing.y = 4.0;
             let mut hidden = 0;
             let mut shown = 0;
-            for (stream_index, stream) in streams.iter().enumerate() {
+            for stream_index in filter.sort.order(streams) {
+                let stream = &streams[stream_index];
                 if stream.source.is_p2p() && !p2p_enabled {
                     hidden += 1;
                     continue;
@@ -2605,12 +2708,47 @@ mod tests {
     }
 
     #[test]
+    fn seeders_and_size_come_from_the_description() {
+        let s = stream(
+            Some("Example\n1080p"),
+            Some("Night of the Living Dead 1968 1080p BluRay\n👤 100 💾 1.51 GB ⚙️ YTS"),
+        );
+        assert_eq!(seeders(&s), Some(100));
+        assert_eq!(size_bytes(&s), Some(1_621_350_154));
+        let bare = stream(Some("1080p"), Some("No numbers here, 12 seeds"));
+        assert_eq!(seeders(&bare), None);
+        assert_eq!(size_bytes(&bare), None);
+        assert_eq!(size_in_text("700 MB"), Some(734_003_200));
+        assert_eq!(size_in_text("2 TiB,"), Some(2_199_023_255_552));
+        let hinted = Stream {
+            video_size: Some(42),
+            ..s
+        };
+        assert_eq!(size_bytes(&hinted), Some(42), "the addon's hint wins");
+    }
+
+    #[test]
+    fn sorting_puts_larger_values_first_and_unknown_last_keeping_ties_in_order() {
+        let streams = [
+            stream(Some("720p"), Some("👤 5 💾 700 MB")),
+            stream(Some("plain"), None),
+            stream(Some("4k"), Some("👤 5 💾 15.77 GB")),
+            stream(Some("1080p"), Some("👤 39 💾 1.5 GB")),
+        ];
+        assert_eq!(StreamSort::AddonOrder.order(&streams), [0, 1, 2, 3]);
+        assert_eq!(StreamSort::Quality.order(&streams), [2, 3, 0, 1]);
+        assert_eq!(StreamSort::Seeders.order(&streams), [3, 0, 2, 1]);
+        assert_eq!(StreamSort::Size.order(&streams), [2, 3, 0, 1]);
+    }
+
+    #[test]
     fn stream_filter_needs_every_word_and_the_quality() {
         let s = stream(Some("Torrentio\n1080p"), Some("Film.2024.WEB-DL 👤 12"));
         let filter = |query: &str, quality| StreamFilter {
             query: query.into(),
             quality,
             addon: None,
+            sort: StreamSort::AddonOrder,
         };
         assert!(filter("", None).matches(&s));
         assert!(filter("web-dl  TORRENTIO", None).matches(&s));
