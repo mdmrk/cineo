@@ -124,6 +124,7 @@ pub fn show(
             CornerRadius::ZERO,
             LOADING_BACKDROP_TINT,
             0.5,
+            false,
         );
     }
     if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {

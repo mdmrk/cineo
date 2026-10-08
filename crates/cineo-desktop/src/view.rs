@@ -978,6 +978,7 @@ fn detail_page(
             CornerRadius::ZERO,
             theme::BACKDROP_TINT,
             0.25,
+            true,
         );
         let fade_start = backdrop.min.y + backdrop.height() * 0.25;
         gradient(
@@ -1027,6 +1028,7 @@ fn detail_page(
                     poster_rect,
                     name,
                     preview.and_then(|p| p.poster.as_ref()),
+                    true,
                 );
                 ui.add_space(6.0);
                 if favorite_button(ui, favorite) {
@@ -2038,7 +2040,7 @@ fn card(
         response.hovered() || response.has_focus(),
         theme::ANIM,
     );
-    poster(ui, rect, name, poster_url);
+    poster(ui, rect, name, poster_url, false);
     let painter = ui.painter();
     if let Some(progress) = progress {
         let track = Rect::from_min_max(pos2(rect.min.x, rect.max.y - 3.0), rect.max);
@@ -2092,12 +2094,12 @@ fn shadow(ui: &Ui, rect: Rect, strength: f32) {
         .add(shadow.as_shape(rect, CornerRadius::same(theme::POSTER_RADIUS)));
 }
 
-fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>) {
+fn poster(ui: &Ui, rect: Rect, name: &str, url: Option<&Url>, fade_in: bool) {
     let radius = CornerRadius::same(theme::POSTER_RADIUS);
     let painter = ui.painter();
     painter.rect_filled(rect, radius, theme::SURFACE);
     if let Some(url) = url {
-        paint_cover(ui, url.as_str(), rect, radius, Color32::WHITE, 0.5);
+        paint_cover(ui, url.as_str(), rect, radius, Color32::WHITE, 0.5, fade_in);
     } else {
         let font = FontId::new(
             (rect.width() / 7.0).clamp(14.0, 26.0),
@@ -2131,23 +2133,36 @@ pub(crate) fn paint_cover(
     radius: CornerRadius,
     tint: Color32,
     focus_y: f32,
+    fade_in: bool,
 ) {
     let image = Image::new(src)
         .corner_radius(radius)
         .texture_options(IMAGE_FILTER)
         .show_loading_spinner(false);
-    let Some(size) = image
-        .load_for_size(ui.ctx(), rect.size())
-        .ok()
-        .and_then(|poll| poll.size())
-    else {
+    let poll = image.load_for_size(ui.ctx(), rect.size()).ok();
+    let opacity = if fade_in {
+        let ready = matches!(poll, Some(egui::load::TexturePoll::Ready { .. }));
+        ui.ctx().animate_bool_with_time_and_easing(
+            egui::Id::new(("cover-fade", src)),
+            ready,
+            COVER_FADE,
+            egui::emath::easing::cubic_out,
+        )
+    } else {
+        1.0
+    };
+    let Some(size) = poll.and_then(|poll| poll.size()) else {
         return;
     };
-    image
-        .uv(cover_uv(size, rect.size(), focus_y))
-        .tint(tint)
-        .paint_at(ui, rect);
+    if opacity > 0.0 {
+        image
+            .uv(cover_uv(size, rect.size(), focus_y))
+            .tint(tint.gamma_multiply(opacity))
+            .paint_at(ui, rect);
+    }
 }
+
+const COVER_FADE: f32 = 0.4;
 
 fn cover_uv(image: Vec2, target: Vec2, focus_y: f32) -> Rect {
     let full = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
