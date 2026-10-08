@@ -772,11 +772,7 @@ fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     let mut favorites: Vec<&LibraryItem> =
         state.library.iter().filter(|i| i.is_favorite()).collect();
     favorites.sort_by_key(|i| std::cmp::Reverse(i.favorited));
-    let mut rest: Vec<&LibraryItem> = state
-        .library
-        .iter()
-        .filter(|i| !i.is_favorite() && i.was_played())
-        .collect();
+    let mut rest: Vec<&LibraryItem> = state.library.iter().filter(|i| i.was_played()).collect();
     rest.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
     if !favorites.is_empty() {
         section(ui, "Favourites", |ui| {

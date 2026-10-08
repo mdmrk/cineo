@@ -169,6 +169,22 @@ fn half_watched(id: &str, name: &str, favorited: Option<u64>) -> LibraryItem {
 }
 
 #[test]
+fn a_watched_favourite_is_also_in_continue_watching_and_recently_played() {
+    let mut state = board_state();
+    state.library.push(half_watched("a", "Liked", Some(1)));
+    let mut harness = harness(state, ViewState::default());
+    harness.get_by_label("Continue watching");
+    harness.get_by_label("Liked");
+    harness.state_mut().1.page = Page::Library;
+    harness.run();
+    assert_eq!(
+        harness.get_all_by_label("Liked").count(),
+        2,
+        "Favourites and Recently played"
+    );
+}
+
+#[test]
 fn a_continue_watching_card_resumes_favorites_or_dismisses_the_item() {
     let mut state = board_state();
     state
@@ -212,8 +228,10 @@ fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
         ..ViewState::default()
     };
     let mut harness = harness(state, view);
-    let top = |h: &Harness<'_, Ui>, label: &str| h.get_by_label(label).rect().top();
-    let left = |h: &Harness<'_, Ui>, label: &str| h.get_by_label(label).rect().left();
+    let first =
+        |h: &Harness<'_, Ui>, label: &str| h.get_all_by_label(label).next().expect(label).rect();
+    let top = |h: &Harness<'_, Ui>, label: &str| first(h, label).top();
+    let left = |h: &Harness<'_, Ui>, label: &str| first(h, label).left();
     assert!(top(&harness, "Favourites") < top(&harness, "Liked"));
     assert!(
         left(&harness, "Loved") < left(&harness, "Liked"),
@@ -223,7 +241,7 @@ fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
     assert!(top(&harness, "Recently played") < top(&harness, "Plain"));
     harness
         .get_all_by_label("Remove from favourites")
-        .last()
+        .nth(1)
         .unwrap()
         .click();
     harness.run();
@@ -236,8 +254,8 @@ fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
     );
     assert_eq!(
         harness.get_all_by_label("Remove from library").count(),
-        3,
-        "played items can be removed"
+        5,
+        "played items can be removed, favourites in both sections"
     );
 }
 
@@ -255,7 +273,9 @@ fn favourites_open_their_page_and_recently_played_resumes() {
         ..ViewState::default()
     };
     let mut harness = harness(state, view);
-    harness.get_by_label("Liked").click();
+    harness.get_all_by_label("Liked").next().unwrap().click();
+    harness.run();
+    harness.get_all_by_label("Liked").nth(1).unwrap().click();
     harness.run();
     harness.get_by_label("Plain").click();
     harness.run();
@@ -264,7 +284,10 @@ fn favourites_open_their_page_and_recently_played_resumes() {
         matches!(&actions[0], Action::OpenDetail { id, preview: Some(p), .. } if id == "a" && p.name == "Liked"),
         "{actions:?}"
     );
-    assert_eq!(actions[1], Action::Resume("b".into()));
+    assert_eq!(
+        actions[1..],
+        [Action::Resume("a".into()), Action::Resume("b".into())]
+    );
 }
 
 #[test]
