@@ -389,12 +389,7 @@ fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response 
             );
         }
     }
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
-    if compact {
-        response.on_hover_text(label)
-    } else {
-        response
-    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 fn notice_bar(ui: &mut Ui, notice: &str, out: &mut Vec<Action>) {
@@ -1298,10 +1293,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
                     ui.set_width(ui.available_width());
                     ui.horizontal_top(|ui| {
                         ui.spacing_mut().item_spacing.x = 10.0;
-                        let play = play_button(ui, playable).on_disabled_hover_text(format!(
-                            "{} streams are not supported yet",
-                            stream.source.kind_label()
-                        ));
+                        let play = play_button(ui, playable);
                         ui.vertical(|ui| {
                             ui.spacing_mut().item_spacing.y = 2.0;
                             ui.horizontal(|ui| {
@@ -1410,9 +1402,7 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
             );
         }
         if playable {
-            response
-                .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .on_hover_text("Play")
+            response.on_hover_cursor(egui::CursorIcon::PointingHand)
         } else {
             response
         }
