@@ -14,7 +14,7 @@ Stremio-protocol addons.
 - Browse catalogs, search and view details
 - Play streams in the app window, including torrents
 - Continue watching and a local library
-- No account and no cloud: your data stays on your machine
+- No account and no cloud
 
 Runs on Linux, Windows and macOS.
 
