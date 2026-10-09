@@ -94,8 +94,7 @@ impl NetPolicy {
     }
 }
 
-/// Whether `ip` is a globally routable unicast address.
-pub fn is_public_ip(ip: IpAddr) -> bool {
+fn is_public_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_public_v4(v4),
         IpAddr::V6(v6) => is_public_v6(v6),

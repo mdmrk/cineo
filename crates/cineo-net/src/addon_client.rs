@@ -81,24 +81,15 @@ impl AddonClient {
         Ok(Self { http, policy })
     }
 
-    pub fn policy(&self) -> &NetPolicy {
-        &self.policy
-    }
-
     /// Fetches and validates `manifest.json`.
     pub async fn fetch_manifest(
         &self,
         addon: &TransportUrl,
     ) -> Result<Parsed<Manifest>, FetchError> {
         let span = info_span!("addon_request", req = next_request_id(), addon = %origin(addon.as_url()), resource = "manifest");
-        async {
-            let body = self.get(addon.as_url().clone()).await?;
-            let parsed = parse_manifest(&body)?;
-            log_warnings(&parsed.warnings);
-            Ok(parsed)
-        }
-        .instrument(span)
-        .await
+        self.fetch_parsed(addon.as_url().clone(), parse_manifest)
+            .instrument(span)
+            .await
     }
 
     /// Fetches a catalog page. The caller decides whether the addon supports
@@ -166,14 +157,20 @@ impl AddonClient {
         parse: fn(&[u8]) -> Result<Parsed<T>, ResponseError>,
     ) -> Result<Parsed<T>, FetchError> {
         let span = info_span!("addon_request", req = next_request_id(), addon = %origin(addon.as_url()), resource = %path.to_url_path());
-        async {
-            let body = self.get(addon.resource_url(path)).await?;
-            let parsed = parse(&body)?;
-            log_warnings(&parsed.warnings);
-            Ok(parsed)
-        }
-        .instrument(span)
-        .await
+        self.fetch_parsed(addon.resource_url(path), parse)
+            .instrument(span)
+            .await
+    }
+
+    async fn fetch_parsed<T, E: Into<FetchError>>(
+        &self,
+        url: Url,
+        parse: fn(&[u8]) -> Result<Parsed<T>, E>,
+    ) -> Result<Parsed<T>, FetchError> {
+        let body = self.get(url).await?;
+        let parsed = parse(&body).map_err(Into::into)?;
+        log_warnings(&parsed.warnings);
+        Ok(parsed)
     }
 
     async fn get(&self, url: Url) -> Result<Vec<u8>, FetchError> {
