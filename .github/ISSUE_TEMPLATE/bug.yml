@@ -25,6 +25,6 @@ body:
     id: version
     attributes:
       label: Version and OS
-      placeholder: cineo 0.1.0, Linux x86_64
+      placeholder: cineo 0.2.0, Linux x86_64
     validations:
       required: true
