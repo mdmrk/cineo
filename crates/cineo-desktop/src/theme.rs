@@ -34,10 +34,10 @@ pub(crate) const SIDEBAR_WIDTH: f32 = 176.0;
 pub(crate) const SIDEBAR_COMPACT_WIDTH: f32 = 56.0;
 pub(crate) const COMPACT_BELOW: f32 = 1000.0;
 
-pub(crate) const LOGO_WIDTH: f32 = 184.0;
+pub(crate) const LOGO_WIDTH: f32 = 280.0;
 pub(crate) const LOGO_ASPECT: f32 = 309.0 / 328.0;
 pub(crate) const LOGO_MOUSTACHE_X: f32 = 135.0 / 328.0;
-pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-20.0, -18.0);
+pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-52.0, -50.0);
 pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
 pub(crate) const GRAIN_FADE: f32 = 40.0;
 pub(crate) const LOADING_WIDTH: f32 = 128.0;
