@@ -31,6 +31,8 @@ const REPLY_ADDRESS_UNSUPPORTED: u8 = 8;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(10);
+const UPLOAD_BUFFER: usize = 8 * 1024;
+const DOWNLOAD_BUFFER: usize = 32 * 1024;
 
 #[derive(Debug)]
 pub(crate) struct Policy {
@@ -54,7 +56,13 @@ pub(crate) async fn run(listener: TcpListener, policy: Arc<Policy>) {
         tokio::spawn(async move {
             match tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake(client, &policy)).await {
                 Ok(Ok(Some((mut client, mut peer)))) => {
-                    let _ = tokio::io::copy_bidirectional(&mut client, &mut peer).await;
+                    let _ = tokio::io::copy_bidirectional_with_sizes(
+                        &mut client,
+                        &mut peer,
+                        UPLOAD_BUFFER,
+                        DOWNLOAD_BUFFER,
+                    )
+                    .await;
                 }
                 Ok(Ok(None)) => {}
                 Ok(Err(err)) => debug!(%err, "SOCKS handshake failed"),

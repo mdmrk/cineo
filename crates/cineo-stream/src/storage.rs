@@ -3,9 +3,9 @@
 //! §Streaming engine). Files are created on first write and grow sparsely.
 
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, RwLock};
 
 use anyhow::Context as _;
 use librqbit::storage::{BoxStorageFactory, StorageFactory, StorageFactoryExt, TorrentStorage};
@@ -41,7 +41,7 @@ impl StorageFactory for CacheStorageFactory {
 
 struct Slot {
     path: PathBuf,
-    file: Mutex<Option<File>>,
+    file: RwLock<Option<File>>,
 }
 
 struct Inner {
@@ -62,12 +62,16 @@ impl std::fmt::Debug for CacheStorage {
     }
 }
 
+fn poisoned<T>(_: T) -> anyhow::Error {
+    anyhow::anyhow!("a storage lock was poisoned")
+}
+
 impl CacheStorage {
     pub(crate) fn new(dir: PathBuf, file_count: usize) -> Self {
         let files = (0..file_count)
             .map(|index| Slot {
                 path: dir.join(index.to_string()),
-                file: Mutex::new(None),
+                file: RwLock::new(None),
             })
             .collect();
         Self {
@@ -82,11 +86,15 @@ impl CacheStorage {
             .with_context(|| format!("no file {file_id} in this torrent"))
     }
 
-    fn open(slot: &Slot, create: bool) -> anyhow::Result<MutexGuard<'_, Option<File>>> {
-        let mut guard = slot
-            .file
-            .lock()
-            .map_err(|_| anyhow::anyhow!("a storage lock was poisoned"))?;
+    fn with_file<R>(
+        slot: &Slot,
+        create: bool,
+        io: impl FnOnce(&File) -> io::Result<R>,
+    ) -> anyhow::Result<Option<R>> {
+        if let Some(file) = slot.file.read().map_err(poisoned)?.as_ref() {
+            return Ok(Some(io(file)?));
+        }
+        let mut guard = slot.file.write().map_err(poisoned)?;
         if guard.is_none() {
             let opened = OpenOptions::new()
                 .read(true)
@@ -96,12 +104,41 @@ impl CacheStorage {
                 .open(&slot.path);
             match opened {
                 Ok(file) => *guard = Some(file),
-                Err(err) if !create && err.kind() == std::io::ErrorKind::NotFound => {}
+                Err(err) if !create && err.kind() == io::ErrorKind::NotFound => return Ok(None),
                 Err(err) => return Err(err).context("cannot open a cache file"),
             }
         }
-        Ok(guard)
+        Ok(guard.as_ref().map(io).transpose()?)
     }
+}
+
+#[cfg(unix)]
+fn read_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+    std::os::unix::fs::FileExt::read_at(file, buf, offset)
+}
+
+#[cfg(windows)]
+fn read_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+    std::os::windows::fs::FileExt::seek_read(file, buf, offset)
+}
+
+#[cfg(unix)]
+fn write_all_at(file: &File, buf: &[u8], offset: u64) -> io::Result<()> {
+    std::os::unix::fs::FileExt::write_all_at(file, buf, offset)
+}
+
+#[cfg(windows)]
+fn write_all_at(file: &File, mut buf: &[u8], mut offset: u64) -> io::Result<()> {
+    while !buf.is_empty() {
+        match std::os::windows::fs::FileExt::seek_write(file, buf, offset)? {
+            0 => return Err(io::ErrorKind::WriteZero.into()),
+            n => {
+                buf = &buf[n..];
+                offset += n as u64;
+            }
+        }
+    }
+    Ok(())
 }
 
 impl TorrentStorage for CacheStorage {
@@ -114,41 +151,35 @@ impl TorrentStorage for CacheStorage {
     }
 
     fn pread_exact(&self, file_id: usize, offset: u64, buf: &mut [u8]) -> anyhow::Result<()> {
-        let slot = self.slot(file_id)?;
-        let mut guard = Self::open(slot, false)?;
-        let Some(file) = guard.as_mut() else {
+        let read = Self::with_file(self.slot(file_id)?, false, |file| {
+            let mut read = 0;
+            while read < buf.len() {
+                match read_at(file, &mut buf[read..], offset + read as u64)? {
+                    0 => break,
+                    n => read += n,
+                }
+            }
+            Ok(read)
+        })?;
+        let Some(read) = read else {
             anyhow::bail!("file {file_id} has no data yet");
         };
-        file.seek(SeekFrom::Start(offset))?;
-        let mut read = 0;
-        while read < buf.len() {
-            match file.read(&mut buf[read..])? {
-                0 => break,
-                n => read += n,
-            }
-        }
         buf[read..].fill(0);
         Ok(())
     }
 
     fn pwrite_all(&self, file_id: usize, offset: u64, buf: &[u8]) -> anyhow::Result<()> {
-        let slot = self.slot(file_id)?;
-        let mut guard = Self::open(slot, true)?;
-        let file = guard.as_mut().context("cache file missing after create")?;
-        file.seek(SeekFrom::Start(offset))?;
-        file.write_all(buf)?;
-        Ok(())
+        Self::with_file(self.slot(file_id)?, true, |file| {
+            write_all_at(file, buf, offset)
+        })?
+        .context("cache file missing after create")
     }
 
     fn remove_file(&self, file_id: usize, _filename: &std::path::Path) -> anyhow::Result<()> {
         let slot = self.slot(file_id)?;
-        let mut guard = slot
-            .file
-            .lock()
-            .map_err(|_| anyhow::anyhow!("a storage lock was poisoned"))?;
-        *guard = None;
+        *slot.file.write().map_err(poisoned)? = None;
         match std::fs::remove_file(&slot.path) {
-            Err(err) if err.kind() != std::io::ErrorKind::NotFound => Err(err.into()),
+            Err(err) if err.kind() != io::ErrorKind::NotFound => Err(err.into()),
             _ => Ok(()),
         }
     }
