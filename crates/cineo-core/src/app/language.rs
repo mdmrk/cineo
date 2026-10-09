@@ -4,53 +4,47 @@ pub struct Language(u8);
 
 struct Info {
     code: &'static str,
-    name: &'static str,
     aliases: &'static [&'static str],
 }
 
-const fn lang(code: &'static str, name: &'static str, aliases: &'static [&'static str]) -> Info {
-    Info {
-        code,
-        name,
-        aliases,
-    }
+const fn lang(code: &'static str, aliases: &'static [&'static str]) -> Info {
+    Info { code, aliases }
 }
 
-/// By English name.
 const TABLE: &[Info] = &[
-    lang("ara", "Arabic", &["ar"]),
-    lang("bul", "Bulgarian", &["bg"]),
-    lang("cat", "Catalan", &["ca"]),
-    lang("chi", "Chinese", &["zho", "zh"]),
-    lang("hrv", "Croatian", &["hr"]),
-    lang("cze", "Czech", &["ces", "cs"]),
-    lang("dan", "Danish", &["da"]),
-    lang("dut", "Dutch", &["nld", "nl"]),
-    lang("eng", "English", &["en"]),
-    lang("fin", "Finnish", &["fi"]),
-    lang("fre", "French", &["fra", "fr"]),
-    lang("ger", "German", &["deu", "de"]),
-    lang("gre", "Greek", &["ell", "el"]),
-    lang("heb", "Hebrew", &["he"]),
-    lang("hin", "Hindi", &["hi"]),
-    lang("hun", "Hungarian", &["hu"]),
-    lang("ind", "Indonesian", &["id"]),
-    lang("ita", "Italian", &["it"]),
-    lang("jpn", "Japanese", &["ja"]),
-    lang("kor", "Korean", &["ko"]),
-    lang("nor", "Norwegian", &["nob", "no", "nb"]),
-    lang("per", "Persian", &["fas", "fa"]),
-    lang("pol", "Polish", &["pl"]),
-    lang("por", "Portuguese", &["pt"]),
-    lang("rum", "Romanian", &["ron", "ro"]),
-    lang("rus", "Russian", &["ru"]),
-    lang("srp", "Serbian", &["sr"]),
-    lang("spa", "Spanish", &["es"]),
-    lang("swe", "Swedish", &["sv"]),
-    lang("tha", "Thai", &["th"]),
-    lang("tur", "Turkish", &["tr"]),
-    lang("ukr", "Ukrainian", &["uk"]),
-    lang("vie", "Vietnamese", &["vi"]),
+    lang("ara", &["ar"]),
+    lang("bul", &["bg"]),
+    lang("cat", &["ca"]),
+    lang("chi", &["zho", "zh"]),
+    lang("hrv", &["hr"]),
+    lang("cze", &["ces", "cs"]),
+    lang("dan", &["da"]),
+    lang("dut", &["nld", "nl"]),
+    lang("eng", &["en"]),
+    lang("fin", &["fi"]),
+    lang("fre", &["fra", "fr"]),
+    lang("ger", &["deu", "de"]),
+    lang("gre", &["ell", "el"]),
+    lang("heb", &["he"]),
+    lang("hin", &["hi"]),
+    lang("hun", &["hu"]),
+    lang("ind", &["id"]),
+    lang("ita", &["it"]),
+    lang("jpn", &["ja"]),
+    lang("kor", &["ko"]),
+    lang("nor", &["nob", "no", "nb"]),
+    lang("per", &["fas", "fa"]),
+    lang("pol", &["pl"]),
+    lang("por", &["pt"]),
+    lang("rum", &["ron", "ro"]),
+    lang("rus", &["ru"]),
+    lang("srp", &["sr"]),
+    lang("spa", &["es"]),
+    lang("swe", &["sv"]),
+    lang("tha", &["th"]),
+    lang("tur", &["tr"]),
+    lang("ukr", &["uk"]),
+    lang("vie", &["vi"]),
 ];
 
 impl std::fmt::Debug for Language {
@@ -71,10 +65,6 @@ impl Language {
 
     pub fn code(self) -> &'static str {
         self.info().code
-    }
-
-    pub fn name(self) -> &'static str {
-        self.info().name
     }
 
     fn info(self) -> &'static Info {

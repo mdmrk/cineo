@@ -380,9 +380,8 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::LoadBoard => load_board(state),
         Action::OpenDiscover { addon, path } => {
-            let target = plan::board_targets(&state.addons)
-                .into_iter()
-                .chain(catalogs_with_required(state))
+            let target = plan::catalogs(&state.addons, |_| true)
+                .map(|(a, c)| plan::catalog_target(a, c))
                 .find(|t| t.addon == addon && t.path == path);
             state.discover = Discover {
                 target,
@@ -752,20 +751,6 @@ fn refresh_board(state: &mut State) -> Vec<Effect> {
     effects
 }
 
-fn catalogs_with_required(state: &State) -> Vec<CatalogTarget> {
-    state
-        .addons
-        .iter()
-        .flat_map(|a| {
-            a.manifest
-                .catalogs
-                .iter()
-                .filter(|c| !c.is_browsable())
-                .map(move |c| plan::catalog_target(a, c))
-        })
-        .collect()
-}
-
 fn default_genre(state: &State, addon: &TransportUrl, path: &ResourcePath) -> Option<String> {
     let catalog = state
         .addons
@@ -928,7 +913,7 @@ fn meta_loaded(
     let Some(detail) = state.detail.as_mut() else {
         return Vec::new();
     };
-    if detail.meta_request.as_ref() != Some(&(addon.clone(), path.clone())) {
+    if detail.meta_request != request {
         return Vec::new();
     }
     match result {

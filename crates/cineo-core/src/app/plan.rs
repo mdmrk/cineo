@@ -12,40 +12,38 @@ pub struct CatalogTarget {
 
 /// Board rows: every catalog that needs no user input (no required extra).
 pub fn board_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
-    addons
-        .iter()
-        .flat_map(|addon| {
-            addon
-                .manifest
-                .catalogs
-                .iter()
-                .filter(|c| c.is_browsable())
-                .map(move |c| catalog_target(addon, c))
-        })
+    catalogs(addons, CatalogDef::is_browsable)
+        .map(|(addon, catalog)| catalog_target(addon, catalog))
         .collect()
 }
 
 /// Search rows: catalogs declaring `search` whose other required extras are
 /// none (so `search` alone is a valid request).
 pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarget> {
-    addons
-        .iter()
-        .flat_map(|addon| {
-            addon
-                .manifest
-                .catalogs
-                .iter()
-                .filter(|c| {
-                    c.extra.iter().any(|e| e.name == "search")
-                        && c.extra.iter().all(|e| !e.is_required || e.name == "search")
-                })
-                .map(move |c| {
-                    let mut target = catalog_target(addon, c);
-                    target.path.extra = vec![ExtraValue::new("search", query)];
-                    target
-                })
-        })
-        .collect()
+    catalogs(addons, |c| {
+        c.extra.iter().any(|e| e.name == "search")
+            && c.extra.iter().all(|e| !e.is_required || e.name == "search")
+    })
+    .map(|(addon, catalog)| {
+        let mut target = catalog_target(addon, catalog);
+        target.path.extra = vec![ExtraValue::new("search", query)];
+        target
+    })
+    .collect()
+}
+
+pub(super) fn catalogs(
+    addons: &[InstalledAddon],
+    keep: impl Fn(&CatalogDef) -> bool + Copy,
+) -> impl Iterator<Item = (&InstalledAddon, &CatalogDef)> {
+    addons.iter().flat_map(move |addon| {
+        addon
+            .manifest
+            .catalogs
+            .iter()
+            .filter(move |c| keep(c))
+            .map(move |c| (addon, c))
+    })
 }
 
 /// Addons that serve `meta` for this item, in user order. The first that

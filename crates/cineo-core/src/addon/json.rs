@@ -54,13 +54,14 @@ pub(crate) fn list<T>(
 ) -> Vec<T> {
     match obj.get(key) {
         None | Some(Value::Null) => Vec::new(),
-        Some(Value::Array(items)) => items
-            .iter()
-            .enumerate()
-            .filter_map(|(i, item)| {
-                parse_item(item, &format!("{}[{i}]", field(loc, key)), warnings)
-            })
-            .collect(),
+        Some(Value::Array(items)) => {
+            let base = field(loc, key);
+            items
+                .iter()
+                .enumerate()
+                .filter_map(|(i, item)| parse_item(item, &format!("{base}[{i}]"), warnings))
+                .collect()
+        }
         Some(other) => {
             warnings.ignored(
                 field(loc, key),
@@ -130,21 +131,15 @@ pub(crate) fn opt_http_url(
     loc: &str,
     warnings: &mut Warnings,
 ) -> Option<Url> {
-    let raw = opt_string(obj, key, loc, warnings)?;
-    match Url::parse(&raw) {
-        Ok(url) if matches!(url.scheme(), "http" | "https") => Some(url),
-        Ok(url) => {
-            warnings.ignored(
-                field(loc, key),
-                format!("unsupported scheme `{}`", url.scheme()),
-            );
-            None
-        }
-        Err(err) => {
-            warnings.ignored(field(loc, key), format!("invalid URL: {err}"));
-            None
-        }
+    let url = opt_any_url(obj, key, loc, warnings)?;
+    if matches!(url.scheme(), "http" | "https") {
+        return Some(url);
     }
+    warnings.ignored(
+        field(loc, key),
+        format!("unsupported scheme `{}`", url.scheme()),
+    );
+    None
 }
 
 pub(crate) fn bool_or_false(obj: &Object, key: &str, loc: &str, warnings: &mut Warnings) -> bool {
