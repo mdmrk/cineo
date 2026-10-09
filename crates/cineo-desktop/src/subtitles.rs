@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use cineo_core::app::{Language, SubtitleGroup};
 use cineo_player::embedded::{Track, TrackKind};
@@ -17,6 +18,8 @@ pub(crate) struct SubtitleFiles {
     dir: PathBuf,
     files: HashMap<Url, PathBuf>,
     written: u64,
+    entries: Vec<AddonSubtitle>,
+    entries_for: Option<(Arc<[Track]>, usize, u64)>,
 }
 
 impl SubtitleFiles {
@@ -26,6 +29,8 @@ impl SubtitleFiles {
             dir,
             files: HashMap::new(),
             written: 0,
+            entries: Vec::new(),
+            entries_for: None,
         }
     }
 
@@ -50,7 +55,24 @@ impl SubtitleFiles {
         Ok(path)
     }
 
-    pub(crate) fn entries(&self, groups: &[SubtitleGroup], tracks: &[Track]) -> Vec<AddonSubtitle> {
+    pub(crate) fn entries(
+        &mut self,
+        groups: &[SubtitleGroup],
+        tracks: &Arc<[Track]>,
+    ) -> &[AddonSubtitle] {
+        let settled = groups.iter().filter(|g| !g.subtitles.is_loading()).count();
+        let fresh = self
+            .entries_for
+            .as_ref()
+            .is_some_and(|(t, s, w)| Arc::ptr_eq(t, tracks) && *s == settled && *w == self.written);
+        if !fresh {
+            self.entries = self.build_entries(groups, tracks);
+            self.entries_for = Some((Arc::clone(tracks), settled, self.written));
+        }
+        &self.entries
+    }
+
+    fn build_entries(&self, groups: &[SubtitleGroup], tracks: &[Track]) -> Vec<AddonSubtitle> {
         let selected_file = tracks
             .iter()
             .find(|t| t.kind == TrackKind::Subtitle && t.selected)
@@ -202,7 +224,7 @@ mod tests {
         let path = files
             .write(&url("https://s.example/2"), b"x")
             .unwrap_or_else(|e| panic!("{e}"));
-        let tracks = [Track {
+        let tracks: Arc<[Track]> = [Track {
             id: 3,
             kind: TrackKind::Subtitle,
             title: None,
@@ -210,13 +232,49 @@ mod tests {
             selected: true,
             external_file: path.to_str().map(str::to_owned),
             codec: None,
-        }];
+        }]
+        .into();
         let entries = files.entries(&groups, &tracks);
         let summary: Vec<_> = entries
             .iter()
             .map(|e| (e.addon_name.as_str(), e.lang.as_str(), e.selected))
             .collect();
         assert_eq!(summary, [("Stream", "eng", false), ("Subs", "spa", true)]);
+    }
+
+    #[test]
+    fn entries_refresh_when_a_group_settles_or_the_tracks_change() {
+        let mut files = SubtitleFiles::new(dir("refresh"));
+        let mut groups = [SubtitleGroup {
+            addon: TransportUrl::parse("https://a.example/manifest.json")
+                .unwrap_or_else(|e| panic!("{e}")),
+            addon_name: "Subs".into(),
+            path: None,
+            subtitles: Loadable::Loading,
+        }];
+        let none: Arc<[Track]> = Arc::from([]);
+        assert!(files.entries(&groups, &none).is_empty());
+        groups[0].subtitles = Loadable::Ready(vec![Subtitle {
+            id: "1".into(),
+            url: url("https://s.example/1"),
+            lang: "eng".into(),
+            label: None,
+        }]);
+        assert!(!files.entries(&groups, &none)[0].selected);
+        let path = files
+            .write(&url("https://s.example/1"), b"x")
+            .unwrap_or_else(|e| panic!("{e}"));
+        let tracks: Arc<[Track]> = [Track {
+            id: 3,
+            kind: TrackKind::Subtitle,
+            title: None,
+            lang: None,
+            selected: true,
+            external_file: path.to_str().map(str::to_owned),
+            codec: None,
+        }]
+        .into();
+        assert!(files.entries(&groups, &tracks)[0].selected);
     }
 
     #[test]

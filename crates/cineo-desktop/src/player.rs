@@ -202,7 +202,7 @@ fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
 }
 
 fn shortcuts(ui: &Ui, status: &Status, settings: &Settings, out: &mut Vec<PlayerCommand>) {
-    let fullscreen = is_fullscreen(ui);
+    let fullscreen = is_fullscreen(ui.ctx());
     let mut toggle_full = false;
     let mut toggle_stats = false;
     let (step, short) = (
@@ -388,18 +388,18 @@ fn stats_overlay(ui: &Ui, rect: Rect, rows: &[(String, String)]) {
     }
 }
 
-fn is_fullscreen(ui: &Ui) -> bool {
-    ui.input(|i| i.viewport().fullscreen.unwrap_or(false))
+fn is_fullscreen(ctx: &egui::Context) -> bool {
+    ctx.input(|i| i.viewport().fullscreen.unwrap_or(false))
 }
 
 fn toggle_fullscreen(ui: &Ui) {
-    let on = !is_fullscreen(ui);
+    let on = !is_fullscreen(ui.ctx());
     ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(on));
 }
 
 /// Leaves fullscreen; called when playback ends.
 pub fn leave_fullscreen(ctx: &egui::Context) {
-    if ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
+    if is_fullscreen(ctx) {
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
     }
 }
@@ -572,7 +572,7 @@ fn bottom_bar(
         x -= step;
         Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
     };
-    let (icon, label) = if is_fullscreen(ui) {
+    let (icon, label) = if is_fullscreen(ui.ctx()) {
         ("minimize", t!("exit-fullscreen"))
     } else {
         ("maximize", t!("fullscreen"))

@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use eframe::egui::{
-    self, Color32, ColorImage, IconData, Rect, TextureHandle, Ui, Vec2, pos2, vec2,
+    self, Color32, ColorImage, IconData, Rect, TextureHandle, TextureId, Ui, Vec2, pos2, vec2,
 };
 
 use crate::view::IMAGE_FILTER;
@@ -39,20 +41,37 @@ fn decode(bytes: &[u8]) -> Option<image::RgbaImage> {
         .map(|image| image.to_rgba8())
 }
 
-pub(crate) fn logo(ctx: &egui::Context) -> Option<TextureHandle> {
-    let id = egui::Id::new("cineo-logo");
-    if let Some(texture) = ctx.data(|d| d.get_temp::<TextureHandle>(id)) {
-        return Some(texture);
-    }
-    let image = decode(LOGO)?;
+fn texture(
+    ctx: &egui::Context,
+    name: String,
+    bytes: &[u8],
+    options: egui::TextureOptions,
+) -> Option<TextureHandle> {
+    let image = decode(bytes)?;
     let size = [image.width() as usize, image.height() as usize];
-    let texture = ctx.load_texture(
-        "cineo-logo",
-        ColorImage::from_rgba_unmultiplied(size, image.as_raw()),
-        egui::TextureOptions::LINEAR,
-    );
-    ctx.data_mut(|d| d.insert_temp(id, texture.clone()));
-    Some(texture)
+    let pixels = ColorImage::from_rgba_unmultiplied(size, image.as_raw());
+    Some(ctx.load_texture(name, pixels, options))
+}
+
+fn cached<T: Clone + Send + Sync + 'static>(
+    ctx: &egui::Context,
+    name: &str,
+    make: impl FnOnce() -> Option<T>,
+) -> Option<T> {
+    let id = egui::Id::new(name);
+    if let Some(value) = ctx.data(|d| d.get_temp::<T>(id)) {
+        return Some(value);
+    }
+    let value = make()?;
+    ctx.data_mut(|d| d.insert_temp(id, value.clone()));
+    Some(value)
+}
+
+pub(crate) fn logo(ctx: &egui::Context) -> Option<TextureId> {
+    cached(ctx, "cineo-logo", || {
+        texture(ctx, "cineo-logo".into(), LOGO, egui::TextureOptions::LINEAR).map(Arc::new)
+    })
+    .map(|texture| texture.id())
 }
 
 /// Paints the animated logo filling `rect`, which should have [`LOADING_SIZE`]'s aspect.
@@ -61,31 +80,21 @@ pub(crate) fn paint_loading(ui: &Ui, rect: Rect, tint: Color32) {
         return;
     }
     ui.ctx().request_repaint();
-    let id = egui::Id::new("cineo-loading");
-    let layers = match ui.ctx().data(|d| d.get_temp::<Vec<TextureHandle>>(id)) {
-        Some(layers) => layers,
-        None => {
-            let Some(layers) = LOADING
-                .iter()
-                .enumerate()
-                .map(|(index, bytes)| {
-                    let image = decode(bytes)?;
-                    let size = [image.width() as usize, image.height() as usize];
-                    Some(ui.ctx().load_texture(
-                        format!("cineo-loading-{index}"),
-                        ColorImage::from_rgba_unmultiplied(size, image.as_raw()),
-                        IMAGE_FILTER,
-                    ))
-                })
-                .collect::<Option<Vec<_>>>()
-            else {
-                return;
-            };
-            ui.ctx().data_mut(|d| d.insert_temp(id, layers.clone()));
-            layers
-        }
-    };
-    let [base, reel, left, right, strip] = &layers[..] else {
+    let layers = cached(ui.ctx(), "cineo-loading", || {
+        LOADING
+            .iter()
+            .enumerate()
+            .map(|(index, bytes)| {
+                texture(
+                    ui.ctx(),
+                    format!("cineo-loading-{index}"),
+                    bytes,
+                    IMAGE_FILTER,
+                )
+            })
+            .collect::<Option<Arc<[_]>>>()
+    });
+    let Some([base, reel, left, right, strip]) = layers.as_deref() else {
         return;
     };
     let time = ui.input(|i| i.time);
@@ -152,20 +161,22 @@ fn strip_frame(time: f64) -> usize {
     frame.min(STRIP_FRAMES - 1)
 }
 
-pub(crate) fn grain(ctx: &egui::Context, size: [usize; 2]) -> TextureHandle {
+pub(crate) fn grain(ctx: &egui::Context, size: [usize; 2]) -> TextureId {
     let id = egui::Id::new("cineo-grain");
-    if let Some((cached, texture)) = ctx.data(|d| d.get_temp::<([usize; 2], TextureHandle)>(id))
+    if let Some((cached, texture)) =
+        ctx.data(|d| d.get_temp::<([usize; 2], Arc<TextureHandle>)>(id))
         && cached == size
     {
-        return texture;
+        return texture.id();
     }
     let texture = ctx.load_texture(
         "cineo-grain",
         grain_image(size),
         egui::TextureOptions::NEAREST,
     );
-    ctx.data_mut(|d| d.insert_temp(id, (size, texture.clone())));
-    texture
+    let texture_id = texture.id();
+    ctx.data_mut(|d| d.insert_temp(id, (size, Arc::new(texture))));
+    texture_id
 }
 
 fn grain_image([width, height]: [usize; 2]) -> ColorImage {

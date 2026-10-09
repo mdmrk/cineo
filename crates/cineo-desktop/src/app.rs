@@ -10,7 +10,8 @@ use cineo_core::app::{
     Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
     TorrentRequest, parse_link, update,
 };
-use cineo_net::{AddonClient, NetPolicy};
+use cineo_core::diagnostics::Parsed;
+use cineo_net::{AddonClient, FetchError, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
 use cineo_player::embedded::{Player, PlayerCommand, ProcAddress, Renderer, Status, Video};
@@ -129,6 +130,7 @@ pub(crate) enum Msg {
         result: Result<Vec<u8>, String>,
     },
     Link(String),
+    LinksRegistered(Result<(), String>),
 }
 
 pub(crate) struct Io {
@@ -229,76 +231,46 @@ impl CineoApp {
     fn run(&mut self, effect: Effect) {
         let client = Arc::clone(&self.io.client);
         match effect {
-            Effect::FetchManifest { transport, install } => {
-                self.spawn(async move {
-                    let result = client
-                        .fetch_manifest(&transport)
-                        .await
-                        .map(|m| Box::new(m.value))
-                        .map_err(|e| e.to_string());
-                    Action::ManifestLoaded {
-                        transport,
-                        result,
-                        install,
-                    }
-                });
-            }
-            Effect::FetchCatalog { addon, path } => {
-                self.spawn(async move {
-                    let result = client
-                        .fetch_catalog(&addon, &path)
-                        .await
-                        .map(|c| c.value.metas)
-                        .map_err(|e| e.to_string());
-                    Action::CatalogLoaded {
-                        addon,
-                        path,
-                        result,
-                    }
-                });
-            }
-            Effect::FetchMeta { addon, path } => {
-                self.spawn(async move {
-                    let result = client
-                        .fetch_meta(&addon, &path)
-                        .await
-                        .map(|m| Box::new(m.value))
-                        .map_err(|e| e.to_string());
-                    Action::MetaLoaded {
-                        addon,
-                        path,
-                        result,
-                    }
-                });
-            }
-            Effect::FetchStreams { addon, path } => {
-                self.spawn(async move {
-                    let result = client
-                        .fetch_streams(&addon, &path)
-                        .await
-                        .map(|s| s.value)
-                        .map_err(|e| e.to_string());
-                    Action::StreamsLoaded {
-                        addon,
-                        path,
-                        result,
-                    }
-                });
-            }
-            Effect::FetchSubtitles { addon, path } => {
-                self.spawn(async move {
-                    let result = client
-                        .fetch_subtitles(&addon, &path)
-                        .await
-                        .map(|s| s.value)
-                        .map_err(|e| e.to_string());
-                    Action::SubtitlesLoaded {
-                        addon,
-                        path,
-                        result,
-                    }
-                });
-            }
+            Effect::FetchManifest { transport, install } => self.spawn(async move {
+                let result = fetched(client.fetch_manifest(&transport).await).map(Box::new);
+                Action::ManifestLoaded {
+                    transport,
+                    result,
+                    install,
+                }
+            }),
+            Effect::FetchCatalog { addon, path } => self.spawn(async move {
+                let result = fetched(client.fetch_catalog(&addon, &path).await).map(|c| c.metas);
+                Action::CatalogLoaded {
+                    addon,
+                    path,
+                    result,
+                }
+            }),
+            Effect::FetchMeta { addon, path } => self.spawn(async move {
+                let result = fetched(client.fetch_meta(&addon, &path).await).map(Box::new);
+                Action::MetaLoaded {
+                    addon,
+                    path,
+                    result,
+                }
+            }),
+            Effect::FetchStreams { addon, path } => self.spawn(async move {
+                let result = fetched(client.fetch_streams(&addon, &path).await);
+                Action::StreamsLoaded {
+                    addon,
+                    path,
+                    result,
+                }
+            }),
+            Effect::FetchSubtitles { addon, path } => self.spawn(async move {
+                let result = fetched(client.fetch_subtitles(&addon, &path).await);
+                Action::SubtitlesLoaded {
+                    addon,
+                    path,
+                    result,
+                }
+            }),
             effect @ (Effect::SaveAddons(_)
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)
@@ -344,6 +316,7 @@ impl CineoApp {
                 }
             }
             let mut ticks = tokio::time::interval(TORRENT_STATUS_INTERVAL);
+            let mut last = None;
             loop {
                 ticks.tick().await;
                 if current.load(Ordering::SeqCst) != generation {
@@ -351,10 +324,15 @@ impl CineoApp {
                 }
                 let status = engine.lock().await.as_ref().and_then(Engine::status);
                 match status {
-                    Some((hash, status)) if hash == info_hash => send(Action::TorrentStatus {
-                        info_hash: info_hash.clone(),
-                        status,
-                    }),
+                    Some((hash, status)) if hash == info_hash => {
+                        if last.as_ref() != Some(&status) {
+                            last = Some(status.clone());
+                            send(Action::TorrentStatus {
+                                info_hash: info_hash.clone(),
+                                status,
+                            });
+                        }
+                    }
                     _ => return,
                 }
             }
@@ -544,19 +522,10 @@ impl CineoApp {
     }
 
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
-        let Some((title, logo, background)) = self
-            .state
-            .torrent
-            .as_ref()
-            .and_then(|t| t.connecting())
-            .map(|request| {
-                (
-                    request.title.clone(),
-                    request.logo.clone(),
-                    request.background.clone(),
-                )
-            })
-        else {
+        let Some(torrent) = &self.state.torrent else {
+            return false;
+        };
+        let Some(request) = torrent.connecting() else {
             return false;
         };
         let mut commands = Vec::new();
@@ -566,13 +535,13 @@ impl CineoApp {
                 let rect = ui.max_rect();
                 let playback = Playback {
                     status: &Status::default(),
-                    title: &title,
-                    logo: logo.as_ref().map(url::Url::as_str),
-                    background: background.as_ref().map(url::Url::as_str),
+                    title: &request.title,
+                    logo: request.logo.as_ref().map(url::Url::as_str),
+                    background: request.background.as_ref().map(url::Url::as_str),
                     addon_subtitles: &[],
                     settings: &self.state.settings,
                     next: None,
-                    torrent: self.state.torrent.as_ref().map(|t| &t.status),
+                    torrent: Some(&torrent.status),
                 };
                 commands = player::show(ui, rect, &playback, &mut self.connecting_controls);
             });
@@ -625,7 +594,7 @@ impl CineoApp {
                     title: &embedded.title,
                     logo: embedded.logo.as_deref(),
                     background: embedded.background.as_deref(),
-                    addon_subtitles: &addon_subtitles,
+                    addon_subtitles,
                     settings: &self.state.settings,
                     next: self
                         .state
@@ -654,7 +623,7 @@ impl CineoApp {
             embedded.player.send(command);
         }
         if !embedded.auto_subtitle.is_empty() && status.loaded && !status.tracks.is_empty() {
-            match subtitles::auto_pick(&embedded.auto_subtitle, &status.tracks, &addon_subtitles) {
+            match subtitles::auto_pick(&embedded.auto_subtitle, &status.tracks, addon_subtitles) {
                 AutoPick::Done => embedded.auto_subtitle.clear(),
                 AutoPick::Load(url) => {
                     embedded.auto_subtitle.clear();
@@ -738,6 +707,7 @@ impl eframe::App for CineoApp {
                     self.pending_link = Some(link);
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
+                Msg::LinksRegistered(result) => self.view.links_registered = Some(result),
             }
         }
         if self.state.addons_loading.is_empty()
@@ -759,8 +729,12 @@ impl eframe::App for CineoApp {
             self.dispatch(action);
         }
         if std::mem::take(&mut self.view.register_links) {
-            self.view.links_registered =
-                Some(register::register().map_err(|err| format!("{err:#}")));
+            let post = self.post();
+            self.io.runtime.spawn_blocking(move || {
+                post(Msg::LinksRegistered(
+                    register::register().map_err(|err| format!("{err:#}")),
+                ));
+            });
         }
     }
 
@@ -797,6 +771,12 @@ async fn open_torrent(
         error!(error = %err, "opening the torrent failed");
         err.to_string()
     })
+}
+
+fn fetched<T>(result: Result<Parsed<T>, FetchError>) -> Result<T, String> {
+    result
+        .map(|parsed| parsed.value)
+        .map_err(|err| err.to_string())
 }
 
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {
@@ -848,20 +828,91 @@ pub(crate) fn spawn_store_writer(
     let thread = std::thread::Builder::new()
         .name("store".into())
         .spawn(move || {
-            for effect in rx {
-                if let Err(err) = store.apply(&effect) {
-                    error!(error = %err, "saving failed");
-                    let _ = results.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
+            while let Ok(first) = rx.recv() {
+                for effect in coalesce(std::iter::once(first).chain(rx.try_iter()).collect()) {
+                    if let Err(err) = store.apply(&effect) {
+                        error!(error = %err, "saving failed");
+                        let _ = results.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
+                    }
                 }
             }
         })?;
     Ok((tx, thread))
 }
 
+fn coalesce(batch: Vec<Effect>) -> impl Iterator<Item = Effect> {
+    let keep: Vec<bool> = (0..batch.len())
+        .map(|i| {
+            !batch[i + 1..]
+                .iter()
+                .any(|later| supersedes(later, &batch[i]))
+        })
+        .collect();
+    batch
+        .into_iter()
+        .zip(keep)
+        .filter_map(|(effect, keep)| keep.then_some(effect))
+}
+
+fn supersedes(later: &Effect, earlier: &Effect) -> bool {
+    match (later, earlier) {
+        (Effect::SaveSettings(_), Effect::SaveSettings(_))
+        | (Effect::SaveAddons(_), Effect::SaveAddons(_)) => true,
+        (Effect::SaveLibraryItem(later), Effect::SaveLibraryItem(earlier)) => {
+            later.id == earlier.id
+        }
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use cineo_core::app::{DownloadLimit, PeerLimit, UploadLimit};
+
+    #[test]
+    fn queued_saves_keep_only_the_last_write_of_each_key() {
+        let item = |id: &str, time_offset_ms| {
+            Effect::SaveLibraryItem(cineo_core::app::LibraryItem {
+                id: id.into(),
+                content_type: cineo_core::addon::ContentType::new("movie").unwrap_or_else(|| {
+                    panic!("valid type");
+                }),
+                name: id.into(),
+                poster: None,
+                video_id: id.into(),
+                time_offset_ms,
+                duration_ms: 0,
+                updated_ms: 1,
+                favorited: None,
+                stream: None,
+            })
+        };
+        let quiet = Settings {
+            volume: Percent::new(10),
+            ..Settings::default()
+        };
+        let batch = vec![
+            Effect::SaveSettings(Settings::default()),
+            item("a", 1),
+            item("b", 1),
+            Effect::DeleteLibraryItem("a".into()),
+            item("a", 2),
+            Effect::SaveSettings(quiet),
+            Effect::ClearLibrary,
+        ];
+        let kept: Vec<Effect> = coalesce(batch).collect();
+        assert_eq!(
+            kept,
+            [
+                item("b", 1),
+                Effect::DeleteLibraryItem("a".into()),
+                item("a", 2),
+                Effect::SaveSettings(quiet),
+                Effect::ClearLibrary,
+            ]
+        );
+    }
 
     #[test]
     fn private_networks_stay_blocked_unless_asked_for() {

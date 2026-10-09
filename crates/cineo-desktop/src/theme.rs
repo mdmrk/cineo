@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use eframe::egui::{
     self, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Margin, Stroke,
     TextStyle, Visuals,
@@ -57,12 +59,15 @@ pub(crate) const WHEEL_LINE_POINTS: f32 = 100.0;
 
 pub(crate) const CAPS_SPACING: f32 = 0.6;
 
+static STRONG: LazyLock<FontFamily> = LazyLock::new(|| FontFamily::Name("strong".into()));
+static SERIF: LazyLock<FontFamily> = LazyLock::new(|| FontFamily::Name("serif".into()));
+
 pub(crate) fn strong_family() -> FontFamily {
-    FontFamily::Name("strong".into())
+    STRONG.clone()
 }
 
 pub(crate) fn serif_family() -> FontFamily {
-    FontFamily::Name("serif".into())
+    SERIF.clone()
 }
 
 pub(crate) fn title() -> FontId {

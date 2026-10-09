@@ -5,17 +5,17 @@ use cineo_core::app::{
     UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
-    self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Frame, Label, Layout, Margin,
-    Modal, Popup, PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, Stroke,
-    TextFormat, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
+    self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Label, Layout, Popup,
+    PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, TextFormat, Ui, UiBuilder,
+    WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
 use crate::brand;
 use crate::i18n::{Locale, t};
 use crate::theme;
 use crate::view::{
-    Icon, Page, ViewState, append_icon, compact, dim, lerp_color, page_title, paint_icon,
-    paint_loading, primary, section,
+    Icon, Page, ViewState, append_icon, compact, dialog, dim, lerp_color, page_title, paint_icon,
+    paint_loading, section,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -221,7 +221,7 @@ fn body(
                 &t!("seek-step-help"),
                 s.seek_step,
                 SeekStep::ALL,
-                seek_name,
+                |step: SeekStep| seconds(step.seconds()),
                 Setting::SeekStep,
             );
             pick(
@@ -231,7 +231,7 @@ fn body(
                 &t!("short-seek-step-help"),
                 s.short_seek_step,
                 ShortSeekStep::ALL,
-                short_seek_name,
+                |step: ShortSeekStep| seconds(step.seconds()),
                 Setting::ShortSeekStep,
             );
             pick(
@@ -241,7 +241,7 @@ fn body(
                 &t!("hide-controls-help"),
                 s.hide_controls,
                 HideControls::ALL,
-                hide_name,
+                |after: HideControls| seconds(after.seconds()),
                 Setting::HideControls,
             );
             switch(
@@ -731,18 +731,6 @@ fn seconds(count: f64) -> String {
     t!("seconds", count = count)
 }
 
-fn seek_name(step: SeekStep) -> String {
-    seconds(step.seconds())
-}
-
-fn short_seek_name(step: ShortSeekStep) -> String {
-    seconds(step.seconds())
-}
-
-fn hide_name(after: HideControls) -> String {
-    seconds(after.seconds())
-}
-
 fn switch(
     ui: &mut Ui,
     out: &mut Vec<Action>,
@@ -773,7 +761,7 @@ fn pick<T: Copy + PartialEq>(
     setting: fn(T) -> Setting,
 ) {
     row(ui, title, help, |ui| {
-        if let Some(value) = select(ui, title, current, options.iter().copied(), name) {
+        if let Some(value) = select(ui, title, current, || options.iter().copied(), name) {
             out.push(Action::ChangeSetting(setting(value)));
         }
     });
@@ -889,9 +877,11 @@ fn language(
     setting: fn(Option<Language>) -> Setting,
 ) {
     row(ui, title, help, |ui| {
-        let mut languages: Vec<Language> = Language::all().collect();
-        languages.sort_by_cached_key(|l| sort_key(&language_name(Some(*l))));
-        let options = std::iter::once(None).chain(languages.into_iter().map(Some));
+        let options = || {
+            let mut languages: Vec<Language> = Language::all().collect();
+            languages.sort_by_cached_key(|l| sort_key(&language_name(Some(*l))));
+            std::iter::once(None).chain(languages.into_iter().map(Some))
+        };
         if let Some(value) = select(ui, title, current, options, language_name) {
             out.push(Action::ChangeSetting(setting(value)));
         }
@@ -951,11 +941,11 @@ fn toggle(ui: &mut Ui, label: &str, on: bool) -> bool {
         .clicked()
 }
 
-fn select<T: Copy + PartialEq>(
+fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
     ui: &mut Ui,
     label: &str,
     current: T,
-    options: impl IntoIterator<Item = T>,
+    options: impl FnOnce() -> I,
     name: impl Fn(T) -> String,
 ) -> Option<T> {
     let (rect, response) = ui.allocate_exact_size(
@@ -997,7 +987,7 @@ fn select<T: Copy + PartialEq>(
         .close_behavior(PopupCloseBehavior::CloseOnClick)
         .show(|ui| {
             ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                for option in options {
+                for option in options() {
                     let selected = option == current;
                     if ui.selectable_label(selected, name(option)).clicked() && !selected {
                         picked = Some(option);
@@ -1085,32 +1075,10 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
             Action::ClearLibrary,
         ),
     };
-    let mut done = false;
-    let modal = Modal::new(egui::Id::new("settings_confirm"))
-        .frame(
-            Frame::new()
-                .fill(theme::PANEL)
-                .stroke(Stroke::new(1.0, theme::RULE))
-                .corner_radius(CornerRadius::same(theme::RADIUS))
-                .inner_margin(Margin::same(20)),
-        )
-        .show(ui.ctx(), |ui| {
-            ui.set_max_width(420.0);
-            ui.label(RichText::new(title).font(theme::heading()));
-            ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(&text)).wrap());
-            ui.add_space(theme::GAP * 1.5);
-            ui.horizontal(|ui| {
-                if primary(ui, true, &button).clicked() {
-                    out.push(action);
-                    done = true;
-                }
-                if ui.button(t!("cancel")).clicked() {
-                    done = true;
-                }
-            });
-        });
-    if done || modal.should_close() {
+    if let Some(accepted) = dialog(ui, "settings_confirm", &title, &text, None, &button) {
+        if accepted {
+            out.push(action);
+        }
         view.confirm = None;
     }
 }

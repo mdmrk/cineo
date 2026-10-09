@@ -209,19 +209,24 @@ impl StreamFilter {
         !self.query.trim().is_empty() || self.quality.is_some() || self.addon.is_some()
     }
 
-    fn matches(&self, stream: &Stream) -> bool {
-        if self.quality.is_some() && Quality::of(stream).map(|q| q.label) != self.quality {
-            return false;
+    fn matcher(&self) -> impl Fn(&Stream) -> bool + '_ {
+        let words: Vec<String> = self
+            .query
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .collect();
+        move |stream| {
+            if self.quality.is_some() && Quality::of(stream).map(|q| q.label) != self.quality {
+                return false;
+            }
+            if words.is_empty() {
+                return true;
+            }
+            let text: Vec<String> = stream_text(stream).map(str::to_lowercase).collect();
+            words
+                .iter()
+                .all(|word| text.iter().any(|t| t.contains(word.as_str())))
         }
-        let mut words = self.query.split_whitespace().peekable();
-        if words.peek().is_none() {
-            return true;
-        }
-        let text: Vec<String> = stream_text(stream).map(str::to_lowercase).collect();
-        words.all(|word| {
-            let word = word.to_lowercase();
-            text.iter().any(|t| t.contains(&word))
-        })
     }
 }
 
@@ -247,7 +252,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
         p2p_prompt(ui, &mut out);
     }
     if let Some(transport) = &state.link_prompt {
-        link_prompt(ui, &transport.to_string(), &mut out);
+        link_prompt(ui, transport.as_url().as_str(), &mut out);
     }
     egui::CentralPanel::default()
         .frame(Frame::new().fill(theme::BG))
@@ -449,13 +454,13 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
     ];
     let full = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
     painter.image(
-        brand::grain(ui.ctx(), pixels).id(),
+        brand::grain(ui.ctx(), pixels),
         backdrop,
         full,
         Color32::WHITE,
     );
     if let Some(texture) = brand::logo(ui.ctx()) {
-        let mut mesh = Mesh::with_texture(texture.id());
+        let mut mesh = Mesh::with_texture(texture);
         for row in 0..=LOGO_FADE_ROWS {
             #[expect(clippy::cast_precision_loss, reason = "a small row count")]
             let v = row as f32 / LOGO_FADE_ROWS as f32;
@@ -586,39 +591,46 @@ fn configure_button(ui: &mut Ui, transport: &TransportUrl) {
     }
 }
 
-fn link_prompt(ui: &mut Ui, url: &str, out: &mut Vec<Action>) {
-    let modal = Modal::new(egui::Id::new("link_prompt"))
-        .frame(
-            Frame::new()
-                .fill(theme::PANEL)
-                .stroke(Stroke::new(1.0, theme::RULE))
-                .corner_radius(CornerRadius::same(theme::RADIUS))
-                .inner_margin(Margin::same(20)),
-        )
-        .show(ui.ctx(), |ui| {
-            ui.set_max_width(480.0);
-            ui.label(RichText::new(t!("link-install-title")).font(theme::heading()));
-            ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(&t!("link-install-notice"))).wrap());
-            ui.add_space(theme::GAP);
-            ui.add(Label::new(RichText::new(url).monospace().color(theme::TEXT_BRIGHT)).wrap());
-            ui.add_space(theme::GAP * 1.5);
-            ui.horizontal(|ui| {
-                if primary(ui, true, &t!("install")).clicked() {
-                    out.push(Action::AcceptLink);
-                }
-                if ui.button(t!("cancel")).clicked() {
-                    out.push(Action::DeclineLink);
-                }
-            });
+fn link_prompt(ui: &Ui, url: &str, out: &mut Vec<Action>) {
+    let title = t!("link-install-title");
+    let notice = t!("link-install-notice");
+    if let Some(accepted) = dialog(
+        ui,
+        "link_prompt",
+        &title,
+        &notice,
+        Some(url),
+        &t!("install"),
+    ) {
+        out.push(if accepted {
+            Action::AcceptLink
+        } else {
+            Action::DeclineLink
         });
-    if modal.should_close() && out.is_empty() {
-        out.push(Action::DeclineLink);
     }
 }
 
-fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
-    let modal = Modal::new(egui::Id::new("p2p_prompt"))
+fn p2p_prompt(ui: &Ui, out: &mut Vec<Action>) {
+    let (title, notice) = (t!("p2p-title"), t!("p2p-notice"));
+    if let Some(accepted) = dialog(ui, "p2p_prompt", &title, &notice, None, &t!("p2p-accept")) {
+        out.push(if accepted {
+            Action::AcceptP2p
+        } else {
+            Action::DeclineP2p
+        });
+    }
+}
+
+pub(crate) fn dialog(
+    ui: &Ui,
+    id: &str,
+    title: &str,
+    text: &str,
+    detail: Option<&str>,
+    accept: &str,
+) -> Option<bool> {
+    let mut answer = None;
+    let modal = Modal::new(egui::Id::new(id))
         .frame(
             Frame::new()
                 .fill(theme::PANEL)
@@ -628,22 +640,26 @@ fn p2p_prompt(ui: &mut Ui, out: &mut Vec<Action>) {
         )
         .show(ui.ctx(), |ui| {
             ui.set_max_width(480.0);
-            ui.label(RichText::new(t!("p2p-title")).font(theme::heading()));
+            ui.label(RichText::new(title).font(theme::heading()));
             ui.add_space(theme::GAP);
-            ui.add(Label::new(dim(&t!("p2p-notice"))).wrap());
+            ui.add(Label::new(dim(text)).wrap());
+            if let Some(detail) = detail {
+                ui.add_space(theme::GAP);
+                ui.add(
+                    Label::new(RichText::new(detail).monospace().color(theme::TEXT_BRIGHT)).wrap(),
+                );
+            }
             ui.add_space(theme::GAP * 1.5);
             ui.horizontal(|ui| {
-                if primary(ui, true, &t!("p2p-accept")).clicked() {
-                    out.push(Action::AcceptP2p);
+                if primary(ui, true, accept).clicked() {
+                    answer = Some(true);
                 }
                 if ui.button(t!("cancel")).clicked() {
-                    out.push(Action::DeclineP2p);
+                    answer = Some(false);
                 }
             });
         });
-    if modal.should_close() && out.is_empty() {
-        out.push(Action::DeclineP2p);
-    }
+    answer.or_else(|| modal.should_close().then_some(false))
 }
 
 fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
@@ -1384,17 +1400,8 @@ fn stream_filters(
     p2p_enabled: bool,
     filter: &mut StreamFilter,
 ) {
-    let streams: Vec<Vec<&Stream>> = groups
-        .iter()
-        .map(|group| match &group.streams {
-            Loadable::Ready(streams) => streams
-                .iter()
-                .filter(|s| p2p_enabled || !s.source.is_p2p())
-                .collect(),
-            _ => Vec::new(),
-        })
-        .collect();
-    if streams.iter().map(Vec::len).sum::<usize>() < 2 {
+    let shown = |group| shown_streams(group, p2p_enabled);
+    if groups.iter().flat_map(shown).nth(1).is_none() {
         return;
     }
     let field = ui.add(
@@ -1418,14 +1425,18 @@ fn stream_filters(
         theme::TEXT_DIM,
     );
     ui.add_space(theme::GAP);
-    let found: Vec<&'static str> = streams
-        .iter()
-        .flatten()
-        .filter_map(|s| Quality::of(s).map(|q| q.label))
-        .collect();
-    let present = QUALITIES.into_iter().filter(|label| found.contains(label));
+    let mut found = [false; QUALITIES.len()];
+    for quality in groups.iter().flat_map(shown).filter_map(Quality::of) {
+        if let Some(rank) = QUALITIES.iter().position(|l| *l == quality.label) {
+            found[rank] = true;
+        }
+    }
+    let present = QUALITIES
+        .into_iter()
+        .zip(found)
+        .filter_map(|(label, found)| found.then_some(label));
     let addons: Vec<usize> = (0..groups.len())
-        .filter(|i| !streams[*i].is_empty())
+        .filter(|&i| shown(&groups[i]).next().is_some())
         .collect();
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
@@ -1467,6 +1478,15 @@ fn stream_filters(
     ui.add_space(theme::GAP);
 }
 
+fn shown_streams(group: &StreamGroup, p2p_enabled: bool) -> impl Iterator<Item = &Stream> {
+    group
+        .streams
+        .ready()
+        .into_iter()
+        .flatten()
+        .filter(move |s| p2p_enabled || !s.source.is_p2p())
+}
+
 fn stream_group(
     ui: &mut Ui,
     index: usize,
@@ -1500,6 +1520,7 @@ fn stream_group(
         }
         Loadable::Ready(streams) => {
             ui.spacing_mut().item_spacing.y = 4.0;
+            let matches = filter.matcher();
             let mut hidden = 0;
             let mut shown = 0;
             for stream_index in filter.sort.order(streams) {
@@ -1508,7 +1529,7 @@ fn stream_group(
                     hidden += 1;
                     continue;
                 }
-                if !filter.matches(stream) {
+                if !matches(stream) {
                     continue;
                 }
                 shown += 1;
@@ -1704,7 +1725,7 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
         ),
     };
     tag(ui, quality.label, fill, ink, stroke);
-    for flag in &quality.flags {
+    for flag in quality.flags {
         badge(ui, flag, theme::TEXT_DIM);
     }
 }
@@ -1735,7 +1756,7 @@ enum Tier {
 struct Quality {
     label: &'static str,
     tier: Tier,
-    flags: Vec<&'static str>,
+    flags: &'static [&'static str],
 }
 
 impl Quality {
@@ -1743,14 +1764,17 @@ impl Quality {
         let name = stream.name.as_deref().unwrap_or_default();
         let description = stream.description.as_deref().unwrap_or_default();
         let (label, tier) = resolution(name).or_else(|| resolution(description))?;
-        let mut flags = Vec::new();
-        let all = || words(name).chain(words(description));
-        if all().any(|w| w.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("hdr"))) {
-            flags.push("HDR");
+        let (mut hdr, mut dv) = (false, false);
+        for word in words(name).chain(words(description)) {
+            hdr |= word.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("hdr"));
+            dv |= word.eq_ignore_ascii_case("dv") || word.eq_ignore_ascii_case("dovi");
         }
-        if all().any(|w| w.eq_ignore_ascii_case("dv") || w.eq_ignore_ascii_case("dovi")) {
-            flags.push("DV");
-        }
+        let flags: &[&str] = match (hdr, dv) {
+            (true, true) => &["HDR", "DV"],
+            (true, false) => &["HDR"],
+            (false, true) => &["DV"],
+            (false, false) => &[],
+        };
         Some(Self { label, tier, flags })
     }
 }
@@ -2099,7 +2123,6 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     }
 }
 
-/// An X at the right end of a text field that empties it; true when clicked.
 fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
     if text.is_empty() {
         return false;
@@ -2490,8 +2513,23 @@ impl Icon {
         )
         .ok()?;
         let glyph = char::from_u32(icon.codepoint)?;
-        Some((glyph, egui::FontFamily::Name(icon.family.into())))
+        Some((glyph, icon_family(icon.family)))
     }
+}
+
+fn icon_family(name: &'static str) -> egui::FontFamily {
+    thread_local! {
+        static FAMILIES: std::cell::RefCell<Vec<(&'static str, egui::FontFamily)>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+    FAMILIES.with_borrow_mut(|families| {
+        if let Some((_, family)) = families.iter().find(|(n, _)| *n == name) {
+            return family.clone();
+        }
+        let family = egui::FontFamily::Name(name.into());
+        families.push((name, family.clone()));
+        family
+    })
 }
 
 pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {
@@ -2935,7 +2973,7 @@ mod tests {
             Quality {
                 label: "4K",
                 tier: Tier::Ultra,
-                flags: vec!["HDR", "DV"]
+                flags: &["HDR", "DV"]
             }
         );
         let q = Quality::of(&stream(
@@ -2992,11 +3030,12 @@ mod tests {
             addon: None,
             sort: StreamSort::AddonOrder,
         };
-        assert!(filter("", None).matches(&s));
-        assert!(filter("web-dl  TORRENTIO", None).matches(&s));
-        assert!(!filter("web-dl hevc", None).matches(&s));
-        assert!(filter("film", Some("1080p")).matches(&s));
-        assert!(!filter("", Some("4K")).matches(&s));
+        let matches = |query: &str, quality| filter(query, quality).matcher()(&s);
+        assert!(matches("", None));
+        assert!(matches("web-dl  TORRENTIO", None));
+        assert!(!matches("web-dl hevc", None));
+        assert!(matches("film", Some("1080p")));
+        assert!(!matches("", Some("4K")));
         assert!(!filter("   ", None).is_active());
     }
 

@@ -139,9 +139,13 @@ Implemented in M5 (`cineo-desktop`):
 - `app::CineoApp` is the shell. Before each frame it drains a channel of IO
   results and dispatches them. Fetches and playback run on a tokio runtime.
   Store writes go, in order, to one thread, which is joined on exit so the
-  last progress write lands. mpv events become `PlaybackProgress` actions.
+  last progress write lands. Queued writes that a later one overwrites
+  (settings, the addon list, a library item by id) are dropped
+  (`queued_saves_keep_only_the_last_write_of_each_key`). mpv events become
+  `PlaybackProgress` actions.
 - Images: `images::NetImageLoader` (an egui `ImageLoader`) fetches through
-  `cineo-net`, then decodes and downscales on the tokio blocking pool.
+  `cineo-net`, then decodes and downscales on the tokio blocking pool, at
+  most one image per CPU core at a time.
 - Text (ADR-0017): `i18n` holds one Fluent bundle per locale, built from
   `assets/locales/*.ftl`. The locale is set from the `ui_language` setting
   every frame. Core returns `Problem` and `Notice` values, never prose.

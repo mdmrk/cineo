@@ -14,6 +14,8 @@ use eframe::egui::{
     mutex::Mutex,
 };
 use image::imageops::FilterType;
+use image::{DynamicImage, ImageDecoder};
+use tokio::sync::Semaphore;
 use url::Url;
 
 pub(crate) const MAX_IMAGE_BYTES: usize = 4 * 1024 * 1024;
@@ -26,16 +28,19 @@ pub(crate) struct NetImageLoader {
     client: Arc<AddonClient>,
     runtime: tokio::runtime::Handle,
     cache: Arc<Mutex<HashMap<String, Entry>>>,
+    decoders: Arc<Semaphore>,
 }
 
 impl NetImageLoader {
     const ID: &'static str = egui::generate_loader_id!(NetImageLoader);
 
     pub(crate) fn new(client: Arc<AddonClient>, runtime: tokio::runtime::Handle) -> Self {
+        let cores = std::thread::available_parallelism().map_or(2, usize::from);
         Self {
             client,
             runtime,
             cache: Arc::default(),
+            decoders: Arc::new(Semaphore::new(cores)),
         }
     }
 }
@@ -51,13 +56,6 @@ impl ImageLoader for NetImageLoader {
     }
 
     fn load(&self, ctx: &egui::Context, uri: &str, size_hint: SizeHint) -> ImageLoadResult {
-        let source = egui::decode_animated_image_uri(uri).map_or(uri, |(source, _)| source);
-        let Some(url) = Url::parse(source)
-            .ok()
-            .filter(|u| matches!(u.scheme(), "http" | "https"))
-        else {
-            return Err(LoadError::NotSupported);
-        };
         let mut cache = self.cache.lock();
         match cache.get(uri) {
             Some(Poll::Ready(Ok(image))) => {
@@ -69,6 +67,13 @@ impl ImageLoader for NetImageLoader {
             Some(Poll::Pending) => return Ok(ImagePoll::Pending { size: None }),
             None => {}
         }
+        let source = egui::decode_animated_image_uri(uri).map_or(uri, |(source, _)| source);
+        let Some(url) = Url::parse(source)
+            .ok()
+            .filter(|u| matches!(u.scheme(), "http" | "https"))
+        else {
+            return Err(LoadError::NotSupported);
+        };
         cache.insert(uri.to_owned(), Poll::Pending);
         drop(cache);
 
@@ -77,12 +82,16 @@ impl ImageLoader for NetImageLoader {
         let ctx = ctx.clone();
         let uri = uri.to_owned();
         let runtime = self.runtime.clone();
+        let decoders = Arc::clone(&self.decoders);
         self.runtime.spawn(async move {
             let result = match client.fetch_image(&url, MAX_IMAGE_BYTES).await {
-                Ok(bytes) => runtime
-                    .spawn_blocking(move || decode(&bytes, size_hint))
-                    .await
-                    .unwrap_or_else(|err| Err(err.to_string())),
+                Ok(bytes) => {
+                    let _slot = decoders.acquire().await;
+                    runtime
+                        .spawn_blocking(move || decode(&bytes, size_hint))
+                        .await
+                        .unwrap_or_else(|err| Err(err.to_string()))
+                }
                 Err(err) => Err(err.to_string()),
             };
             if let Err(err) = &result {
@@ -121,9 +130,8 @@ impl ImageLoader for NetImageLoader {
 }
 
 pub(crate) fn decode(bytes: &[u8], hint: SizeHint) -> Result<ColorImage, String> {
-    check_dimensions(bytes)?;
-    let image =
-        image::load_from_memory(bytes).map_err(|err| format!("unsupported image: {err}"))?;
+    let image = DynamicImage::from_decoder(checked_decoder(bytes)?)
+        .map_err(|err| format!("unsupported image: {err}"))?;
     let (width, height) = decoded_size(image.width(), image.height(), hint);
     let image = if (width, height) == (image.width(), image.height()) {
         image
@@ -160,16 +168,17 @@ pub(crate) fn decoded_size(width: u32, height: u32, hint: SizeHint) -> (u32, u32
     (side(w), side(h))
 }
 
-pub(crate) fn check_dimensions(bytes: &[u8]) -> Result<(), String> {
-    let (width, height) = image::ImageReader::new(Cursor::new(bytes))
+fn checked_decoder(bytes: &[u8]) -> Result<impl ImageDecoder + '_, String> {
+    let decoder = image::ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|err| err.to_string())?
-        .into_dimensions()
+        .into_decoder()
         .map_err(|err| format!("unsupported image: {err}"))?;
+    let (width, height) = decoder.dimensions();
     if width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE {
         return Err(format!("image too large ({width}×{height})"));
     }
-    Ok(())
+    Ok(decoder)
 }
 
 #[cfg(test)]
@@ -177,6 +186,10 @@ mod tests {
     #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
+
+    fn check_dimensions(bytes: &[u8]) -> Result<(), String> {
+        checked_decoder(bytes).map(drop)
+    }
 
     fn png(width: u32, height: u32) -> Vec<u8> {
         let mut out = Cursor::new(Vec::new());

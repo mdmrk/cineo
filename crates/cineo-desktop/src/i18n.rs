@@ -82,17 +82,9 @@ pub fn set(locale: Locale) {
     CURRENT.set(locale);
 }
 
-pub fn current() -> Locale {
-    CURRENT.get()
-}
-
 pub fn text(id: &str, args: Option<&FluentArgs<'_>>) -> String {
     BUNDLES.with(|bundles| {
-        let index = Locale::ALL
-            .iter()
-            .position(|l| *l == CURRENT.get())
-            .unwrap_or(0);
-        format(&bundles[index], id, args)
+        format(&bundles[CURRENT.get() as usize], id, args)
             .or_else(|| format(&bundles[0], id, args))
             .unwrap_or_else(|| id.to_owned())
     })
