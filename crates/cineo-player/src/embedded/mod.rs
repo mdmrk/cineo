@@ -331,7 +331,6 @@ impl Player {
     }
 }
 
-/// mpv's preferred subtitle languages: every tag the language goes by.
 fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
     let mut options = Vec::new();
     if !settings.hardware_decoding {
@@ -510,15 +509,11 @@ fn apply_stat(stats: &mut Stats, id: u64, value: &Value) -> bool {
                 Value::Text(text) if !text.is_empty() => Some(text.clone()),
                 _ => None,
             };
-            let changed = stats.hwdec != hwdec;
-            stats.hwdec = hwdec;
-            return changed;
+            return replace(&mut stats.hwdec, hwdec);
         }
         _ => return false,
     };
-    let changed = *field != number;
-    *field = number;
-    changed
+    replace(field, number)
 }
 
 struct EventLoop {
@@ -557,7 +552,7 @@ impl EventLoop {
                     None
                 }
                 Event::FileLoaded => {
-                    self.update(|status| status.loaded = true);
+                    self.update(|status| replace(&mut status.loaded, true));
                     Some(Input::FileLoaded)
                 }
                 Event::EndFile { eof } => Some(Input::EndFile(match eof {
@@ -605,46 +600,43 @@ impl EventLoop {
         let flag = *value == Value::Flag(true);
         match id {
             TIME_POS => {
-                self.update(|s| s.position_s = number);
+                self.update(|s| replace(&mut s.position_s, number));
                 return matches!(value, Value::Double(_)).then_some(Input::TimePos(number));
             }
             DURATION => {
-                self.update(|s| s.duration_s = number);
+                self.update(|s| replace(&mut s.duration_s, number));
                 return matches!(value, Value::Double(_)).then_some(Input::Duration(number));
             }
-            PAUSE => self.update(|s| s.paused = flag),
-            BUFFERING => self.update(|s| s.buffering = flag),
-            VOLUME => self.update(|s| s.volume = number),
-            MUTE => self.update(|s| s.muted = flag),
+            PAUSE => self.update(|s| replace(&mut s.paused, flag)),
+            BUFFERING => self.update(|s| replace(&mut s.buffering, flag)),
+            VOLUME => self.update(|s| replace(&mut s.volume, number)),
+            MUTE => self.update(|s| replace(&mut s.muted, flag)),
             TRACK_LIST => {
                 let tracks = match value {
                     Value::Text(json) => parse_tracks(json),
                     _ => Vec::new(),
                 };
-                self.update(|s| s.tracks = tracks.into());
+                self.update(|s| {
+                    s.tracks = tracks.into();
+                    true
+                });
             }
-            _ => {
-                let changed = apply_stat(
-                    &mut self
-                        .status
-                        .lock()
-                        .unwrap_or_else(PoisonError::into_inner)
-                        .stats,
-                    id,
-                    value,
-                );
-                if changed {
-                    (self.notify)();
-                }
-            }
+            _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }
         None
     }
 
-    fn update(&self, change: impl FnOnce(&mut Status)) {
-        change(&mut self.status.lock().unwrap_or_else(PoisonError::into_inner));
-        (self.notify)();
+    fn update(&self, change: impl FnOnce(&mut Status) -> bool) {
+        if change(&mut self.status.lock().unwrap_or_else(PoisonError::into_inner)) {
+            (self.notify)();
+        }
     }
+}
+
+fn replace<T: PartialEq>(slot: &mut T, value: T) -> bool {
+    let changed = *slot != value;
+    *slot = value;
+    changed
 }
 
 #[cfg(test)]
