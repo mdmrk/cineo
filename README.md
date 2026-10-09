@@ -7,14 +7,13 @@ Stremio-protocol addons.
 
 ![A movie page with its streams](docs/images/detail.png)
 
-> **Pre-alpha.** It works, but there are no installers yet.
-> See [what works](docs/COMPATIBILITY.md).
-
 ## Features
 
 - Install addons by URL
 - Browse catalogs, search and view details
 - Play streams in the app window, including torrents
+- Torrents stream from memory by default, holding only the part around
+  the playback position (1 GB, adjustable), so nothing is written to disk
 - Continue watching and a local library
 - No account and no cloud
 
@@ -34,6 +33,7 @@ included, mainly for debugging addons.
 
 ## Learn more
 
+- [What works](docs/COMPATIBILITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development](docs/DEVELOPMENT.md)
