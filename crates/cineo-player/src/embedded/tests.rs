@@ -192,7 +192,9 @@ fn wav(seconds: u32) -> Vec<u8> {
     out
 }
 
-fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
+fn listen(
+    mut respond: impl FnMut(std::net::TcpStream) + Send + 'static,
+) -> (String, std_mpsc::Receiver<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/film.wav", listener.local_addr().unwrap());
     let (tx, rx) = std_mpsc::channel();
@@ -205,15 +207,21 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
                 head.push(byte[0]);
             }
             let _ = tx.send(String::from_utf8_lossy(&head).into_owned());
-            let _ = write!(
-                stream,
-                "HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            let _ = stream.write_all(&body);
+            respond(stream);
         }
     });
     (url, rx)
+}
+
+fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
+    listen(move |mut stream| {
+        let _ = write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        let _ = stream.write_all(&body);
+    })
 }
 
 #[test]
@@ -304,23 +312,8 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
 }
 
 fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let url = format!("http://{}/film.wav", listener.local_addr().unwrap());
-    let (tx, rx) = std_mpsc::channel();
-    std::thread::spawn(move || {
-        let mut open = Vec::new();
-        for stream in listener.incoming() {
-            let Ok(mut stream) = stream else { continue };
-            let mut head = Vec::new();
-            let mut byte = [0_u8];
-            while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
-                head.push(byte[0]);
-            }
-            let _ = tx.send(String::from_utf8_lossy(&head).into_owned());
-            open.push(stream);
-        }
-    });
-    (url, rx)
+    let mut open = Vec::new();
+    listen(move |stream| open.push(stream))
 }
 
 #[test]
