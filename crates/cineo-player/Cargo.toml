@@ -16,7 +16,6 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
-# Copy of the workspace lints with `unsafe_code` relaxed; keep in sync.
 [lints.rust]
 unsafe_code = "deny"
 missing_debug_implementations = "warn"

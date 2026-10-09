@@ -201,6 +201,8 @@ must:
 The one exception so far is `cineo-player` (ADR-0014): its own lint
 table sets `unsafe_code = "deny"`, and only the modules `embedded::ffi`
 (libmpv bindings) and `embedded::render` (the OpenGL renderer) allow it.
+That table is a copy of the root `[workspace.lints]` with only
+`unsafe_code` changed; a lint added to the root must be added there too.
 
 ## Reporting a vulnerability
 
