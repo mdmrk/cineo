@@ -149,6 +149,9 @@ fn the_subtitles_menu_changes_the_style_and_the_delay() {
     let mut harness = harness(status());
     harness.get_by_label("Subtitles").click();
     harness.run();
+    assert!(harness.query_by_label("Bold").is_none());
+    harness.get_by_label("Style and delay").hover();
+    harness.run();
     harness.get_by_label("Bold").click();
     harness.run();
     for label in [
