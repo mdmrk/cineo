@@ -120,7 +120,7 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                             if top <= visible_top + 48.0 {
                                 current = part;
                             }
-                            body(ui, part, state, view, out);
+                            body(ui, part, full.center().x, state, view, out);
                             ui.add_space(theme::SECTION_GAP);
                         }
                         let tail = ui.cursor().min.y - last_top;
@@ -143,7 +143,14 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
     confirm(ui, view, out);
 }
 
-fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+fn body(
+    ui: &mut Ui,
+    section: Section,
+    center_x: f32,
+    state: &State,
+    view: &mut ViewState,
+    out: &mut Vec<Action>,
+) {
     let s = &state.settings;
     match section {
         Section::Interface => {
@@ -378,11 +385,16 @@ fn body(ui: &mut Ui, section: Section, state: &State, view: &mut ViewState, out:
             ui.add_space(theme::GAP);
             ui.label(dim(&t!("about-license")));
             ui.label(dim(&t!("about-credits")));
-            ui.add_space(theme::SECTION_GAP * 2.0);
+            ui.add_space(theme::SECTION_GAP * 4.0);
             let height = theme::LOADING_WIDTH * brand::LOADING_SIZE.y / brand::LOADING_SIZE.x;
             let (rect, _) =
                 ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
-            paint_loading(ui, rect.center(), theme::LOADING_WIDTH, theme::TEXT_FAINT);
+            paint_loading(
+                ui,
+                pos2(center_x, rect.center().y),
+                theme::LOADING_WIDTH,
+                theme::TEXT_FAINT,
+            );
         }
     }
 }
