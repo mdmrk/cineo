@@ -16,9 +16,7 @@ use url::Url;
 use crate::i18n::t;
 use crate::settings::subtitle_controls;
 use crate::theme;
-use crate::view::{
-    IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_loading, paint_spinner,
-};
+use crate::view::{IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_loading};
 
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
@@ -146,10 +144,8 @@ pub fn show(
     }
     if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {
         loading_art(ui, rect, title, logo);
-    } else if !status.loaded {
+    } else if !status.loaded || status.buffering {
         paint_loading(ui, rect.center(), LOADING_WIDTH, theme::TEXT_BRIGHT);
-    } else if status.buffering {
-        paint_spinner(ui, rect.center(), 44.0, theme::TEXT_BRIGHT);
     }
 
     if let Some(next) = &playback.next {
