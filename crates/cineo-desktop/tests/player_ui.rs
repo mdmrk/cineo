@@ -31,6 +31,7 @@ fn track(id: i64, kind: TrackKind, lang: &str, selected: bool) -> Track {
         lang: Some(lang.into()),
         selected,
         external_file: None,
+        codec: None,
     }
 }
 
@@ -77,6 +78,7 @@ fn harness_full(
                     background: None,
                     addon_subtitles: addon,
                     next: None,
+                    torrent: None,
                     settings,
                 };
                 out.extend(show(ui, rect, &playback, controls));
@@ -246,6 +248,7 @@ fn addon_subtitles_are_listed_and_requested() {
         .cloned()
         .chain([Track {
             external_file: Some("/cache/subtitles/1".into()),
+            codec: None,
             ..track(2, TrackKind::Subtitle, "spa", false)
         }])
         .collect();

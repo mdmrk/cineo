@@ -209,6 +209,7 @@ mod tests {
             lang: None,
             selected: true,
             external_file: path.to_str().map(str::to_owned),
+            codec: None,
         }];
         let entries = files.entries(&groups, &tracks);
         let summary: Vec<_> = entries
@@ -228,6 +229,7 @@ mod tests {
             lang: Some(lang.into()),
             selected,
             external_file: None,
+            codec: None,
         };
         let entry = |u: &str, lang: &str| AddonSubtitle {
             url: url(u),

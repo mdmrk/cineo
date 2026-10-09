@@ -69,6 +69,7 @@ pub struct Track {
     pub selected: bool,
     /// The file an external track was loaded from (`external-filename`).
     pub external_file: Option<String>,
+    pub codec: Option<String>,
 }
 
 /// A snapshot of the playback for the UI.
@@ -85,6 +86,23 @@ pub struct Status {
     pub volume: f64,
     pub muted: bool,
     pub tracks: Arc<[Track]>,
+    pub stats: Stats,
+}
+
+/// Streaming and decoding figures; `None` while mpv has no value.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Stats {
+    /// Bytes per second read from the network into the cache.
+    pub cache_speed: Option<f64>,
+    /// Seconds buffered ahead of the playhead.
+    pub cache_s: Option<f64>,
+    pub width: Option<f64>,
+    pub height: Option<f64>,
+    /// Bits per second.
+    pub video_bitrate: Option<f64>,
+    /// The hardware decoder in use, `no` for software decoding.
+    pub hwdec: Option<String>,
+    pub dropped_frames: Option<f64>,
 }
 
 const TIME_POS: u64 = 1;
@@ -94,8 +112,15 @@ const BUFFERING: u64 = 4;
 const VOLUME: u64 = 5;
 const MUTE: u64 = 6;
 const TRACK_LIST: u64 = 7;
+const CACHE_SPEED: u64 = 8;
+const CACHE_DURATION: u64 = 9;
+const WIDTH: u64 = 10;
+const HEIGHT: u64 = 11;
+const VIDEO_BITRATE: u64 = 12;
+const HWDEC_CURRENT: u64 = 13;
+const FRAME_DROPS: u64 = 14;
 
-const OBSERVED: [(u64, &str, std::ffi::c_int); 7] = [
+const OBSERVED: [(u64, &str, std::ffi::c_int); 14] = [
     (TIME_POS, "time-pos", ffi::FORMAT_DOUBLE),
     (DURATION, "duration", ffi::FORMAT_DOUBLE),
     (PAUSE, "pause", ffi::FORMAT_FLAG),
@@ -103,6 +128,13 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 7] = [
     (VOLUME, "volume", ffi::FORMAT_DOUBLE),
     (MUTE, "mute", ffi::FORMAT_FLAG),
     (TRACK_LIST, "track-list", ffi::FORMAT_STRING),
+    (CACHE_SPEED, "cache-speed", ffi::FORMAT_DOUBLE),
+    (CACHE_DURATION, "demuxer-cache-duration", ffi::FORMAT_DOUBLE),
+    (WIDTH, "width", ffi::FORMAT_DOUBLE),
+    (HEIGHT, "height", ffi::FORMAT_DOUBLE),
+    (VIDEO_BITRATE, "video-bitrate", ffi::FORMAT_DOUBLE),
+    (HWDEC_CURRENT, "hwdec-current", ffi::FORMAT_STRING),
+    (FRAME_DROPS, "frame-drop-count", ffi::FORMAT_DOUBLE),
 ];
 
 // VA-API first: `auto-safe` alone loads the CUDA interop, which prints to stderr.
@@ -455,9 +487,38 @@ fn parse_tracks(json: &str) -> Vec<Track> {
                 lang: text(item, "lang"),
                 selected: item.get("selected").and_then(Json::as_bool) == Some(true),
                 external_file: text(item, "external-filename"),
+                codec: text(item, "codec"),
             })
         })
         .collect()
+}
+
+fn apply_stat(stats: &mut Stats, id: u64, value: &Value) -> bool {
+    let number = match *value {
+        Value::Double(x) if x.is_finite() && x >= 0.0 => Some(x),
+        _ => None,
+    };
+    let field = match id {
+        CACHE_SPEED => &mut stats.cache_speed,
+        CACHE_DURATION => &mut stats.cache_s,
+        WIDTH => &mut stats.width,
+        HEIGHT => &mut stats.height,
+        VIDEO_BITRATE => &mut stats.video_bitrate,
+        FRAME_DROPS => &mut stats.dropped_frames,
+        HWDEC_CURRENT => {
+            let hwdec = match value {
+                Value::Text(text) if !text.is_empty() => Some(text.clone()),
+                _ => None,
+            };
+            let changed = stats.hwdec != hwdec;
+            stats.hwdec = hwdec;
+            return changed;
+        }
+        _ => return false,
+    };
+    let changed = *field != number;
+    *field = number;
+    changed
 }
 
 struct EventLoop {
@@ -562,7 +623,20 @@ impl EventLoop {
                 };
                 self.update(|s| s.tracks = tracks.into());
             }
-            _ => {}
+            _ => {
+                let changed = apply_stat(
+                    &mut self
+                        .status
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner)
+                        .stats,
+                    id,
+                    value,
+                );
+                if changed {
+                    (self.notify)();
+                }
+            }
         }
         None
     }

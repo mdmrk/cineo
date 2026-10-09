@@ -572,6 +572,7 @@ impl CineoApp {
                     addon_subtitles: &[],
                     settings: &self.state.settings,
                     next: None,
+                    torrent: self.state.torrent.as_ref().map(|t| &t.status),
                 };
                 commands = player::show(ui, rect, &playback, &mut self.connecting_controls);
             });
@@ -635,6 +636,7 @@ impl CineoApp {
                             title: &n.title,
                             image: n.image.as_ref().map(url::Url::as_str),
                         }),
+                    torrent: self.state.torrent.as_ref().map(|t| &t.status),
                 };
                 commands = player::show(ui, rect, &playback, &mut embedded.controls);
             });

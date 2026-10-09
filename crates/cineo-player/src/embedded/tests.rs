@@ -96,7 +96,7 @@ fn track_list_is_parsed_leniently() {
     let tracks = parse_tracks(
         r#"[
             {"id":1,"type":"video","selected":true},
-            {"id":1,"type":"audio","lang":"eng","title":"Commentary","selected":true},
+            {"id":1,"type":"audio","lang":"eng","title":"Commentary","codec":"aac","selected":true},
             {"id":2,"type":"audio","lang":"  "},
             {"id":1,"type":"sub","lang":"spa","external":true,"external-filename":"/c/subtitles/1"},
             {"type":"sub"},
@@ -114,12 +114,46 @@ fn track_list_is_parsed_leniently() {
             lang: Some("eng".into()),
             selected: true,
             external_file: None,
+            codec: Some("aac".into()),
         }
     );
     assert_eq!(tracks[2].lang, None, "blank text is no text");
     assert_eq!(tracks[3].kind, TrackKind::Subtitle);
     assert_eq!(tracks[3].external_file.as_deref(), Some("/c/subtitles/1"));
     assert!(parse_tracks("not json").is_empty());
+}
+
+#[test]
+fn stats_take_mpv_values_and_drop_unavailable_ones() {
+    let mut stats = Stats::default();
+    assert!(apply_stat(
+        &mut stats,
+        CACHE_SPEED,
+        &Value::Double(2_500_000.0)
+    ));
+    assert!(!apply_stat(
+        &mut stats,
+        CACHE_SPEED,
+        &Value::Double(2_500_000.0)
+    ));
+    assert!(apply_stat(&mut stats, WIDTH, &Value::Double(1920.0)));
+    assert!(apply_stat(
+        &mut stats,
+        HWDEC_CURRENT,
+        &Value::Text("vaapi".into())
+    ));
+    assert_eq!(stats.cache_speed, Some(2_500_000.0));
+    assert_eq!(stats.width, Some(1920.0));
+    assert_eq!(stats.hwdec.as_deref(), Some("vaapi"));
+    assert!(apply_stat(&mut stats, CACHE_SPEED, &Value::None));
+    assert!(apply_stat(&mut stats, WIDTH, &Value::Double(f64::NAN)));
+    assert!(apply_stat(
+        &mut stats,
+        HWDEC_CURRENT,
+        &Value::Text(String::new())
+    ));
+    assert_eq!(stats, Stats::default());
+    assert!(!apply_stat(&mut stats, TIME_POS, &Value::Double(1.0)));
 }
 
 #[test]
