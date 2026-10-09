@@ -117,7 +117,7 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 | Risk | Control |
 |------|---------|
 | Other local users or web pages reach the engine's HTTP server (as with any localhost service) | Implemented (M9): binds `127.0.0.1` only; a random 128-bit per-session path token, compared in constant time; `GET`/`HEAD` only; no CORS headers; the `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defense). Test: `requests_without_the_token_or_from_a_foreign_host_are_refused` |
-| Disk exhaustion | Implemented (M9): only the torrent being played is on disk. Its data is deleted when it stops, and data left by a crash is deleted when the engine starts (`stopping_deletes_the_torrent_data`, `leftover_torrent_data_is_deleted_at_start`, `leftover_torrents_are_deleted_and_nothing_else`). One file larger than the free space can still fill the disk (TECHNICAL_DEBT.md). With "Torrent data" set to memory (ADR-0019), nothing of the torrent is written to disk and memory stays near the chosen window (`memory_mode_plays_a_file_larger_than_its_window_without_disk`); it can go over by the pieces in flight and partial pieces left by dead peers (TECHNICAL_DEBT.md) |
+| Disk exhaustion | Implemented (M9): only the torrent being played is on disk. Its data is deleted when it stops, and data left by a crash is deleted when the engine starts (`stopping_deletes_the_torrent_data`, `leftover_torrent_data_is_deleted_at_start`, `leftover_torrents_are_deleted_and_nothing_else`). One file larger than the free space can still fill the disk (TECHNICAL_DEBT.md). With "Torrent data" in memory (the default, ADR-0019), nothing of the torrent is written to disk and memory stays near the chosen window (`memory_mode_plays_a_file_larger_than_its_window_without_disk`); it can go over by the pieces in flight and partial pieces left by dead peers (TECHNICAL_DEBT.md) |
 | Path traversal via torrent or archive file names | File names from torrents and archives never become filesystem paths. Torrent storage is `<cache>/<info hash>/<file index>` (`downloaded_data_is_stored_by_hash_and_file_index_only`); the cache directory is `0700` on Unix |
 | P2P exposure (IP visible to peers, uploads) | Implemented (M9): a notice before the first torrent plays, saying the IP is visible and that Cineo uploads (`the_first_torrent_play_shows_the_p2p_notice`); a Settings switch that hides and blocks torrent streams (`turning_p2p_off_hides_torrent_streams`, `settings_switch_p2p_off`); `behaviorHints.p2p` labels on installed addons. The engine starts only when a torrent is played (by construction in the desktop shell; no test) |
 | Malicious archives (bombs, huge member counts) | Member count, path length and decompressed-size limits. `fileMustInclude` patterns run with a size-limited regex engine (no backtracking) |
@@ -185,7 +185,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 |---------|---------|
 | Private-network access | Off (opt-in: CLI flag or Settings, applied at startup) |
 | Torrent upload | On; can be turned off in Settings (librqbit `disable_upload`, behavior not covered by a test) |
-| Torrent data | On disk; can be kept in memory with a 256 MB to 2 GB window (ADR-0019) |
+| Torrent data | In memory with a 1 GB window; 256 MB to 2 GB or on disk in Settings (ADR-0019) |
 | Max decoded body | 8 MiB |
 | Request timeout / connect timeout | 20 s / 10 s |
 | Max redirects | 5, no https→http |

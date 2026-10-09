@@ -426,7 +426,7 @@ settings! {
     audio_output: AudioOutput = AudioOutput::Auto => AudioOutput("audio_output"),
     audio_passthrough: bool = false => AudioPassthrough("audio_passthrough"),
     torrent_upload: bool = true => TorrentUpload("torrent_upload"),
-    torrent_storage: TorrentStorage = TorrentStorage::Disk => TorrentStorage("torrent_storage"),
+    torrent_storage: TorrentStorage = TorrentStorage::Ram1024 => TorrentStorage("torrent_storage"),
     download_limit: DownloadLimit = DownloadLimit::Unlimited => DownloadLimit("download_limit"),
     upload_limit: UploadLimit = UploadLimit::Unlimited => UploadLimit("upload_limit"),
     peer_limit: PeerLimit = PeerLimit::P128 => PeerLimit("peer_limit"),

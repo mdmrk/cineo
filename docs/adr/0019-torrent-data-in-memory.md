@@ -40,9 +40,10 @@ over keeping the whole file in memory.
     disconnect: BitTorrent has no message that takes back a "have";
   - idle peers wake when a stream moves to another piece.
 - `cineo-stream` adds `MemoryStorage` (one buffer per piece) and
-  `EngineOptions::memory_window`. Disk storage stays the default.
-- Settings → Torrents → "Torrent data": on disk (default), or in memory
-  with a 256 MB, 512 MB, 1 GB or 2 GB window. It applies from the next
+  `EngineOptions::memory_window`. The engine's own default is disk.
+- Settings → Torrents → "Torrent data": on disk, or in memory with a
+  256 MB, 512 MB, 1 GB or 2 GB window. In memory with 1 GB is the default
+  (owner decision 2026-10-09). It applies from the next
   torrent.
 
 ## Consequences

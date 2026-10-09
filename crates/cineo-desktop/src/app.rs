@@ -937,6 +937,7 @@ mod tests {
             defaults,
             EngineOptions {
                 peer_limit: Some(128),
+                memory_window: NonZeroU64::new(1024 * 1024 * 1024),
                 ..base.clone()
             },
             "the defaults match librqbit's"
