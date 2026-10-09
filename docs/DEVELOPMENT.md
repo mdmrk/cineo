@@ -432,7 +432,8 @@ Re-check them when adding.
 | `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
-| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks, decoding and downscaling (desktop) | MIT/Apache |
+| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
+| `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/fix/urgent-piece-helpers) at `be52c57a` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
@@ -487,6 +488,16 @@ about 910 KB together, all OFL-1.1 ([LEGAL.md](LEGAL.md#bundled-assets)), with
 2026-10-07: MIT, MSRV 1.92, no runtime dependencies) with only the Tabler
 pack enabled, which embeds Tabler's regular and filled icon fonts (about
 1.5 MB). The other 13 packs stay off. The logo (656×618) and window icon (256×256) are PNGs in `assets/brand/`, decoded with the `image` crate already in use. The loading animation's source is `assets/brand/loading.svg` (SMIL); egui cannot play SVG animation, so it is rasterized at 2× into layers in `assets/brand/loading/` (static parts, reel, each moustache half, and a 5×2 sheet of the film strip's 10 frames) that `brand::paint_loading` rotates and steps in code. All brand PNGs come to about 130 KB. egui's `default_fonts` stay enabled as the fallback for symbols and emoji.
+
+2026-10-09: `fast_image_resize` 6.1.0 (crates.io: MIT/Apache, MSRV 1.87,
+released 2026-07-21, about 21 M downloads) replaces `image`'s Triangle
+resize for network images. Measured on a 580×859 JPEG poster scaled to
+card size (release build): decode plus resize went from 6.96 ms to
+3.51 ms; the resize itself from about 6 ms to 0.6 ms. Its `image` and
+`rayon` features stay off. Its dependencies (`cfg-if`, `num-traits`,
+`thiserror`, `document-features`) were already in the tree, so it is the
+only new crate in `Cargo.lock`. RGBA images are resized with premultiplied
+alpha (`colour_and_transparency_survive_downscaling`).
 
 ### Planned (researched, not added)
 

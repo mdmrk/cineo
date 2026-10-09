@@ -13,7 +13,7 @@ use eframe::egui::{
     load::{ImageLoadResult, ImageLoader, ImagePoll, LoadError, SizeHint},
     mutex::Mutex,
 };
-use image::imageops::FilterType;
+use fast_image_resize::{self as fir, FilterType, PixelType, ResizeAlg, ResizeOptions, Resizer};
 use image::{DynamicImage, ImageDecoder};
 use tokio::sync::Semaphore;
 use url::Url;
@@ -132,15 +132,30 @@ impl ImageLoader for NetImageLoader {
 pub(crate) fn decode(bytes: &[u8], hint: SizeHint) -> Result<ColorImage, String> {
     let image = DynamicImage::from_decoder(checked_decoder(bytes)?)
         .map_err(|err| format!("unsupported image: {err}"))?;
-    let (width, height) = decoded_size(image.width(), image.height(), hint);
-    let image = if (width, height) == (image.width(), image.height()) {
-        image
-    } else {
-        image.resize_exact(width, height, FilterType::Triangle)
+    let (from_width, from_height) = (image.width(), image.height());
+    let (width, height) = decoded_size(from_width, from_height, hint);
+    let (kind, pixels) = match image {
+        DynamicImage::ImageRgb8(rgb) => (PixelType::U8x3, rgb.into_raw()),
+        other => (PixelType::U8x4, other.into_rgba8().into_raw()),
     };
-    let rgba = image.into_rgba8();
-    let size = [rgba.width() as usize, rgba.height() as usize];
-    Ok(ColorImage::from_rgba_unmultiplied(size, rgba.as_raw()))
+    let pixels = if (width, height) == (from_width, from_height) {
+        pixels
+    } else {
+        let from = fir::images::Image::from_vec_u8(from_width, from_height, pixels, kind)
+            .map_err(|err| err.to_string())?;
+        let mut to = fir::images::Image::new(width, height, kind);
+        let filter = ResizeOptions::new().resize_alg(ResizeAlg::Convolution(FilterType::Bilinear));
+        Resizer::new()
+            .resize(&from, &mut to, &filter)
+            .map_err(|err| err.to_string())?;
+        to.into_vec()
+    };
+    let size = [width as usize, height as usize];
+    Ok(if kind == PixelType::U8x3 {
+        ColorImage::from_rgb(size, &pixels)
+    } else {
+        ColorImage::from_rgba_unmultiplied(size, &pixels)
+    })
 }
 
 #[expect(
@@ -244,6 +259,33 @@ mod tests {
         assert_eq!(decoded_size(3000, 1500, hint), (768, 384));
         let decoded = decode(&png(1000, 1500), hint).unwrap();
         assert_eq!(decoded.size, [256, 384]);
+    }
+
+    #[test]
+    fn colour_and_transparency_survive_downscaling() {
+        let mut out = Cursor::new(Vec::new());
+        image::RgbImage::from_pixel(400, 600, image::Rgb([200, 40, 10]))
+            .write_to(&mut out, image::ImageFormat::Png)
+            .unwrap();
+        let hint = SizeHint::Size {
+            width: 50,
+            height: 75,
+            maintain_aspect_ratio: true,
+        };
+        let rgb = decode(&out.into_inner(), hint).unwrap();
+        assert_eq!(rgb.size, [100, 150]);
+        assert!(
+            rgb.pixels
+                .iter()
+                .all(|p| *p == egui::Color32::from_rgb(200, 40, 10))
+        );
+        let mut out = Cursor::new(Vec::new());
+        image::RgbaImage::from_pixel(400, 600, image::Rgba([10, 200, 40, 0]))
+            .write_to(&mut out, image::ImageFormat::Png)
+            .unwrap();
+        let clear = decode(&out.into_inner(), hint).unwrap();
+        assert_eq!(clear.size, [100, 150]);
+        assert!(clear.pixels.iter().all(|p| p.a() == 0));
     }
 
     #[test]

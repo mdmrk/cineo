@@ -21,6 +21,7 @@ cineo-store.workspace = true
 cineo-stream.workspace = true
 clap.workspace = true
 eframe.workspace = true
+fast_image_resize.workspace = true
 fluent-bundle.workspace = true
 iconflow.workspace = true
 image.workspace = true
