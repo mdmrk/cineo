@@ -131,6 +131,7 @@ fullscreen = Fullscreen
 exit-fullscreen = Exit fullscreen
 player-subtitles = Subtitles
 player-audio = Audio
+subtitle-style-menu = Style and delay
 mute = Mute
 unmute = Unmute
 position = Position

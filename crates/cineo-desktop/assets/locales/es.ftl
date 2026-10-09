@@ -131,6 +131,7 @@ fullscreen = Pantalla completa
 exit-fullscreen = Salir de pantalla completa
 player-subtitles = Subtítulos
 player-audio = Audio
+subtitle-style-menu = Estilo y retraso
 mute = Silenciar
 unmute = Activar sonido
 position = Posición

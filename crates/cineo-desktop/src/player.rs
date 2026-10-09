@@ -28,6 +28,7 @@ const PULSE_PERIOD: f64 = 1.6;
 const MENU_MAX_HEIGHT: f32 = 320.0;
 const STYLE_WIDTH: f32 = 420.0;
 const STYLE_MAX_HEIGHT: f32 = 520.0;
+const STYLE_GAP: f32 = 8.0;
 const AUTO_NEXT_S: f64 = 10.0;
 const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
 
@@ -37,6 +38,7 @@ pub struct Controls {
     last_activity: f64,
     last_pointer: Option<Pos2>,
     menu: Option<TrackKind>,
+    style_open: bool,
     seek_drag: Option<f64>,
     volume_drag: Option<f64>,
     addon_request: Option<Url>,
@@ -473,7 +475,7 @@ fn bottom_bar(
             track_menu(ui, audio, status, &[], TrackKind::Audio, controls, out);
         }
         Some(TrackKind::Subtitle) => {
-            let menu = track_menu(
+            let (menu, style_hovered) = track_menu(
                 ui,
                 subtitles,
                 status,
@@ -482,9 +484,22 @@ fn bottom_bar(
                 controls,
                 out,
             );
-            style_panel(ui, menu, playback.settings, controls, out);
+            let panel = style_rect(ui, menu);
+            let ctx = ui.ctx();
+            let keep = ctx
+                .pointer_hover_pos()
+                .is_some_and(|p| panel.expand(STYLE_GAP).contains(p))
+                || ctx.dragged_id().is_some()
+                || egui::Popup::is_any_open(ctx);
+            controls.style_open = style_hovered || (controls.style_open && keep);
+            if controls.style_open {
+                style_panel(ui, panel, playback.settings, controls, out);
+            }
         }
         _ => {}
+    }
+    if controls.menu != Some(TrackKind::Subtitle) {
+        controls.style_open = false;
     }
 }
 
@@ -748,7 +763,7 @@ fn track_menu(
     kind: TrackKind,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
-) -> Rect {
+) -> (Rect, bool) {
     let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
     let mut entries: Vec<(Entry, String, bool)> = Vec::new();
     if kind == TrackKind::Subtitle {
@@ -781,7 +796,14 @@ fn track_menu(
     #[expect(clippy::cast_precision_loss, reason = "a short list")]
     let content = entries.len() as f32 * row;
     let room = (anchor.top() - ui.max_rect().top() - 24.0).max(row);
-    let height = content.min(MENU_MAX_HEIGHT).min(room) + 8.0;
+    let footer = if kind == TrackKind::Subtitle {
+        row + 4.0
+    } else {
+        0.0
+    };
+    let list = content.min(MENU_MAX_HEIGHT).min(room);
+    let height = list + footer + 8.0;
+    let mut style_hovered = false;
     let menu = Rect::from_min_size(
         pos2(
             (anchor.right() - width).max(ui.max_rect().left() + 8.0),
@@ -797,7 +819,7 @@ fn track_menu(
                 .rect_filled(menu, CornerRadius::same(theme::RADIUS), theme::PANEL);
             ui.scope_builder(UiBuilder::new().max_rect(menu.shrink(4.0)), |ui| {
                 egui::ScrollArea::vertical()
-                    .max_height(height - 8.0)
+                    .max_height(list)
                     .auto_shrink(false)
                     .show(ui, |ui| {
                         ui.spacing_mut().item_spacing.y = 0.0;
@@ -859,20 +881,67 @@ fn track_menu(
                         }
                     });
             });
+            if footer > 0.0 {
+                style_hovered = style_row(ui, menu, row, controls.style_open);
+            }
         });
-    menu
+    (menu, style_hovered)
+}
+
+fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
+    let item = Rect::from_min_size(
+        pos2(menu.left() + 4.0, menu.bottom() - 4.0 - row),
+        vec2(menu.width() - 8.0, row),
+    );
+    let label = t!("subtitle-style-menu");
+    let response = ui.interact(item, ui.id().with("subtitle-style-row"), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+    let painter = ui.painter();
+    painter.hline(
+        item.x_range().shrink(6.0),
+        item.top() - 2.0,
+        egui::Stroke::new(1.0, theme::RULE),
+    );
+    if open || response.hovered() {
+        painter.rect_filled(
+            item,
+            CornerRadius::same(theme::RADIUS),
+            theme::SURFACE_HOVER,
+        );
+    }
+    paint_icon(
+        painter,
+        Icon::ChevronLeft,
+        pos2(item.left() + 14.0, item.center().y),
+        16.0,
+        theme::TEXT,
+    );
+    painter.text(
+        pos2(item.left() + 30.0, item.center().y),
+        Align2::LEFT_CENTER,
+        &label,
+        theme::body(),
+        theme::TEXT,
+    );
+    response.hovered()
+}
+
+fn style_rect(ui: &Ui, menu: Rect) -> Rect {
+    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(ui.max_rect().top() + 24.0);
+    let left = (menu.left() - STYLE_GAP - STYLE_WIDTH).max(ui.max_rect().left() + 8.0);
+    Rect::from_min_max(
+        pos2(left, top),
+        pos2(menu.left() - STYLE_GAP, menu.bottom()),
+    )
 }
 
 fn style_panel(
     ui: &mut Ui,
-    menu: Rect,
+    panel: Rect,
     settings: &Settings,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
-    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(ui.max_rect().top() + 24.0);
-    let left = (menu.left() - 8.0 - STYLE_WIDTH).max(ui.max_rect().left() + 8.0);
-    let panel = Rect::from_min_max(pos2(left, top), pos2(menu.left() - 8.0, menu.bottom()));
     egui::Area::new(ui.id().with("subtitle-style"))
         .order(egui::Order::Foreground)
         .fixed_pos(panel.min)
