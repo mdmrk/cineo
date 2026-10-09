@@ -800,6 +800,18 @@ fn left_label(ui: &mut Ui, rect: Rect, label: Label) {
     );
 }
 
+fn paint_elided(painter: &egui::Painter, rect: Rect, text: &str, color: Color32) -> bool {
+    let mut job = egui::text::LayoutJob::simple_singleline(text.to_owned(), theme::body(), color);
+    job.wrap.max_width = rect.width().max(1.0);
+    job.wrap.max_rows = 1;
+    job.wrap.break_anywhere = true;
+    let galley = painter.layout_job(job);
+    let elided = galley.elided;
+    let y = rect.center().y - galley.size().y / 2.0;
+    painter.galley(pos2(rect.left(), y), galley, color);
+    elided
+}
+
 fn toggle(menu: Option<TrackKind>, kind: TrackKind) -> Option<TrackKind> {
     (menu != Some(kind)).then_some(kind)
 }
@@ -1007,17 +1019,19 @@ fn track_menu(
                                     theme::ACCENT,
                                 );
                             }
-                            painter.text(
-                                pos2(item.left() + 30.0, item.center().y),
-                                Align2::LEFT_CENTER,
-                                &label,
-                                theme::body(),
-                                if selected {
-                                    theme::TEXT_BRIGHT
-                                } else {
-                                    theme::TEXT
-                                },
-                            );
+                            let color = if selected {
+                                theme::TEXT_BRIGHT
+                            } else {
+                                theme::TEXT
+                            };
+                            let text = item
+                                .with_min_x(item.left() + 30.0)
+                                .with_max_x(item.right() - 8.0);
+                            let response = if paint_elided(painter, text, &label, color) {
+                                response.on_hover_text(&label)
+                            } else {
+                                response
+                            };
                             if response.clicked() {
                                 match id {
                                     Entry::Track(id) if kind == TrackKind::Subtitle => {
