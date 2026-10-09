@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use anyhow::{Context, Result, bail};
 use cineo_core::addon::{ContentType, ExtraValue, Manifest, ResourcePath, TransportUrl};
 use cineo_core::app::{LibraryItem, continue_watching};
-use cineo_core::diagnostics::Warning;
+use cineo_core::diagnostics::{Parsed, Warning};
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_store::{DB_FILE, Report, SCHEMA_VERSION, Store};
 use clap::{Args, Parser, Subcommand};
@@ -118,37 +118,26 @@ async fn run(cli: Cli) -> Result<()> {
     };
     match cli.command {
         Command::Addon(AddonCommand::Inspect { url }) => {
-            let addon = TransportUrl::parse(&url).context("invalid addon URL")?;
-            let manifest = client()?
-                .fetch_manifest(&addon)
-                .await
-                .context("failed to load addon manifest")?;
+            let manifest = fetch_manifest(&client()?, &addon_url(&url)?).await?;
             print!("{}", render_manifest(&manifest.value, &manifest.warnings));
         }
         Command::Addon(AddonCommand::Add { url }) => {
-            let addon = TransportUrl::parse(&url).context("invalid addon URL")?;
+            let addon = addon_url(&url)?;
             let mut store = open_store(data_dir()?)?;
             let mut addons = store.addons()?;
             if addons.contains(&addon) {
                 bail!("this addon is already installed");
             }
-            let manifest = client()?
-                .fetch_manifest(&addon)
-                .await
-                .context("failed to load addon manifest")?;
-            for warning in &manifest.warnings {
-                tracing::warn!(%warning, "manifest problem");
-            }
+            let manifest = fetch_manifest(&client()?, &addon).await?.value;
             addons.push(addon);
             store.save_addons(&addons)?;
-            let manifest = manifest.value;
             println!(
                 "installed {} {} ({})",
                 manifest.name, manifest.version, manifest.id
             );
         }
         Command::Addon(AddonCommand::Remove { url }) => {
-            let addon = TransportUrl::parse(&url).context("invalid addon URL")?;
+            let addon = addon_url(&url)?;
             let mut store = open_store(data_dir()?)?;
             let mut addons = store.addons()?;
             let before = addons.len();
@@ -184,15 +173,11 @@ async fn run(cli: Cli) -> Result<()> {
             }
         }
         Command::Catalog(args) => {
-            let addon = TransportUrl::parse(&args.url).context("invalid addon URL")?;
+            let addon = addon_url(&args.url)?;
             let content_type = ContentType::new(args.content_type.as_str())
                 .context("content type must be non-empty without surrounding spaces")?;
             let client = client()?;
-            let manifest = client
-                .fetch_manifest(&addon)
-                .await
-                .context("failed to load addon manifest")?
-                .value;
+            let manifest = fetch_manifest(&client, &addon).await?.value;
             let path = ResourcePath::catalog(content_type, args.id).with_extra(args.extra);
             let Some(catalog) = manifest.catalog(&path.content_type, &path.id) else {
                 bail!(
@@ -215,12 +200,20 @@ async fn run(cli: Cli) -> Result<()> {
                     meta.id, meta.content_type, year, meta.name
                 );
             }
-            for warning in &response.warnings {
-                tracing::warn!(%warning, "catalog entry problem");
-            }
         }
     }
     Ok(())
+}
+
+fn addon_url(raw: &str) -> Result<TransportUrl> {
+    TransportUrl::parse(raw).context("invalid addon URL")
+}
+
+async fn fetch_manifest(client: &AddonClient, addon: &TransportUrl) -> Result<Parsed<Manifest>> {
+    client
+        .fetch_manifest(addon)
+        .await
+        .context("failed to load addon manifest")
 }
 
 fn open_store(dir: &Path) -> Result<Store> {
