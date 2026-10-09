@@ -214,6 +214,26 @@ impl DownloadLimit {
 }
 
 choice! {
+    TorrentStorage {
+        Disk = "disk", Ram256 = "ram-256", Ram512 = "ram-512", Ram1024 = "ram-1024",
+        Ram2048 = "ram-2048",
+    }
+}
+
+impl TorrentStorage {
+    pub const fn memory_window_bytes(self) -> Option<u64> {
+        const MIB: u64 = 1024 * 1024;
+        match self {
+            Self::Disk => None,
+            Self::Ram256 => Some(256 * MIB),
+            Self::Ram512 => Some(512 * MIB),
+            Self::Ram1024 => Some(1024 * MIB),
+            Self::Ram2048 => Some(2048 * MIB),
+        }
+    }
+}
+
+choice! {
     UploadLimit { Unlimited = "none", K100 = "100k", K500 = "500k", M1 = "1", M5 = "5", }
 }
 
@@ -406,6 +426,7 @@ settings! {
     audio_output: AudioOutput = AudioOutput::Auto => AudioOutput("audio_output"),
     audio_passthrough: bool = false => AudioPassthrough("audio_passthrough"),
     torrent_upload: bool = true => TorrentUpload("torrent_upload"),
+    torrent_storage: TorrentStorage = TorrentStorage::Disk => TorrentStorage("torrent_storage"),
     download_limit: DownloadLimit = DownloadLimit::Unlimited => DownloadLimit("download_limit"),
     upload_limit: UploadLimit = UploadLimit::Unlimited => UploadLimit("upload_limit"),
     peer_limit: PeerLimit = PeerLimit::P128 => PeerLimit("peer_limit"),

@@ -2912,7 +2912,7 @@ dependencies = [
 [[package]]
 name = "librqbit"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -2975,7 +2975,7 @@ dependencies = [
 [[package]]
 name = "librqbit-bencode"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -2991,7 +2991,7 @@ dependencies = [
 [[package]]
 name = "librqbit-buffers"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "bytes",
  "librqbit-clone-to-owned",
@@ -3002,7 +3002,7 @@ dependencies = [
 [[package]]
 name = "librqbit-clone-to-owned"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "bytes",
 ]
@@ -3010,7 +3010,7 @@ dependencies = [
 [[package]]
 name = "librqbit-core"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "bytes",
@@ -3039,7 +3039,7 @@ dependencies = [
 [[package]]
 name = "librqbit-dht"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "backon",
@@ -3086,7 +3086,7 @@ dependencies = [
 [[package]]
 name = "librqbit-lsd"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "atoi",
@@ -3105,7 +3105,7 @@ dependencies = [
 [[package]]
 name = "librqbit-peer-protocol"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -3125,7 +3125,7 @@ dependencies = [
 [[package]]
 name = "librqbit-sha1-wrapper"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "assert_cfg",
  "aws-lc-rs",
@@ -3134,7 +3134,7 @@ dependencies = [
 [[package]]
 name = "librqbit-tracker-comms"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -3162,7 +3162,7 @@ dependencies = [
 [[package]]
 name = "librqbit-upnp"
 version = "9.0.1"
-source = "git+https://github.com/mdmrk/rqbit?rev=be52c57a0d6c85d6d35467a2c8d5d60f66924aea#be52c57a0d6c85d6d35467a2c8d5d60f66924aea"
+source = "git+https://github.com/mdmrk/rqbit?rev=297cbbe07506d6671507f03357ee4454ed762849#297cbbe07506d6671507f03357ee4454ed762849"
 dependencies = [
  "anyhow",
  "bstr",

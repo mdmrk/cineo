@@ -98,8 +98,25 @@ Format:
 - Why: deleting data under the player would break playback and seeking.
 - Instead: nothing else is kept: data is deleted when the torrent stops
   and leftovers when the engine starts.
-- Exit: refuse files larger than the free space up front, or drop pieces
-  already played (needs piece-level storage).
+- Exit: refuse files larger than the free space up front. Keeping torrent
+  data in memory (ADR-0019) already avoids this, as an option.
+
+### Streaming engine: memory mode can hold more than its window
+- Where: [memory.rs](../crates/cineo-stream/src/memory.rs) and
+  `torrent_state/live/mod.rs` in our librqbit fork
+  ([commit 297cbbe0](https://github.com/mdmrk/rqbit/commit/297cbbe07506d6671507f03357ee4454ed762849), ADR-0019)
+- Gap: only validated pieces count toward the window. Pieces in flight
+  come on top, and a partial piece whose peer died and that no stream
+  needs again stays in memory until the torrent stops. A piece forgotten
+  while it waits in a peer's upload queue cannot be read, and that peer is
+  disconnected (INFERRED from the code).
+- Why: librqbit tells the storage nothing when a piece is abandoned, and
+  its upload path treats a failed read as fatal for the connection.
+- Instead: in-flight pieces are a few per peer; abandoned ones are
+  usually near the playback position and get downloaded again. A
+  disconnected peer is retried with backoff.
+- Exit: a librqbit hook for abandoned pieces, and skipping unreadable
+  upload requests instead of disconnecting.
 
 ### Streaming engine: shared urgent pieces waste some bandwidth and blame
 - Where: `crates/librqbit/src/piece_tracker.rs` in our librqbit fork

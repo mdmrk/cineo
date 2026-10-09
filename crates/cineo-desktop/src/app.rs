@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::num::{NonZeroU32, NonZeroU64};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -796,6 +796,10 @@ fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
             .bytes_per_second()
             .and_then(NonZeroU32::new),
         peer_limit: Some(settings.peer_limit.peers()),
+        memory_window: settings
+            .torrent_storage
+            .memory_window_bytes()
+            .and_then(NonZeroU64::new),
         ..base.clone()
     }
 }
@@ -868,7 +872,7 @@ fn supersedes(later: &Effect, earlier: &Effect) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cineo_core::app::{DownloadLimit, PeerLimit, UploadLimit};
+    use cineo_core::app::{DownloadLimit, PeerLimit, TorrentStorage, UploadLimit};
 
     #[test]
     fn queued_saves_keep_only_the_last_write_of_each_key() {
@@ -943,10 +947,12 @@ mod tests {
             download_limit: DownloadLimit::M5,
             upload_limit: UploadLimit::K100,
             peer_limit: PeerLimit::P50,
+            torrent_storage: TorrentStorage::Ram512,
             ..Settings::default()
         };
         let options = engine_options(&base, &settings);
         assert!(!options.upload && !options.dht);
+        assert_eq!(options.memory_window, NonZeroU64::new(512 * 1024 * 1024));
         assert_eq!(options.download_limit_bps, NonZeroU32::new(5_000_000));
         assert_eq!(options.upload_limit_bps, NonZeroU32::new(100_000));
         assert_eq!(options.peer_limit, Some(50));

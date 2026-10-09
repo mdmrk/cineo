@@ -2,7 +2,7 @@ use cineo_core::app::{
     Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice,
     PeerLimit, SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
     SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    UiLanguage, UploadLimit, WatchedAt,
+    TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Label, Layout, Popup,
@@ -614,6 +614,16 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     pick(
         ui,
         out,
+        &t!("torrent-storage"),
+        &t!("torrent-storage-help"),
+        s.torrent_storage,
+        TorrentStorage::ALL,
+        storage_name,
+        Setting::TorrentStorage,
+    );
+    pick(
+        ui,
+        out,
         &t!("download-limit"),
         &t!("next-torrent"),
         s.download_limit,
@@ -682,6 +692,16 @@ fn download_name(limit: DownloadLimit) -> String {
         DownloadLimit::M5 => "5 MB/s".to_owned(),
         DownloadLimit::M10 => "10 MB/s".to_owned(),
         DownloadLimit::M20 => "20 MB/s".to_owned(),
+    }
+}
+
+fn storage_name(storage: TorrentStorage) -> String {
+    match storage {
+        TorrentStorage::Disk => t!("storage-disk"),
+        TorrentStorage::Ram256 => t!("storage-memory", size = "256 MB"),
+        TorrentStorage::Ram512 => t!("storage-memory", size = "512 MB"),
+        TorrentStorage::Ram1024 => t!("storage-memory", size = "1 GB"),
+        TorrentStorage::Ram2048 => t!("storage-memory", size = "2 GB"),
     }
 }
 

@@ -4,7 +4,7 @@ use cineo_core::app::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice, PeerLimit,
     Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
     SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize, UiLanguage, UploadLimit, WatchedAt,
+    SubtitlePosition, SubtitleSize, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
 };
 
 #[test]
@@ -38,6 +38,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::AudioOutput(AudioOutput::Stereo),
         Setting::AudioPassthrough(true),
         Setting::TorrentUpload(false),
+        Setting::TorrentStorage(TorrentStorage::Ram512),
         Setting::DownloadLimit(DownloadLimit::M5),
         Setting::UploadLimit(UploadLimit::K100),
         Setting::PeerLimit(PeerLimit::P50),
@@ -106,6 +107,7 @@ fn saved_keys_never_change() {
             "audio_output",
             "audio_passthrough",
             "torrent_upload",
+            "torrent_storage",
             "download_limit",
             "upload_limit",
             "peer_limit",

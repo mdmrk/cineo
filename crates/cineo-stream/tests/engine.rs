@@ -315,6 +315,72 @@ async fn downloaded_data_is_stored_by_hash_and_file_index_only() {
     engine.shutdown().await;
 }
 
+const WINDOW: u64 = 256 * 1024;
+
+fn memory_options(name: &str, seeder: &Seeder) -> EngineOptions {
+    EngineOptions {
+        memory_window: std::num::NonZeroU64::new(WINDOW),
+        ..options(name, seeder)
+    }
+}
+
+fn downloaded(engine: &Engine) -> u64 {
+    match engine.status() {
+        Some((_, TorrentStatus::Streaming { downloaded, .. })) => downloaded,
+        other => panic!("{other:?}"),
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn memory_mode_plays_a_file_larger_than_its_window_without_disk() {
+    let seeder = seeder("memory-play").await;
+    let opts = memory_options("memory-play", &seeder);
+    let dir = opts.cache_dir.join(&seeder.info_hash);
+    let engine = Engine::start(opts).await.unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    let addr = engine.local_addr();
+
+    let full = http(addr, "GET", url.path(), &[]).await;
+    assert!(full.body == seeder.film, "the whole film arrives intact");
+    assert!(!dir.exists(), "nothing is written to disk");
+    let held = downloaded(&engine);
+    assert!(
+        held <= WINDOW + 4 * 32 * 1024,
+        "{held} bytes held for a {WINDOW} byte window"
+    );
+    assert!(held < seeder.film.len() as u64);
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn memory_mode_downloads_forgotten_pieces_again_on_a_seek_back() {
+    let seeder = seeder("memory-seek").await;
+    let engine = Engine::start(memory_options("memory-seek", &seeder))
+        .await
+        .unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    let addr = engine.local_addr();
+
+    let full = http(addr, "GET", url.path(), &[]).await;
+    assert!(full.body == seeder.film);
+    assert!(
+        downloaded(&engine) < 100_000 + WINDOW,
+        "pieces were forgotten"
+    );
+    let start = http(addr, "GET", url.path(), &[("Range", "bytes=0-99999")]).await;
+    assert_eq!(start.status, 206);
+    assert_eq!(start.body, seeder.film[..100_000]);
+    let middle = http(
+        addr,
+        "GET",
+        url.path(),
+        &[("Range", "bytes=1200000-1200099")],
+    )
+    .await;
+    assert_eq!(middle.body, seeder.film[1_200_000..1_200_100]);
+    engine.shutdown().await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn stopping_deletes_the_torrent_data() {
     let seeder = seeder("stop-deletes").await;

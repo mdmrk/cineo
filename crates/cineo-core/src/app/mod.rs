@@ -21,7 +21,7 @@ pub use settings::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,
     Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
     SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize, UiLanguage, UploadLimit, WatchedAt,
+    SubtitlePosition, SubtitleSize, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
 };
 pub use state::{
     Action, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest, Playing,

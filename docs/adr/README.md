@@ -30,10 +30,11 @@ old one *Superseded by NNNN*.
 | [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015) |
 | [0013](0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
 | [0014](0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted |
-| [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016) |
+| [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016; in-memory option: 0019) |
 | [0016](0016-librqbit-from-a-fork.md) | librqbit from the owner's fork instead of a vendored copy | Accepted |
 | [0017](0017-localization-with-fluent.md) | Localization: Fluent catalogs in the desktop shell; core reports typed messages | Accepted |
 | [0018](0018-deep-links-single-instance-and-scheme-registration.md) | Deep links: typed routes in core, single-instance handover, opt-in scheme registration | Accepted |
+| [0019](0019-torrent-data-in-memory.md) | Torrent data in memory, bounded by a sliding window | Accepted |
 
 ## What we took from the reference projects
 

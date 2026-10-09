@@ -40,6 +40,9 @@ apart from test names). No upstream PR does the same (VERIFIED
 - The patch's own unit tests live in the fork; ours
   (`a_slow_peer_does_not_hold_back_the_start`) still check the behavior.
 - ADR-0015's other decisions (no torrent cache, carrying the patch) stand.
+- 2026-10-09: the pinned commit moved to `297cbbe0` on branch
+  `feat/stream-window`, which adds the stream window of ADR-0019 on top of
+  `fix/urgent-piece-helpers`.
 
 ## Rejected alternatives
 - Option 1: the owner asked to use the fork; the copy was large and

@@ -82,4 +82,4 @@ strip = "symbols"
 opt-level = 2
 
 [patch.crates-io]
-librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "be52c57a0d6c85d6d35467a2c8d5d60f66924aea" }
+librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "297cbbe07506d6671507f03357ee4454ed762849" }

@@ -3,6 +3,7 @@
 mod blocklist;
 mod cache;
 mod engine;
+mod memory;
 mod range;
 mod server;
 mod socks;

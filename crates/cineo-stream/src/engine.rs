@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::net::{IpAddr, SocketAddr};
-use std::num::NonZeroU32;
+use std::num::{NonZeroU32, NonZeroU64};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -20,6 +20,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 use url::Url;
 
+use crate::memory::MemoryStorageFactory;
 use crate::server::{self, Ctx, Served};
 use crate::storage::{CacheStorageFactory, torrent_dir};
 use crate::{blocklist, cache, socks};
@@ -44,6 +45,7 @@ pub struct EngineOptions {
     pub extra_peers: Vec<SocketAddr>,
     /// How long to wait for a torrent's file list.
     pub metadata_timeout: Duration,
+    pub memory_window: Option<NonZeroU64>,
 }
 
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
@@ -62,6 +64,7 @@ impl EngineOptions {
             peer_limit: None,
             extra_peers: Vec::new(),
             metadata_timeout: Duration::from_secs(60),
+            memory_window: None,
         }
     }
 }
@@ -216,6 +219,11 @@ impl Engine {
             output_folder: Some(self.options.cache_dir.to_string_lossy().into_owned()),
             initial_peers: (!self.options.extra_peers.is_empty())
                 .then(|| self.options.extra_peers.clone()),
+            storage_factory: self
+                .options
+                .memory_window
+                .map(|_| MemoryStorageFactory.boxed()),
+            stream_window: self.options.memory_window.map(NonZeroU64::get),
             ..AddTorrentOptions::default()
         };
         let wait = self.options.metadata_timeout;
