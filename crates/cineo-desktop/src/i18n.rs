@@ -12,15 +12,18 @@ pub enum Locale {
     #[default]
     English,
     Spanish,
+    Russian,
 }
 
 impl Locale {
-    pub const ALL: [Self; 2] = [Self::English, Self::Spanish];
+    pub const ALL: [Self; 3] = [Self::English, Self::Spanish, Self::Russian];
 
     pub fn from_tag(tag: &str) -> Self {
         let language = tag.split(['-', '_', '.', '@']).next().unwrap_or_default();
         if language.eq_ignore_ascii_case("es") {
             Self::Spanish
+        } else if language.eq_ignore_ascii_case("ru") {
+            Self::Russian
         } else {
             Self::English
         }
@@ -35,6 +38,7 @@ impl Locale {
             UiLanguage::System => system,
             UiLanguage::English => Self::English,
             UiLanguage::Spanish => Self::Spanish,
+            UiLanguage::Russian => Self::Russian,
         }
     }
 
@@ -42,6 +46,7 @@ impl Locale {
         match self {
             Self::English => "English",
             Self::Spanish => "Español",
+            Self::Russian => "Русский",
         }
     }
 
@@ -49,13 +54,15 @@ impl Locale {
         match self {
             Self::English => langid!("en"),
             Self::Spanish => langid!("es"),
+            Self::Russian => langid!("ru"),
         }
     }
 
-    fn source(self) -> &'static str {
+    pub(crate) fn source(self) -> &'static str {
         match self {
             Self::English => include_str!("../assets/locales/en.ftl"),
             Self::Spanish => include_str!("../assets/locales/es.ftl"),
+            Self::Russian => include_str!("../assets/locales/ru.ftl"),
         }
     }
 }
@@ -64,7 +71,7 @@ type Bundle = FluentBundle<FluentResource>;
 
 thread_local! {
     static CURRENT: Cell<Locale> = const { Cell::new(Locale::English) };
-    static BUNDLES: [Bundle; 2] = Locale::ALL.map(bundle);
+    static BUNDLES: [Bundle; 3] = Locale::ALL.map(bundle);
 }
 
 fn bundle(locale: Locale) -> Bundle {
@@ -203,6 +210,10 @@ mod tests {
         assert_eq!(t!("count-titles", count = 1), "1 título");
         assert_eq!(t!("count-titles", count = 3), "3 títulos");
         assert_eq!(t!("no-such-message"), "no-such-message");
+        set(Locale::Russian);
+        assert_eq!(t!("count-titles", count = 21), "21 название");
+        assert_eq!(t!("count-titles", count = 3), "3 названия");
+        assert_eq!(t!("count-titles", count = 11), "11 названий");
         set(Locale::English);
         assert_eq!(t!("count-titles", count = 1), "1 title");
         assert_eq!(
@@ -216,6 +227,7 @@ mod tests {
     fn the_system_tag_picks_a_locale() {
         assert_eq!(Locale::from_tag("es-MX"), Locale::Spanish);
         assert_eq!(Locale::from_tag("es_ES.UTF-8"), Locale::Spanish);
+        assert_eq!(Locale::from_tag("ru_RU.UTF-8"), Locale::Russian);
         assert_eq!(Locale::from_tag("en-US"), Locale::English);
         assert_eq!(Locale::from_tag("fr-FR"), Locale::English);
         assert_eq!(Locale::from_tag("C"), Locale::English);

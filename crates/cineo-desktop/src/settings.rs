@@ -674,6 +674,7 @@ fn ui_language_name(language: UiLanguage, system: Locale) -> String {
         UiLanguage::System => t!("ui-language-system", language = system.endonym()),
         UiLanguage::English => Locale::English.endonym().to_owned(),
         UiLanguage::Spanish => Locale::Spanish.endonym().to_owned(),
+        UiLanguage::Russian => Locale::Russian.endonym().to_owned(),
     }
 }
 

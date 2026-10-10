@@ -257,4 +257,19 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn every_locale_has_glyphs_in_the_text_fonts() {
+        let mut fonts = egui::epaint::Fonts::new(egui::epaint::TextOptions::default(), fonts());
+        for locale in crate::i18n::Locale::ALL {
+            for c in locale.source().chars().filter(|c| !c.is_whitespace()) {
+                for family in [FontFamily::Proportional, strong_family()] {
+                    assert!(
+                        fonts.has_glyph(&FontId::new(14.0, family.clone()), c),
+                        "{locale:?} {family:?}: {c:?}"
+                    );
+                }
+            }
+        }
+    }
 }
