@@ -760,7 +760,9 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                             out.push(Action::SetDiscoverGenre(Some(option.to_owned())));
                         }
                     }
-                });
+                })
+                .response
+                .on_hover_cursor(egui::CursorIcon::PointingHand);
         });
     }
     ui.add_space(theme::GAP);

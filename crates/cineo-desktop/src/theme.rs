@@ -181,6 +181,7 @@ pub(crate) fn apply(ctx: &egui::Context) {
     visuals.faint_bg_color = PANEL;
     visuals.override_text_color = Some(TEXT);
     visuals.hyperlink_color = ACCENT;
+    visuals.interact_cursor = Some(egui::CursorIcon::PointingHand);
     visuals.selection.bg_fill = ACCENT.gamma_multiply(0.35);
     visuals.selection.stroke = Stroke::new(1.5, ACCENT);
     visuals.window_corner_radius = CornerRadius::same(RADIUS);
