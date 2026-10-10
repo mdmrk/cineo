@@ -540,7 +540,7 @@ fn spanish_notices_wrap_the_technical_detail() {
         ..ViewState::default()
     };
     let harness = harness(state, view);
-    harness.get_by_label_contains("URL de complemento no válida: ");
+    harness.get_by_label_contains("URL de add-on no válida: ");
 }
 
 #[test]
