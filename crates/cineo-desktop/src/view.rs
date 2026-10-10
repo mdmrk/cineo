@@ -584,6 +584,23 @@ pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> 
     out
 }
 
+fn buttons_width(ui: &Ui, labels: &[String]) -> f32 {
+    let style = ui.style();
+    let font = egui::TextStyle::Button.resolve(style);
+    let text: f32 = labels
+        .iter()
+        .map(|label| {
+            ui.painter()
+                .layout_no_wrap(label.clone(), font.clone(), theme::TEXT_DIM)
+                .size()
+                .x
+        })
+        .sum();
+    let count = labels.len() as f32;
+    text + count * 2.0 * style.spacing.button_padding.x
+        + (count - 1.0).max(0.0) * style.spacing.item_spacing.x
+}
+
 fn configure_button(ui: &mut Ui, transport: &TransportUrl) {
     if ui.button(t!("configure")).clicked() {
         ui.ctx()
@@ -942,7 +959,11 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         let manifest = &addon.manifest;
         ui.add_space(4.0);
         ui.horizontal(|ui| {
-            let actions_width = 250.0;
+            let mut labels = vec![t!("move-up"), t!("move-down"), t!("remove")];
+            if manifest.behavior_hints.configurable {
+                labels.push(t!("configure"));
+            }
+            let actions_width = buttons_width(ui, &labels) + ui.spacing().item_spacing.x * 2.0;
             ui.vertical(|ui| {
                 ui.set_max_width((ui.available_width() - actions_width).max(200.0));
                 ui.spacing_mut().item_spacing.y = 4.0;
