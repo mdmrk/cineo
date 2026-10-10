@@ -13,10 +13,11 @@ pub enum Locale {
     English,
     Spanish,
     Russian,
+    Italian,
 }
 
 impl Locale {
-    pub const ALL: [Self; 3] = [Self::English, Self::Spanish, Self::Russian];
+    pub const ALL: [Self; 4] = [Self::English, Self::Spanish, Self::Russian, Self::Italian];
 
     pub fn from_tag(tag: &str) -> Self {
         let language = tag.split(['-', '_', '.', '@']).next().unwrap_or_default();
@@ -24,6 +25,8 @@ impl Locale {
             Self::Spanish
         } else if language.eq_ignore_ascii_case("ru") {
             Self::Russian
+        } else if language.eq_ignore_ascii_case("it") {
+            Self::Italian
         } else {
             Self::English
         }
@@ -39,6 +42,7 @@ impl Locale {
             UiLanguage::English => Self::English,
             UiLanguage::Spanish => Self::Spanish,
             UiLanguage::Russian => Self::Russian,
+            UiLanguage::Italian => Self::Italian,
         }
     }
 
@@ -47,6 +51,7 @@ impl Locale {
             Self::English => "English",
             Self::Spanish => "Español",
             Self::Russian => "Русский",
+            Self::Italian => "Italiano",
         }
     }
 
@@ -55,6 +60,7 @@ impl Locale {
             Self::English => langid!("en"),
             Self::Spanish => langid!("es"),
             Self::Russian => langid!("ru"),
+            Self::Italian => langid!("it"),
         }
     }
 
@@ -63,6 +69,7 @@ impl Locale {
             Self::English => include_str!("../assets/locales/en.ftl"),
             Self::Spanish => include_str!("../assets/locales/es.ftl"),
             Self::Russian => include_str!("../assets/locales/ru.ftl"),
+            Self::Italian => include_str!("../assets/locales/it.ftl"),
         }
     }
 }
@@ -71,7 +78,7 @@ type Bundle = FluentBundle<FluentResource>;
 
 thread_local! {
     static CURRENT: Cell<Locale> = const { Cell::new(Locale::English) };
-    static BUNDLES: [Bundle; 3] = Locale::ALL.map(bundle);
+    static BUNDLES: [Bundle; 4] = Locale::ALL.map(bundle);
 }
 
 fn bundle(locale: Locale) -> Bundle {
@@ -228,6 +235,7 @@ mod tests {
         assert_eq!(Locale::from_tag("es-MX"), Locale::Spanish);
         assert_eq!(Locale::from_tag("es_ES.UTF-8"), Locale::Spanish);
         assert_eq!(Locale::from_tag("ru_RU.UTF-8"), Locale::Russian);
+        assert_eq!(Locale::from_tag("it-IT"), Locale::Italian);
         assert_eq!(Locale::from_tag("en-US"), Locale::English);
         assert_eq!(Locale::from_tag("fr-FR"), Locale::English);
         assert_eq!(Locale::from_tag("C"), Locale::English);

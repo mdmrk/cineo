@@ -306,7 +306,7 @@ choice! {
 }
 
 choice! {
-    UiLanguage { System = "system", English = "en", Spanish = "es", Russian = "ru", }
+    UiLanguage { System = "system", English = "en", Spanish = "es", Russian = "ru", Italian = "it", }
 }
 
 choice! {
