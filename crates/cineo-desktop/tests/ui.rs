@@ -255,8 +255,8 @@ fn the_library_lists_newest_favorites_first_and_unfavorites_them() {
     );
     assert_eq!(
         harness.get_all_by_label("Remove from library").count(),
-        5,
-        "played items can be removed, favourites in both sections"
+        3,
+        "only recently played cards can be removed, not favourites"
     );
 }
 

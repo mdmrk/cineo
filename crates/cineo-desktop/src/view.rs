@@ -2104,18 +2104,18 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
         });
     }
     let remove = rect.right_top() + vec2(-corner, corner);
-    let (label, action) = match shelf {
-        Shelf::ContinueWatching => (
+    let removable = match shelf {
+        Shelf::ContinueWatching => Some((
             t!("remove-continue"),
             Action::DismissContinueWatching(item.id.clone()),
-        ),
-        Shelf::Favorites | Shelf::Library => (
+        )),
+        Shelf::Library if item.was_played() => Some((
             t!("remove-library"),
             Action::RemoveFromLibrary(item.id.clone()),
-        ),
+        )),
+        Shelf::Library | Shelf::Favorites => None,
     };
-    let removable = shelf == Shelf::ContinueWatching || item.was_played();
-    if removable
+    if let Some((label, action)) = removable
         && card_button(
             ui,
             item,
