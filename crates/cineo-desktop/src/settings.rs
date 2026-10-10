@@ -57,6 +57,20 @@ impl Section {
             Self::About => t!("section-about"),
         }
     }
+
+    fn icon(self) -> Icon {
+        Icon::Named(match self {
+            Self::Interface => "layout-dashboard",
+            Self::Player => "movie",
+            Self::Languages => "language",
+            Self::Subtitles => "badge-cc",
+            Self::Audio => "volume",
+            Self::Torrents => "magnet",
+            Self::Data => "database",
+            Self::Keyboard => "keyboard",
+            Self::About => "info-circle",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -134,7 +148,7 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
         ui.scope_builder(UiBuilder::new().max_rect(nav), |ui| {
             ui.add_space(theme::GAP * 4.0);
             for part in Section::ALL {
-                if nav_item(ui, &part.label(), part == jump.unwrap_or(current)).clicked() {
+                if nav_item(ui, part, part == jump.unwrap_or(current)).clicked() {
                     view.settings_jump = Some(part);
                 }
             }
@@ -1020,9 +1034,10 @@ fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
     picked
 }
 
-fn nav_item(ui: &mut Ui, label: &str, selected: bool) -> Response {
+fn nav_item(ui: &mut Ui, part: Section, selected: bool) -> Response {
+    let label = part.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, &label));
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
         if selected || response.hovered() {
@@ -1038,8 +1053,15 @@ fn nav_item(ui: &mut Ui, label: &str, selected: bool) -> Response {
         } else {
             theme::TEXT_DIM
         };
+        paint_icon(
+            painter,
+            part.icon(),
+            pos2(rect.min.x + 18.0, rect.center().y),
+            16.0,
+            color,
+        );
         painter.text(
-            pos2(rect.min.x + 12.0, rect.center().y),
+            pos2(rect.min.x + 36.0, rect.center().y),
             Align2::LEFT_CENTER,
             label,
             theme::nav(),
@@ -1108,6 +1130,13 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
 #[cfg(test)]
 mod tests {
     use crate::i18n::{self, Locale};
+
+    #[test]
+    fn every_section_icon_exists_in_the_tabler_set() {
+        for part in super::Section::ALL {
+            assert!(part.icon().glyph().is_some(), "{part:?}");
+        }
+    }
 
     #[test]
     fn languages_sort_by_their_translated_name_ignoring_accents() {
