@@ -713,11 +713,13 @@ fn download_name(limit: DownloadLimit) -> String {
 
 fn storage_name(storage: TorrentStorage) -> String {
     match storage {
-        TorrentStorage::Disk => t!("storage-disk"),
         TorrentStorage::Ram256 => t!("storage-memory", size = "256 MB"),
         TorrentStorage::Ram512 => t!("storage-memory", size = "512 MB"),
         TorrentStorage::Ram1024 => t!("storage-memory", size = "1 GB"),
         TorrentStorage::Ram2048 => t!("storage-memory", size = "2 GB"),
+        TorrentStorage::Disk2048 => t!("storage-disk", size = "2 GB"),
+        TorrentStorage::Disk4096 => t!("storage-disk", size = "4 GB"),
+        TorrentStorage::Disk8192 => t!("storage-disk", size = "8 GB"),
     }
 }
 

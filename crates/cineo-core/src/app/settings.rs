@@ -215,21 +215,29 @@ impl DownloadLimit {
 
 choice! {
     TorrentStorage {
-        Disk = "disk", Ram256 = "ram-256", Ram512 = "ram-512", Ram1024 = "ram-1024",
-        Ram2048 = "ram-2048",
+        Ram256 = "ram-256", Ram512 = "ram-512", Ram1024 = "ram-1024", Ram2048 = "ram-2048",
+        Disk2048 = "disk-2048", Disk4096 = "disk", Disk8192 = "disk-8192",
     }
 }
 
 impl TorrentStorage {
-    pub const fn memory_window_bytes(self) -> Option<u64> {
+    pub const fn window_bytes(self) -> u64 {
         const MIB: u64 = 1024 * 1024;
         match self {
-            Self::Disk => None,
-            Self::Ram256 => Some(256 * MIB),
-            Self::Ram512 => Some(512 * MIB),
-            Self::Ram1024 => Some(1024 * MIB),
-            Self::Ram2048 => Some(2048 * MIB),
+            Self::Ram256 => 256 * MIB,
+            Self::Ram512 => 512 * MIB,
+            Self::Ram1024 => 1024 * MIB,
+            Self::Ram2048 | Self::Disk2048 => 2048 * MIB,
+            Self::Disk4096 => 4096 * MIB,
+            Self::Disk8192 => 8192 * MIB,
         }
+    }
+
+    pub const fn in_memory(self) -> bool {
+        matches!(
+            self,
+            Self::Ram256 | Self::Ram512 | Self::Ram1024 | Self::Ram2048
+        )
     }
 }
 

@@ -7,6 +7,8 @@ use librqbit::storage::{
 };
 use librqbit::{ManagedTorrentShared, TorrentMetadata};
 
+use crate::layout::Layout;
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct MemoryStorageFactory;
 
@@ -18,16 +20,7 @@ impl StorageFactory for MemoryStorageFactory {
         _shared: &ManagedTorrentShared,
         metadata: &TorrentMetadata,
     ) -> anyhow::Result<MemoryStorage> {
-        let lengths = metadata.lengths();
-        Ok(MemoryStorage::new(
-            metadata
-                .file_infos
-                .iter()
-                .map(|f| f.offset_in_torrent)
-                .collect(),
-            u64::from(lengths.default_piece_length()),
-            lengths.total_length(),
-        ))
+        Ok(MemoryStorage::new(Layout::of(metadata)))
     }
 
     fn clone_box(&self) -> BoxStorageFactory {
@@ -36,9 +29,7 @@ impl StorageFactory for MemoryStorageFactory {
 }
 
 struct Inner {
-    file_offsets: Vec<u64>,
-    piece_length: u64,
-    total_length: u64,
+    layout: Layout,
     pieces: RwLock<HashMap<u64, Box<[u8]>>>,
 }
 
@@ -52,12 +43,10 @@ fn poisoned<T>(_: T) -> anyhow::Error {
 }
 
 impl MemoryStorage {
-    pub(crate) fn new(file_offsets: Vec<u64>, piece_length: u64, total_length: u64) -> Self {
+    pub(crate) fn new(layout: Layout) -> Self {
         Self {
             inner: Arc::new(Inner {
-                file_offsets,
-                piece_length,
-                total_length,
+                layout,
                 pieces: RwLock::new(HashMap::new()),
             }),
         }
@@ -69,46 +58,6 @@ impl MemoryStorage {
             .pieces
             .read()
             .map_or(0, |p| p.values().map(|b| b.len()).sum())
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "offsets within one piece, a u32 in librqbit"
-    )]
-    fn parts(
-        &self,
-        file_id: usize,
-        offset: u64,
-        len: usize,
-    ) -> anyhow::Result<impl Iterator<Item = (u64, usize, usize)> + use<>> {
-        let inner = &self.inner;
-        let start = inner
-            .file_offsets
-            .get(file_id)
-            .with_context(|| format!("no file {file_id} in this torrent"))?
-            + offset;
-        let end = start + len as u64;
-        anyhow::ensure!(end <= inner.total_length, "past the end of the torrent");
-        let piece_length = inner.piece_length;
-        let mut at = start;
-        Ok(std::iter::from_fn(move || {
-            (at < end).then(|| {
-                let piece = at / piece_length;
-                let in_piece = at % piece_length;
-                let part = (piece_length - in_piece).min(end - at);
-                at += part;
-                (piece, in_piece as usize, part as usize)
-            })
-        }))
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "a piece length, a u32 in librqbit"
-    )]
-    fn piece_len(&self, piece: u64) -> usize {
-        let inner = &self.inner;
-        (inner.total_length - piece * inner.piece_length).min(inner.piece_length) as usize
     }
 }
 
@@ -124,7 +73,7 @@ impl TorrentStorage for MemoryStorage {
     fn pread_exact(&self, file_id: usize, offset: u64, buf: &mut [u8]) -> anyhow::Result<()> {
         let pieces = self.inner.pieces.read().map_err(poisoned)?;
         let mut done = 0;
-        for (piece, at, len) in self.parts(file_id, offset, buf.len())? {
+        for (piece, at, len) in self.inner.layout.parts(file_id, offset, buf.len())? {
             let data = pieces
                 .get(&piece)
                 .with_context(|| format!("piece {piece} is not in memory"))?;
@@ -137,10 +86,10 @@ impl TorrentStorage for MemoryStorage {
     fn pwrite_all(&self, file_id: usize, offset: u64, buf: &[u8]) -> anyhow::Result<()> {
         let mut pieces = self.inner.pieces.write().map_err(poisoned)?;
         let mut done = 0;
-        for (piece, at, len) in self.parts(file_id, offset, buf.len())? {
+        for (piece, at, len) in self.inner.layout.parts(file_id, offset, buf.len())? {
             let data = pieces
                 .entry(piece)
-                .or_insert_with(|| vec![0; self.piece_len(piece)].into_boxed_slice());
+                .or_insert_with(|| vec![0; self.inner.layout.piece_len(piece)].into_boxed_slice());
             data[at..at + len].copy_from_slice(&buf[done..done + len]);
             done += len;
         }
@@ -178,7 +127,7 @@ mod tests {
     use super::*;
 
     fn storage() -> MemoryStorage {
-        MemoryStorage::new(vec![0, 10], 8, 25)
+        MemoryStorage::new(Layout::new(vec![0, 10], 8, 25))
     }
 
     #[test]

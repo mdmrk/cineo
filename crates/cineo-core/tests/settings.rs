@@ -141,6 +141,18 @@ fn unknown_keys_and_unreadable_values_are_told_apart() {
 }
 
 #[test]
+fn torrent_data_on_disk_is_bounded_too() {
+    assert_eq!(
+        Setting::parse("torrent_storage", "disk"),
+        Ok(Setting::TorrentStorage(TorrentStorage::Disk4096)),
+        "the value saved before disk had a window"
+    );
+    assert_eq!(TorrentStorage::Disk4096.window_bytes(), 4 << 30);
+    assert!(!TorrentStorage::Disk4096.in_memory());
+    assert!(TorrentStorage::Ram512.in_memory());
+}
+
+#[test]
 fn numbers_are_kept_in_range() {
     assert_eq!(Percent::new(250).get(), 100);
     assert_eq!(

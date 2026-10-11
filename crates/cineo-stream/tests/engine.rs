@@ -1,6 +1,3 @@
-//! The engine against a local seeder: no internet, no DHT. The seeder is a
-//! second `librqbit` session on loopback that already has the files.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -294,7 +291,7 @@ async fn loopback_peers_are_blocked_unless_private_networks_are_allowed() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn downloaded_data_is_stored_by_hash_and_file_index_only() {
+async fn downloaded_data_is_stored_by_hash_and_piece_index_only() {
     let seeder = seeder("resume").await;
     let opts = options("resume", &seeder);
     let cache = opts.cache_dir.clone();
@@ -319,7 +316,8 @@ const WINDOW: u64 = 256 * 1024;
 
 fn memory_options(name: &str, seeder: &Seeder) -> EngineOptions {
     EngineOptions {
-        memory_window: std::num::NonZeroU64::new(WINDOW),
+        window: std::num::NonZeroU64::new(WINDOW),
+        in_memory: true,
         ..options(name, seeder)
     }
 }
@@ -349,6 +347,30 @@ async fn memory_mode_plays_a_file_larger_than_its_window_without_disk() {
         "{held} bytes held for a {WINDOW} byte window"
     );
     assert!(held < seeder.film.len() as u64);
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn disk_mode_keeps_only_its_window_on_disk() {
+    let seeder = seeder("disk-window").await;
+    let opts = EngineOptions {
+        window: std::num::NonZeroU64::new(WINDOW),
+        ..options("disk-window", &seeder)
+    };
+    let dir = opts.cache_dir.join(&seeder.info_hash);
+    let engine = Engine::start(opts).await.unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+
+    let full = http(engine.local_addr(), "GET", url.path(), &[]).await;
+    assert!(full.body == seeder.film, "the whole film arrives intact");
+    let on_disk: u64 = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().metadata().unwrap().len())
+        .sum();
+    assert!(
+        on_disk <= WINDOW + 4 * 32 * 1024,
+        "{on_disk} bytes on disk for a {WINDOW} byte window"
+    );
     engine.shutdown().await;
 }
 

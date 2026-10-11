@@ -45,7 +45,8 @@ pub struct EngineOptions {
     pub extra_peers: Vec<SocketAddr>,
     /// How long to wait for a torrent's file list.
     pub metadata_timeout: Duration,
-    pub memory_window: Option<NonZeroU64>,
+    pub window: Option<NonZeroU64>,
+    pub in_memory: bool,
 }
 
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
@@ -64,7 +65,8 @@ impl EngineOptions {
             peer_limit: None,
             extra_peers: Vec::new(),
             metadata_timeout: Duration::from_secs(60),
-            memory_window: None,
+            window: None,
+            in_memory: false,
         }
     }
 }
@@ -219,11 +221,8 @@ impl Engine {
             output_folder: Some(self.options.cache_dir.to_string_lossy().into_owned()),
             initial_peers: (!self.options.extra_peers.is_empty())
                 .then(|| self.options.extra_peers.clone()),
-            storage_factory: self
-                .options
-                .memory_window
-                .map(|_| MemoryStorageFactory.boxed()),
-            stream_window: self.options.memory_window.map(NonZeroU64::get),
+            storage_factory: self.options.in_memory.then(|| MemoryStorageFactory.boxed()),
+            stream_window: self.options.window.map(NonZeroU64::get),
             ..AddTorrentOptions::default()
         };
         let wait = self.options.metadata_timeout;

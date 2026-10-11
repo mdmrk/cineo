@@ -807,10 +807,8 @@ fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
             .bytes_per_second()
             .and_then(NonZeroU32::new),
         peer_limit: Some(settings.peer_limit.peers()),
-        memory_window: settings
-            .torrent_storage
-            .memory_window_bytes()
-            .and_then(NonZeroU64::new),
+        window: NonZeroU64::new(settings.torrent_storage.window_bytes()),
+        in_memory: settings.torrent_storage.in_memory(),
         ..base.clone()
     }
 }
@@ -948,7 +946,8 @@ mod tests {
             defaults,
             EngineOptions {
                 peer_limit: Some(128),
-                memory_window: NonZeroU64::new(1024 * 1024 * 1024),
+                window: NonZeroU64::new(1024 * 1024 * 1024),
+                in_memory: true,
                 ..base.clone()
             },
             "the defaults match librqbit's"
@@ -959,12 +958,13 @@ mod tests {
             download_limit: DownloadLimit::M5,
             upload_limit: UploadLimit::K100,
             peer_limit: PeerLimit::P50,
-            torrent_storage: TorrentStorage::Ram512,
+            torrent_storage: TorrentStorage::Disk8192,
             ..Settings::default()
         };
         let options = engine_options(&base, &settings);
         assert!(!options.upload && !options.dht);
-        assert_eq!(options.memory_window, NonZeroU64::new(512 * 1024 * 1024));
+        assert_eq!(options.window, NonZeroU64::new(8 << 30));
+        assert!(!options.in_memory);
         assert_eq!(options.download_limit_bps, NonZeroU32::new(5_000_000));
         assert_eq!(options.upload_limit_bps, NonZeroU32::new(100_000));
         assert_eq!(options.peer_limit, Some(50));

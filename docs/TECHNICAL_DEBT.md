@@ -91,23 +91,13 @@ Format:
 - Exit: have `open` record the torrent id before awaiting anything else,
   or remove unknown torrents from the session at the next `open`.
 
-### Streaming engine: the torrent being played can fill the disk
-- Where: [storage.rs](../crates/cineo-stream/src/storage.rs)
-- Gap: the file being played is kept whole on disk until it stops, so a
-  file larger than the free space fills the disk.
-- Why: deleting data under the player would break playback and seeking.
-- Instead: nothing else is kept: data is deleted when the torrent stops
-  and leftovers when the engine starts.
-- Exit: refuse files larger than the free space up front. Keeping torrent
-  data in memory (ADR-0019) already avoids this, as an option.
-
-### Streaming engine: memory mode can hold more than its window
-- Where: [memory.rs](../crates/cineo-stream/src/memory.rs) and
+### Streaming engine: torrent data can exceed its window
+- Where: [memory.rs](../crates/cineo-stream/src/memory.rs), [storage.rs](../crates/cineo-stream/src/storage.rs) and
   `torrent_state/live/mod.rs` in our librqbit fork
   ([commit 297cbbe0](https://github.com/mdmrk/rqbit/commit/297cbbe07506d6671507f03357ee4454ed762849), ADR-0019)
 - Gap: only validated pieces count toward the window. Pieces in flight
   come on top, and a partial piece whose peer died and that no stream
-  needs again stays in memory until the torrent stops. A piece forgotten
+  needs again stays in memory or on disk until the torrent stops. A piece forgotten
   while it waits in a peer's upload queue cannot be read, and that peer is
   disconnected (INFERRED from the code).
 - Why: librqbit tells the storage nothing when a piece is abandoned, and
