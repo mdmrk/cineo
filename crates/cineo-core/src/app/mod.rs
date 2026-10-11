@@ -15,7 +15,8 @@ pub use library::{LibraryItem, SavedStream, continue_watching};
 pub use link::{DiscoverLink, LinkError, Route, parse_link};
 pub use message::{Notice, PlaybackFailure, Problem};
 pub use plan::{
-    CatalogTarget, board_targets, meta_candidates, search_targets, stream_targets, subtitle_targets,
+    CatalogTarget, addon_list_targets, board_targets, meta_candidates, search_targets,
+    stream_targets, subtitle_targets,
 };
 pub use settings::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,
@@ -24,7 +25,7 @@ pub use settings::{
     SubtitlePosition, SubtitleSize, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
 };
 pub use state::{
-    Action, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest, Playing,
-    Row, State, StreamGroup, SubtitleGroup, update,
+    Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest,
+    Playing, Row, State, StreamGroup, SubtitleGroup, update,
 };
 pub use torrent::{TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file};

@@ -1,0 +1,37 @@
+{
+  "addons": [
+    {
+      "transportUrl": "https://catalog.example.org/manifest.json",
+      "transportName": "http",
+      "manifest": {
+        "id": "org.cineo.fixture.catalog",
+        "version": "1.0.0",
+        "name": "Catalog Fixture",
+        "description": "Movies and series",
+        "logo": "https://catalog.example.org/logo.png",
+        "types": ["movie", "series"],
+        "catalogs": [{ "type": "movie", "id": "top" }],
+        "resources": ["catalog", "meta"]
+      },
+      "flags": { "official": true }
+    },
+    "not an object",
+    { "manifest": { "id": "org.cineo.fixture.nourl", "version": "1.0.0", "name": "No URL", "types": [], "resources": [] } },
+    {
+      "transportUrl": "https://legacy.example.org/stremio/v1",
+      "manifest": { "id": "org.cineo.fixture.legacy", "version": "1.0.0", "name": "Legacy", "types": [], "resources": [] }
+    },
+    {
+      "transportUrl": "https://broken.example.org/manifest.json",
+      "manifest": { "id": "org.cineo.fixture.broken", "name": "No Version", "types": [], "resources": [] }
+    },
+    {
+      "transportUrl": "https://catalog.example.org/manifest.json",
+      "manifest": { "id": "org.cineo.fixture.again", "version": "2.0.0", "name": "Repeated", "types": [], "resources": [] }
+    },
+    {
+      "transportUrl": "https://subs.example.org/manifest.json",
+      "manifest": { "id": "org.cineo.fixture.subs", "version": "0.3.0", "name": "Subtitles Fixture", "types": ["movie"], "resources": ["subtitles"] }
+    }
+  ]
+}

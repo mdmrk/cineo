@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cineo_core::addon::{
-    CatalogResponse, Manifest, ManifestError, Meta, ResourcePath, ResponseError, Stream, Subtitle,
-    TransportUrl, parse_catalog_response, parse_manifest, parse_meta_response,
-    parse_stream_response, parse_subtitles_response,
+    AddonDescriptor, CatalogResponse, Manifest, ManifestError, Meta, ResourcePath, ResponseError,
+    Stream, Subtitle, TransportUrl, parse_addon_catalog_response, parse_catalog_response,
+    parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::diagnostics::Parsed;
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
@@ -100,6 +100,15 @@ impl AddonClient {
         path: &ResourcePath,
     ) -> Result<Parsed<CatalogResponse>, FetchError> {
         self.fetch_resource(addon, path, parse_catalog_response)
+            .await
+    }
+
+    pub async fn fetch_addon_list(
+        &self,
+        addon: &TransportUrl,
+        path: &ResourcePath,
+    ) -> Result<Parsed<Vec<AddonDescriptor>>, FetchError> {
+        self.fetch_resource(addon, path, parse_addon_catalog_response)
             .await
     }
 

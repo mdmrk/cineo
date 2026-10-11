@@ -367,6 +367,7 @@ on **Linux and Windows**, and record the date, OS and result in
 | 12 | Torrent streams | See [Torrents (M9)](#torrents-m9) |
 | 13 | Library → Remove the item | It disappears, and stays gone after a restart |
 | 14 | Install `http://127.0.0.1:9/manifest.json` without `--allow-private-network` | Error mentions the network policy; nothing crashes |
+| 15 | Addons → Discover addons → Official, then Community → Install one | Lists load; installed addons show "Installed"; the new addon joins the installed list |
 
 Also watch the `-v` log: no panics, and no full addon or stream URLs (only
 origins and resource paths).

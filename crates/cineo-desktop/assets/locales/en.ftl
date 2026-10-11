@@ -60,6 +60,10 @@ installing = Installing…
 installed-addon = Installed { $name }
 addons-installed = Installed
 addons-none = Nothing installed yet.
+addons-discover = Discover addons
+addons-discover-note = Addons in these lists are made by third parties. Install only those you trust.
+addons-list-empty = This list is empty.
+addon-installed = Installed
 count-addons =
     { $count ->
         [one] { $count } addon

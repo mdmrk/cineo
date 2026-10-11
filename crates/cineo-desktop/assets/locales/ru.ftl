@@ -62,6 +62,10 @@ installing = Установка…
 installed-addon = Установлен { $name }
 addons-installed = Установленные
 addons-none = Пока ничего не установлено.
+addons-discover = Обзор аддонов
+addons-discover-note = Аддоны из этих списков созданы сторонними разработчиками. Устанавливайте только те, которым доверяете.
+addons-list-empty = Этот список пуст.
+addon-installed = Установлен
 count-addons =
     { $count ->
         [one] { $count } аддон

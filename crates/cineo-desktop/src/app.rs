@@ -26,7 +26,7 @@ use crate::images::{self, NetImageLoader};
 use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
-use crate::view::{self, ViewState};
+use crate::view::{self, Page, ViewState};
 use crate::{instance, register};
 
 /// Startup options (command line).
@@ -216,6 +216,9 @@ impl CineoApp {
             app.dispatch(action);
         }
         app.view.page = app.state.settings.start_page.into();
+        if app.view.page == Page::Addons {
+            app.dispatch(Action::LoadAddonLists);
+        }
         app
     }
 
@@ -242,6 +245,14 @@ impl CineoApp {
             Effect::FetchCatalog { addon, path } => self.spawn(async move {
                 let result = fetched(client.fetch_catalog(&addon, &path).await).map(|c| c.metas);
                 Action::CatalogLoaded {
+                    addon,
+                    path,
+                    result,
+                }
+            }),
+            Effect::FetchAddonList { addon, path } => self.spawn(async move {
+                let result = fetched(client.fetch_addon_list(&addon, &path).await);
+                Action::AddonListLoaded {
                     addon,
                     path,
                     result,

@@ -164,6 +164,11 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   carry configuration (`addons_page_installs_from_the_typed_url_and_lists_installed_addons`).
 - Addon strings are rendered as plain text, never interpreted as markup or
   links without a scheme check.
+- Addon lists (`addon_catalog`, e.g. Cinemeta's "Community") come from third
+  parties and are not reviewed. The Addons page says so above the lists.
+  Installing from a list takes the same path as a typed URL: the addon's own
+  manifest is fetched under the network policy and validated; the listed
+  manifest is never trusted (`addon_lists_install_listed_addons_and_mark_installed_ones`).
 
 ### Code and CI rules
 

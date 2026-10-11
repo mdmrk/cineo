@@ -8,9 +8,9 @@
 )]
 
 use cineo_core::addon::{
-    ContentType, Manifest, MetaPreview, ResourcePath, SourceKind, TransportUrl,
-    parse_catalog_response, parse_manifest, parse_meta_response, parse_stream_response,
-    parse_subtitles_response,
+    ContentType, Manifest, MetaPreview, ResourceName, ResourcePath, SourceKind, TransportUrl,
+    parse_addon_catalog_response, parse_catalog_response, parse_manifest, parse_meta_response,
+    parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, SavedStream,
@@ -44,6 +44,7 @@ fn ty(s: &str) -> ContentType {
 const BASIC: &str = "https://basic.example/manifest.json";
 const STREAMS: &str = "https://streams.example/manifest.json";
 const SUBS: &str = "https://subs.example/manifest.json";
+const LISTS: &str = "https://lists.example/manifest.json";
 
 fn restored() -> (State, Vec<Effect>) {
     let mut state = State::default();
@@ -216,6 +217,116 @@ fn reordering_and_removing_addons_reuse_loaded_rows() {
         "{effects:?}"
     );
     assert_eq!(state.board.len(), 2);
+}
+
+fn addon_list_path(id: &str) -> ResourcePath {
+    ResourcePath {
+        resource: ResourceName::AddonCatalog,
+        ..ResourcePath::catalog(ty("all"), id)
+    }
+}
+
+fn fetched_addon_lists(effects: &[Effect]) -> Vec<&str> {
+    effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::FetchAddonList { addon, path } if *addon == url(LISTS) => {
+                Some(path.id.as_str())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn addon_lists_load_when_asked_and_only_failed_ones_retry() {
+    let mut state = restore(&[BASIC, LISTS]);
+    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    let effects = update(&mut state, loaded(LISTS, "basic/manifest-addon-lists.json"));
+    assert!(
+        fetched_addon_lists(&effects).is_empty(),
+        "not asked for yet"
+    );
+    assert_eq!(state.addon_lists, None);
+
+    let effects = update(&mut state, Action::LoadAddonLists);
+    assert_eq!(
+        fetched_addon_lists(&effects),
+        vec!["official", "community"],
+        "type `all` without required extras, in manifest order"
+    );
+    let lists = state.addon_lists.as_ref().unwrap();
+    assert_eq!(lists[0].target.name, "Official");
+    assert_eq!(lists[0].target.addon_name, "Lists Fixture");
+    assert!(lists.iter().all(|l| l.addons.is_loading()));
+
+    let addons = parse_addon_catalog_response(&fixture("quirks/addon-catalog-mixed.json"))
+        .unwrap()
+        .value;
+    update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("official"),
+            result: Ok(addons.clone()),
+        },
+    );
+    update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("community"),
+            result: Err("HTTP 500".into()),
+        },
+    );
+    let lists = state.addon_lists.as_ref().unwrap();
+    assert_eq!(lists[0].addons, Loadable::Ready(addons));
+    assert_eq!(
+        lists[1].addons,
+        Loadable::Failed(Problem::Request("HTTP 500".into()))
+    );
+
+    let effects = update(&mut state, Action::LoadAddonLists);
+    assert_eq!(fetched_addon_lists(&effects), vec!["community"]);
+    assert!(
+        state.addon_lists.as_ref().unwrap()[0]
+            .addons
+            .ready()
+            .is_some()
+    );
+}
+
+#[test]
+fn addon_lists_follow_the_installed_addons() {
+    let mut state = restore(&[BASIC]);
+    update(&mut state, Action::LoadAddonLists);
+    assert_eq!(state.addon_lists, Some(Vec::new()));
+    update(&mut state, Action::InstallAddon(LISTS.into()));
+    let effects = update(
+        &mut state,
+        Action::ManifestLoaded {
+            transport: url(LISTS),
+            result: Ok(manifest("basic/manifest-addon-lists.json")),
+            install: true,
+        },
+    );
+    assert_eq!(fetched_addon_lists(&effects), vec!["official", "community"]);
+    update(&mut state, Action::RemoveAddon(url(LISTS)));
+    assert_eq!(state.addon_lists, Some(Vec::new()));
+    let stale = update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("official"),
+            result: Ok(Vec::new()),
+        },
+    );
+    assert!(stale.is_empty());
+    assert_eq!(
+        state.addon_lists,
+        Some(Vec::new()),
+        "late results are dropped"
+    );
 }
 
 #[test]

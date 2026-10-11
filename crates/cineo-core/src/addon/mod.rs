@@ -1,5 +1,6 @@
 //! The addon protocol model.
 
+mod addon_catalog;
 mod catalog;
 mod json;
 mod manifest;
@@ -8,6 +9,7 @@ mod request;
 mod stream;
 mod types;
 
+pub use addon_catalog::{AddonDescriptor, parse_addon_catalog_response};
 pub use catalog::{CatalogResponse, MetaPreview, PosterShape, parse_catalog_response};
 pub use manifest::{
     BehaviorHints, CatalogDef, ExtraError, ExtraProp, IdFilter, Manifest, ManifestError, Resource,

@@ -32,6 +32,26 @@ pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarg
     .collect()
 }
 
+pub fn addon_list_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
+    addons
+        .iter()
+        .flat_map(|addon| {
+            addon
+                .manifest
+                .addon_catalogs
+                .iter()
+                .filter(|c| c.content_type.as_str() == "all" && c.is_browsable())
+                .map(move |c| CatalogTarget {
+                    path: ResourcePath {
+                        resource: ResourceName::AddonCatalog,
+                        ..ResourcePath::catalog(c.content_type.clone(), c.id.clone())
+                    },
+                    ..catalog_target(addon, c)
+                })
+        })
+        .collect()
+}
+
 pub(super) fn catalogs(
     addons: &[InstalledAddon],
     keep: impl Fn(&CatalogDef) -> bool + Copy,

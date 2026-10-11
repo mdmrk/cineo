@@ -187,6 +187,20 @@ Format:
 - Instead: `State.notice` reports the addon that failed to load.
 - Exit: store the last good manifest and restore from it (v0.x caching).
 
+### Addon lists: only lists of type `all`, no logos
+- Where: [plan.rs](../crates/cineo-core/src/app/plan.rs) (`addon_list_targets`),
+  [view.rs](../crates/cineo-desktop/src/view.rs) (`addon_lists`)
+- Gap: `addonCatalogs` of other types (Cinemeta also has `movie`, `series`,
+  `channel`, …) are not offered, there is no search in a list, and listed
+  addons show no logo.
+- Why: the first slice mirrors Stremio's default view; Cinemeta's `all`
+  lists already contain every addon of its typed lists (VERIFIED against
+  the live lists, 2026-10-10).
+- Instead: one chip per `all` list; each addon shows name, version, host,
+  description and badges.
+- Exit: a type filter over the same `addonCatalogs`, and logos through the
+  existing image loader.
+
 ### Desktop UI: only Latin and Cyrillic, left-to-right UI languages
 - Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
   [assets/locales](../crates/cineo-desktop/assets/locales)
@@ -237,14 +251,15 @@ Format:
 - Exit: track the image URIs painted each frame and `forget_image` those
   unused for a while.
 
-### Desktop UI: off-screen stream cards are not in the accessibility tree
-- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`stream_group`)
-- Gap: stream cards outside the scrolled view are skipped, so screen readers
-  see only the cards on screen.
+### Desktop UI: off-screen stream cards and listed addons are not in the accessibility tree
+- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`stream_group`,
+  `addon_lists`)
+- Gap: stream cards and addon list rows outside the scrolled view are
+  skipped, so screen readers see only the ones on screen.
 - Why: laying out every card made each frame of a 300-stream list take
   3.2 ms instead of 0.15 ms.
-- Instead: scrolling brings the other cards into the tree.
-- Exit: report skipped cards to AccessKit with their remembered rect.
+- Instead: scrolling brings the others into the tree.
+- Exit: report skipped rows to AccessKit with their remembered rect.
 
 ### Player settings: pause on minimize depends on frames while minimized
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`pause_on_minimize`)

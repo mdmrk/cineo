@@ -1,0 +1,19 @@
+{
+  "id": "org.cineo.fixture.lists",
+  "version": "1.0.0",
+  "name": "Lists Fixture",
+  "types": [],
+  "catalogs": [],
+  "resources": ["addon_catalog"],
+  "addonCatalogs": [
+    { "type": "all", "id": "official", "name": "Official" },
+    { "type": "movie", "id": "official", "name": "Official" },
+    { "type": "all", "id": "community", "name": "Community" },
+    {
+      "type": "all",
+      "id": "search",
+      "name": "Search",
+      "extra": [{ "name": "search", "isRequired": true }]
+    }
+  ]
+}

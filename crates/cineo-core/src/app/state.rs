@@ -7,8 +7,8 @@ use super::plan::{self, CatalogTarget};
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
-    ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream, StreamSource,
-    Subtitle, TransportUrl, Video,
+    AddonDescriptor, ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream,
+    StreamSource, Subtitle, TransportUrl, Video,
 };
 
 /// An installed addon: identity (transport URL) plus its manifest.
@@ -67,6 +67,12 @@ pub struct Discover {
     /// `skip` value of the next page, if the catalog supports paging and the
     /// last page was not empty.
     pub next_skip: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AddonList {
+    pub target: CatalogTarget,
+    pub addons: Loadable<Vec<AddonDescriptor>>,
 }
 
 /// Streams from one addon.
@@ -133,6 +139,7 @@ pub struct State {
     pub addons_loading: Vec<TransportUrl>,
     /// Result of the last install attempt, for the addon screen.
     pub install: Option<Loadable<String>>,
+    pub addon_lists: Option<Vec<AddonList>>,
     pub board: Vec<Row>,
     pub discover: Discover,
     pub search_query: String,
@@ -194,6 +201,7 @@ pub enum Action {
         to: usize,
     },
     LoadBoard,
+    LoadAddonLists,
     OpenDiscover {
         addon: TransportUrl,
         path: ResourcePath,
@@ -255,6 +263,11 @@ pub enum Action {
         path: ResourcePath,
         result: Result<Box<Meta>, String>,
     },
+    AddonListLoaded {
+        addon: TransportUrl,
+        path: ResourcePath,
+        result: Result<Vec<AddonDescriptor>, String>,
+    },
     StreamsLoaded {
         addon: TransportUrl,
         path: ResourcePath,
@@ -291,6 +304,10 @@ pub enum Effect {
         path: ResourcePath,
     },
     FetchMeta {
+        addon: TransportUrl,
+        path: ResourcePath,
+    },
+    FetchAddonList {
         addon: TransportUrl,
         path: ResourcePath,
     },
@@ -357,6 +374,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.addons.retain(|a| a.transport != transport);
             let mut effects = vec![save_addons(state)];
             effects.extend(refresh_board(state));
+            effects.extend(refresh_addon_lists(state, false));
             effects
         }
         Action::MoveAddon { from, to } => {
@@ -373,12 +391,17 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 }
                 let mut effects = vec![save_addons(state)];
                 effects.extend(refresh_board(state));
+                effects.extend(refresh_addon_lists(state, false));
                 effects
             } else {
                 Vec::new()
             }
         }
         Action::LoadBoard => load_board(state),
+        Action::LoadAddonLists => {
+            state.addon_lists.get_or_insert_default();
+            refresh_addon_lists(state, true)
+        }
         Action::OpenDiscover { addon, path } => {
             let target = plan::catalogs(&state.addons, |_| true)
                 .map(|(a, c)| plan::catalog_target(a, c))
@@ -575,6 +598,21 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             path,
             result,
         } => meta_loaded(state, &addon, &path, result),
+        Action::AddonListLoaded {
+            addon,
+            path,
+            result,
+        } => {
+            if let Some(list) = state
+                .addon_lists
+                .iter_mut()
+                .flatten()
+                .find(|l| l.target.addon == addon && l.target.path == path)
+            {
+                list.addons = result.into();
+            }
+            Vec::new()
+        }
         Action::StreamsLoaded {
             addon,
             path,
@@ -751,6 +789,36 @@ fn refresh_board(state: &mut State) -> Vec<Effect> {
     effects
 }
 
+fn refresh_addon_lists(state: &mut State, retry: bool) -> Vec<Effect> {
+    let Some(mut old) = state.addon_lists.take() else {
+        return Vec::new();
+    };
+    let mut effects = Vec::new();
+    let lists = plan::addon_list_targets(&state.addons)
+        .into_iter()
+        .map(|target| {
+            let kept = old.iter().position(|l| {
+                l.target == target && !(retry && matches!(l.addons, Loadable::Failed(_)))
+            });
+            match kept {
+                Some(index) => old.swap_remove(index),
+                None => {
+                    effects.push(Effect::FetchAddonList {
+                        addon: target.addon.clone(),
+                        path: target.path.clone(),
+                    });
+                    AddonList {
+                        target,
+                        addons: Loadable::Loading,
+                    }
+                }
+            }
+        })
+        .collect();
+    state.addon_lists = Some(lists);
+    effects
+}
+
 fn default_genre(state: &State, addon: &TransportUrl, path: &ResourcePath) -> Option<String> {
     let catalog = state
         .addons
@@ -840,6 +908,7 @@ fn manifest_loaded(
                 effects.push(save_addons(state));
             }
             effects.extend(refresh_board(state));
+            effects.extend(refresh_addon_lists(state, false));
             effects
         }
         Err(err) => {

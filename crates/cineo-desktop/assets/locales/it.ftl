@@ -60,6 +60,10 @@ installing = Installazione…
 installed-addon = { $name } installato
 addons-installed = Installati
 addons-none = Ancora nulla di installato.
+addons-discover = Scopri add-on
+addons-discover-note = Gli add-on di questi elenchi sono realizzati da terzi. Installa solo quelli di cui ti fidi.
+addons-list-empty = Questo elenco è vuoto.
+addon-installed = Installato
 count-addons =
     { $count ->
         [one] { $count } add-on

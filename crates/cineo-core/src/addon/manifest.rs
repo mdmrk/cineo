@@ -177,7 +177,10 @@ pub enum ManifestError {
 
 /// Parses and validates a manifest document.
 pub fn parse_manifest(bytes: &[u8]) -> Result<Parsed<Manifest>, ManifestError> {
-    let root: Value = serde_json::from_slice(bytes)?;
+    manifest_from_value(serde_json::from_slice(bytes)?)
+}
+
+pub(super) fn manifest_from_value(root: Value) -> Result<Parsed<Manifest>, ManifestError> {
     let Value::Object(obj) = root else {
         return Err(ManifestError::NotAnObject);
     };

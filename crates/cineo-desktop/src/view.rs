@@ -5,7 +5,8 @@
 use std::time::Duration;
 
 use cineo_core::addon::{
-    ContentType, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl,
+    AddonDescriptor, ContentType, Manifest, Meta, MetaPreview, PosterShape, ResourcePath,
+    SourceKind, Stream, TransportUrl,
 };
 use cineo_core::app::{
     Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Notice, PlaybackFailure,
@@ -93,6 +94,7 @@ pub struct ViewState {
     /// Focus the search field on the next frame.
     pub focus_search: bool,
     pub settings_jump: Option<Section>,
+    pub addon_list: Option<(TransportUrl, ResourcePath)>,
     pub confirm: Option<Confirm>,
     pub streams: StreamFilter,
     pub system_locale: Locale,
@@ -317,6 +319,9 @@ fn go(page: Page, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
             addon: first.addon,
             path: first.path,
         });
+    }
+    if page == Page::Addons {
+        out.push(Action::LoadAddonLists);
     }
     if page == Page::Search {
         view.focus_search = true;
@@ -966,45 +971,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
                 labels.push(t!("configure"));
             }
             let actions_width = buttons_width(ui, &labels) + ui.spacing().item_spacing.x * 2.0;
-            ui.vertical(|ui| {
-                ui.set_max_width((ui.available_width() - actions_width).max(200.0));
-                ui.spacing_mut().item_spacing.y = 4.0;
-                ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new(format!("{} {}", manifest.name, manifest.version))
-                            .font(theme::strong())
-                            .color(theme::TEXT_BRIGHT),
-                    );
-                    if let Some(host) = addon.transport.as_url().host_str() {
-                        ui.label(faint(host));
-                    }
-                });
-                if let Some(description) = &manifest.description {
-                    ui.add(
-                        Label::new(addon_text(
-                            description,
-                            &theme::body(),
-                            theme::TEXT_DIM,
-                            theme::TEXT_DIM,
-                        ))
-                        .wrap(),
-                    );
-                }
-                let hints = &manifest.behavior_hints;
-                if hints.adult || hints.p2p || hints.configuration_required {
-                    ui.horizontal(|ui| {
-                        if hints.adult {
-                            badge(ui, &t!("badge-adult"), theme::WARNING);
-                        }
-                        if hints.p2p {
-                            badge(ui, &t!("badge-p2p"), theme::WARNING);
-                        }
-                        if hints.configuration_required {
-                            badge(ui, &t!("badge-configure"), theme::WARNING);
-                        }
-                    });
-                }
-            });
+            addon_info(ui, &addon.transport, manifest, actions_width);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if ui
                     .add(Button::new(
@@ -1068,6 +1035,155 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         ui.add_space(6.0);
         rule(ui);
     }
+    addon_lists(ui, state, view, out);
+}
+
+fn addon_info(ui: &mut Ui, transport: &TransportUrl, manifest: &Manifest, actions_width: f32) {
+    ui.vertical(|ui| {
+        ui.set_max_width((ui.available_width() - actions_width).max(200.0));
+        ui.spacing_mut().item_spacing.y = 4.0;
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new(format!("{} {}", manifest.name, manifest.version))
+                    .font(theme::strong())
+                    .color(theme::TEXT_BRIGHT),
+            );
+            if let Some(host) = transport.as_url().host_str() {
+                ui.label(faint(host));
+            }
+        });
+        if let Some(description) = &manifest.description {
+            ui.add(
+                Label::new(addon_text(
+                    description,
+                    &theme::body(),
+                    theme::TEXT_DIM,
+                    theme::TEXT_DIM,
+                ))
+                .wrap(),
+            );
+        }
+        let hints = &manifest.behavior_hints;
+        if hints.adult || hints.p2p || hints.configuration_required {
+            ui.horizontal(|ui| {
+                if hints.adult {
+                    badge(ui, &t!("badge-adult"), theme::WARNING);
+                }
+                if hints.p2p {
+                    badge(ui, &t!("badge-p2p"), theme::WARNING);
+                }
+                if hints.configuration_required {
+                    badge(ui, &t!("badge-configure"), theme::WARNING);
+                }
+            });
+        }
+    });
+}
+
+fn addon_lists(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
+    let Some(lists) = state.addon_lists.as_ref().filter(|l| !l.is_empty()) else {
+        return;
+    };
+    ui.add_space(theme::SECTION_GAP);
+    section(ui, &t!("addons-discover"), |_| {});
+    ui.add(Label::new(faint(&t!("addons-discover-note"))).wrap());
+    ui.add_space(theme::GAP / 2.0);
+    let selected = lists
+        .iter()
+        .position(|l| {
+            view.addon_list
+                .as_ref()
+                .is_some_and(|(addon, path)| *addon == l.target.addon && *path == l.target.path)
+        })
+        .unwrap_or(0);
+    let several_addons = lists
+        .iter()
+        .any(|l| l.target.addon != lists[0].target.addon);
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = Vec2::splat(6.0);
+        for (index, list) in lists.iter().enumerate() {
+            let target = &list.target;
+            let label = if several_addons {
+                format!("{} — {}", target.name, target.addon_name)
+            } else {
+                target.name.clone()
+            };
+            if chip(ui, &label, index == selected).clicked() {
+                view.addon_list = Some((target.addon.clone(), target.path.clone()));
+            }
+        }
+    });
+    ui.add_space(theme::GAP);
+    let busy = state.install.as_ref().is_some_and(Loadable::is_loading);
+    let actions_width = [t!("install"), t!("configure"), t!("addon-installed")]
+        .into_iter()
+        .map(|label| buttons_width(ui, &[label]))
+        .fold(0.0, f32::max)
+        + ui.spacing().item_spacing.x * 2.0;
+    match &lists[selected].addons {
+        Loadable::Loading => centered_spinner(ui),
+        Loadable::Failed(err) => {
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
+                if ui.button(t!("retry")).clicked() {
+                    out.push(Action::LoadAddonLists);
+                }
+            });
+        }
+        Loadable::Ready(addons) if addons.is_empty() => empty(ui, &t!("addons-list-empty")),
+        Loadable::Ready(addons) => {
+            let width = ui.available_width();
+            for addon in addons {
+                let id = ui.id().with(("listed", &addon.transport));
+                let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
+                if let Some(size) = known
+                    && !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, size))
+                {
+                    ui.add_space(size.y);
+                    continue;
+                }
+                let top = ui.cursor().min.y;
+                listed_addon(ui, state, addon, busy, actions_width, out);
+                let height = ui.cursor().min.y - top;
+                ui.data_mut(|d| d.insert_temp(id, vec2(width, height)));
+            }
+        }
+    }
+}
+
+fn listed_addon(
+    ui: &mut Ui,
+    state: &State,
+    addon: &AddonDescriptor,
+    busy: bool,
+    actions_width: f32,
+    out: &mut Vec<Action>,
+) {
+    let manifest = &addon.manifest;
+    let installed = state.installed.contains(&addon.transport);
+    let needs_setup = manifest.behavior_hints.configuration_required;
+    let label = if installed {
+        t!("addon-installed")
+    } else if needs_setup {
+        t!("configure")
+    } else {
+        t!("install")
+    };
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        addon_info(ui, &addon.transport, manifest, actions_width);
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            if installed {
+                ui.label(RichText::new(label).color(theme::SUCCESS));
+            } else if needs_setup {
+                configure_button(ui, &addon.transport);
+            } else if ui.add_enabled(!busy, Button::new(label)).clicked() {
+                out.push(Action::InstallAddon(addon.transport.to_string()));
+            }
+        });
+    });
+    ui.add_space(6.0);
+    rule(ui);
 }
 
 fn detail_page(

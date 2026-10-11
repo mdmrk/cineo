@@ -10,9 +10,9 @@
 
 use cineo_core::addon::{
     ContentType, ExtraError, ExtraValue, IdFilter, ManifestError, PosterShape, ResourceName,
-    ResourcePath, ResponseError, SourceKind, StreamSource, parse_catalog_response, parse_manifest,
-    parse_meta_response, parse_stream_json, parse_stream_response, parse_subtitles_response,
-    stream_to_json,
+    ResourcePath, ResponseError, SourceKind, StreamSource, parse_addon_catalog_response,
+    parse_catalog_response, parse_manifest, parse_meta_response, parse_stream_json,
+    parse_stream_response, parse_subtitles_response, stream_to_json,
 };
 
 fn fixture(path: &str) -> Vec<u8> {
@@ -220,6 +220,51 @@ fn basic_catalog_parses() {
     assert_eq!(metas[0].release_info.as_deref(), Some("1999"));
     assert_eq!(metas[0].poster_shape, PosterShape::Poster);
     assert_eq!(metas[1].poster_shape, PosterShape::Landscape);
+}
+
+#[test]
+fn quirky_addon_catalog_keeps_valid_addons_and_reports_the_rest() {
+    let parsed = parse_addon_catalog_response(&fixture("quirks/addon-catalog-mixed.json")).unwrap();
+    let names: Vec<_> = parsed
+        .value
+        .iter()
+        .map(|a| a.manifest.name.as_str())
+        .collect();
+    assert_eq!(names, vec!["Catalog Fixture", "Subtitles Fixture"]);
+    let first = &parsed.value[0];
+    assert_eq!(
+        first.transport.as_url().as_str(),
+        "https://catalog.example.org/manifest.json"
+    );
+    assert_eq!(
+        first.manifest.description.as_deref(),
+        Some("Movies and series")
+    );
+    assert!(first.manifest.logo.is_some());
+    let locations: Vec<_> = parsed
+        .warnings
+        .iter()
+        .map(|w| w.location.as_str())
+        .collect();
+    assert_eq!(
+        locations,
+        vec![
+            "addons[1]",
+            "addons[2]",
+            "addons[3]",
+            "addons[4]",
+            "addons[5]"
+        ],
+        "non-object, no URL, legacy URL, invalid manifest, repeated URL"
+    );
+}
+
+#[test]
+fn addon_catalog_without_addons_is_an_error() {
+    assert!(matches!(
+        parse_addon_catalog_response(br#"{"metas": []}"#),
+        Err(ResponseError::MissingField("addons"))
+    ));
 }
 
 #[test]
