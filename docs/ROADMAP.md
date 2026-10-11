@@ -103,7 +103,7 @@ as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
 
 ### Future research (not committed)
 
-- Casting (Chromecast, DLNA), and Android, iOS, TV and web/WASM targets.
+- Casting (Chromecast, DLNA), and Android, iOS and web/WASM targets.
 - Live TV EPG (`epgProvider`, scheduled videos). This is needed for full
   parity, so it is scheduled after v1.0.
 
@@ -125,7 +125,7 @@ as documented in the SDK's `deep-links.md`) as well as its own `cineo://`.
 | Linux x86_64 | Initial target (primary development platform) |
 | Windows x86_64 | Initial target |
 | macOS aarch64 | Best-effort until v1.0; built and tested in CI |
-| Android, iOS, TV, Web | Postponed. The core is kept free of IO so it can be reused. |
+| Android, iOS, Web | Postponed. The core is kept free of IO so it can be reused. |
 
 ## What depends on what
 
@@ -177,43 +177,22 @@ flowchart LR
 | M2 Meta, streams, aggregation | **Done** (2026-10-06) |
 | M3 mpv player | **Done on Linux** (2026-10-06); Windows untested (acceptance: a stream from a mock addon plays and sends progress events) |
 | M4 Persistence + library | **Done** (2026-10-06) |
-| M5 Desktop GUI | **Implemented** (2026-10-06); acceptance pending: [manual test](DEVELOPMENT.md#manual-gui-test) on Linux and Windows |
-| M9 Streaming engine: torrents | **Implemented** (2026-10-06); acceptance pending: [torrent manual test](DEVELOPMENT.md#torrents-m9) on Linux and Windows. Moved ahead of M6/M7 (owner decision 2026-10-06) |
-| M6 Subtitles | **Implemented** (2026-10-07); acceptance pending: subtitles from a live subtitles addon shown in the app (each part is tested separately, but not yet end to end) |
+| M5 Desktop GUI | **Done** (2026-10-11) |
+| M9 Streaming engine: torrents | **Done** (2026-10-11). Moved ahead of M6/M7 (owner decision 2026-10-06) |
+| M6 Subtitles | **Done** (2026-10-11) |
 | M7 Packaging | Next |
 | M8, M10 | Planned |
 
 ---
 
-Finished milestones (M0–M4) are summarized in the table above; what they
+Finished milestones (M0–M6, M9) are summarized in the table above; what they
 delivered is in the git history.
-
-### M5 — Desktop GUI
-- **Prerequisites:** M3, M4. UI technology: egui (ADR-0011).
-- **Deliverables:**
-  - Board, Discover, Detail, Streams.
-  - Play in mpv.
-  - Library and continue watching.
-  - Addon management.
-- **Tests:** core-level tests carry the logic; a UI smoke test; manual test
-  script in [DEVELOPMENT.md](DEVELOPMENT.md#manual-gui-test).
-- **Acceptance:** success scenario 1 (below, under Goals) works on Linux and Windows.
-
-### M6 — Subtitles
-- **Prerequisites:** M5.
-- **Deliverables:**
-  - The subtitles resource (with `videoHash`, `videoSize` and `filename`
-    extras).
-  - Subtitles embedded in stream objects.
-  - Track selection and language preference.
-  - The fetch policy question resolved (SECURITY.md §Subtitles).
-- **Acceptance:** subtitles from a mock subtitle addon display in mpv.
 
 ### M7 — Packaging and releases
 - **Prerequisites:** M5.
 - **Deliverables:**
   - Installers (AppImage or Flatpak, MSI).
-  - Bundling or locating libmpv (ADR-0014).
+  - libmpv bundled with every build (ADR-0014, amended 2026-10-11).
   - The release workflow producing GUI artifacts.
   - A signing plan.
 - **Acceptance:** a tagged pre-release installs and runs on clean machines.
@@ -226,25 +205,6 @@ delivered is in the git history.
   `cineo://`), `ytId` sources, macOS packaging.
 - A compatibility corpus in CI.
 - Each item is an independent PR with its own COMPATIBILITY.md row.
-
-### M9 — Local streaming engine: torrents (ADR-0010, ADR-0012)
-- **Prerequisites:** M3 player, M5 GUI. Moved ahead of M6/M7 (owner
-  decision 2026-10-06).
-- **Deliverables:**
-  - A library spike: done, `librqbit` 9.0.1 (ADR-0012).
-  - The `cineo-stream` crate serving `infoHash`/`fileIdx`/`sources` as a
-    loopback HTTP URL with range support.
-  - Bounded disk cache.
-  - P2P disclosure and a disable setting.
-  - Stream status (peers, speed, buffer) in the UI. Shown as a bottom bar
-    until 2026-10-07; the player now shows the pulsing logo instead.
-- **Tests:**
-  - Engine against a local test swarm or fixture torrent with
-    public-domain content.
-  - Loopback-only binding and path-token tests.
-  - Tests that torrent data is deleted when it stops.
-- **Acceptance:** a torrent stream from a mock addon plays and seeks in mpv
-  on Linux and Windows. Disabling P2P hides and blocks torrent sources.
 
 ### M10 — Archive and NZB sources (ADR-0010)
 - **Prerequisites:** M9.

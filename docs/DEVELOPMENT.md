@@ -549,7 +549,8 @@ added since are in the table above. One open question from that research:
 Windows x86_64 and macOS arm64, packages each build with the README, the
 license and the font licenses, and attests build provenance (check a file
 with `gh attestation verify <file> --repo <owner>/cineo`). The `cineo` CLI
-is not shipped. libmpv is not bundled.
+is not shipped. libmpv is not bundled yet; M7 bundles it with every build
+(ADR-0014, amended 2026-10-11).
 
 ### Steps
 
@@ -570,7 +571,7 @@ commit.
 
 - Code signing (Windows Authenticode, macOS notarization) and installer
   formats.
-- Bundling libmpv (license review: [LEGAL.md](LEGAL.md)).
+- How libmpv is bundled per platform (license review: [LEGAL.md](LEGAL.md)).
 - Reproducible-build verification beyond `--locked` + a pinned toolchain.
 
 ## Pull requests

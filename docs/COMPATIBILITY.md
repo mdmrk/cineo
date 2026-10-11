@@ -81,7 +81,7 @@ _Last reviewed: 2026-10-06._
 | Linux x86_64 | Partial | CLI and GUI run (KDE Wayland, 2026-10-06); no package yet (M7) |
 | Windows x86_64 | Planned | CI from M0 |
 | macOS aarch64 | Planned | CI from M0; best-effort until v1.0 |
-| Android / iOS / TV / Web | Unsupported | Postponed ([ROADMAP.md](ROADMAP.md#platforms)) |
+| Android / iOS / Web | Unsupported | Postponed ([ROADMAP.md](ROADMAP.md#platforms)) |
 
 ## Verified addons
 

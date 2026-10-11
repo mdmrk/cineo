@@ -97,6 +97,12 @@ Option 4.
   `--external-player` are gone. The consequences below that mention two
   backends describe the original decision.
 
+- **Amended 2026-10-11 (owner decision): libmpv is always bundled.**
+  Every release build ships libmpv next to the executable, as a
+  replaceable shared library, so playback does not depend on a system
+  install. The lookup order above is unchanged; the system names remain a
+  fallback for development builds.
+
 ## Consequences
 - Video plays inside the Cineo window, under our own controls.
 - `unsafe` code exists for the first time, limited to two modules of one
