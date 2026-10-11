@@ -99,10 +99,19 @@ pub(crate) fn opt_string(
     loc: &str,
     warnings: &mut Warnings,
 ) -> Option<String> {
+    opt_str(obj, key, loc, warnings).map(str::to_owned)
+}
+
+pub(crate) fn opt_str<'a>(
+    obj: &'a Object,
+    key: &str,
+    loc: &str,
+    warnings: &mut Warnings,
+) -> Option<&'a str> {
     match obj.get(key) {
         None | Some(Value::Null) => None,
         Some(Value::String(s)) if s.is_empty() => None,
-        Some(Value::String(s)) => Some(s.clone()),
+        Some(Value::String(s)) => Some(s),
         Some(other) => {
             warnings.ignored(
                 field(loc, key),
@@ -228,8 +237,8 @@ pub(crate) fn opt_any_url(
     loc: &str,
     warnings: &mut Warnings,
 ) -> Option<Url> {
-    let raw = opt_string(obj, key, loc, warnings)?;
-    match Url::parse(&raw) {
+    let raw = opt_str(obj, key, loc, warnings)?;
+    match Url::parse(raw) {
         Ok(url) => Some(url),
         Err(err) => {
             warnings.ignored(field(loc, key), format!("invalid URL: {err}"));

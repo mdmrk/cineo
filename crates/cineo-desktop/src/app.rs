@@ -94,7 +94,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             theme::apply(&cc.egui_ctx);
             images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
             let mut io = io;
-            io.gl = cc.get_proc_address.clone();
+            io.gl.clone_from(&cc.get_proc_address);
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
             if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
                 let _ = tx.send(Msg::Link(link));
@@ -426,7 +426,7 @@ impl CineoApp {
         self.io.engine.cache_dir.join("subtitles")
     }
 
-    fn load_addon_subtitle(&mut self, url: url::Url) {
+    fn load_addon_subtitle(&self, url: url::Url) {
         let Some(embedded) = &self.playback else {
             return;
         };

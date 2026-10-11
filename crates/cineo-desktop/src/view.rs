@@ -2109,7 +2109,7 @@ fn poster_strip(
     }
 }
 
-fn pager(ui: &mut Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> Response {
+fn pager(ui: &Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> Response {
     let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
     let label = if right {
         t!("scroll-right")
@@ -2262,7 +2262,7 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     }
 }
 
-fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
+fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool {
     if text.is_empty() {
         return false;
     }
@@ -2287,7 +2287,7 @@ fn clear_button(ui: &mut Ui, field: &Response, text: &mut String) -> bool {
 }
 
 fn card_button(
-    ui: &mut Ui,
+    ui: &Ui,
     item: &LibraryItem,
     (role, center): (&str, Pos2),
     icon: Icon,
@@ -2823,7 +2823,7 @@ pub(crate) fn paint_loading(ui: &Ui, center: Pos2, width: f32, tint: Color32) {
     brand::paint_loading(ui, Rect::from_center_size(center, size), tint);
 }
 
-fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
+fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui.interact(rect, ui.id().with(label), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     let painter = ui.painter();

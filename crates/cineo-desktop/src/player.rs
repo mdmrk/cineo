@@ -817,7 +817,7 @@ fn toggle(menu: Option<TrackKind>, kind: TrackKind) -> Option<TrackKind> {
 }
 
 fn seek_bar(
-    ui: &mut Ui,
+    ui: &Ui,
     rect: Rect,
     status: &Status,
     controls: &mut Controls,
@@ -875,7 +875,7 @@ fn seek_bar(
 }
 
 fn volume_slider(
-    ui: &mut Ui,
+    ui: &Ui,
     rect: Rect,
     status: &Status,
     controls: &mut Controls,
@@ -921,7 +921,7 @@ fn volume_slider(
 }
 
 fn track_menu(
-    ui: &mut Ui,
+    ui: &Ui,
     anchor: Rect,
     status: &Status,
     addon_subtitles: &[AddonSubtitle],
@@ -1103,7 +1103,7 @@ fn style_rect(ui: &Ui, menu: Rect) -> Rect {
 }
 
 fn style_panel(
-    ui: &mut Ui,
+    ui: &Ui,
     panel: Rect,
     settings: &Settings,
     controls: &mut Controls,
@@ -1212,7 +1212,7 @@ fn plain_text(text: &str) -> String {
     text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }
 
-fn icon_button(ui: &mut Ui, rect: Rect, icon: Icon, label: &str) -> Response {
+fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui
         .interact(rect, ui.id().with(label), Sense::click())
         .on_hover_cursor(CursorIcon::PointingHand);

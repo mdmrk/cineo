@@ -167,6 +167,17 @@ fn status_snapshots_share_the_track_list() {
 }
 
 #[test]
+fn an_unchanged_track_list_keeps_its_snapshot() {
+    let json = r#"[{"id":1,"type":"audio","selected":true}]"#;
+    let mut tracks: Arc<[Track]> = parse_tracks(json).into();
+    let before = Arc::clone(&tracks);
+    assert!(!replace_tracks(&mut tracks, parse_tracks(json)));
+    assert!(Arc::ptr_eq(&tracks, &before));
+    assert!(replace_tracks(&mut tracks, Vec::new()));
+    assert!(tracks.is_empty());
+}
+
+#[test]
 fn non_http_urls_are_refused_before_loading_libmpv() {
     let err =
         Player::start_with(&request("file:///etc/passwd"), Arc::new(|| {}), None, &[]).unwrap_err();

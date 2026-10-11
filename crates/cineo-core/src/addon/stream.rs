@@ -227,7 +227,7 @@ fn parse_source(obj: &Object, loc: &str, warnings: &mut Warnings) -> Option<Stre
     if let Some(id) = json::opt_string(obj, "ytId", loc, warnings) {
         return Some(StreamSource::YouTube { id });
     }
-    if let Some(hash) = json::opt_string(obj, "infoHash", loc, warnings) {
+    if let Some(hash) = json::opt_str(obj, "infoHash", loc, warnings) {
         let hash = hash.to_ascii_lowercase();
         if hash.len() == 40 && hash.bytes().all(|b| b.is_ascii_hexdigit()) {
             return Some(StreamSource::Torrent {

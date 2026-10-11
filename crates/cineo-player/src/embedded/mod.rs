@@ -616,10 +616,7 @@ impl EventLoop {
                     Value::Text(json) => parse_tracks(json),
                     _ => Vec::new(),
                 };
-                self.update(|s| {
-                    s.tracks = tracks.into();
-                    true
-                });
+                self.update(|s| replace_tracks(&mut s.tracks, tracks));
             }
             _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }
@@ -636,6 +633,14 @@ impl EventLoop {
 fn replace<T: PartialEq>(slot: &mut T, value: T) -> bool {
     let changed = *slot != value;
     *slot = value;
+    changed
+}
+
+fn replace_tracks(slot: &mut Arc<[Track]>, tracks: Vec<Track>) -> bool {
+    let changed = **slot != *tracks;
+    if changed {
+        *slot = tracks.into();
+    }
     changed
 }
 

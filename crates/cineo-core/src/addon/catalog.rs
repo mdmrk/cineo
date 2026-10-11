@@ -56,7 +56,7 @@ pub(super) fn parse_meta_preview(
     let obj = json::object(item, loc, warnings)?;
     let id = json::id(obj, loc, warnings)?;
     let content_type = json::content_type(obj, loc, warnings)?;
-    let poster_shape = match json::opt_string(obj, "posterShape", loc, warnings).as_deref() {
+    let poster_shape = match json::opt_str(obj, "posterShape", loc, warnings) {
         None | Some("poster") => PosterShape::Poster,
         Some("square") => PosterShape::Square,
         Some("landscape") => PosterShape::Landscape,

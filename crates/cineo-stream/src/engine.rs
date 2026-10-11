@@ -249,32 +249,29 @@ impl Engine {
         tokio::time::timeout(wait, torrent.wait_until_initialized())
             .await
             .map_err(|_| StreamError::MetadataTimeout)?
-            .map_err(|err| StreamError::Add(format!("{err:#}")))?;
+            .map_err(add_failed)?;
 
-        let files: Vec<(String, u64)> = torrent
+        let mut files: Vec<(String, u64)> = torrent
             .with_metadata(|m| {
                 m.file_infos
                     .iter()
                     .map(|f| (f.relative_filename.to_string_lossy().into_owned(), f.len))
                     .collect()
             })
-            .map_err(|err| StreamError::Add(format!("{err:#}")))?;
+            .map_err(add_failed)?;
         let views: Vec<TorrentFile<'_>> = files
             .iter()
             .map(|(path, len)| TorrentFile { path, len: *len })
             .collect();
         let index = choose_file(&views, request.file_idx, request.filename.as_deref())
             .ok_or(StreamError::NoFiles)?;
-        let (name, len) = files[index].clone();
+        let (name, len) = files.swap_remove(index);
 
         self.session
             .update_only_files(&torrent, &HashSet::from([index]))
             .await
-            .map_err(|err| StreamError::Add(format!("{err:#}")))?;
-        self.session
-            .unpause(&torrent)
-            .await
-            .map_err(|err| StreamError::Add(format!("{err:#}")))?;
+            .map_err(add_failed)?;
+        self.session.unpause(&torrent).await.map_err(add_failed)?;
 
         if let Ok(mut current) = self.ctx.current.write() {
             *current = Some(Arc::new(Served {
@@ -350,6 +347,10 @@ impl Engine {
             task.abort();
         }
     }
+}
+
+fn add_failed(err: impl std::fmt::Display) -> StreamError {
+    StreamError::Add(format!("{err:#}"))
 }
 
 fn magnet(hash: &str, trackers: &[Url], allow_private_network: bool) -> String {

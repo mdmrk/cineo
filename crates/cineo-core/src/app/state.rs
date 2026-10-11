@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use url::Url;
 
 use super::library::{LibraryItem, SavedStream};
@@ -371,10 +373,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.installed.retain(|t| *t != transport);
             state.addons_loading.retain(|t| *t != transport);
             state.addons.retain(|a| a.transport != transport);
-            let mut effects = vec![save_addons(state)];
-            effects.extend(refresh_board(state));
-            effects.extend(refresh_addon_lists(state, false));
-            effects
+            addons_changed(state, true)
         }
         Action::MoveAddon { from, to } => {
             if from < state.addons.len() && to < state.addons.len() && from != to {
@@ -388,10 +387,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                         *slot = next;
                     }
                 }
-                let mut effects = vec![save_addons(state)];
-                effects.extend(refresh_board(state));
-                effects.extend(refresh_addon_lists(state, false));
-                effects
+                addons_changed(state, true)
             } else {
                 Vec::new()
             }
@@ -733,8 +729,14 @@ impl State {
     }
 }
 
-fn save_addons(state: &State) -> Effect {
-    Effect::SaveAddons(state.installed.clone())
+fn addons_changed(state: &mut State, save: bool) -> Vec<Effect> {
+    let mut effects = Vec::new();
+    if save {
+        effects.push(Effect::SaveAddons(state.installed.clone()));
+    }
+    effects.extend(refresh_board(state));
+    effects.extend(refresh_addon_lists(state, false));
+    effects
 }
 
 fn fetch_catalog(target: &CatalogTarget) -> Effect {
@@ -895,13 +897,7 @@ fn manifest_loaded(
                     .count();
                 state.addons.insert(at, addon);
             }
-            let mut effects = Vec::new();
-            if install {
-                effects.push(save_addons(state));
-            }
-            effects.extend(refresh_board(state));
-            effects.extend(refresh_addon_lists(state, false));
-            effects
+            addons_changed(state, install)
         }
         Err(err) => {
             if install {
@@ -948,11 +944,11 @@ fn catalog_loaded(
                 if skip == 0 {
                     discover.items = items;
                 } else {
-                    for item in items {
-                        if !discover.items.iter().any(|i| i.id == item.id) {
-                            discover.items.push(item);
-                        }
-                    }
+                    let mut seen: HashSet<String> =
+                        discover.items.iter().map(|i| i.id.clone()).collect();
+                    discover
+                        .items
+                        .extend(items.into_iter().filter(|i| seen.insert(i.id.clone())));
                 }
             }
             Err(err) => discover.error = Some(Problem::Request(err)),
@@ -1083,11 +1079,7 @@ fn open_detail(
     preview: Option<MetaPreview>,
 ) -> Vec<Effect> {
     let mut candidates = plan::meta_candidates(&state.addons, &content_type, &id);
-    let first = if candidates.is_empty() {
-        None
-    } else {
-        Some(candidates.remove(0))
-    };
+    let first = (!candidates.is_empty()).then(|| candidates.remove(0));
     state.detail = Some(Detail {
         meta: if first.is_some() {
             Loadable::Loading
@@ -1608,6 +1600,6 @@ fn addon_name(addons: &[InstalledAddon], addon: &TransportUrl) -> String {
 }
 
 fn dedup_by_url(subtitles: &mut Vec<Subtitle>) {
-    let mut seen = std::collections::HashSet::new();
+    let mut seen = HashSet::new();
     subtitles.retain(|s| seen.insert(s.url.clone()));
 }
