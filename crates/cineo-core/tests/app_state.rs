@@ -830,19 +830,6 @@ fn a_resume_that_played_does_not_fall_back_to_the_detail_page() {
 }
 
 #[test]
-fn dismissing_from_continue_watching_keeps_the_item_and_its_favourite() {
-    let mut state = with_library(vec![played_item("a", Some(1))]);
-    let effects = update(&mut state, Action::DismissContinueWatching("a".into()));
-    let [Effect::SaveLibraryItem(item)] = effects.as_slice() else {
-        panic!("{effects:?}")
-    };
-    assert_eq!(item.time_offset_ms, 0);
-    assert!(item.is_favorite());
-    assert!(continue_watching(&state.library, WatchedAt::P92).is_empty());
-    assert_eq!(state.library.len(), 1);
-}
-
-#[test]
 fn removing_from_the_library_shows_no_notice() {
     let mut state = with_library(vec![played_item("a", None)]);
     let effects = update(&mut state, Action::RemoveFromLibrary("a".into()));

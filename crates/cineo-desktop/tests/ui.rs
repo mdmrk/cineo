@@ -186,7 +186,7 @@ fn a_watched_favourite_is_also_in_continue_watching_and_recently_played() {
 }
 
 #[test]
-fn a_continue_watching_card_resumes_favorites_or_dismisses_the_item() {
+fn a_continue_watching_card_resumes_favorites_or_removes_the_item() {
     let mut state = board_state();
     state
         .library
@@ -209,7 +209,7 @@ fn a_continue_watching_card_resumes_favorites_or_dismisses_the_item() {
                 id: "tt0000001".into(),
                 favorite: true,
             },
-            Action::DismissContinueWatching("tt0000001".into()),
+            Action::RemoveFromLibrary("tt0000001".into()),
         ]
     );
 }

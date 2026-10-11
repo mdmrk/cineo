@@ -234,7 +234,6 @@ pub enum Action {
     PlaybackEnded,
     PlayNext,
     RemoveFromLibrary(String),
-    DismissContinueWatching(String),
     SetFavorite {
         id: String,
         favorite: bool,
@@ -564,13 +563,6 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             }
             state.library.retain(|i| i.id != id);
             vec![Effect::DeleteLibraryItem(id)]
-        }
-        Action::DismissContinueWatching(id) => {
-            let Some(item) = state.library.iter_mut().find(|i| i.id == id) else {
-                return Vec::new();
-            };
-            item.time_offset_ms = 0;
-            vec![Effect::SaveLibraryItem(item.clone())]
         }
         Action::ClearLibrary => {
             state.library.clear();

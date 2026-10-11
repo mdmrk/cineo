@@ -2223,7 +2223,7 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
     let removable = match shelf {
         Shelf::ContinueWatching => Some((
             t!("remove-continue"),
-            Action::DismissContinueWatching(item.id.clone()),
+            Action::RemoveFromLibrary(item.id.clone()),
         )),
         Shelf::Library if item.was_played() => Some((
             t!("remove-library"),
