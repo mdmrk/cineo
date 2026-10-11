@@ -82,11 +82,20 @@ pub struct Status {
     pub paused: bool,
     /// Waiting for the network.
     pub buffering: bool,
+    /// A seek has not finished yet.
+    pub seeking: bool,
     /// Percent, 0–100.
     pub volume: f64,
     pub muted: bool,
     pub tracks: Arc<[Track]>,
     pub stats: Stats,
+}
+
+impl Status {
+    /// Playback is held up by the network or by an unfinished seek.
+    pub fn is_waiting(&self) -> bool {
+        self.buffering || self.seeking
+    }
 }
 
 /// Streaming and decoding figures; `None` while mpv has no value.
@@ -119,8 +128,9 @@ const HEIGHT: u64 = 11;
 const VIDEO_BITRATE: u64 = 12;
 const HWDEC_CURRENT: u64 = 13;
 const FRAME_DROPS: u64 = 14;
+const SEEKING: u64 = 15;
 
-const OBSERVED: [(u64, &str, std::ffi::c_int); 14] = [
+const OBSERVED: [(u64, &str, std::ffi::c_int); 15] = [
     (TIME_POS, "time-pos", ffi::FORMAT_DOUBLE),
     (DURATION, "duration", ffi::FORMAT_DOUBLE),
     (PAUSE, "pause", ffi::FORMAT_FLAG),
@@ -135,6 +145,7 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 14] = [
     (VIDEO_BITRATE, "video-bitrate", ffi::FORMAT_DOUBLE),
     (HWDEC_CURRENT, "hwdec-current", ffi::FORMAT_STRING),
     (FRAME_DROPS, "frame-drop-count", ffi::FORMAT_DOUBLE),
+    (SEEKING, "seeking", ffi::FORMAT_FLAG),
 ];
 
 // VA-API first: `auto-safe` alone loads the CUDA interop, which prints to stderr.
@@ -609,6 +620,7 @@ impl EventLoop {
             }
             PAUSE => self.update(|s| replace(&mut s.paused, flag)),
             BUFFERING => self.update(|s| replace(&mut s.buffering, flag)),
+            SEEKING => self.update(|s| replace(&mut s.seeking, flag)),
             VOLUME => self.update(|s| replace(&mut s.volume, number)),
             MUTE => self.update(|s| replace(&mut s.muted, flag)),
             TRACK_LIST => {

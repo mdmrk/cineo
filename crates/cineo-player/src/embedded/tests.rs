@@ -167,6 +167,25 @@ fn status_snapshots_share_the_track_list() {
 }
 
 #[test]
+fn an_unfinished_seek_counts_as_waiting() {
+    let playing = Status {
+        loaded: true,
+        ..Status::default()
+    };
+    assert!(!playing.is_waiting());
+    let seeking = Status {
+        seeking: true,
+        ..playing.clone()
+    };
+    assert!(seeking.is_waiting());
+    let buffering = Status {
+        buffering: true,
+        ..playing
+    };
+    assert!(buffering.is_waiting());
+}
+
+#[test]
 fn an_unchanged_track_list_keeps_its_snapshot() {
     let json = r#"[{"id":1,"type":"audio","selected":true}]"#;
     let mut tracks: Arc<[Track]> = parse_tracks(json).into();

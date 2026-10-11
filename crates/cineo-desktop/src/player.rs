@@ -47,6 +47,7 @@ pub struct Controls {
     next_dismissed: bool,
     next_requested: bool,
     next_shown_at: Option<f64>,
+    started: bool,
 }
 
 impl Controls {
@@ -132,9 +133,8 @@ pub fn show(
         out.push(PlayerCommand::TogglePause);
     }
 
-    if !status.loaded
-        && let Some(background) = background
-    {
+    let first_load = first_load(controls, status);
+    if first_load && let Some(background) = background {
         paint_cover(
             ui,
             background,
@@ -145,9 +145,9 @@ pub fn show(
             false,
         );
     }
-    if !status.loaded && (logo.is_some() || !title.trim().is_empty()) {
+    if first_load && (logo.is_some() || !title.trim().is_empty()) {
         loading_art(ui, rect, title, logo);
-    } else if !status.loaded || status.buffering {
+    } else if first_load || status.is_waiting() {
         paint_loading(ui, rect.center(), LOADING_WIDTH, theme::TEXT_BRIGHT);
     }
 
@@ -182,6 +182,11 @@ pub fn show(
         bottom_bar(ui, rect, playback, controls, &mut out);
     }
     out
+}
+
+fn first_load(controls: &mut Controls, status: &Status) -> bool {
+    controls.started |= status.loaded && !status.is_waiting();
+    !controls.started
 }
 
 fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
@@ -1250,6 +1255,23 @@ fn clock(seconds: f64, scale: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_first_load_lasts_until_playback_is_no_longer_waiting() {
+        let mut controls = Controls::default();
+        let mut status = Status::default();
+        assert!(first_load(&mut controls, &status));
+        status.loaded = true;
+        status.seeking = true;
+        assert!(first_load(&mut controls, &status));
+        status.seeking = false;
+        assert!(!first_load(&mut controls, &status));
+        status.buffering = true;
+        assert!(
+            !first_load(&mut controls, &status),
+            "later waits are not the first load"
+        );
+    }
 
     #[test]
     fn clock_shows_hours_only_for_long_media() {
