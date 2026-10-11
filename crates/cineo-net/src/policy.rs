@@ -110,11 +110,11 @@ fn is_public_v4(ip: Ipv4Addr) -> bool {
         || ip.is_broadcast()
         || ip.is_multicast()
         || ip.is_documentation()
-        || a == 0 // 0.0.0.0/8 "this network"
-        || (a == 100 && (64..=127).contains(&b)) // 100.64.0.0/10 CGNAT
-        || (a == 192 && b == 0 && c == 0) // 192.0.0.0/24 IETF protocol assignments
-        || (a == 198 && (b == 18 || b == 19)) // 198.18.0.0/15 benchmarking
-        || a >= 240) // 240.0.0.0/4 reserved
+        || a == 0
+        || (a == 100 && (64..=127).contains(&b))
+        || (a == 192 && b == 0 && c == 0)
+        || (a == 198 && (b == 18 || b == 19))
+        || a >= 240)
 }
 
 fn is_public_v6(ip: Ipv6Addr) -> bool {
@@ -122,11 +122,9 @@ fn is_public_v6(ip: Ipv6Addr) -> bool {
         return is_public_v4(v4);
     }
     let seg = ip.segments();
-    // NAT64: judge the embedded IPv4 address.
     if seg[0] == 0x64 && seg[1] == 0xff9b && seg[2..6] == [0, 0, 0, 0] {
         return is_public_v4(embedded_v4(seg[6], seg[7]));
     }
-    // 6to4: judge the embedded IPv4 address.
     if seg[0] == 0x2002 {
         return is_public_v4(embedded_v4(seg[1], seg[2]));
     }
@@ -135,9 +133,9 @@ fn is_public_v6(ip: Ipv6Addr) -> bool {
         || ip.is_multicast()
         || ip.is_unique_local()
         || ip.is_unicast_link_local()
-        || (seg[0] == 0x2001 && seg[1] == 0x0db8) // 2001:db8::/32 documentation
-        || (seg[0] == 0x2001 && seg[1] == 0) // 2001::/32 Teredo
-        || seg[..6] == [0, 0, 0, 0, 0, 0]) // ::/96 deprecated IPv4-compatible
+        || (seg[0] == 0x2001 && seg[1] == 0x0db8)
+        || (seg[0] == 0x2001 && seg[1] == 0)
+        || seg[..6] == [0, 0, 0, 0, 0, 0])
 }
 
 fn embedded_v4(hi: u16, lo: u16) -> Ipv4Addr {
@@ -208,7 +206,7 @@ mod tests {
             "http://[::1]:8080/manifest.json",
             "http://localhost:7000/manifest.json",
             "http://foo.localhost/manifest.json",
-            "http://2130706433/manifest.json", // 127.0.0.1 in decimal; `url` normalizes it
+            "http://2130706433/manifest.json",
         ] {
             let url = Url::parse(url).unwrap();
             assert!(policy.check_url(&url).is_err(), "{url} must be blocked");

@@ -71,7 +71,6 @@ impl AddonClient {
             .timeout(policy.timeout)
             .connect_timeout(policy.connect_timeout)
             .redirect(redirect_policy)
-            // A proxy would resolve hostnames itself and bypass the resolver check.
             .no_proxy()
             .dns_resolver(Arc::new(PolicyResolver {
                 policy: Arc::clone(&policy),
@@ -212,7 +211,6 @@ impl AddonClient {
         {
             return Err(FetchError::TooLarge { limit });
         }
-        // Count decoded bytes: this also bounds gzip/brotli expansion.
         let capacity = response
             .content_length()
             .map_or(0, |len| usize::try_from(len).unwrap_or(limit));

@@ -114,7 +114,6 @@ impl Store {
         for (index, raw) in rows.enumerate() {
             match TransportUrl::parse(&raw?) {
                 Ok(addon) => addons.push(addon),
-                // Never log the URL itself: it may embed addon configuration.
                 Err(err) => warn!(index, %err, "skipping stored addon"),
             }
         }

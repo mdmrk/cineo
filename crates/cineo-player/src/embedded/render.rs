@@ -28,15 +28,10 @@ impl std::fmt::Debug for Renderer {
     }
 }
 
-// SAFETY: see the thread contract on the type: it moves between threads only
-// as part of a paint callback that runs on the GL thread.
 unsafe impl Send for Renderer {}
-// SAFETY: as above; `&Renderer` gives no access to the context.
 unsafe impl Sync for Renderer {}
 
 unsafe extern "C" fn proc_address(ctx: *mut c_void, name: *const c_char) -> *mut c_void {
-    // SAFETY: `ctx` is the `Box<ProcAddress>` owned by the renderer, alive
-    // while mpv can call this; `name` is a NUL-terminated string.
     unsafe {
         let resolve = &*ctx.cast::<ProcAddress>();
         resolve(CStr::from_ptr(name)).cast_mut()
@@ -44,8 +39,6 @@ unsafe extern "C" fn proc_address(ctx: *mut c_void, name: *const c_char) -> *mut
 }
 
 unsafe extern "C" fn frame_ready(ctx: *mut c_void) {
-    // SAFETY: `ctx` is the `Box<OnFrame>` owned by the renderer; mpv stops
-    // calling this when the render context is freed, before the box is.
     unsafe { (*ctx.cast::<OnFrame>())() };
 }
 
@@ -77,9 +70,6 @@ impl Renderer {
             },
         ];
         let mut context = std::ptr::null_mut();
-        // SAFETY: valid core handle; `params` is terminated by INVALID and
-        // its pointers outlive the call; the proc-address context is boxed
-        // and kept in the renderer. The caller holds the GL context current.
         let code = unsafe {
             (lib.render_context_create)(&raw mut context, core.handle(), params.as_mut_ptr())
         };
@@ -88,8 +78,6 @@ impl Renderer {
                 "mpv could not draw with this OpenGL context (error {code})"
             )));
         }
-        // SAFETY: valid context; the callback data is boxed and outlives the
-        // context (freed in `drop` before the box).
         unsafe {
             (lib.render_context_set_update_callback)(
                 context,
@@ -146,8 +134,6 @@ impl Renderer {
                 data: std::ptr::null_mut(),
             },
         ];
-        // SAFETY: valid context, used on the GL thread (type contract);
-        // `params` is INVALID-terminated and its pointers outlive the calls.
         unsafe {
             let _flags = (lib.render_context_update)(self.context);
             (lib.render_context_render)(self.context, params.as_mut_ptr());
@@ -157,8 +143,6 @@ impl Renderer {
 
 impl Drop for Renderer {
     fn drop(&mut self) {
-        // SAFETY: valid context, freed once, on the GL thread (type
-        // contract), while `core` is still alive.
         unsafe { (self.core.lib().render_context_free)(self.context) };
     }
 }

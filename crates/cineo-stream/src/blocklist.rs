@@ -7,29 +7,29 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::sync::LazyLock;
 
 const V4: &[(Ipv4Addr, u8)] = &[
-    (Ipv4Addr::new(0, 0, 0, 0), 8),       // "this network"
-    (Ipv4Addr::new(10, 0, 0, 0), 8),      // private
-    (Ipv4Addr::new(100, 64, 0, 0), 10),   // CGNAT
-    (Ipv4Addr::new(127, 0, 0, 0), 8),     // loopback
-    (Ipv4Addr::new(169, 254, 0, 0), 16),  // link-local
-    (Ipv4Addr::new(172, 16, 0, 0), 12),   // private
-    (Ipv4Addr::new(192, 0, 0, 0), 24),    // IETF protocol assignments
-    (Ipv4Addr::new(192, 0, 2, 0), 24),    // documentation
-    (Ipv4Addr::new(192, 168, 0, 0), 16),  // private
-    (Ipv4Addr::new(198, 18, 0, 0), 15),   // benchmarking
-    (Ipv4Addr::new(198, 51, 100, 0), 24), // documentation
-    (Ipv4Addr::new(203, 0, 113, 0), 24),  // documentation
-    (Ipv4Addr::new(224, 0, 0, 0), 4),     // multicast
-    (Ipv4Addr::new(240, 0, 0, 0), 4),     // reserved, broadcast
+    (Ipv4Addr::new(0, 0, 0, 0), 8),
+    (Ipv4Addr::new(10, 0, 0, 0), 8),
+    (Ipv4Addr::new(100, 64, 0, 0), 10),
+    (Ipv4Addr::new(127, 0, 0, 0), 8),
+    (Ipv4Addr::new(169, 254, 0, 0), 16),
+    (Ipv4Addr::new(172, 16, 0, 0), 12),
+    (Ipv4Addr::new(192, 0, 0, 0), 24),
+    (Ipv4Addr::new(192, 0, 2, 0), 24),
+    (Ipv4Addr::new(192, 168, 0, 0), 16),
+    (Ipv4Addr::new(198, 18, 0, 0), 15),
+    (Ipv4Addr::new(198, 51, 100, 0), 24),
+    (Ipv4Addr::new(203, 0, 113, 0), 24),
+    (Ipv4Addr::new(224, 0, 0, 0), 4),
+    (Ipv4Addr::new(240, 0, 0, 0), 4),
 ];
 
 const V6: &[(Ipv6Addr, u8)] = &[
-    (Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 96), // unspecified, loopback, v4-compatible
-    (Ipv6Addr::new(0xfc00, 0, 0, 0, 0, 0, 0, 0), 7), // unique local
-    (Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 0), 10), // link-local
-    (Ipv6Addr::new(0xff00, 0, 0, 0, 0, 0, 0, 0), 8), // multicast
-    (Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0), 32), // documentation
-    (Ipv6Addr::new(0x2001, 0, 0, 0, 0, 0, 0, 0), 32), // Teredo
+    (Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), 96),
+    (Ipv6Addr::new(0xfc00, 0, 0, 0, 0, 0, 0, 0), 7),
+    (Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 0), 10),
+    (Ipv6Addr::new(0xff00, 0, 0, 0, 0, 0, 0, 0), 8),
+    (Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0), 32),
+    (Ipv6Addr::new(0x2001, 0, 0, 0, 0, 0, 0, 0), 32),
 ];
 
 fn v4_bounds((net, prefix): (Ipv4Addr, u8)) -> (u32, u32) {

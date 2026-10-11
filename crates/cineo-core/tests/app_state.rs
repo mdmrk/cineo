@@ -1186,7 +1186,7 @@ fn discover_pages_with_skip_and_deduplicates() {
     };
     assert_eq!(path.to_url_path(), "catalog/movie/top/skip=2.json");
     let mut page = catalog_items();
-    page.truncate(1); // a repeated item
+    page.truncate(1);
     update(
         &mut state,
         Action::CatalogLoaded {

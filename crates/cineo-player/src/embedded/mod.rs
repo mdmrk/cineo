@@ -148,7 +148,6 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 15] = [
     (SEEKING, "seeking", ffi::FORMAT_FLAG),
 ];
 
-// VA-API first: `auto-safe` alone loads the CUDA interop, which prints to stderr.
 #[cfg(target_os = "linux")]
 const HWDEC: &str = "vaapi,auto-safe";
 #[cfg(not(target_os = "linux"))]
@@ -247,13 +246,11 @@ impl Player {
         for (id, name, format) in OBSERVED {
             core.observe(id, name, format).map_err(fail)?;
         }
-        // The render context must exist before a file loads, or mpv plays audio only.
         let renderer = video
             .map(|video| Renderer::new(Arc::clone(&core), video.get_proc_address, video.on_frame))
             .transpose()?;
         for (name, value) in &request.headers {
             if is_safe_header(name, value) {
-                // `append` adds exactly one item: no list parsing of the value.
                 core.command(&[
                     "change-list",
                     "http-header-fields",
@@ -263,7 +260,6 @@ impl Player {
                 .map_err(fail)?;
             }
         }
-        // A property, not an option: addon text is never parsed as one.
         core.set_property("force-media-title", &request.title)
             .map_err(fail)?;
         core.command(&["loadfile", request.url.as_str(), "replace"])
@@ -465,7 +461,6 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],
         PlayerCommand::SetAudio(id) => vec!["set".into(), "aid".into(), track(id)],
         PlayerCommand::SetSubtitle(id) => vec!["set".into(), "sid".into(), track(id)],
-        // `quit`, not `stop`: mpv ignores a stop before the file has loaded.
         PlayerCommand::Stop => vec!["quit".into()],
     };
     Some(args)

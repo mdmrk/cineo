@@ -210,8 +210,8 @@ fn wav(seconds: u32) -> Vec<u8> {
     out.extend_from_slice(&(36 + samples * 2).to_le_bytes());
     out.extend_from_slice(b"WAVEfmt ");
     out.extend_from_slice(&16_u32.to_le_bytes());
-    out.extend_from_slice(&1_u16.to_le_bytes()); // PCM
-    out.extend_from_slice(&1_u16.to_le_bytes()); // mono
+    out.extend_from_slice(&1_u16.to_le_bytes());
+    out.extend_from_slice(&1_u16.to_le_bytes());
     out.extend_from_slice(&8000_u32.to_le_bytes());
     out.extend_from_slice(&16000_u32.to_le_bytes());
     out.extend_from_slice(&2_u16.to_le_bytes());

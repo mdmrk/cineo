@@ -234,7 +234,6 @@ impl Engine {
         .await
         .map_err(|_| StreamError::MetadataTimeout)?
         .map_err(|err| {
-            // librqbit's message may name trackers; keep it out of the UI.
             debug!(error = %format!("{err:#}"), "adding the torrent failed");
             StreamError::Add("no usable metadata".into())
         })?;
@@ -341,7 +340,6 @@ impl Engine {
     /// without librqbit's 1 s grace period.
     pub async fn shutdown(self) {
         self.stop().await;
-        // `Session::stop` sleeps a fixed second after cancelling; nothing needs that at exit.
         let _ = tokio::time::timeout(SESSION_STOP_GRACE, self.session.stop()).await;
         for task in &self.tasks {
             task.abort();

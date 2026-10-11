@@ -98,7 +98,6 @@ impl ImageLoader for NetImageLoader {
                 tracing::debug!(origin = %url.origin().ascii_serialization(), %err, "image not loaded");
             }
             let result = result.map(Arc::new);
-            // Released before repainting: egui may hold its own lock while asking this cache.
             cache.lock().insert(uri, Poll::Ready(result));
             ctx.request_repaint();
         });

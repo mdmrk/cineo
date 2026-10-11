@@ -148,12 +148,9 @@ fn candidates() -> Vec<PathBuf> {
 fn load() -> Result<Lib, String> {
     let mut last = String::from("no library name for this platform");
     for path in candidates() {
-        // A bare name must reach the system loader as such, not as a relative path.
         if path.components().count() > 1 && !path.exists() {
             continue;
         }
-        // SAFETY: loading runs libmpv's initializers. libmpv is a regular C
-        // library without load-time side effects beyond its dependencies.
         match unsafe { libloading::Library::new(&path) } {
             Ok(library) => {
                 let lib = resolve(library).map_err(|err| format!("{}: {err}", path.display()))?;
@@ -179,14 +176,10 @@ fn describe(err: &libloading::Error) -> String {
 fn resolve(library: libloading::Library) -> Result<Lib, String> {
     macro_rules! sym {
         ($name:literal) => {
-            // SAFETY: the declared type matches the C prototype in mpv's
-            // client API 2.x headers; the pointer is copied out and stays
-            // valid because `library` is stored in the returned `Lib`.
             *unsafe { library.get($name) }.map_err(|err| describe(&err))?
         };
     }
     let version: unsafe extern "C" fn() -> c_ulong = sym!(b"mpv_client_api_version\0");
-    // SAFETY: no arguments, returns a number.
     let version = unsafe { version() };
     if version >> 16 != API_MAJOR {
         return Err(format!(
@@ -261,17 +254,11 @@ impl std::fmt::Debug for Core {
     }
 }
 
-// SAFETY: "The client API is generally fully thread-safe, unless otherwise
-// noted" (client.h). The one exception, `mpv_wait_event`, is serialized by
-// `waiting`.
 unsafe impl Send for Core {}
-// SAFETY: as above.
 unsafe impl Sync for Core {}
 
 impl Drop for Core {
     fn drop(&mut self) {
-        // SAFETY: `handle` came from `mpv_create` and is destroyed once.
-        // Render contexts are already freed (see the type's invariant).
         unsafe { (self.lib.terminate_destroy)(self.handle) };
     }
 }
@@ -284,7 +271,6 @@ unsafe fn text(ptr: *const c_char) -> String {
     if ptr.is_null() {
         String::new()
     } else {
-        // SAFETY: non-NULL and NUL-terminated per the caller's contract.
         unsafe { CStr::from_ptr(ptr) }
             .to_string_lossy()
             .into_owned()
@@ -293,7 +279,6 @@ unsafe fn text(ptr: *const c_char) -> String {
 
 impl Core {
     pub(crate) fn create(lib: &'static Lib) -> Result<Self, MpvError> {
-        // SAFETY: no arguments; returns NULL on failure.
         let handle = unsafe { (lib.create)() };
         if handle.is_null() {
             return Err(MpvError("mpv_create failed".into()));
@@ -317,27 +302,22 @@ impl Core {
         if code >= 0 {
             return Ok(());
         }
-        // SAFETY: returns a static string for any code.
         Err(MpvError(unsafe { text((self.lib.error_string)(code)) }))
     }
 
     pub(crate) fn set_option(&self, name: &str, value: &str) -> Result<(), MpvError> {
         let (name, value) = (cstring(name)?, cstring(value)?);
-        // SAFETY: valid handle and NUL-terminated strings that outlive the
-        // call (mpv copies them).
         self.check(unsafe {
             (self.lib.set_option_string)(self.handle, name.as_ptr(), value.as_ptr())
         })
     }
 
     pub(crate) fn initialize(&self) -> Result<(), MpvError> {
-        // SAFETY: valid handle, initialized once by the caller.
         self.check(unsafe { (self.lib.initialize)(self.handle) })
     }
 
     pub(crate) fn set_property(&self, name: &str, value: &str) -> Result<(), MpvError> {
         let (name, value) = (cstring(name)?, cstring(value)?);
-        // SAFETY: as in `set_option`.
         self.check(unsafe {
             (self.lib.set_property_string)(self.handle, name.as_ptr(), value.as_ptr())
         })
@@ -345,26 +325,21 @@ impl Core {
 
     pub(crate) fn command(&self, args: &[&str]) -> Result<(), MpvError> {
         let (_owned, mut argv) = argv(args)?;
-        // SAFETY: `argv` is a NULL-terminated array of strings owned by
-        // `_owned`, alive for the call.
         self.check(unsafe { (self.lib.command)(self.handle, argv.as_mut_ptr()) })
     }
 
     pub(crate) fn command_async(&self, args: &[&str]) -> Result<(), MpvError> {
         let (_owned, mut argv) = argv(args)?;
-        // SAFETY: as in `command`; mpv copies the arguments before returning.
         self.check(unsafe { (self.lib.command_async)(self.handle, 0, argv.as_mut_ptr()) })
     }
 
     pub(crate) fn observe(&self, id: u64, name: &str, format: c_int) -> Result<(), MpvError> {
         let name = cstring(name)?;
-        // SAFETY: valid handle and string; `format` is an `mpv_format` value.
         self.check(unsafe { (self.lib.observe_property)(self.handle, id, name.as_ptr(), format) })
     }
 
     pub(crate) fn request_log_messages(&self, level: &str) -> Result<(), MpvError> {
         let level = cstring(level)?;
-        // SAFETY: valid handle and string.
         self.check(unsafe { (self.lib.request_log_messages)(self.handle, level.as_ptr()) })
     }
 
@@ -373,9 +348,6 @@ impl Core {
             .waiting
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        // SAFETY: valid handle; only one thread waits at a time (`_guard`).
-        // The result is never NULL and stays valid until the next call,
-        // which `_guard` keeps from happening while we copy it.
         unsafe {
             let event = &*(self.lib.wait_event)(self.handle, timeout);
             decode(self.lib, event)
@@ -401,9 +373,7 @@ unsafe fn decode(lib: &Lib, event: &RawEvent) -> Event {
         EVENT_SHUTDOWN => Event::Shutdown,
         EVENT_FILE_LOADED => Event::FileLoaded,
         EVENT_LOG_MESSAGE if !event.data.is_null() => {
-            // SAFETY: LOG_MESSAGE carries an `mpv_event_log_message`.
             let log = unsafe { &*event.data.cast::<RawLogMessage>() };
-            // SAFETY: the strings are valid until the next wait.
             unsafe {
                 Event::Log {
                     level: text(log.level),
@@ -413,20 +383,16 @@ unsafe fn decode(lib: &Lib, event: &RawEvent) -> Event {
             }
         }
         EVENT_END_FILE if !event.data.is_null() => {
-            // SAFETY: END_FILE carries an `mpv_event_end_file`.
             let end = unsafe { &*event.data.cast::<RawEndFile>() };
             let eof = match end.reason {
                 END_FILE_EOF => Ok(true),
-                // SAFETY: returns a static string for any code.
                 END_FILE_ERROR => Err(unsafe { text((lib.error_string)(end.error)) }),
                 _ => Ok(false),
             };
             Event::EndFile { eof }
         }
         EVENT_PROPERTY_CHANGE if !event.data.is_null() => {
-            // SAFETY: PROPERTY_CHANGE carries an `mpv_event_property`.
             let property = unsafe { &*event.data.cast::<RawProperty>() };
-            // SAFETY: `data` points to a value of `format`, or is NULL.
             let value = unsafe { property_value(property) };
             Event::Property {
                 id: event.reply_userdata,
@@ -441,7 +407,6 @@ unsafe fn property_value(property: &RawProperty) -> Value {
     if property.data.is_null() {
         return Value::None;
     }
-    // SAFETY (all arms): `data` points to the C type `format` names.
     unsafe {
         match property.format {
             FORMAT_FLAG => Value::Flag(*property.data.cast::<c_int>() != 0),
@@ -467,7 +432,6 @@ mod tests {
 
     #[test]
     fn a_load_error_keeps_the_system_reason() {
-        // SAFETY: the library does not exist, so nothing is loaded.
         let Err(err) = (unsafe { libloading::Library::new("libcineo-missing.so") }) else {
             panic!("loaded a library that does not exist");
         };
