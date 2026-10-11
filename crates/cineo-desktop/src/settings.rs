@@ -1022,8 +1022,10 @@ fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
     let mut picked = None;
     Popup::from_toggle_button_response(&response)
         .width(rect.width())
+        .layout(Layout::top_down_justified(Align::Min))
         .close_behavior(PopupCloseBehavior::CloseOnClick)
         .show(|ui| {
+            ui.set_min_width(ui.available_width());
             ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
                 for option in options() {
                     let selected = option == current;
