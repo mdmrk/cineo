@@ -26,9 +26,22 @@ Stremio-protocol addons.
 
 Runs on Linux, Windows and macOS.
 
-## Run it
+## Install
 
-You need Rust and libmpv.
+Download a build from
+[Releases](https://github.com/mdmrk/cineo/releases). Cineo plays video with
+libmpv, which is not included yet, so install mpv first:
+
+- **Arch:** `pacman -S mpv`
+- **Debian/Ubuntu:** `apt install libmpv2`
+- **Fedora:** `dnf install mpv-libs`
+- **macOS:** `brew install mpv`
+- **Windows:** put `libmpv-2.dll` from an mpv development build next to
+  `cineo-desktop.exe`.
+
+## Run from source
+
+You need Rust and libmpv (see above).
 
 ```sh
 git clone https://github.com/mdmrk/cineo && cd cineo
