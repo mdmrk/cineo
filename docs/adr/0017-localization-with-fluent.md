@@ -1,6 +1,6 @@
 # 0017. Localization: Fluent catalogs in the desktop shell; core reports typed messages
 
-- Status: Accepted
+- Status: Accepted (Fluent runtime: superseded by 0021)
 - Date: 2026-10-08
 
 ## Context

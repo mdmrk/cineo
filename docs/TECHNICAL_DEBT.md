@@ -199,10 +199,13 @@ Format:
   Right-to-left languages and scripts outside the bundled fonts cannot be
   added yet.
   Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
+  Counted messages are worded as "label: number" because the catalogs
+  have no plural rules (ADR-0021).
   Technical details from IO layers stay in English inside a translated
   sentence.
 - Why: egui does not shape right-to-left text, the bundled fonts cover
-  Latin and Cyrillic only, and `fluent-bundle` does not format numbers per locale.
+  Latin and Cyrillic only, and `rust-i18n` has neither plural rules nor
+  per-locale number formatting.
 - Instead: other system locales fall back to English.
 - Exit: bundle fonts for more scripts, wait for bidi support in egui, and
   give IO errors typed kinds that the UI can word.

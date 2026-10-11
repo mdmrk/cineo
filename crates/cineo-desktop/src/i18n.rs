@@ -1,10 +1,8 @@
-//! Fluent message catalogs (ADR-0017).
+//! Message catalogs (ADR-0021).
 
 use std::cell::Cell;
 
 use cineo_core::app::UiLanguage;
-use fluent_bundle::{FluentArgs, FluentBundle, FluentResource};
-use unic_langid::{LanguageIdentifier, langid};
 
 /// A language of Cineo's own text.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -55,74 +53,47 @@ impl Locale {
         }
     }
 
-    fn id(self) -> LanguageIdentifier {
+    #[cfg(test)]
+    pub(crate) fn source(self) -> &'static str {
         match self {
-            Self::English => langid!("en"),
-            Self::Spanish => langid!("es"),
-            Self::Russian => langid!("ru"),
-            Self::Italian => langid!("it"),
+            Self::English => include_str!("../assets/locales/en.toml"),
+            Self::Spanish => include_str!("../assets/locales/es.toml"),
+            Self::Russian => include_str!("../assets/locales/ru.toml"),
+            Self::Italian => include_str!("../assets/locales/it.toml"),
         }
     }
 
-    pub(crate) fn source(self) -> &'static str {
+    pub(crate) fn tag(self) -> &'static str {
         match self {
-            Self::English => include_str!("../assets/locales/en.ftl"),
-            Self::Spanish => include_str!("../assets/locales/es.ftl"),
-            Self::Russian => include_str!("../assets/locales/ru.ftl"),
-            Self::Italian => include_str!("../assets/locales/it.ftl"),
+            Self::English => "en",
+            Self::Spanish => "es",
+            Self::Russian => "ru",
+            Self::Italian => "it",
         }
     }
 }
-
-type Bundle = FluentBundle<FluentResource>;
 
 thread_local! {
     static CURRENT: Cell<Locale> = const { Cell::new(Locale::English) };
-    static BUNDLES: [Bundle; 4] = Locale::ALL.map(bundle);
-}
-
-fn bundle(locale: Locale) -> Bundle {
-    let mut bundle = FluentBundle::new(vec![locale.id()]);
-    bundle.set_use_isolating(false);
-    let resource =
-        FluentResource::try_new(locale.source().to_owned()).unwrap_or_else(|(partial, _)| partial);
-    if let Err(errors) = bundle.add_resource(resource) {
-        tracing::warn!(?locale, ?errors, "duplicate messages");
-    }
-    bundle
 }
 
 pub fn set(locale: Locale) {
     CURRENT.set(locale);
 }
 
-pub fn text(id: &str, args: Option<&FluentArgs<'_>>) -> String {
-    BUNDLES.with(|bundles| {
-        format(&bundles[CURRENT.get() as usize], id, args)
-            .or_else(|| format(&bundles[0], id, args))
-            .unwrap_or_else(|| id.to_owned())
-    })
-}
-
-fn format(bundle: &Bundle, id: &str, args: Option<&FluentArgs<'_>>) -> Option<String> {
-    let pattern = bundle.get_message(id)?.value()?;
-    let mut errors = Vec::new();
-    let text = bundle.format_pattern(pattern, args, &mut errors);
-    if !errors.is_empty() {
-        tracing::debug!(id, ?errors, "message formatting failed");
-    }
-    Some(text.into_owned())
+pub(crate) fn tag() -> &'static str {
+    CURRENT.get().tag()
 }
 
 macro_rules! t {
-    ($id:expr) => {
-        $crate::i18n::text($id, None)
+    ($id:expr $(, $name:ident = $value:expr)* $(,)?) => {
+        match $id {
+            id => {
+                let id: &str = id;
+                rust_i18n::t!(id, locale = $crate::i18n::tag() $(, $name = $value)*).into_owned()
+            }
+        }
     };
-    ($id:expr, $($name:ident = $value:expr),+ $(,)?) => {{
-        let mut args = fluent_bundle::FluentArgs::new();
-        $(args.set(stringify!($name), $value);)+
-        $crate::i18n::text($id, Some(&args))
-    }};
 }
 pub(crate) use t;
 
@@ -135,28 +106,21 @@ mod tests {
     use super::*;
 
     fn messages(locale: Locale) -> BTreeMap<String, BTreeSet<String>> {
-        if let Err((_, errors)) = FluentResource::try_new(locale.source().to_owned()) {
-            panic!("{locale:?} does not parse: {errors:?}");
-        }
         let mut messages: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
-        let mut current = None;
         for line in locale.source().lines() {
-            if line.starts_with(|c: char| c.is_ascii_lowercase())
-                && let Some((id, _)) = line.split_once(" =")
-            {
-                current = Some(id.to_owned());
-                messages.entry(id.to_owned()).or_default();
-            } else if !line.starts_with(' ') {
-                current = None;
+            if line.is_empty() || line.starts_with('#') {
+                continue;
             }
-            if let Some(id) = &current {
-                for (_, rest) in line.match_indices('$').map(|(i, _)| line.split_at(i + 1)) {
-                    let name: String = rest
-                        .chars()
-                        .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
-                        .collect();
-                    messages.entry(id.clone()).or_default().insert(name);
-                }
+            let Some((id, value)) = line.split_once(" = ") else {
+                panic!("{locale:?}: unexpected line {line:?}");
+            };
+            let arguments = messages.entry(id.to_owned()).or_default();
+            for (_, rest) in value
+                .match_indices("%{")
+                .map(|(i, _)| value.split_at(i + 2))
+            {
+                let name = rest.split('}').next().unwrap_or_default();
+                arguments.insert(name.to_owned());
             }
         }
         messages
@@ -167,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn every_locale_parses_and_has_the_same_messages_and_arguments() {
+    fn every_locale_has_the_same_messages_and_arguments() {
         let english = messages(Locale::English);
         assert!(english.len() > 100, "found only {}", english.len());
         for locale in Locale::ALL {
@@ -211,23 +175,22 @@ mod tests {
     }
 
     #[test]
-    fn messages_follow_the_locale_with_plurals_and_fall_back_to_english() {
+    fn messages_follow_the_locale_and_fall_back_to_the_id() {
         set(Locale::Spanish);
         assert_eq!(t!("page-library"), "Biblioteca");
-        assert_eq!(t!("count-titles", count = 1), "1 título");
-        assert_eq!(t!("count-titles", count = 3), "3 títulos");
+        assert_eq!(t!("count-titles", count = 3), "Títulos: 3");
         assert_eq!(t!("no-such-message"), "no-such-message");
         set(Locale::Russian);
-        assert_eq!(t!("count-titles", count = 21), "21 название");
-        assert_eq!(t!("count-titles", count = 3), "3 названия");
-        assert_eq!(t!("count-titles", count = 11), "11 названий");
+        assert_eq!(t!("count-titles", count = 21), "Названий: 21");
+        assert_eq!(t!(&format!("language-{}", "ara")), "Арабский");
+        set(Locale::Italian);
+        assert_eq!(t!("watched-percent", percent = 40), "40 % riprodotto");
         set(Locale::English);
-        assert_eq!(t!("count-titles", count = 1), "1 title");
         assert_eq!(
             t!("installed-addon", name = "Torrentio"),
-            "Installed Torrentio",
-            "no isolation marks around arguments"
+            "Installed Torrentio"
         );
+        assert_eq!(t!("seconds", count = 2.5), "2.5 s");
     }
 
     #[test]

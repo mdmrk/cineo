@@ -659,7 +659,7 @@ fn turning_p2p_off_hides_torrent_streams() {
     );
     let harness = harness(state, ViewState::default());
     assert_eq!(harness.get_all_by_label("Play").count(), 5);
-    harness.get_by_label("1 torrent stream hidden: peer-to-peer is off in Settings");
+    harness.get_by_label("Torrent streams hidden: 1 (peer-to-peer is off in Settings)");
 }
 
 #[test]
@@ -940,7 +940,7 @@ fn player_and_language_settings_change_from_the_page() {
     harness.run();
     harness.get_by_label("Seek step").click();
     harness.run();
-    harness.get_by_label("30 seconds").click();
+    harness.get_by_label("30 s").click();
     harness.run();
     harness.get_by_label("Second audio language").scroll_to_me();
     harness.run();

@@ -13,3 +13,5 @@ mod theme;
 pub mod view;
 
 pub use app::{Options, run};
+
+rust_i18n::i18n!("assets/locales", fallback = "en");

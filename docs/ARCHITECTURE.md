@@ -146,9 +146,10 @@ Implemented in M5 (`cineo-desktop`):
 - Images: `images::NetImageLoader` (an egui `ImageLoader`) fetches through
   `cineo-net`, then decodes and downscales on the tokio blocking pool, at
   most one image per CPU core at a time.
-- Text (ADR-0017): `i18n` holds one Fluent bundle per locale, built from
-  `assets/locales/*.ftl`. The locale is set from the `ui_language` setting
-  every frame. Core returns `Problem` and `Notice` values, never prose.
+- Text (ADR-0017, ADR-0021): `rust-i18n` embeds the
+  `assets/locales/*.toml` catalogs at compile time, and `i18n::t!` looks
+  messages up in the thread-local locale. The locale is set from the
+  `ui_language` setting every frame. Core returns `Problem` and `Notice` values, never prose.
 
 ### Platform abstraction
 
