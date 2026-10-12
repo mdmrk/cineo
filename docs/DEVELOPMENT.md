@@ -568,7 +568,7 @@ Every release has these files, with the same names in every release so that
 | `cineo-aarch64-macos.tar.gz` | The executable, README and licenses; uses Homebrew's libmpv |
 | `cineo-licenses.zip` | Cineo's license, font licenses, LGPL-2.1 and the libmpv notice |
 | `cineo.png` | App icon, used by `install.sh` |
-| `install.sh`, `install.ps1` | Per-user installers (README, Install) |
+| `install.sh`, `install.ps1` | Per-user installers (README, Install). Uninstall: `… \| sh -s -- --uninstall`, or `$env:CINEO_UNINSTALL = 1` before `irm … \| iex`. `CINEO_VERSION` picks another release |
 | `SHA256SUMS` | Checksums of all of the above; the installers verify them |
 
 **libmpv on Windows** (ADR-0014, amended 2026-10-12). The build fetches an
