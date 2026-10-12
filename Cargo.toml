@@ -76,6 +76,7 @@ match_same_arms = "warn"
 lto = "thin"
 codegen-units = 1
 strip = "symbols"
+panic = "abort"
 
 [profile.dev.package."*"]
 opt-level = 2
