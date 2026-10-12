@@ -544,27 +544,36 @@ added since are in the table above. One open question from that research:
 - **Tags:** `vMAJOR.MINOR.PATCH`, with an optional pre-release suffix
   (`v0.1.0-alpha.1`). Tags containing `-` become GitHub pre-releases.
 
-`.github/workflows/release.yml` builds `cineo-desktop` for Linux x86_64,
-Windows x86_64 and macOS arm64, packages each build with the README, the
-license and the font licenses, and attests build provenance (check a file
-with `gh attestation verify <file> --repo <owner>/cineo`). The `cineo` CLI
-is not shipped. libmpv is not bundled yet; M7 bundles it with every build
-(ADR-0014, amended 2026-10-11).
+Three workflows start runs; each stage waits for the one before it:
+
+| Workflow | Trigger | Stages |
+|----------|---------|--------|
+| `ci.yml` | push, pull request | lint, test (Linux, Windows, macOS), cargo-deny, zizmor |
+| `prerelease.yml` | push to `main` | build → publish `prerelease` |
+| `release.yml` | tag `vX.Y.Z` | checks (`ci.yml`) → build → publish `vX.Y.Z` |
+
+`build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
+x86_64, Windows x86_64 and macOS arm64, packages each build with
+`scripts/package.sh` (the binary, the README, the license and the font
+licenses), and attests build provenance (check a file with
+`gh attestation verify <file> --repo <owner>/cineo`). It never publishes. The
+`cineo` CLI is not shipped. libmpv is not bundled yet; M7 bundles it with
+every build (ADR-0014, amended 2026-10-11).
 
 ### Steps
 
 1. On `main` with green CI: bump `version` in `Cargo.toml`.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
-4. The workflow runs the tests, builds, and publishes the release `vX.Y.Z`
-   with notes generated from the commits since the previous tag.
+4. `release.yml` runs every CI gate, builds, and publishes the release
+   `vX.Y.Z` with notes generated from the commits since the previous tag.
 
 ### Prerelease builds
 
-Every push to `main` (or a manual run on `main`) runs the same workflow
-without tests (CI runs them in parallel). It deletes the previous
-`prerelease` GitHub release and its tag and recreates both at the pushed
-commit.
+Every push to `main` (or a manual run on `main`) runs `prerelease.yml`. It
+does not run the tests itself (`ci.yml` runs them in parallel). It deletes
+the previous `prerelease` GitHub release and its tag and recreates both at
+the pushed commit.
 
 ### Not yet decided (M7)
 
