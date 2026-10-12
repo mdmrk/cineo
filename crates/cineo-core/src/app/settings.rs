@@ -446,6 +446,7 @@ settings! {
     watched_at: WatchedAt = WatchedAt::P92 => WatchedAt("watched_at"),
     binge_watching: bool = true => BingeWatching("binge_watching"),
     next_video_notice: NextVideoNotice = NextVideoNotice::S35 => NextVideoNotice("next_video_notice"),
+    check_for_updates: bool = true => CheckForUpdates("check_for_updates"),
 }
 
 impl Settings {

@@ -285,3 +285,30 @@ async fn subtitle_files_are_fetched_under_the_policy() {
         Err(FetchError::Blocked(_))
     ));
 }
+
+#[tokio::test]
+async fn the_latest_release_version_comes_from_its_tag() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/repos/mdmrk/cineo/releases/latest",
+        br#"{"tag_name":"v0.5.0","assets":[]}"#.to_vec(),
+    )
+    .await;
+    serve(&server, "/broken", br#"{"message":"Not Found"}"#.to_vec()).await;
+    let client = AddonClient::new(local_policy()).unwrap();
+
+    let url = url::Url::parse(&format!(
+        "{}/repos/mdmrk/cineo/releases/latest",
+        server.uri()
+    ))
+    .unwrap();
+    let version = client.fetch_latest_release(&url).await.unwrap();
+    assert_eq!(version, semver::Version::new(0, 5, 0));
+
+    let broken = url::Url::parse(&format!("{}/broken", server.uri())).unwrap();
+    assert!(matches!(
+        client.fetch_latest_release(&broken).await,
+        Err(FetchError::Release(_))
+    ));
+}

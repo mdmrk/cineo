@@ -50,6 +50,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::WatchedAt(WatchedAt::P80),
         Setting::BingeWatching(false),
         Setting::NextVideoNotice(NextVideoNotice::Off),
+        Setting::CheckForUpdates(false),
     ] {
         settings.set(setting);
     }
@@ -119,6 +120,7 @@ fn saved_keys_never_change() {
             "watched_at",
             "binge_watching",
             "next_video_notice",
+            "check_for_updates",
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");

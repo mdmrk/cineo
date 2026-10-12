@@ -6,6 +6,7 @@ mod library;
 mod link;
 mod message;
 mod plan;
+mod release;
 mod settings;
 mod state;
 mod torrent;
@@ -18,6 +19,7 @@ pub use plan::{
     CatalogTarget, addon_list_targets, board_targets, meta_candidates, search_targets,
     stream_targets, subtitle_targets,
 };
+pub use release::{LATEST_RELEASE_URL, ReleaseError, parse_release, release_page};
 pub use settings::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,
     Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,

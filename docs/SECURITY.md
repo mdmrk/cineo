@@ -49,6 +49,7 @@ These are all treated as hostile:
 | Oversized responses / decompression bombs | Limit on **decoded** bytes (default 8 MiB), counted while streaming. `Content-Length` is checked early. |
 | Slow-loris addons | Total request timeout of 20 s, connect timeout of 10 s. |
 | Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. Fuzzing is planned for the parsers ([DEVELOPMENT.md](DEVELOPMENT.md#testing)). |
+| Update check reveals usage to GitHub | Once per start, `api.github.com/repos/mdmrk/cineo/releases/latest` is fetched through the same `AddonClient` and `NetPolicy` (1 MiB limit). It sends only the `Cineo/<version>` user agent; GitHub sees the IP address. On by default; Settings → About → "Check for updates" turns it off before the next start (`with_update_checks_off_nothing_is_fetched_or_shown`). Only the version is read from the response; the release page link is built by Cineo, not taken from it. |
 | Credential leakage | Transport URLs with userinfo are rejected. Logs and errors include only the origin and resource path, never full addon URLs. Error messages from the HTTP stack are scrubbed of URLs. |
 
 ### Player (`cineo-player`, M3; embedded since ADR-0014)
@@ -190,6 +191,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Setting | Default |
 |---------|---------|
 | Private-network access | Off (opt-in: CLI flag or Settings, applied at startup) |
+| Update check | On, once per start, to `api.github.com`; off in Settings → About |
 | Torrent upload | On; can be turned off in Settings (librqbit `disable_upload`, behavior not covered by a test) |
 | Torrent data | In memory with a 1 GB window; 256 MB to 2 GB or on disk in Settings (ADR-0019) |
 | Max decoded body | 8 MiB |

@@ -297,6 +297,13 @@ impl CineoApp {
             Effect::Play(request) => self.play(&request),
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
+            Effect::CheckForUpdate(url) => self.spawn(async move {
+                let result = client.fetch_latest_release(&url).await.map_err(|err| {
+                    debug!(%err, "update check failed");
+                    err.to_string()
+                });
+                Action::LatestReleaseLoaded(result)
+            }),
         }
     }
 

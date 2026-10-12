@@ -405,6 +405,9 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 }
             }
             ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                if let Some(latest) = state.available_update() {
+                    update_link(ui, latest, compact);
+                }
                 let version = faint(&t!("app-version", version = env!("CARGO_PKG_VERSION")));
                 ui.horizontal(|ui| {
                     ui.add_space(9.0);
@@ -424,6 +427,37 @@ fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Actio
                 }
             });
         });
+}
+
+fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
+    let text = t!("update-available", version = latest.to_string());
+    let mut job = LayoutJob::default();
+    append_icon(
+        &mut job,
+        Icon::Named("circle-arrow-up"),
+        15.0,
+        theme::ACCENT,
+    );
+    if !compact {
+        job.append(
+            &text,
+            6.0,
+            TextFormat::simple(theme::caption(), theme::ACCENT),
+        );
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(9.0);
+        let link = ui
+            .add(egui::Link::new(job))
+            .on_hover_text(t!("update-available-help"));
+        link.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &text));
+        if link.clicked() {
+            ui.ctx()
+                .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
+                    latest,
+                )));
+        }
+    });
 }
 
 fn logo(ui: &mut Ui, sidebar_width: f32) {

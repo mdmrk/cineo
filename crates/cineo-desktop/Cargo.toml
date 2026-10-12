@@ -28,6 +28,7 @@ fast_image_resize.workspace = true
 iconflow.workspace = true
 image.workspace = true
 rust-i18n.workspace = true
+semver.workspace = true
 sys-locale.workspace = true
 tokio.workspace = true
 tracing.workspace = true

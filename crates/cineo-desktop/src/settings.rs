@@ -388,6 +388,15 @@ fn body(
         Section::About => {
             ui.label(dim(&t!("app-version", version = env!("CARGO_PKG_VERSION"))));
             ui.add_space(theme::GAP);
+            switch(
+                ui,
+                out,
+                &t!("check-updates"),
+                &t!("check-updates-help"),
+                s.check_for_updates,
+                Setting::CheckForUpdates,
+            );
+            ui.add_space(theme::GAP);
             let mut job = LayoutJob::default();
             append_icon(&mut job, Icon::Named("brand-github"), 18.0, theme::ACCENT);
             job.append(

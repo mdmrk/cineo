@@ -419,7 +419,7 @@ Re-check them when adding.
 | Crate | Version | Purpose | License |
 |-------|---------|---------|---------|
 | `percent-encoding` | 2.3.2 | `encodeURIComponent` path encoding (core) | MIT/Apache |
-| `semver` | 1.0.28 | Manifest `version` (core) | MIT/Apache |
+| `semver` | 1.0.28 | Manifest `version` (core), release versions (core, net, desktop) | MIT/Apache |
 | `serde_json` | 1.0.151 | JSON documents (core) | MIT/Apache |
 | `thiserror` | 2.0.21 | Library errors | MIT/Apache |
 | `url` | 2.5.8 | URLs (core, net) | MIT/Apache |

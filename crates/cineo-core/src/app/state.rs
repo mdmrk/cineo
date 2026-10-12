@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 
+use semver::Version;
 use url::Url;
 
 use super::library::{LibraryItem, SavedStream};
 use super::link::Route;
 use super::message::{Notice, PlaybackFailure, Problem};
 use super::plan::{self, CatalogTarget};
+use super::release;
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
@@ -159,6 +161,8 @@ pub struct State {
     /// Addon subtitles for the current playback, stream subtitles first.
     pub subtitles: Vec<SubtitleGroup>,
     pub playing: Option<Playing>,
+    pub update: Option<Version>,
+    pub update_checked: bool,
 }
 
 /// The playback in progress, until it stops or fails.
@@ -249,6 +253,7 @@ pub enum Action {
     DeclineLink,
     ChangeSetting(Setting),
     ResetSettings,
+    LatestReleaseLoaded(Result<Version, String>),
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
@@ -328,6 +333,7 @@ pub enum Effect {
     Play(Box<PlayRequest>),
     StartTorrent(TorrentRequest),
     StopTorrent,
+    CheckForUpdate(Url),
 }
 
 /// Applies `action` to `state` and returns the effects to run.
@@ -347,7 +353,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::RestoreSettings(settings) => {
             state.settings = settings;
-            Vec::new()
+            check_for_update(state).into_iter().collect()
         }
         Action::InstallAddon(input) => match TransportUrl::parse(&input) {
             Ok(transport)
@@ -537,11 +543,24 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::ChangeSetting(setting) => {
             state.settings.set(setting);
-            settings_changed(state)
+            let mut effects = settings_changed(state);
+            if setting == Setting::CheckForUpdates(true) {
+                effects.extend(check_for_update(state));
+            }
+            effects
         }
         Action::ResetSettings => {
+            let was_checking = state.settings.check_for_updates;
             state.settings = state.settings.reset();
-            settings_changed(state)
+            let mut effects = settings_changed(state);
+            if !was_checking {
+                effects.extend(check_for_update(state));
+            }
+            effects
+        }
+        Action::LatestReleaseLoaded(result) => {
+            state.update = result.ok().filter(release::is_newer);
+            Vec::new()
         }
         Action::SetFavorite { id, favorite } => set_favorite(state, id, favorite),
         Action::RemoveFromLibrary(id) => {
@@ -695,6 +714,16 @@ fn settings_changed(state: &mut State) -> Vec<Effect> {
     effects
 }
 
+fn check_for_update(state: &mut State) -> Option<Effect> {
+    if !state.settings.check_for_updates || state.update_checked {
+        return None;
+    }
+    state.update_checked = true;
+    Url::parse(release::LATEST_RELEASE_URL)
+        .ok()
+        .map(Effect::CheckForUpdate)
+}
+
 fn stop_torrent(state: &mut State) -> Vec<Effect> {
     if state.torrent.take().is_some() {
         vec![Effect::StopTorrent]
@@ -718,6 +747,12 @@ fn torrent_ready(state: &mut State, info_hash: &str, url: Url) -> Vec<Effect> {
 }
 
 impl State {
+    pub fn available_update(&self) -> Option<&Version> {
+        self.update
+            .as_ref()
+            .filter(|_| self.settings.check_for_updates)
+    }
+
     /// Installed addons whose manifest failed to load.
     pub fn unavailable_addons(&self) -> Vec<&TransportUrl> {
         self.installed

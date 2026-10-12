@@ -70,6 +70,7 @@ _Last reviewed: 2026-10-06._
 | Deep links (`cineo://`) | Supported | Same forms as `stremio://` (ADR-0018; `links_parse_into_routes_and_anything_else_is_rejected`). Opened from the command line and handed to a running window on Unix (`a_link_reaches_the_running_instance_through_a_private_socket`); the Windows pipe and scheme registration are untested; macOS links are not handled |
 | `stremio://` addon install links | Supported | Mapped to `https://` only; installs after confirmation (`an_install_link_installs_nothing_until_accepted`) |
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
+| Update notice | Supported | Cineo-only: once per start, GitHub's latest release is compared with the running version; a newer one shows as "vX.Y.Z available" under the version in the sidebar and opens its release page. Settings → About turns the check off (`restoring_settings_checks_for_an_update_once`, `a_newer_release_is_offered_and_an_older_one_is_not`, `with_update_checks_off_nothing_is_fetched_or_shown`, `the_latest_release_version_comes_from_its_tag`, `a_newer_release_shows_in_the_sidebar_and_opens_its_page`, `update_checks_can_be_turned_off_in_about`). No in-app install: the user runs the installer again |
 | Casting | Planned | Future research |
 | Account / cloud sync | Unsupported | Not planned for now (owner decision 2026-10-06) |
 | Data export / import | Planned | v1.0 |

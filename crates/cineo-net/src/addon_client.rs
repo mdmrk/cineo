@@ -8,6 +8,7 @@ use cineo_core::addon::{
     Stream, Subtitle, TransportUrl, parse_addon_catalog_response, parse_catalog_response,
     parse_manifest, parse_meta_response, parse_stream_response, parse_subtitles_response,
 };
+use cineo_core::app::{ReleaseError, parse_release};
 use cineo_core::diagnostics::Parsed;
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use reqwest::{StatusCode, redirect};
@@ -16,6 +17,7 @@ use url::Url;
 
 use crate::policy::{BlockReason, NetPolicy};
 
+const RELEASE_LIMIT: usize = 1024 * 1024;
 const USER_AGENT: &str = concat!("Cineo/", env!("CARGO_PKG_VERSION"));
 
 /// Fetches and parses addon resources under a [`NetPolicy`].
@@ -46,6 +48,8 @@ pub enum FetchError {
     Manifest(#[from] ManifestError),
     #[error("invalid response: {0}")]
     Response(#[from] ResponseError),
+    #[error("invalid release: {0}")]
+    Release(#[from] ReleaseError),
 }
 
 impl AddonClient {
@@ -156,6 +160,18 @@ impl AddonClient {
         self.get_limited(url.clone(), self.policy.max_body_bytes, "*/*")
             .instrument(span)
             .await
+    }
+
+    pub async fn fetch_latest_release(&self, url: &Url) -> Result<semver::Version, FetchError> {
+        let span = info_span!("release_request", req = next_request_id(), origin = %origin(url));
+        async {
+            let body = self
+                .get_limited(url.clone(), RELEASE_LIMIT, "application/vnd.github+json")
+                .await?;
+            Ok(parse_release(&body)?)
+        }
+        .instrument(span)
+        .await
     }
 
     async fn fetch_resource<T>(

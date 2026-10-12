@@ -98,6 +98,8 @@ response.
 
 All HTTP goes through `cineo-net`'s `AddonClient`, which enforces `NetPolicy`
 ([SECURITY.md](SECURITY.md)). The core only builds `Url`s; it never fetches.
+The update check is one more request through the same client: the core asks
+for it with `Effect::CheckForUpdate` and compares the version it gets back.
 
 ### Player boundary (ADR-0014)
 

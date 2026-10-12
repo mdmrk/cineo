@@ -1070,3 +1070,47 @@ fn the_compact_sidebar_keeps_settings_where_the_wide_one_has_it() {
     };
     assert_eq!(settings(1280.0), settings(900.0));
 }
+
+#[test]
+fn a_newer_release_shows_in_the_sidebar_and_opens_its_page() {
+    let mut state = State::default();
+    update(&mut state, Action::RestoreSettings(Settings::default()));
+    let mut before = harness(state.clone(), ViewState::default());
+    before.run();
+    assert!(before.query_by_label_contains("available").is_none());
+
+    update(
+        &mut state,
+        Action::LatestReleaseLoaded(Ok(semver::Version::new(999, 0, 0))),
+    );
+    let mut harness = harness(state, ViewState::default());
+    harness.run();
+    harness.get_by_label("v999.0.0 available").click();
+    harness.step();
+    let opened: Vec<_> = harness
+        .output()
+        .platform_output
+        .commands
+        .iter()
+        .filter_map(|command| match command {
+            eframe::egui::OutputCommand::OpenUrl(open) => Some(open.url.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        opened,
+        ["https://github.com/mdmrk/cineo/releases/tag/v999.0.0"]
+    );
+}
+
+#[test]
+fn update_checks_can_be_turned_off_in_about() {
+    let mut harness = harness(State::default(), settings_page());
+    open_section(&mut harness, "About");
+    harness.get_by_label("Check for updates").click();
+    settle(&mut harness);
+    assert_eq!(
+        harness.state().2,
+        vec![Action::ChangeSetting(Setting::CheckForUpdates(false))]
+    );
+}
