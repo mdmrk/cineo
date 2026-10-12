@@ -147,7 +147,9 @@ Format:
 - Why: it would add a dependency (`tracing-appender`) and a page outside
   M5's acceptance.
 - Instead: start `cineo-desktop -v` from a terminal; `cineo doctor` covers
-  the database.
+  the database. Windows release builds use the GUI subsystem (no console
+  window), so their stderr is not shown even from a terminal; debug builds
+  keep the console.
 - Exit: a log file in the platform state directory, plus a diagnostics page.
 
 ### Desktop: image cache is unbounded for a session
