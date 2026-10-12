@@ -1,6 +1,3 @@
-//! The libmpv inside Windows release builds (ADR-0014, amended 2026-10-12),
-//! written to the cache directory so the player can load it.
-
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
