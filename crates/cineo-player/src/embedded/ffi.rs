@@ -1,7 +1,7 @@
 #![allow(unsafe_code, reason = "FFI to libmpv; ADR-0014, docs/SECURITY.md")]
 
 use std::ffi::{CStr, CString, c_char, c_int, c_ulong, c_void};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use tracing::{debug, info};
@@ -133,14 +133,25 @@ const NAMES: &[&str] = &["libmpv-2.dll", "mpv-2.dll"];
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 const NAMES: &[&str] = &[];
 
+static BUNDLED: OnceLock<PathBuf> = OnceLock::new();
+
+pub(crate) fn set_bundled(path: PathBuf) {
+    let _ = BUNDLED.set(path);
+}
+
 fn candidates() -> Vec<PathBuf> {
     let beside = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(PathBuf::from));
+    candidates_from(beside.as_deref(), BUNDLED.get().map(PathBuf::as_path))
+}
+
+fn candidates_from(beside: Option<&Path>, bundled: Option<&Path>) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = beside
         .iter()
         .flat_map(|dir| NAMES.iter().map(|name| dir.join(name)))
         .collect();
+    paths.extend(bundled.map(Path::to_path_buf));
     paths.extend(NAMES.iter().map(PathBuf::from));
     paths
 }
@@ -428,6 +439,21 @@ mod tests {
         assert_eq!(owned.len(), 1);
         assert_eq!(pointers.len(), 2, "NULL-terminated");
         assert!(pointers[1].is_null());
+    }
+
+    #[test]
+    fn the_bundled_library_comes_after_the_executable_dir_and_before_the_system() {
+        let exe_dir = Path::new("/opt/cineo");
+        let bundled = Path::new("/cache/libmpv/0.3.0/libmpv-2.dll");
+        let paths = candidates_from(Some(exe_dir), Some(bundled));
+        let mut expected: Vec<PathBuf> = NAMES.iter().map(|name| exe_dir.join(name)).collect();
+        expected.push(bundled.to_path_buf());
+        expected.extend(NAMES.iter().map(PathBuf::from));
+        assert_eq!(paths, expected);
+        assert_eq!(
+            candidates_from(None, None),
+            NAMES.iter().map(PathBuf::from).collect::<Vec<_>>()
+        );
     }
 
     #[test]

@@ -4,7 +4,7 @@
 mod ffi;
 mod render;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
@@ -170,6 +170,13 @@ const OPTIONS: &[(&str, &str)] = &[
     ("video-timing-offset", "0"),
     ("audio-client-name", "Cineo"),
 ];
+
+/// Adds a libmpv shipped with the app to the lookup, after the executable's
+/// directory and before the system names. Only the first call counts, and
+/// only before the first playback.
+pub fn use_bundled_libmpv(path: PathBuf) {
+    ffi::set_bundled(path);
+}
 
 /// A playback running in this process. Dropping it stops playback; mpv shuts
 /// down once the last [`Renderer`] for it is dropped too.

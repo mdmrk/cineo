@@ -28,16 +28,33 @@ Runs on Linux, Windows and macOS.
 
 ## Install
 
-Download a build from
-[Releases](https://github.com/mdmrk/cineo/releases). Cineo plays video with
-libmpv, which is not included yet, so install mpv first:
+Cineo is one executable. Install it for your user with:
 
-- **Arch:** `pacman -S mpv`
-- **Debian/Ubuntu:** `apt install libmpv2`
-- **Fedora:** `dnf install mpv-libs`
-- **macOS:** `brew install mpv`
-- **Windows:** put `libmpv-2.dll` from an mpv development build next to
-  `cineo-desktop.exe`.
+- **Linux (x86_64):**
+  ```sh
+  curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
+  ```
+  It goes to `~/.local/bin/cineo-desktop`, with an app-menu entry. Video
+  plays with your system's libmpv; the installer says which package to
+  install if it is missing (`mpv` on Arch, `libmpv2` on Debian/Ubuntu,
+  `mpv-libs` on Fedora).
+- **Windows (x86_64), in PowerShell:**
+  ```powershell
+  irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+  ```
+  It goes to `%LOCALAPPDATA%\Programs\Cineo`, with a Start menu entry.
+  libmpv is included. The executable is not signed yet, so SmartScreen may
+  warn on first start.
+
+Both scripts check the download against the release's `SHA256SUMS`. To
+remove Cineo, run the Linux script with `sh -s -- --uninstall`, or set
+`$env:CINEO_UNINSTALL = 1` before the PowerShell one; your addons and
+library are kept.
+
+Without a script: download `cineo-x86_64-linux` or
+`cineo-x86_64-windows.exe` from
+[Releases](https://github.com/mdmrk/cineo/releases) and run it. On macOS,
+download `cineo-aarch64-macos.tar.gz` and install mpv (`brew install mpv`).
 
 ## Run from source
 

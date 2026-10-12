@@ -66,7 +66,8 @@ process and no IPC socket.
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
 | Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only (`embedded::PlayerCommand`: pause, seek, volume, mute, track ids, stop), formatted from numbers by `cineo-player`. There is no "send arbitrary mpv command" path, unlike shell-ng. |
 | Track names from the media file | Shown as plain text, one line, at most 60 characters. The same applies to addon subtitle languages and labels in the Subtitles menu. |
-| Loading a planted libmpv | libmpv is looked up next to the executable first, then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. On Windows the system search order applies to the bare names (UNKNOWN whether it should be restricted; review before the Windows release). |
+| Loading a planted libmpv | libmpv is looked up next to the executable first, then at the copy that Windows release builds write to `<cache dir>/libmpv/<version>/` (by full path), then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. The written copy is in a user-writable directory and is reused when its size matches, not re-hashed on every start: the same user could replace the executable too. On Windows the system search order applies to the bare names, which are tried only if that copy could not be written (UNKNOWN whether it should be restricted). |
+| Tampered downloads | `install.sh` and `install.ps1` check every file against the release's `SHA256SUMS` before installing anything; release files also have build-provenance attestations. The CI pins the bundled libmpv archive by SHA-256. Checksums from the same release protect against corrupted or swapped mirror files, not against a compromised release. |
 
 ### Subtitles
 

@@ -54,15 +54,26 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   Cineo loads it at runtime with `libloading` (ADR-0014). Our bindings are
   written from mpv's ISC-licensed headers (`client.h`, `render.h`,
   `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
-  not use the LGPL `libmpv2` crates. Bundling libmpv in installers
-  (M7) must comply with its license: ship it as a separate, replaceable
-  shared library, with its notices and source offer. This needs
-  a review before the first installer.
+  not use the LGPL `libmpv2` crates. Linux and macOS builds use the
+  system's libmpv and ship none.
+- The Windows executable contains an unmodified **LGPL** build of
+  `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later; zhongfly/mpv-winbuild,
+  pinned in `scripts/libmpv-windows.env`), added 2026-10-12. It is written
+  to disk and loaded as a separate shared library, and a DLL placed next to
+  the executable is loaded first, so users can replace it (LGPL-2.1 §6).
+  Every release ships `cineo-licenses.zip` with the LGPL-2.1 text and a
+  notice naming the binary, the mpv commit and the build scripts with the
+  library sources (`scripts/package.sh`); the archive is mirrored in this
+  repository's releases. We point to upstream sources and do not host a
+  full source copy ourselves (UNKNOWN whether that suffices for every
+  bundled library; see TECHNICAL_DEBT.md).
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),
 unmodified and not sold on their own, as the OFL requires. Each license
-text ships next to its files and must accompany binary distributions.
+text ships next to its files and must accompany binary distributions: in
+`cineo-licenses.zip` next to the executables in every release, which the
+install scripts copy beside the installed app.
 Added 2026-10-07.
 
 Cineo's logo, app icon and loading animation

@@ -103,6 +103,24 @@ Option 4.
   install. The lookup order above is unchanged; the system names remain a
   fallback for development builds.
 
+- **Amended 2026-10-12 (owner decision): one file per platform.** Releases
+  are a single executable, with no archive and no file next to it.
+  - Windows: the release build (cargo feature `bundled-libmpv`) embeds an
+    LGPL build of `libmpv-2.dll` (zhongfly/mpv-winbuild, pinned by SHA-256
+    in `scripts/libmpv-windows.env`). On start it writes the DLL to
+    `<cache dir>/libmpv/<version>/` if it is missing or has a different
+    size. The torrent cleanup removes only info-hash directories, so the
+    copy survives restarts.
+  - Lookup order: next to the executable, then the extracted copy, then
+    the system names. A user can still replace the library (LGPL-2.1 §6)
+    by putting their own DLL next to the executable.
+  - Linux keeps using the system libmpv. Bundling FFmpeg and its
+    dependencies into one Linux binary fails on glibc, Mesa and VA-API
+    differences between distros (INFERRED).
+  - Rejected: a separate DLL next to the executable (not one file), and a
+    zstd-compressed DLL (about 70 MB smaller download, one more
+    dependency; it can be added later).
+
 ## Consequences
 - Video plays inside the Cineo window, under our own controls.
 - `unsafe` code exists for the first time, limited to two modules of one

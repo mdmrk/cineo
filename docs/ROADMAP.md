@@ -191,8 +191,10 @@ delivered is in the git history.
 ### M7 — Packaging and releases
 - **Prerequisites:** M5.
 - **Deliverables:**
-  - Installers (AppImage or Flatpak, MSI).
-  - libmpv bundled with every build (ADR-0014, amended 2026-10-11).
+  - Single-executable releases with per-user install scripts for Linux and
+    Windows (no AppImage, Flatpak or MSI; owner decision 2026-10-12).
+  - libmpv inside the Windows executable; Linux uses the system libmpv
+    (ADR-0014, amended 2026-10-12).
   - The release workflow producing GUI artifacts.
   - A signing plan.
 - **Acceptance:** a tagged pre-release installs and runs on clean machines.

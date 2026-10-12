@@ -59,6 +59,7 @@ fn start(cli: Cli) -> anyhow::Result<()> {
     {
         return Ok(());
     }
+    cineo_desktop::libmpv::install(&cache_dir);
     cineo_desktop::run(cineo_desktop::Options {
         data_dir,
         cache_dir,

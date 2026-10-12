@@ -276,3 +276,30 @@ Format:
 - Instead: on macOS, links open nothing; second windows share the database.
 - Exit: handle `CFBundleURLTypes` and the open-URL event in the M7 bundle;
   run the Windows path on a Windows machine.
+
+### Releases: large Windows executable, untested install scripts
+- Where: [build.yml](../.github/workflows/build.yml),
+  [libmpv.rs](../crates/cineo-desktop/src/libmpv.rs),
+  [install.ps1](../scripts/install.ps1)
+- Gap: the Windows executable carries libmpv uncompressed (about 100 MB
+  more), and writes the same 100 MB again to the cache directory on first
+  start. `install.ps1`, the Windows build with `bundled-libmpv` and the
+  release workflows have not run yet; `install.sh` was run only against a
+  local server (VERIFIED 2026-10-12: install, checksum mismatch, uninstall).
+- Why: compressing the DLL needs a decompression dependency; there is no
+  Windows machine in the loop.
+- Instead: a download of roughly 130 MB on Windows; Windows behavior is
+  UNKNOWN until the first release run.
+- Exit: compress the embedded DLL (for example zstd, about 29 MB), and run
+  the installer and the manual test on Windows (M7).
+
+### Releases: libmpv sources are referenced, not hosted
+- Where: `scripts/package.sh` (`libmpv.md` in `cineo-licenses.zip`)
+- Gap: for the bundled LGPL libmpv we link to the mpv commit, the upstream
+  build scripts and their build log, but host no copy of the sources of
+  mpv, FFmpeg and the other libraries in that build.
+- Why: the build pulls dozens of libraries; mirroring their sources is a
+  separate job.
+- Instead: the sources are only as available as upstream keeps them.
+- Exit: mirror the source tarballs next to the libmpv archive, or build
+  libmpv ourselves from pinned sources.

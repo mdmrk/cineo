@@ -5,6 +5,7 @@ mod brand;
 pub mod i18n;
 mod images;
 pub mod instance;
+pub mod libmpv;
 pub mod player;
 mod register;
 pub mod settings;

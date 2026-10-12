@@ -553,12 +553,37 @@ Three workflows start runs; each stage waits for the one before it:
 | `release.yml` | tag `vX.Y.Z` | checks (`ci.yml`) → build → publish `vX.Y.Z` |
 
 `build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
-x86_64, Windows x86_64 and macOS arm64, packages each build with
-`scripts/package.sh` (the binary, the README, the license and the font
-licenses), and attests build provenance (check a file with
+x86_64, Windows x86_64 and macOS arm64, puts the files into `dist/` with
+`scripts/package.sh`, and attests build provenance (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It never publishes. The
-`cineo` CLI is not shipped. libmpv is not bundled yet; M7 bundles it with
-every build (ADR-0014, amended 2026-10-11).
+`cineo` CLI is not shipped.
+
+Every release has these files, with the same names in every release so that
+`releases/latest/download/<name>` works:
+
+| File | What |
+|------|------|
+| `cineo-x86_64-linux` | The executable; uses the system libmpv |
+| `cineo-x86_64-windows.exe` | The executable with libmpv inside (below) |
+| `cineo-aarch64-macos.tar.gz` | The executable, README and licenses; uses Homebrew's libmpv |
+| `cineo-licenses.zip` | Cineo's license, font licenses, LGPL-2.1 and the libmpv notice |
+| `cineo.png` | App icon, used by `install.sh` |
+| `install.sh`, `install.ps1` | Per-user installers (README, Install) |
+| `SHA256SUMS` | Checksums of all of the above; the installers verify them |
+
+**libmpv on Windows** (ADR-0014, amended 2026-10-12). The build fetches an
+LGPL build of libmpv pinned by SHA-256 in `scripts/libmpv-windows.env` with
+`scripts/fetch-libmpv.sh`, and embeds it through the `bundled-libmpv`
+feature (`CINEO_LIBMPV_DLL` names the DLL at build time). Upstream deletes
+builds after about a month, so the publish jobs keep a copy in a
+`libmpv-<tag>` pre-release of this repository (`scripts/mirror-libmpv.sh`),
+which the fetch script tries first. To update libmpv: pick a new
+`mpv-dev-lgpl-x86_64` build from
+[zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild/releases)
+and change every value in `scripts/libmpv-windows.env`.
+
+To try a Windows-style build elsewhere:
+`CINEO_LIBMPV_DLL=/abs/path/libmpv-2.dll cargo build -p cineo-desktop --features bundled-libmpv`.
 
 ### Steps
 
@@ -577,9 +602,8 @@ the pushed commit.
 
 ### Not yet decided (M7)
 
-- Code signing (Windows Authenticode, macOS notarization) and installer
-  formats.
-- How libmpv is bundled per platform (license review: [LEGAL.md](LEGAL.md)).
+- Code signing (Windows Authenticode, macOS notarization).
+- How libmpv is bundled on macOS.
 - Reproducible-build verification beyond `--locked` + a pinned toolchain.
 
 ## Pull requests

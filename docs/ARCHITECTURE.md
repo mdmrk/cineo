@@ -108,6 +108,10 @@ video in an egui paint callback over the whole window and its own controls
 on top (`cineo-desktop/src/player.rs`). The controls send typed
 `PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
 feeds them. Without libmpv, playback fails with a message saying so.
+Windows release builds carry libmpv inside the executable: the shell writes
+it to the cache directory on start and registers that path with
+`cineo-player`, which tries it after the executable's own directory and
+before the system names.
 
 mpv's events become `PlayerEvent`s (`Progress`, `Ended`, `Failed`,
 `Closed`) through a small state machine (`tracker`), which the shell turns

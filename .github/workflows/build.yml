@@ -2,11 +2,6 @@ name: Build
 
 on:
   workflow_call:
-    inputs:
-      version:
-        description: Version used in the file names (a tag, or "prerelease").
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -21,8 +16,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { name: linux x86_64, os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
-          - { name: windows x86_64, os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { name: linux x86_64, os: ubuntu-latest, target: x86_64-unknown-linux-gnu, extras: true }
+          - { name: windows x86_64, os: windows-latest, target: x86_64-pc-windows-msvc, features: bundled-libmpv }
           - { name: macos arm64, os: macos-latest, target: aarch64-apple-darwin }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -30,26 +25,34 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install pinned toolchain (rust-toolchain.toml)
-        shell: bash
         env:
           TARGET: ${{ matrix.target }}
         run: rustup toolchain install && rustup target add "$TARGET"
+      - name: Fetch libmpv
+        if: matrix.features == 'bundled-libmpv'
+        run: |
+          scripts/fetch-libmpv.sh libmpv
+          echo "CINEO_LIBMPV_DLL=$(cygpath -m "$PWD/libmpv/libmpv-2.dll")" >> "$GITHUB_ENV"
       - name: Build
-        shell: bash
         env:
           TARGET: ${{ matrix.target }}
-        run: cargo build -p cineo-desktop --locked --release --target "$TARGET"
+          FEATURES: ${{ matrix.features }}
+        run: cargo build -p cineo-desktop --locked --release --target "$TARGET" ${FEATURES:+--features "$FEATURES"}
       - name: Package
-        shell: bash
         env:
-          VERSION: ${{ inputs.version }}
           TARGET: ${{ matrix.target }}
-        run: scripts/package.sh "$VERSION" "$TARGET"
+        run: scripts/package.sh "$TARGET"
+      - name: Package licenses, icon and install scripts
+        if: matrix.extras
+        run: scripts/package.sh extras
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
@@ -57,4 +60,10 @@ jobs:
         with:
           name: cineo-${{ matrix.target }}
           path: dist/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: matrix.features == 'bundled-libmpv'
+        with:
+          name: libmpv-windows
+          path: libmpv/*.7z
           if-no-files-found: error
