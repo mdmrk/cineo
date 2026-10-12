@@ -16,15 +16,15 @@ Stremio-protocol addons.
 
 ## Features
 
-- Install addons by URL
-- Browse catalogs, search and view details
-- Play streams in the app window, including torrents
-- Torrents stream from memory by default, holding only the part around
-  the playback position (1 GB, adjustable), so nothing is written to disk
-- Continue watching and a local library
+- Addons by URL or from the official and community lists
+- Catalogs, discover and search across addons
+- Streams from all addons in one list, with filters and sorting
+- Playback in the app window, torrents included, streamed from memory
+- Subtitles from addons and files, with preferred languages and styling
+- Binge watching, continue watching, favourites and a local library
 - No account and no cloud
 
-Runs on Linux, Windows and macOS.
+Available on Linux, Windows and macOS.
 
 ## Install
 
