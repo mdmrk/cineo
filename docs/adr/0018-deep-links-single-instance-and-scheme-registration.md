@@ -1,6 +1,6 @@
 # 0018. Deep links: typed routes in core, single-instance handover, opt-in scheme registration
 
-- Status: Accepted
+- Status: Accepted (Windows and macOS parts superseded by 0022)
 - Date: 2026-10-08
 
 ## Context

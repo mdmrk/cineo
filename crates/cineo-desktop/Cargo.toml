@@ -12,9 +12,6 @@ publish.workspace = true
 name = "cineo-desktop"
 path = "src/main.rs"
 
-[features]
-bundled-libmpv = []
-
 [dependencies]
 anyhow.workspace = true
 cineo-core.workspace = true

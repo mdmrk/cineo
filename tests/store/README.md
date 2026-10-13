@@ -11,4 +11,4 @@ Rules:
 
 | File | Schema version | Notes |
 |------|----------------|-------|
-| `v1.sql` | 1 (M4) | Two addons out of insertion order; a valid item, an item with a non-http poster, and items with a negative time and an empty content type (to be skipped) |
+| `v1.sql` | 1 | Two addons out of insertion order; a valid item, an item with a non-http poster, and items with a negative time and an empty content type (to be skipped) |

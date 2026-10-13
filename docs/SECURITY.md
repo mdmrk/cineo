@@ -16,7 +16,6 @@ Sources consulted (2026-10-06):
   `192.168.x.x`, cloud metadata endpoints.
 - Addon transport URLs. They often embed **API keys and configuration**.
 - Library and watch history (private).
-- Future account credentials.
 
 ## Threat actors
 
@@ -37,22 +36,22 @@ These are all treated as hostile:
 
 ## Controls
 
-### Network (`cineo-net`, M1)
+### Network (`cineo-net`)
 
 | Risk | Control |
 |------|---------|
 | SSRF / LAN attacks: an addon (or a URL inside its data) points at `127.0.0.1`, `192.168.1.1`, `169.254.169.254` | `NetPolicy` blocks non-public destinations **by default**. IP literals and `localhost` are checked before connecting. Hostnames are checked **after DNS resolution inside the resolver**: the connection only uses checked addresses, which defeats DNS rebinding. Blocked: loopback, RFC 1918, link-local, CGNAT, multicast, broadcast, documentation, benchmarking, reserved, unspecified, plus IPv6 forms embedding IPv4 (mapped, NAT64, 6to4). |
-| Self-hosted addons on the LAN | Explicit opt-in only: `--allow-private-network` (CLI) or the "Allow local network addresses" setting (off by default, read at startup; `private_networks_stay_blocked_unless_asked_for`). Planned: a per-addon trust flag set at install time with a clear prompt. A public addon can never cause private-network requests. |
+| Self-hosted addons on the LAN | Explicit opt-in only: `--allow-private-network` (CLI) or the "Allow local network addresses" setting (off by default, read at startup; `private_networks_stay_blocked_unless_asked_for`). There is no per-addon trust (TECHNICAL_DEBT.md). A public addon can never cause private-network requests. |
 | Redirect-based bypass | Every redirect hop is re-validated: scheme, destination and https→http downgrade (refused). At most 5 hops. |
 | Proxy bypasses the resolver check | System proxies are disabled for addon traffic (INFERRED necessity: a proxy resolves names itself). |
 | Scheme abuse (`file:`, `ftp:`, `data:`) | Only `http`/`https` for addons and images. |
 | Oversized responses / decompression bombs | Limit on **decoded** bytes (default 8 MiB), counted while streaming. `Content-Length` is checked early. |
 | Slow-loris addons | Total request timeout of 20 s, connect timeout of 10 s. |
-| Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. Fuzzing is planned for the parsers ([DEVELOPMENT.md](DEVELOPMENT.md#testing)). |
+| Malformed JSON | serde_json (recursion limit 128). Lenient field-level parsing never panics. The parsers are not fuzzed. |
 | Update check reveals usage to GitHub | Once per start, `api.github.com/repos/mdmrk/cineo/releases/latest` is fetched through the same `AddonClient` and `NetPolicy` (1 MiB limit). It sends only the `Cineo/<version>` user agent; GitHub sees the IP address. On by default; Settings → About → "Check for updates" turns it off before the next start (`with_update_checks_off_nothing_is_fetched_or_shown`). Only the version is read from the response; the release page link is built by Cineo, not taken from it. |
 | Credential leakage | Transport URLs with userinfo are rejected. Logs and errors include only the origin and resource path, never full addon URLs. Error messages from the HTTP stack are scrubbed of URLs. |
 
-### Player (`cineo-player`, M3; embedded since ADR-0014)
+### Player (`cineo-player`, ADR-0014)
 
 Playback runs in libmpv inside the Cineo window. There is no external mpv
 process and no IPC socket.
@@ -62,13 +61,13 @@ process and no IPC socket.
 | Option injection via the URL (`--script=…`) | Load media with `loadfile` as an argument array (`mpv_command`, argv). Never build command lines from addon data. Never use `mpv_command_string`-style string commands. Embedded headers are added one at a time with `change-list http-header-fields append`, so a value is never parsed as a list (VERIFIED: a value with a comma arrives intact, `real_libmpv_plays_to_the_end_with_headers_and_tracks`). The title goes through the `force-media-title` property, not the `--title` option (which expands `${…}`). Resuming uses a `seek` after `file-loaded`. |
 | Dangerous mpv protocols (`edl://`, `lavfi://`, `av://`, `file://`, `memory://`, `fd://`) | Only `http`/`https` URLs from addons reach mpv, plus loopback URLs issued by `cineo-stream` (ADR-0010). Local files are allowed only when the **user** picked them. |
 | Untrusted playlists | Do not enable `--load-unsafe-playlists`. |
-| `ytdl` hook running an external program on addon URLs | Set `ytdl=no` (and `load-scripts=no`). `ytId` support (v0.x) may enable it only for URLs Cineo builds from a validated YouTube id (`[A-Za-z0-9_-]{11}`), decided by its own ADR. |
-| User mpv config/scripts changing behavior | Set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=auto-safe` (`vaapi,auto-safe` on Linux) before `mpv_initialize`; there is no IPC server (`cineo-player`, `embedded::OPTIONS`). The one per-playback option, `slang`, is built from Cineo's own language table, never from addon data. Revisit if users want their own config. |
+| `ytdl` hook running an external program on addon URLs | Set `ytdl=no` (and `load-scripts=no`). `ytId` streams are not played. |
+| User mpv config/scripts changing behavior | Set `config=no`, `load-scripts=no`, `ytdl=no`, `osc=no`, `terminal=no`, `input-default-bindings=no`, `input-vo-keyboard=no`, `hwdec=vaapi,auto-safe` before `mpv_initialize`; there is no IPC server (`cineo-player`, `embedded::OPTIONS`). The one per-playback option, `slang`, is built from Cineo's own language table, never from addon data. Revisit if users want their own config. |
 | Header injection via `proxyHeaders` | Header names must be RFC 7230 tokens, and values must not contain CR/LF/NUL. Otherwise the stream is rejected. |
 | Raw command passthrough from the UI | The UI sends typed `PlayerCommand`s only (`embedded::PlayerCommand`: pause, seek, volume, mute, track ids, stop), formatted from numbers by `cineo-player`. There is no "send arbitrary mpv command" path, unlike shell-ng. |
 | Track names from the media file | Shown as plain text, one line, at most 60 characters. The same applies to addon subtitle languages and labels in the Subtitles menu. |
-| Loading a planted libmpv | libmpv is looked up next to the executable first, then at the copy that Windows release builds write to `<cache dir>/libmpv/<version>/` (by full path), then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. The written copy is in a user-writable directory and is reused when its size matches, not re-hashed on every start: the same user could replace the executable too. On Windows the system search order applies to the bare names, which are tried only if that copy could not be written (UNKNOWN whether it should be restricted). |
-| Tampered downloads | `install.sh` and `install.ps1` check every file against the release's `SHA256SUMS` before installing anything; release files also have build-provenance attestations. The CI pins the bundled libmpv archive by SHA-256. Checksums from the same release protect against corrupted or swapped mirror files, not against a compromised release. |
+| Loading a planted libmpv | libmpv is looked up next to the executable first, then on the system's library path (`embedded::ffi`). Whoever can write the install directory already controls the executable. |
+| Tampered downloads | `install.sh` checks every file against the release's `SHA256SUMS` before installing anything; release files also have build-provenance attestations. Checksums from the same release protect against corrupted or swapped mirror files, not against a compromised release. |
 
 ### Subtitles
 
@@ -92,7 +91,7 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 - The files are deleted when the playback ends, and leftovers from a crash
   are deleted when the next playback starts.
 
-### Deep links (v0.x)
+### Deep links (ADR-0018)
 
 - `stremio://` and `cineo://` links come from web pages and other apps, so
   they are untrusted. They are parsed into an allowlist of typed routes;
@@ -108,32 +107,28 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   link only sets a prompt that shows the full manifest URL
   (`an_install_link_installs_nothing_until_accepted`).
 - A running Cineo accepts links from new launches on `<data dir>/cineo.sock`
-  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`)
-  or, on Windows, a named pipe that rejects remote clients. One line of at
-  most 8 KiB is read, and it is handled like any other link.
+  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`).
+  One line of at most 8 KiB is read, and it is handled like any other link.
 - Registering Cineo for `stremio://` and `cineo://` is opt-in from Settings
   and per user only.
 
-### Streaming engine (M9/M10, ADR-0010)
+### Streaming engine (ADR-0010)
 
 | Risk | Control |
 |------|---------|
-| Other local users or web pages reach the engine's HTTP server (as with any localhost service) | Implemented (M9): binds `127.0.0.1` only; a random 128-bit per-session path token, compared in constant time; `GET`/`HEAD` only; no CORS headers; the `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defense). Test: `requests_without_the_token_or_from_a_foreign_host_are_refused` |
-| Disk exhaustion | Implemented (M9): only the torrent being played is on disk. Its data is deleted when it stops, and data left by a crash is deleted when the engine starts (`stopping_deletes_the_torrent_data`, `leftover_torrent_data_is_deleted_at_start`, `leftover_torrents_are_deleted_and_nothing_else`). "Torrent data" keeps only a window around the playback position: on disk 2 to 8 GB (`disk_mode_keeps_only_its_window_on_disk`, ADR-0020), or in memory (the default, ADR-0019), where nothing of the torrent is written to disk (`memory_mode_plays_a_file_larger_than_its_window_without_disk`). Either can go over the window by the pieces in flight and partial pieces left by dead peers (TECHNICAL_DEBT.md) |
-| Path traversal via torrent or archive file names | File names from torrents and archives never become filesystem paths. Torrent storage is `<cache>/<info hash>/<piece index>` (`downloaded_data_is_stored_by_hash_and_piece_index_only`, ADR-0020); the cache directory is `0700` on Unix |
-| P2P exposure (IP visible to peers, uploads) | Implemented (M9): a notice before the first torrent plays, saying the IP is visible and that Cineo uploads (`the_first_torrent_play_shows_the_p2p_notice`); a Settings switch that hides and blocks torrent streams (`turning_p2p_off_hides_torrent_streams`, `settings_switch_p2p_off`); `behaviorHints.p2p` labels on installed addons. The engine starts only when a torrent is played (by construction in the desktop shell; no test) |
-| Malicious archives (bombs, huge member counts) | Member count, path length and decompressed-size limits. `fileMustInclude` patterns run with a size-limited regex engine (no backtracking) |
-| NZB server credentials | Stored in the OS keyring only. Addon-supplied `servers` entries are shown to the user before use |
+| Other local users or web pages reach the engine's HTTP server (as with any localhost service) | binds `127.0.0.1` only; a random 128-bit per-session path token, compared in constant time; `GET`/`HEAD` only; no CORS headers; the `Host` header must be `127.0.0.1:<port>` or `localhost:<port>` (DNS-rebinding defense). Test: `requests_without_the_token_or_from_a_foreign_host_are_refused` |
+| Disk exhaustion | only the torrent being played is on disk. Its data is deleted when it stops, and data left by a crash is deleted when the engine starts (`stopping_deletes_the_torrent_data`, `leftover_torrent_data_is_deleted_at_start`, `leftover_torrents_are_deleted_and_nothing_else`). "Torrent data" keeps only a window around the playback position: on disk 2 to 8 GB (`disk_mode_keeps_only_its_window_on_disk`, ADR-0020), or in memory (the default, ADR-0019), where nothing of the torrent is written to disk (`memory_mode_plays_a_file_larger_than_its_window_without_disk`). Either can go over the window by the pieces in flight and partial pieces left by dead peers (TECHNICAL_DEBT.md) |
+| Path traversal via torrent file names | File names from torrents never become filesystem paths. Torrent storage is `<cache>/<info hash>/<piece index>` (`downloaded_data_is_stored_by_hash_and_piece_index_only`, ADR-0020); the cache directory is `0700` |
+| P2P exposure (IP visible to peers, uploads) | a notice before the first torrent plays, saying the IP is visible and that Cineo uploads (`the_first_torrent_play_shows_the_p2p_notice`); a Settings switch that hides and blocks torrent streams (`turning_p2p_off_hides_torrent_streams`, `settings_switch_p2p_off`); `behaviorHints.p2p` labels on installed addons. The engine starts only when a torrent is played (by construction in the desktop shell; no test) |
 | Trackers and DHT contacting private networks | Peer TCP connections and HTTP trackers go through a loopback SOCKS5 proxy with a random per-session password that refuses non-public addresses unless private networks are allowed (`loopback_peers_are_blocked_unless_private_networks_are_allowed`, `non_public_targets_are_refused_by_default`). Tracker URLs on a literal non-public IP are dropped (`trackers_on_non_public_addresses_are_dropped_by_default`). No incoming connections, UPnP or local service discovery. **Gap:** UDP trackers by host name and the DHT do not go through the proxy (TECHNICAL_DEBT.md) |
 
-### Filesystem and persistence (M4)
+### Filesystem and persistence
 
-- All paths are derived from platform data directories. Addon data never
+- All paths are derived from the XDG data and cache directories. Addon data never
   forms a path; ids are stored as data, never used as file names.
 - SQLite queries use bound parameters only (`hostile_ids_are_stored_as_data`).
-- On Unix the data directory is created with mode `0700`, because the
+- The data directory is created with mode `0700`, because the
   library and the addon URLs are private (`data_directory_is_private_to_the_user`).
-  On Windows the per-user profile ACLs apply.
 - A database that is corrupt or has a newer schema is never written to or
   replaced; the user is told (`corrupt_file_is_reported_and_left_untouched`,
   `newer_schema_is_refused_and_left_untouched`). `cineo doctor` opens it
@@ -145,15 +140,13 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   lenient parser as an addon response, and only playable sources are kept
   (`playable_streams_survive_saving_and_others_are_not_saved`,
   `an_unreadable_saved_stream_is_dropped_and_the_item_kept`).
-- Secrets (future account tokens) go to the OS keyring. They are never
-  written to SQLite, logs or exports.
 
 ### Process execution
 
 No shell is ever invoked with addon-controlled input. Opening `externalUrl`
 in the browser requires a user confirmation and an `http(s)` scheme.
 
-### Desktop UI (M5, ADR-0011)
+### Desktop UI (ADR-0011)
 
 - Images are fetched through `cineo-net` with the same network policy and a
   4 MiB size cap. No other image loader (egui's `http` or `file`) is
@@ -207,7 +200,7 @@ must:
 2. Justify it in an ADR.
 3. Document every `unsafe` block with a `// SAFETY:` comment.
 
-The one exception so far is `cineo-player` (ADR-0014): its own lint
+The one exception is `cineo-player` (ADR-0014): its own lint
 table sets `unsafe_code = "deny"`, and only the modules `embedded::ffi`
 (libmpv bindings) and `embedded::render` (the OpenGL renderer) allow it.
 That table is a copy of the root `[workspace.lints]` with only
@@ -217,5 +210,6 @@ That table is a copy of the root `[workspace.lints]` with only
 
 Do not open public issues for vulnerabilities. Use GitHub's private
 vulnerability reporting on this repository ("Security" tab → "Report a
-vulnerability"). We aim to acknowledge reports within 7 days. There is no
-supported release yet, so fixes land on `main`.
+vulnerability"). We aim to acknowledge reports within 7 days. Only the
+latest release is supported; fixes land on `main` and ship in the next
+release.

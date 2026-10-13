@@ -108,7 +108,7 @@ async fn run(cli: Cli) -> Result<()> {
     let data_dir = || {
         data_dir
             .as_deref()
-            .context("the platform reports no home directory; pass --data-dir")
+            .context("no home directory; pass --data-dir")
     };
     let client = || {
         AddonClient::new(NetPolicy {

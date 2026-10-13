@@ -1,7 +1,7 @@
 # Addon protocol
 
 This document defines the protocol surface Cineo implements, and how. It is
-the reference for `cineo-core::addon` (from Milestone 1 on). Implementation
+the reference for `cineo-core::addon`. Implementation
 status per feature lives in [COMPATIBILITY.md](COMPATIBILITY.md).
 
 ## Sources and how claims are labelled
@@ -24,7 +24,7 @@ differences](#doc-vs-reference-differences).
 
 | Transport | URL form | Cineo |
 |-----------|----------|-------|
-| HTTP(S) | `https://host/[prefix/]manifest.json[?query]` | **Supported (planned M1)** |
+| HTTP(S) | `https://host/[prefix/]manifest.json[?query]` | **Supported** |
 | Legacy | `…/stremio/v1` (JSON-RPC to v1/v2 addons) | Rejected (ADR-0007) |
 | IPFS/IPNS | `ipfs://…/manifest.json` | Rejected (ADR-0007) |
 
@@ -79,7 +79,7 @@ Unknown resource names in a manifest are preserved, not rejected.
 | `config` | optional | — | ignored: the addon's `/configure` page builds the configured manifest URL |
 | `contactEmail` | optional | optional | optional |
 
-Configuration (v0.x):
+Configuration:
 - `configurable` adds a Configure button that opens the transport URL with
   its final `manifest.json` replaced by `configure`, query kept, in the
   system browser. `configurationRequired` addons are not installed; the
@@ -137,7 +137,7 @@ change which addons are asked.
 | subtitles | `{ "subtitles": [Subtitle] }` | `url` must be http(s); missing `lang` → `und` |
 | addon_catalog | `{ "addons": [{ "transportUrl", "manifest" }] }` | Missing `addons` is an error; an entry needs a valid transport URL (legacy `/stremio/v1` URLs are skipped) and a manifest that passes the normal manifest validation, or it is skipped with a warning; a repeated `transportUrl` is skipped (first wins). Other entry fields (`transportName`, `flags`) are ignored. The listed manifest is only shown: installing fetches the addon's own manifest |
 
-### MetaPreview fields Cineo keeps (M1)
+### MetaPreview fields Cineo keeps
 
 `id` (required, non-empty), `type` (required), `name` (absent or null becomes
 `""`), `poster`, `posterShape` (`poster`|`square`|`landscape`, default
@@ -157,18 +157,17 @@ These are listed in COMPATIBILITY.md.
 - Warnings carry a location (`catalogs[2].extra[0]`) and are logged at `warn`
   level by the IO layer.
 
-### Streams (planned, M2)
+### Streams
 
 A stream source is one of `url`, `ytId`, `infoHash`(+`fileIdx`), `externalUrl`,
 `nzbUrl` or the archive sources (`rarUrls`, …) (VERIFIED-DOC). Cineo plays
-**`url` with `http(s)`** first (M3). Other sources are parsed from M2 on and
-shown as "not yet supported" until the local streaming engine supports them
-(ADR-0010: torrents in M9, archives and NZB in M10). They are never fetched
-before then.
+**`url` with `http(s)`** and **`infoHash`** (through `cineo-stream`,
+ADR-0010). The other sources are parsed and listed, but refused with a
+notice naming the source kind; they are never fetched.
 `behaviorHints.proxyHeaders.request` become player HTTP headers only after
 validation (no CR/LF; header names restricted to tokens).
 
-Torrent streams (`infoHash`, M9; ADR-0012):
+Torrent streams (`infoHash`, ADR-0012):
 - The file to play is `fileIdx` if it names a file, else the file whose name
   equals `behaviorHints.filename` (case-insensitive, folders ignored), else
   the largest video file, else the largest file. The SDK documents only the
@@ -179,7 +178,7 @@ Torrent streams (`infoHash`, M9; ADR-0012):
 - Real addons may send no `sources` at all: Torrentio's streams had only
   `infoHash`, `fileIdx` and `behaviorHints.filename` (VERIFIED 2026-10-06).
 
-Subtitles (M6):
+Subtitles:
 - When a stream plays, every addon that supports `subtitles` for the item's
   type and the **video** id is asked for `subtitles/{type}/{videoId}`. The
   extras are `videoHash`, `videoSize` and `filename`, in that order, taken
@@ -187,13 +186,13 @@ Subtitles (M6):
   `models/player.rs` `subtitles_update`).
 - The reference client also fills these extras from values its player
   reports and skips the request when it has none at all. Cineo's player
-  reports none yet, so Cineo always asks, without extras if the stream has no
+  reports none, so Cineo always asks, without extras if the stream has no
   hints (INFERRED to match the reference client, whose player always reports
   something; `subtitle_request_without_hints_has_no_extras`).
 - The stream's own `subtitles` are listed first, then each addon's, in user
   order. Duplicate URLs within one list are dropped.
 
-Binge-watching (`behaviorHints.bingeGroup`, v0.x):
+Binge-watching (`behaviorHints.bingeGroup`):
 - The next video is the one after the playing video in the meta's `videos`
   order. It is skipped when it moves into season 0 from another season, or
   when its `released` date is still in the future (VERIFIED-REF,
@@ -213,7 +212,7 @@ Binge-watching (`behaviorHints.bingeGroup`, v0.x):
 - Cineo extra: with binge-watching on, the notice counts down 10 s of
   playback and then plays the next video without input; Play and × act at
   once. The reference client waits for the end instead (INFERRED from
-  `Player.js`; no UI test yet).
+  `Player.js`; no UI test).
 - A finished video moves its library item on to the next video with a
   1 ms offset, so Continue Watching offers it (VERIFIED-REF,
   `models/player.rs` `item_state_update`, `advance_to_video`). Cineo uses its
@@ -231,7 +230,7 @@ Binge-watching (`behaviorHints.bingeGroup`, v0.x):
 | Duplicate catalogs | unspecified | first wins | reference (+ warning) |
 | The minimal example in `protocol.md` | uses `/subtitle/` in one place | `/subtitles/` | `subtitles` |
 
-## Deep links (v0.x, ADR-0018)
+## Deep links (ADR-0018)
 
 From the SDK's `deep-links.md` (VERIFIED-DOC):
 - **Addon install:** `stremio://<host>/<path>/manifest.json`. This is the
@@ -250,13 +249,12 @@ From the SDK's `deep-links.md` (VERIFIED-DOC):
   the board. The Discover addon segment must be a percent-encoded manifest
   URL (`links_parse_into_routes_and_anything_else_is_rejected`).
 
-## Caching (planned, v0.x)
+## Caching
 
 The SDK sets `Cache-Control: max-age`, `stale-while-revalidate` and
 `stale-if-error` on responses (VERIFIED-DOC). Whether the reference client
-honors them in the app is **UNKNOWN**. Cineo plans an in-memory cache keyed by
-the full request URL that honors `max-age` and `stale-if-error`, with an upper
-bound. There is no caching before M2.
+honors them in the app is **UNKNOWN**. Cineo does not cache addon
+responses.
 
 ## Errors, timeouts and partial failure
 

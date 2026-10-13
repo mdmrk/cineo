@@ -33,7 +33,6 @@ fn request(url: &str) -> PlayRequest {
 }
 
 #[test]
-#[cfg(target_os = "linux")]
 fn linux_tries_vaapi_before_the_other_hardware_decoders() {
     let hwdec = OPTIONS.iter().find(|(name, _)| *name == "hwdec");
     assert_eq!(hwdec, Some(&("hwdec", "vaapi,auto-safe")));

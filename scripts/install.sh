@@ -20,8 +20,8 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-[ "$(uname -s)" = Linux ] || die "this script is for Linux; see https://github.com/$repo/releases"
-[ "$(uname -m)" = x86_64 ] || die "no build for $(uname -m) yet"
+[ "$(uname -s)" = Linux ] || die "Cineo runs on Linux only"
+[ "$(uname -m)" = x86_64 ] || die "no build for $(uname -m)"
 command -v curl >/dev/null || die "curl is required"
 command -v sha256sum >/dev/null || die "sha256sum is required"
 

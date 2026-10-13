@@ -1,8 +1,8 @@
 # AGENTS.md — engineering contract
 
-Cineo: an independent Rust desktop media center for Stremio-protocol addons.
-Goals, scope and milestones: `docs/ROADMAP.md`. Current state: its
-milestone table) and `docs/COMPATIBILITY.md`.
+Cineo: an independent Rust desktop media center for Stremio-protocol addons,
+for Linux x86_64 only (ADR-0022). Scope and current state:
+`docs/COMPATIBILITY.md`. Known limitations: `docs/TECHNICAL_DEBT.md`.
 
 ## Architecture invariants (docs/ARCHITECTURE.md, docs/adr/)
 - Dependency direction: shells → IO crates → `cineo-core`. **`cineo-core`

@@ -124,40 +124,26 @@ pub(crate) fn lib() -> Result<&'static Lib, String> {
     LIB.get_or_init(load).as_ref().map_err(Clone::clone)
 }
 
-#[cfg(target_os = "linux")]
 const NAMES: &[&str] = &["libmpv.so.2", "libmpv.so"];
-#[cfg(target_os = "macos")]
-const NAMES: &[&str] = &["libmpv.2.dylib", "libmpv.dylib"];
-#[cfg(windows)]
-const NAMES: &[&str] = &["libmpv-2.dll", "mpv-2.dll"];
-#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
-const NAMES: &[&str] = &[];
-
-static BUNDLED: OnceLock<PathBuf> = OnceLock::new();
-
-pub(crate) fn set_bundled(path: PathBuf) {
-    let _ = BUNDLED.set(path);
-}
 
 fn candidates() -> Vec<PathBuf> {
     let beside = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(PathBuf::from));
-    candidates_from(beside.as_deref(), BUNDLED.get().map(PathBuf::as_path))
+    candidates_from(beside.as_deref())
 }
 
-fn candidates_from(beside: Option<&Path>, bundled: Option<&Path>) -> Vec<PathBuf> {
+fn candidates_from(beside: Option<&Path>) -> Vec<PathBuf> {
     let mut paths: Vec<PathBuf> = beside
         .iter()
         .flat_map(|dir| NAMES.iter().map(|name| dir.join(name)))
         .collect();
-    paths.extend(bundled.map(Path::to_path_buf));
     paths.extend(NAMES.iter().map(PathBuf::from));
     paths
 }
 
 fn load() -> Result<Lib, String> {
-    let mut last = String::from("no library name for this platform");
+    let mut last = String::from("libmpv not found");
     for path in candidates() {
         if path.components().count() > 1 && !path.exists() {
             continue;
@@ -442,16 +428,14 @@ mod tests {
     }
 
     #[test]
-    fn the_bundled_library_comes_after_the_executable_dir_and_before_the_system() {
+    fn the_executable_dir_comes_before_the_system() {
         let exe_dir = Path::new("/opt/cineo");
-        let bundled = Path::new("/cache/libmpv/0.3.0/libmpv-2.dll");
-        let paths = candidates_from(Some(exe_dir), Some(bundled));
+        let paths = candidates_from(Some(exe_dir));
         let mut expected: Vec<PathBuf> = NAMES.iter().map(|name| exe_dir.join(name)).collect();
-        expected.push(bundled.to_path_buf());
         expected.extend(NAMES.iter().map(PathBuf::from));
         assert_eq!(paths, expected);
         assert_eq!(
-            candidates_from(None, None),
+            candidates_from(None),
             NAMES.iter().map(PathBuf::from).collect::<Vec<_>>()
         );
     }

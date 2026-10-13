@@ -96,7 +96,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
-            if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
+            if let Err(err) = instance::listen(&data_dir, move |link| {
                 let _ = tx.send(Msg::Link(link));
                 ctx.request_repaint();
             }) {

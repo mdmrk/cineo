@@ -1,6 +1,6 @@
 # 0014. Embedded playback with libmpv, loaded at runtime
 
-- Status: Accepted
+- Status: Accepted (Windows and macOS parts superseded by 0022)
 - Date: 2026-10-07
 - Supersedes: 0004
 

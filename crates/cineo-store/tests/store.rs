@@ -67,7 +67,6 @@ fn fresh_database_is_created_at_the_latest_schema_version() {
     assert_eq!(user_version(&dir.join(DB_FILE)), SCHEMA_VERSION);
 }
 
-#[cfg(unix)]
 #[test]
 fn data_directory_is_private_to_the_user() {
     use std::os::unix::fs::PermissionsExt;

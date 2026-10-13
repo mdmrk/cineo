@@ -4,7 +4,7 @@
 mod ffi;
 mod render;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
@@ -148,11 +148,6 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 15] = [
     (SEEKING, "seeking", ffi::FORMAT_FLAG),
 ];
 
-#[cfg(target_os = "linux")]
-const HWDEC: &str = "vaapi,auto-safe";
-#[cfg(not(target_os = "linux"))]
-const HWDEC: &str = "auto-safe";
-
 const OPTIONS: &[(&str, &str)] = &[
     ("config", "no"),
     ("load-scripts", "no"),
@@ -163,20 +158,13 @@ const OPTIONS: &[(&str, &str)] = &[
     ("input-vo-keyboard", "no"),
     ("osd-level", "0"),
     ("osd-bar", "no"),
-    ("hwdec", HWDEC),
+    ("hwdec", "vaapi,auto-safe"),
     ("vo", "libmpv"),
     ("idle", "yes"),
     ("keep-open", "no"),
     ("video-timing-offset", "0"),
     ("audio-client-name", "Cineo"),
 ];
-
-/// Adds a libmpv shipped with the app to the lookup, after the executable's
-/// directory and before the system names. Only the first call counts, and
-/// only before the first playback.
-pub fn use_bundled_libmpv(path: PathBuf) {
-    ffi::set_bundled(path);
-}
 
 /// A playback running in this process. Dropping it stops playback; mpv shuts
 /// down once the last [`Renderer`] for it is dropped too.

@@ -24,29 +24,21 @@ Stremio-protocol addons.
 - Binge watching, continue watching, favourites and a local library
 - No account and no cloud
 
-Available on Linux, Windows and macOS.
+Linux x86_64 only.
 
 ## Install
-
-Linux:
 
 ```sh
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
 ```
 
-Windows (PowerShell):
-
-```powershell
-irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
-```
-
-On Linux, Cineo needs mpv installed. On Windows, it is included. Or
-download the executable from
-[Releases](https://github.com/mdmrk/cineo/releases) and run it.
+Cineo needs libmpv (the mpv package of your distribution). Or download
+the executable from [Releases](https://github.com/mdmrk/cineo/releases)
+and run it. To uninstall: `… | sh -s -- --uninstall`.
 
 ## Run from source
 
-You need Rust and libmpv (see above).
+You need Rust and libmpv.
 
 ```sh
 git clone https://github.com/mdmrk/cineo && cd cineo
@@ -59,7 +51,6 @@ included, mainly for debugging addons.
 ## Learn more
 
 - [What works](docs/COMPATIBILITY.md)
-- [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Development](docs/DEVELOPMENT.md)
 - [Security](docs/SECURITY.md)

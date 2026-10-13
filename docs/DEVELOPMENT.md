@@ -123,7 +123,7 @@ first test needs it.
 ### Pyramid
 
 ```
-            ┌───────────────┐  few: E2E (CLI binary vs mock addon; later GUI smoke)
+            ┌───────────────┐  few: E2E (CLI binary vs mock addon) and headless UI tests
           ┌─┴───────────────┴─┐  some: integration (IO crate vs local mock / temp DB / real libmpv, opt-in)
       ┌───┴───────────────────┴───┐  many: unit + protocol fixtures (pure core, fast)
 ```
@@ -132,8 +132,8 @@ first test needs it.
 |-------|-------|-------|-----------|
 | Unit | `#[cfg(test)] mod tests` next to the code | std test harness | always |
 | Protocol fixtures | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures | always |
-| Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`, chosen in M1) | always |
-| Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always (M4+) |
+| Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`) | always |
+| Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always |
 | Player | `crates/cineo-player/src/` (unit tests) | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
 | E2E | `crates/cineo-cli/tests/` | built binary (`CARGO_BIN_EXE_cineo`) + mock addon | always |
 | Live addons | `scripts/` (manual) | real public addons | never in CI (flaky, external) |
@@ -157,28 +157,20 @@ first test needs it.
 - Assertions on warnings compare **locations**, so that wording changes do
   not break tests.
 
-### Not set up yet
-
-Added only with a concrete first use: property tests (`proptest`, e.g. URL
-encoding round-trips), fuzzing (`cargo-fuzz`; targets: the manifest, catalog,
-meta and stream parsers and mpv's track-list JSON; nightly, not per PR), snapshot
-tests (`insta`, only for large structured output), benchmarks (only for a
-measured problem), and a replayed compatibility corpus (v1.0 goal).
-
 Commands are under [Everyday commands](#everyday-commands).
 
 ### Per-subsystem strategy
 
 | Subsystem | Strategy |
 |-----------|----------|
-| Protocol parsing | Fixtures for basic, quirks and invalid cases; every lenient rule has a fixture case; fuzz later |
+| Protocol parsing | Fixtures for basic, quirks and invalid cases; every lenient rule has a fixture case |
 | URL building | Table tests including the docs' example, reserved chars, unicode, prefix and query transport URLs |
 | Filtering/planning | Fixture manifests × request matrix |
 | Network policy | Pure IP/URL classification tables + mock-server tests (blocked loopback, redirects, size, gzip bomb, timeout, no URL leak in errors) |
-| Aggregation (M2) | Reducer tests: effects emitted, partial failure, stale responses dropped |
-| Player (M3, ADR-0014) | Commands built from typed values; event mapping tables; real-libmpv playback `#[ignore]`; controls via kittest |
-| Persistence (M4) | Round-trip; migration from each historical schema fixture; corruption handling |
-| GUI (M5) | Core-level tests carry the logic; UI smoke test only |
+| Aggregation | Reducer tests: effects emitted, partial failure, stale responses dropped |
+| Player (ADR-0014) | Commands built from typed values; event mapping tables; real-libmpv playback `#[ignore]`; controls via kittest |
+| Persistence | Round-trip; migration from each historical schema fixture; corruption handling |
+| GUI | Core-level tests carry the logic; `egui_kittest` tests drive the views headlessly |
 
 ## Command-line tool
 
@@ -202,9 +194,8 @@ Output of `catalog`: one tab-separated line per item: `id  type  year  name`.
 Output of `library`: `id  video-id  position/duration  name`, most recent
 first.
 
-Installed addons and the library live in one SQLite database, by default in
-`~/.local/share/cineo/cineo.db` (Linux), `%APPDATA%\Cineo\data\cineo.db`
-(Windows) or `~/Library/Application Support/Cineo/cineo.db` (macOS).
+Installed addons and the library live in one SQLite database, by default
+`$XDG_DATA_HOME/cineo/cineo.db` (`~/.local/share/cineo/cineo.db`).
 `--data-dir <dir>` uses another directory. `addon list` prints full addon
 URLs, which can contain your addon configuration; do not paste them publicly.
 A database that is corrupt or from a newer Cineo is never modified: commands
@@ -229,8 +220,8 @@ subsystem logs and how to diagnose it.
 - GUI: `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
   `RUST_LOG` rules. libmpv's own messages use the target `libmpv`: its
   errors are always shown, its warnings (about the media, some on every
-  frame) only with `-v`. A log file and a diagnostics view are not implemented
-  yet ([TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)).
+  frame) only with `-v`. There is no log file or diagnostics view
+  ([TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)).
 
 #### Span conventions
 
@@ -319,9 +310,9 @@ The issue templates ask for these.
 
 The UI tests (`crates/cineo-desktop/tests/ui.rs`) check rendering and the
 actions clicks produce. This script covers what they cannot: real windows,
-real addons, libmpv, and restarts. Run it before marking a GUI milestone done,
-on **Linux and Windows**, and record the date, OS and result in
-[ROADMAP.md](ROADMAP.md) or the PR.
+real addons, libmpv, and restarts. Run it before a release that changes the
+GUI, player or engine, and record the date, desktop session (Wayland or X11)
+and result in the PR.
 
 ### Setup
 
@@ -351,7 +342,7 @@ on **Linux and Windows**, and record the date, OS and result in
   Then start Cineo with `--allow-private-network` so it may reach
   `127.0.0.1`.
 
-### Steps (success scenario 1 in ROADMAP.md)
+### Steps
 
 | # | Do | Expect |
 |---|----|--------|
@@ -366,7 +357,7 @@ on **Linux and Windows**, and record the date, OS and result in
 | 9 | Open the item from Continue watching → Play | Playback resumes at ~10 minutes |
 | 10 | Discover → pick "Popular — Cinemeta", a genre, "Load more" | Items change with the genre; more items append |
 | 11 | Open a series → choose a season → an episode | Episode list for that season; streams load for the episode |
-| 12 | Torrent streams | See [Torrents (M9)](#torrents-m9) |
+| 12 | Torrent streams | See [Torrents](#torrents) |
 | 13 | Library → Remove the item | It disappears, and stays gone after a restart |
 | 14 | Install `http://127.0.0.1:9/manifest.json` without `--allow-private-network` | Error mentions the network policy; nothing crashes |
 | 15 | Addons → Discover addons → Official, then Community → Install one | Lists load; installed addons show "Installed"; the new addon joins the installed list |
@@ -374,7 +365,7 @@ on **Linux and Windows**, and record the date, OS and result in
 Also watch the `-v` log: no panics, and no full addon or stream URLs (only
 origins and resource paths).
 
-### Torrents (M9)
+### Torrents
 
 Use a torrent of content you may share (for example a public-domain film
 from the Internet Archive; each item has a torrent whose info hash is on
@@ -432,7 +423,7 @@ Re-check them when adding.
 | `clap` | 4.6.7 | CLI arguments (cli) | MIT/Apache |
 | `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
 | `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
-| `etcetera` | 0.11.0 | Platform data directory (store) | MIT/Apache |
+| `etcetera` | 0.11.0 | XDG data and cache directories (store) | MIT/Apache |
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
@@ -448,22 +439,21 @@ Re-check them when adding.
 | `sys-locale` | 0.3.2 | The OS locale for the default UI language (desktop) | MIT/Apache |
 | `libloading` | 0.9.0 | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC |
 
-`tokio` features `io-util` and `sync` were added for the mpv player (M3);
-`process` was dropped with the external mpv player (2026-10-07). The player
-uses `serde_json` for mpv's track list.
+`tokio` features `io-util` and `sync` serve the mpv player; `process` was
+dropped with the external mpv player (2026-10-07). The player uses
+`serde_json` for mpv's track list.
 
 `rusqlite` drops its default features (`cache`, and an FFI backend used only
 on wasm). `bundled` compiles SQLite from source, so no system library is
-needed on any OS. `etcetera` MSRV: 1.87 (M4).
+needed. `etcetera` MSRV: 1.87.
 
-M5 (2026-10-06): the egui crates have MSRV 1.95. Through `eframe`, the
-tree gains `arboard`/`clipboard-win` (BSL-1.0, allowlisted, see LEGAL.md)
-for copy and paste. Wayland and X11 libraries are loaded at run time
+egui (2026-10-06): the egui crates have MSRV 1.95. Through `eframe`, the
+tree gains `arboard` for copy and paste. Wayland and X11 libraries are loaded at run time
 (`dlopen`), so no system development packages are needed to build.
 `egui_kittest` was not in the plan; it is egui's own test harness and
 replaces a hand-written AccessKit walker.
 
-M9 (2026-10-06): `librqbit` (chosen in ADR-0012; `cratetorrent` is
+librqbit (2026-10-06, ADR-0012; `cratetorrent` is
 unmaintained) brings its own `axum` and `reqwest`. Its default features
 are off; `rust-tls` keeps TLS on rustls. The server uses `hyper` directly
 because it serves one route and needs exact control of range responses;
@@ -503,20 +493,6 @@ card size (release build): decode plus resize went from 6.96 ms to
 only new crate in `Cargo.lock`. RGBA images are resized with premultiplied
 alpha (`colour_and_transparency_survive_downscaling`).
 
-### Planned (researched, not added)
-
-Researched with versions as of 2026-10-06. Rows for crates that were
-added since are in the table above. One open question from that research:
-`reqwest`'s `rustls` feature uses aws-lc-rs, whose C build on Windows CI is
-**UNKNOWN** (fallback: `rustls-no-provider` + ring).
-
-| Concern | Choice | Version | License | MSRV | Added in | Why / alternatives considered |
-|---------|--------|---------|---------|------|----------|-------------------------------|
-| Secrets | `keyring` | 4.2.0 | MIT/Apache | 1.88 | M10 (NZB server credentials) | OS keychains. Not needed until there are credentials; cloud sync is not planned |
-| Property tests (dev) | `proptest` | 1.11.0 | MIT/Apache | 1.85 | When first useful | URL round-trips, parser robustness |
-| Snapshots (dev) | `insta` | 1.49.0 | Apache | 1.66 | Only if needed | Large CLI outputs |
-| Fuzzing | `cargo-fuzz` / `libfuzzer-sys` | 0.13.2 / 0.4.13 | MIT/Apache (+NCSA) | — | After M2 | Parser fuzz targets |
-
 ### Deliberately not used
 
 | Crate | Reason |
@@ -524,11 +500,11 @@ added since are in the table above. One open question from that research:
 | `libmpv2` (LGPL-2.1) | Would compile LGPL code into the binary and link libmpv at build time; own bindings loaded at runtime instead (ADR-0014) |
 | `slint` | GPL or proprietary licensing |
 | `serde_with` | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit |
-| `chrono` / `jiff` / `time` | Not needed until dates are modelled (M2 `released`). Decide then; `jiff` is the current front-runner |
-| `directories` 6.0.0 | Pulls in `option-ext` (MPL-2.0, not in the `.config/deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths with only `cfg-if`/`windows-sys` (2026-10-06) |
-| `sqlx` / `redb` | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen in M4 |
+| `chrono` / `jiff` / `time` | The only date parsed is `released`, by a small ISO 8601 reader in the core (`addon::meta`) |
+| `directories` 6.0.0 | Pulls in `option-ext` (MPL-2.0, not in the `.config/deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths (2026-10-06) |
+| `sqlx` / `redb` | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen instead |
 | `async-trait` | Native async fn in traits is enough; effects are data (ADR-0001) |
-| `figment` / config crates | No configuration file yet |
+| `figment` / config crates | No configuration file; settings live in SQLite |
 | OpenSSL (`native-tls`) | rustls only; banned in `.config/deny.toml` |
 
 ### Tools (not crate dependencies)
@@ -541,22 +517,22 @@ added since are in the table above. One open question from that research:
 
 ## Releasing
 
-- **Versioning:** SemVer. `0.x` until v1.0, and anything may change in
-  `0.x`. The workspace version in the root `Cargo.toml` is the single source.
+- **Versioning:** SemVer. The workspace version in the root `Cargo.toml` is
+  the single source.
 - **Tags:** `vMAJOR.MINOR.PATCH`, with an optional pre-release suffix
-  (`v0.1.0-alpha.1`). Tags containing `-` become GitHub pre-releases.
+  (`v1.0.1-rc.1`). Tags containing `-` become GitHub pre-releases.
 
 Three workflows start runs; each stage waits for the one before it:
 
 | Workflow | Trigger | Stages |
 |----------|---------|--------|
-| `ci.yml` | push, pull request | lint, test (Linux, Windows, macOS), cargo-deny, zizmor |
+| `ci.yml` | push, pull request | lint, test, cargo-deny, zizmor |
 | `prerelease.yml` | push to `main` | build → publish `prerelease` |
 | `release.yml` | tag `vX.Y.Z` | checks (`ci.yml`) → build → publish `vX.Y.Z` |
 
 `build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
-x86_64, Windows x86_64 and macOS arm64, puts the files into `dist/` with
-`scripts/package.sh`, and attests build provenance (check a file with
+x86_64, puts the files into `dist/` with `scripts/package.sh`, and attests
+build provenance (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It never publishes. The
 `cineo` CLI is not shipped.
 
@@ -566,26 +542,10 @@ Every release has these files, with the same names in every release so that
 | File | What |
 |------|------|
 | `cineo-x86_64-linux` | The executable; uses the system libmpv |
-| `cineo-x86_64-windows.exe` | The executable with libmpv inside (below) |
-| `cineo-aarch64-macos.tar.gz` | The executable, README and licenses; uses Homebrew's libmpv |
-| `cineo-licenses.zip` | Cineo's license, font licenses, LGPL-2.1 and the libmpv notice |
+| `cineo-licenses.zip` | Cineo's license and the font licenses |
 | `cineo.png` | App icon, used by `install.sh` |
-| `install.sh`, `install.ps1` | Per-user installers (README, Install). Uninstall: `… \| sh -s -- --uninstall`, or `$env:CINEO_UNINSTALL = 1` before `irm … \| iex`. `CINEO_VERSION` picks another release |
-| `SHA256SUMS` | Checksums of all of the above; the installers verify them |
-
-**libmpv on Windows** (ADR-0014, amended 2026-10-12). The build fetches an
-LGPL build of libmpv pinned by SHA-256 in `scripts/libmpv-windows.env` with
-`scripts/fetch-libmpv.sh`, and embeds it through the `bundled-libmpv`
-feature (`CINEO_LIBMPV_DLL` names the DLL at build time). Upstream deletes
-builds after about a month, so the publish jobs keep a copy in a
-`libmpv-<tag>` pre-release of this repository (`scripts/mirror-libmpv.sh`),
-which the fetch script tries first. To update libmpv: pick a new
-`mpv-dev-lgpl-x86_64` build from
-[zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild/releases)
-and change every value in `scripts/libmpv-windows.env`.
-
-To try a Windows-style build elsewhere:
-`CINEO_LIBMPV_DLL=/abs/path/libmpv-2.dll cargo build -p cineo-desktop --features bundled-libmpv`.
+| `install.sh` | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
+| `SHA256SUMS` | Checksums of all of the above; the installer verifies them |
 
 ### Steps
 
@@ -602,20 +562,14 @@ does not run the tests itself (`ci.yml` runs them in parallel). It deletes
 the previous `prerelease` GitHub release and its tag and recreates both at
 the pushed commit.
 
-### Not yet decided (M7)
-
-- Code signing (Windows Authenticode, macOS notarization).
-- How libmpv is bundled on macOS.
-- Reproducible-build verification beyond `--locked` + a pinned toolchain.
+Release artifacts are not code-signed; build provenance attestations and
+`SHA256SUMS` are the integrity checks.
 
 ## Pull requests
 
 - Run `scripts/check.sh` before opening one.
 - **AI assistance** must be disclosed in the PR description. You are
   responsible for every line you submit.
-
-By contributing, you agree that your contributions are licensed under the
-project's MIT license.
 
 By contributing, you agree that your contributions are licensed under the
 project's MIT license.

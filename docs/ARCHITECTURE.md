@@ -1,8 +1,7 @@
 # Architecture
 
-Status: **partly implemented** (M1–M5, see [ROADMAP.md](ROADMAP.md)).
-Decisions are recorded in [adr/](adr/README.md). This
-document describes the target; each section says what exists today.
+Decisions are recorded in [adr/](adr/README.md). Cineo runs on Linux
+x86_64 only (ADR-0022).
 
 ## System overview
 
@@ -12,15 +11,16 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
   validation, request planning, and state reducers. It does no IO, has no
   async and no clock, so it can be tested exhaustively and quickly.
 - **IO crates** perform effects described by the core. These are HTTP, the
-  the player (libmpv) and storage, and each has its own safety policy.
-- **Shells** wire everything together and present state. The CLI comes first;
-  the desktop GUI follows.
+  player (libmpv), storage and the streaming engine, and each has its own
+  safety policy.
+- **Shells** wire everything together and present state: the desktop GUI,
+  and a CLI for debugging addons.
 
 ```mermaid
 flowchart TB
   subgraph Shells
-    CLI[cineo-cli<br/>M1]
-    GUI[cineo-desktop<br/>M5, egui]
+    CLI[cineo-cli]
+    GUI[cineo-desktop<br/>egui]
   end
   subgraph IO
     NET[cineo-net<br/>HTTP + net policy]
@@ -43,10 +43,6 @@ flowchart TB
   MPV -. loopback HTTP .-> STREAM
 ```
 
-Today `cineo-core`, `cineo-net`, `cineo-cli`, `cineo-player`,
-`cineo-store`, `cineo-desktop` and `cineo-stream` exist. The other crates are created by the milestone that
-needs them ([ROADMAP.md](ROADMAP.md)).
-
 ## Dependency direction
 
 `shells → IO crates → core`. Never the reverse.
@@ -60,15 +56,15 @@ needs them ([ROADMAP.md](ROADMAP.md)).
 
 ## Crate boundaries (ADR-0002)
 
-| Crate | Responsibility | Created in |
-|-------|---------------|-----------|
-| `cineo-core` | Protocol model (wire → domain), validation, filtering, URL building, aggregation, library/progress model, reducers | M0 (placeholder) |
-| `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy; later caching | M1 |
-| `cineo-cli` | Headless shell; first end-to-end slice; debugging tool | M1 |
-| `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events | M3 (embedded since ADR-0014) |
-| `cineo-store` | Persistence (installed addons, library, progress) with migrations | M4 |
-| `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` | M5 |
-| `cineo-stream` | Local streaming engine: torrent/archive/NZB sources → loopback HTTP URL (ADR-0010) | M9 |
+| Crate | Responsibility |
+|-------|---------------|
+| `cineo-core` | Protocol model (wire → domain), validation, filtering, URL building, aggregation, library/progress model, reducers |
+| `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy |
+| `cineo-cli` | Headless shell; debugging tool |
+| `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events (ADR-0014) |
+| `cineo-store` | Persistence (installed addons, library, progress, settings) with migrations |
+| `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
+| `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010) |
 
 **When to add a crate:** only when the new code has a different dependency
 set or a different IO boundary from an existing crate. A new *concept* is a
@@ -110,10 +106,8 @@ video in an egui paint callback over the whole window and its own controls
 on top (`cineo-desktop/src/player.rs`). The controls send typed
 `PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
 feeds them. Without libmpv, playback fails with a message saying so.
-Windows release builds carry libmpv inside the executable: the shell writes
-it to the cache directory on start and registers that path with
-`cineo-player`, which tries it after the executable's own directory and
-before the system names.
+`cineo-player` looks for `libmpv.so.2` and `libmpv.so` in the executable's
+directory first, then on the system library path.
 
 mpv's events become `PlayerEvent`s (`Progress`, `Ended`, `Failed`,
 `Closed`) through a small state machine (`tracker`), which the shell turns
@@ -129,8 +123,6 @@ library items, progress). The core defines what is stored: the
 version in `PRAGMA user_version`, append-only migrations run in one
 transaction, and a fixture per released schema (`tests/store/`).
 The API is blocking; async shells call it off the runtime's worker threads.
-Implemented in M4.
-Secrets (future account tokens) go to the OS keyring, never to SQLite.
 
 ### UI boundary (ADR-0011)
 
@@ -138,7 +130,7 @@ The UI renders **state snapshots** and sends **actions**. It holds no business
 logic. That keeps the GUI technology replaceable and lets the CLI exercise
 exactly the same core paths.
 
-Implemented in M5 (`cineo-desktop`):
+In `cineo-desktop`:
 - `view::show(ui, &State, &mut ViewState) -> Vec<Action>` is pure rendering.
   `ViewState` holds presentation only (open page, text being typed). The UI
   tests drive this function headlessly with `egui_kittest`.
@@ -157,11 +149,12 @@ Implemented in M5 (`cineo-desktop`):
   messages up in the thread-local locale. The locale is set from the
   `ui_language` setting every frame. Core returns `Problem` and `Notice` values, never prose.
 
-### Platform abstraction
+### Platform integration
 
-Platform differences (paths, libmpv library names, keyring, URL scheme
-registration) live in IO crates and shells behind small functions or traits.
-They are introduced only when a second platform actually differs.
+Linux only (ADR-0022): XDG data and cache directories (`cineo-store`),
+`libmpv.so.2` (`cineo-player`), a Unix socket for the single-instance
+handover and an `xdg-mime` scheme registration (`cineo-desktop`). Code may
+use `std::os::unix` directly.
 
 ## State model and data flow
 
@@ -229,23 +222,14 @@ path), per playback session and per startup phase. See
 See [DEVELOPMENT.md](DEVELOPMENT.md#testing):
 
 - The core is tested with fixtures and pure assertions.
-- IO crates are tested against local mocks (HTTP mock server, fake mpv
-  socket, temporary SQLite).
-- Shells get end-to-end smoke tests.
+- IO crates are tested against local mocks (HTTP mock server, local
+  torrent seeder, temporary SQLite); real-libmpv tests are opt-in.
+- Shells get end-to-end tests: the CLI binary against a mock addon, and the
+  desktop views headlessly with `egui_kittest`.
 
-## Future extension points
+## Deep links (ADR-0018)
 
-- **Transports.** The `TransportUrl` type could gain a variant if another
-  transport is ever accepted. That is currently rejected (ADR-0007).
-- **Embedded player.** A second implementation of the player boundary using
-  the libmpv render API.
-- **Sync.** Not planned for now (owner decision 2026-10-06). If that
-  changes, it would be a crate behind the persistence boundary, with a new
-  ADR.
-- **Stream sources.** The "stream resolver" turns non-URL sources into
-  playable URLs: `cineo-stream`, M9/M10 (ADR-0010).
-- **Deep links (ADR-0018).** `stremio://` and `cineo://` URLs parse into
-  typed routes in the core (`app::parse_link`). The desktop shell opens a
-  link given on the command line, hands it to an already running window
-  (`instance.rs`), and registers the schemes per user on request
-  (`register.rs`).
+`stremio://` and `cineo://` URLs parse into typed routes in the core
+(`app::parse_link`). The desktop shell opens a link given on the command
+line, hands it to an already running window (`instance.rs`), and registers
+the schemes per user on request (`register.rs`).

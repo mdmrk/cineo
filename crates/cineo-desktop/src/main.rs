@@ -1,5 +1,3 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -49,7 +47,7 @@ fn start(cli: Cli) -> anyhow::Result<()> {
     let data_dir = cli
         .data_dir
         .or_else(cineo_store::default_data_dir)
-        .context("the platform reports no home directory; pass --data-dir")?;
+        .context("no home directory; pass --data-dir")?;
     let cache_dir = cli
         .cache_dir
         .or_else(cineo_store::default_cache_dir)
@@ -59,7 +57,6 @@ fn start(cli: Cli) -> anyhow::Result<()> {
     {
         return Ok(());
     }
-    cineo_desktop::libmpv::install(&cache_dir);
     cineo_desktop::run(cineo_desktop::Options {
         data_dir,
         cache_dir,

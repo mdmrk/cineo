@@ -1,14 +1,13 @@
-# Technical debt and known gaps
+# Known limitations
 
-Known limitations that are **intentional for now**. Each entry says:
+Limitations of the released software. Each entry says:
 - what is affected (with a link to code),
 - what does not work,
 - why,
 - what happens instead,
 - what would remove the limitation.
 
-Fix an entry and delete it in the same change. Do not hide debt in `TODO`
-comments without an entry here.
+Fix an entry and delete it in the same change.
 
 Format:
 
@@ -18,7 +17,7 @@ Format:
 - Gap: …
 - Why: …
 - Instead: … (observable behavior today)
-- Exit: … (what would fix it; link issue/milestone)
+- Exit: … (what would fix it)
 ```
 
 ## Entries
@@ -31,7 +30,7 @@ Format:
   server, the file size and name).
 - Why: computing the hash needs the first and last 64 KiB of the file
   (from `cineo-stream` for torrents, or range requests for HTTP), which is
-  not built yet.
+  not built.
 - Instead: for streams without hints, subtitle addons are asked by video id
   only, so hash-matched results (exact sync) are missing.
 - Exit: report the file size and name from the player or the engine, and
@@ -46,23 +45,23 @@ Format:
   the bottom bar.
 - Why: passing the display needs the window's raw display handle from
   eframe; moving subtitles needs a `sub-margin-y` change tied to the
-  controls' visibility. Both were left out of the first slice.
+  controls' visibility. Neither was built.
 - Instead: mpv decodes with a copy-back or software path (UNKNOWN which on a
   given machine); subtitles can be covered for up to 2.5 s after input.
 - Exit: pass the raw display handle at render-context creation; adjust
   `sub-margin-y` when the controls show and hide.
 
-### Embedded player: GL thread assumption, Windows and macOS untested
+### Embedded player: GL thread assumption
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs)
 - Gap: the renderer is created and freed inside eframe's `logic`/`ui`/
   `on_exit`, which assumes the window's GL context is current there
-  (INFERRED from eframe's single-window glow integration). On Linux, a test
-  build that created it at startup and freed it in `ui` worked under
-  Wayland and X11 (VERIFIED 2026-10-07); the full app path is not yet
-  exercised. Windows and macOS have never run embedded playback.
-- Why: no Windows or macOS machine in the loop yet.
-- Instead: on Linux it works; elsewhere behavior is UNKNOWN.
-- Exit: run the manual test on Windows and macOS (M7).
+  (INFERRED from eframe's single-window glow integration). A test build
+  that created it at startup and freed it in `ui` worked under Wayland and
+  X11 (VERIFIED 2026-10-07).
+- Why: eframe exposes the GL context only inside those callbacks.
+- Instead: it works on the tested sessions; other GL drivers are UNKNOWN.
+- Exit: create and free the renderer from a callback eframe documents as
+  having the context current.
 
 ### Streaming engine: UDP trackers and the DHT bypass the address filter
 - Where: [engine.rs](../crates/cineo-stream/src/engine.rs)
@@ -138,19 +137,16 @@ Format:
 - Why: silently replacing it would lose the user's library.
 - Instead: the error and `cineo doctor` explain it; the user moves the file
   away and Cineo starts fresh.
-- Exit: a GUI prompt (M5) that renames the file aside and starts fresh.
+- Exit: a GUI prompt that renames the file aside and starts fresh.
 
 ### Desktop: no log file or diagnostics view
 - Where: [main.rs](../crates/cineo-desktop/src/main.rs)
-- Gap: logs go to stderr only; the debugging guide planned a rotating file and an
-  About/Diagnostics view.
-- Why: it would add a dependency (`tracing-appender`) and a page outside
-  M5's acceptance.
+- Gap: logs go to stderr only; there is no log file and no diagnostics
+  view.
+- Why: it would add a dependency (`tracing-appender`) and a page.
 - Instead: start `cineo-desktop -v` from a terminal; `cineo doctor` covers
-  the database. Windows release builds use the GUI subsystem (no console
-  window), so their stderr is not shown even from a terminal; debug builds
-  keep the console.
-- Exit: a log file in the platform state directory, plus a diagnostics page.
+  the database.
+- Exit: a log file in `$XDG_STATE_HOME/cineo`, plus a diagnostics page.
 
 ### Desktop: image cache is unbounded for a session
 - Where: [images.rs](../crates/cineo-desktop/src/images.rs)
@@ -163,21 +159,21 @@ Format:
 
 ### Desktop: private networks are a launch flag only
 - Where: [main.rs](../crates/cineo-desktop/src/main.rs)
-- Gap: self-hosted addons need `--allow-private-network`; there is no
-  setting, and no per-addon trust (ROADMAP.md, v0.x).
-- Why: a settings page was not in M5's scope.
+- Gap: self-hosted addons need `--allow-private-network` or the "Allow
+  local network addresses" setting, which applies to every addon; there
+  is no per-addon trust.
+- Why: per-addon trust needs a prompt at install time and a stored flag.
 - Instead: blocked addons fail to install with "blocked by network policy".
-- Exit: a settings page, then per-addon trust.
+- Exit: a trust flag set at install time with a clear prompt.
 
 ### Store: manifests are not cached
 - Where: [migrate.rs](../crates/cineo-store/src/migrate.rs) (only
   transport URLs are stored)
 - Gap: at startup every installed addon's manifest is fetched again; an
   addon that is offline is reported and missing until the next start.
-- Why: the core's `Restore` action takes URLs only (M2); caching was not in
-  M4's scope.
+- Why: the core's `Restore` action takes URLs only.
 - Instead: `State.notice` reports the addon that failed to load.
-- Exit: store the last good manifest and restore from it (v0.x caching).
+- Exit: store the last good manifest and restore from it.
 
 ### Addon lists: only lists of type `all`, no logos
 - Where: [plan.rs](../crates/cineo-core/src/app/plan.rs) (`addon_list_targets`),
@@ -185,7 +181,7 @@ Format:
 - Gap: `addonCatalogs` of other types (Cinemeta also has `movie`, `series`,
   `channel`, …) are not offered, there is no search in a list, and listed
   addons show no logo.
-- Why: the first slice mirrors Stremio's default view; Cinemeta's `all`
+- Why: it mirrors Stremio's default view; Cinemeta's `all`
   lists already contain every addon of its typed lists (VERIFIED against
   the live lists, 2026-10-10).
 - Instead: one chip per `all` list; each addon shows name, version, host,
@@ -199,7 +195,7 @@ Format:
 - Gap: the UI is offered in English, Spanish, Russian and Italian
   only.
   Right-to-left languages and scripts outside the bundled fonts cannot be
-  added yet.
+  added.
   Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
   Counted messages are worded as "label: number" because the catalogs
   have no plural rules (ADR-0021).
@@ -217,13 +213,12 @@ Format:
 - Gap: the window icon is set through `ViewportBuilder::with_icon`.
   Wayland has no protocol for an app to set its own window icon; the
   compositor takes it from a `cineo.desktop` entry matching the `cineo`
-  app id. Nothing installs that entry yet, so on Wayland the taskbar shows
-  a generic icon (INFERRED from winit's platform notes; UNKNOWN on Windows
-  and macOS, which are untested).
-- Why: no desktop packaging yet.
-- Instead: X11 and the other platforms get the icon from the window.
-- Exit: when desktop packaging lands (M7), install `cineo.desktop` and the
-  icon under the hicolor theme.
+  app id. `install.sh` installs that entry and the icon under the hicolor
+  theme; a binary started any other way shows a generic icon on Wayland
+  (INFERRED from winit's platform notes).
+- Why: there is no Wayland protocol for it.
+- Instead: X11 gets the icon from the window.
+- Exit: none; install with `install.sh`.
 
 ### Desktop UI: rows scroll sideways only with Shift, a touchpad or arrows
 - Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`poster_strip`)
@@ -259,49 +254,16 @@ Format:
 ### Player settings: pause on minimize depends on frames while minimized
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`pause_on_minimize`)
 - Gap: the check runs in eframe's `logic`, once per frame. Whether frames
-  still run while the window is minimized is UNKNOWN on each platform
+  still run while the window is minimized is UNKNOWN per compositor
   (Wayland compositors may stop them).
 - Why: eframe reports `minimized` through viewport info only.
 - Instead: if no frame runs after minimizing, the video keeps playing until
   the window is shown again, and then it pauses.
-- Exit: verify per platform; otherwise react to the window event directly.
+- Exit: react to the window event directly.
 
-### Deep links: macOS and plain second launches
-- Where: [instance.rs](../crates/cineo-desktop/src/instance.rs),
-  [register.rs](../crates/cineo-desktop/src/register.rs)
-- Gap: macOS delivers links as Apple Events to an app bundle, so links do
-  not reach Cineo there, and registration reports it as unsupported. A
-  second launch without a link still opens a second window. The Windows
-  pipe and registration have not been run.
-- Why: Cineo has no macOS bundle before packaging (M7); only links needed a
-  handover.
-- Instead: on macOS, links open nothing; second windows share the database.
-- Exit: handle `CFBundleURLTypes` and the open-URL event in the M7 bundle;
-  run the Windows path on a Windows machine.
-
-### Releases: large Windows executable, untested install scripts
-- Where: [build.yml](../.github/workflows/build.yml),
-  [libmpv.rs](../crates/cineo-desktop/src/libmpv.rs),
-  [install.ps1](../scripts/install.ps1)
-- Gap: the Windows executable carries libmpv uncompressed (about 100 MB
-  more), and writes the same 100 MB again to the cache directory on first
-  start. `install.ps1`, the Windows build with `bundled-libmpv` and the
-  release workflows have not run yet; `install.sh` was run only against a
-  local server (VERIFIED 2026-10-12: install, checksum mismatch, uninstall).
-- Why: compressing the DLL needs a decompression dependency; there is no
-  Windows machine in the loop.
-- Instead: a download of roughly 130 MB on Windows; Windows behavior is
-  UNKNOWN until the first release run.
-- Exit: compress the embedded DLL (for example zstd, about 29 MB), and run
-  the installer and the manual test on Windows (M7).
-
-### Releases: libmpv sources are referenced, not hosted
-- Where: `scripts/package.sh` (`libmpv.md` in `cineo-licenses.zip`)
-- Gap: for the bundled LGPL libmpv we link to the mpv commit, the upstream
-  build scripts and their build log, but host no copy of the sources of
-  mpv, FFmpeg and the other libraries in that build.
-- Why: the build pulls dozens of libraries; mirroring their sources is a
-  separate job.
-- Instead: the sources are only as available as upstream keeps them.
-- Exit: mirror the source tarballs next to the libmpv archive, or build
-  libmpv ourselves from pinned sources.
+### Deep links: plain second launches
+- Where: [instance.rs](../crates/cineo-desktop/src/instance.rs)
+- Gap: a second launch without a link still opens a second window.
+- Why: only links needed a handover.
+- Instead: second windows share the database.
+- Exit: hand plain launches to the running window too, which raises it.

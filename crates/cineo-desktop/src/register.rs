@@ -1,14 +1,9 @@
-#[cfg(any(windows, all(unix, not(target_os = "macos"))))]
 use std::process::Command;
 
-#[cfg(any(windows, all(unix, not(target_os = "macos"))))]
-use anyhow::Context;
-use anyhow::bail;
+use anyhow::{Context, bail};
 
-#[cfg(any(windows, all(unix, not(target_os = "macos"))))]
 const SCHEMES: [&str; 2] = ["stremio", "cineo"];
 
-#[cfg(all(unix, not(target_os = "macos")))]
 pub(crate) fn register() -> anyhow::Result<()> {
     let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
     let data = std::env::var_os("XDG_DATA_HOME")
@@ -35,7 +30,6 @@ pub(crate) fn register() -> anyhow::Result<()> {
         .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}"))))
 }
 
-#[cfg(all(unix, not(target_os = "macos")))]
 fn desktop_quote(path: &str) -> String {
     let mut out = String::from("\"");
     for c in path.chars() {
@@ -48,40 +42,6 @@ fn desktop_quote(path: &str) -> String {
     out
 }
 
-#[cfg(windows)]
-pub(crate) fn register() -> anyhow::Result<()> {
-    let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
-    let command = format!("\"{}\" \"%1\"", exe.display());
-    for scheme in SCHEMES {
-        let key = format!(r"HKCU\Software\Classes\{scheme}");
-        for args in [
-            vec![
-                key.clone(),
-                "/ve".into(),
-                "/d".into(),
-                format!("URL:{scheme}"),
-            ],
-            vec![
-                key.clone(),
-                "/v".into(),
-                "URL Protocol".into(),
-                "/d".into(),
-                String::new(),
-            ],
-            vec![
-                format!(r"{key}\shell\open\command"),
-                "/ve".into(),
-                "/d".into(),
-                command.clone(),
-            ],
-        ] {
-            run(Command::new("reg").arg("add").args(&args).arg("/f"))?;
-        }
-    }
-    Ok(())
-}
-
-#[cfg(any(windows, all(unix, not(target_os = "macos"))))]
 fn run(command: &mut Command) -> anyhow::Result<()> {
     let program = command.get_program().to_string_lossy().into_owned();
     let output = command
@@ -92,9 +52,4 @@ fn run(command: &mut Command) -> anyhow::Result<()> {
         bail!("{program} failed ({}): {}", output.status, stderr.trim());
     }
     Ok(())
-}
-
-#[cfg(not(any(windows, all(unix, not(target_os = "macos")))))]
-pub(crate) fn register() -> anyhow::Result<()> {
-    bail!("not supported on this platform yet")
 }

@@ -105,33 +105,12 @@ impl CacheStorage {
     }
 }
 
-#[cfg(unix)]
 fn read_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<usize> {
     std::os::unix::fs::FileExt::read_at(file, buf, offset)
 }
 
-#[cfg(windows)]
-fn read_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<usize> {
-    std::os::windows::fs::FileExt::seek_read(file, buf, offset)
-}
-
-#[cfg(unix)]
 fn write_all_at(file: &File, buf: &[u8], offset: u64) -> io::Result<()> {
     std::os::unix::fs::FileExt::write_all_at(file, buf, offset)
-}
-
-#[cfg(windows)]
-fn write_all_at(file: &File, mut buf: &[u8], mut offset: u64) -> io::Result<()> {
-    while !buf.is_empty() {
-        match std::os::windows::fs::FileExt::seek_write(file, buf, offset)? {
-            0 => return Err(io::ErrorKind::WriteZero.into()),
-            n => {
-                buf = &buf[n..];
-                offset += n as u64;
-            }
-        }
-    }
-    Ok(())
 }
 
 impl TorrentStorage for CacheStorage {

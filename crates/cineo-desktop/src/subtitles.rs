@@ -41,14 +41,12 @@ impl SubtitleFiles {
     pub(crate) fn write(&mut self, url: &Url, bytes: &[u8]) -> io::Result<PathBuf> {
         let mut builder = std::fs::DirBuilder::new();
         builder.recursive(true);
-        #[cfg(unix)]
         std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
         builder.create(&self.dir)?;
         self.written += 1;
         let path = self.dir.join(self.written.to_string());
         let mut options = std::fs::OpenOptions::new();
         options.write(true).create_new(true);
-        #[cfg(unix)]
         std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
         options.open(&path)?.write_all(bytes)?;
         self.files.insert(url.clone(), path.clone());
@@ -171,17 +169,13 @@ mod tests {
             files.get(&url("https://s.example/a.srt")),
             Some(path.as_path())
         );
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt as _;
-            let mode = |p: &Path| {
-                std::fs::metadata(p)
-                    .map(|m| m.permissions().mode() & 0o777)
-                    .unwrap_or_else(|e| panic!("{e}"))
-            };
-            assert_eq!(mode(&dir), 0o700);
-            assert_eq!(mode(&path), 0o600);
-        }
+        let mode = |p: &Path| {
+            std::fs::metadata(p)
+                .map(|m| std::os::unix::fs::PermissionsExt::mode(&m.permissions()) & 0o777)
+                .unwrap_or_else(|e| panic!("{e}"))
+        };
+        assert_eq!(mode(&dir), 0o700);
+        assert_eq!(mode(&path), 0o600);
         let again = |files: &mut SubtitleFiles, u: &str| {
             files.write(&url(u), b"y").unwrap_or_else(|e| panic!("{e}"))
         };

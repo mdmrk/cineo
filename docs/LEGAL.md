@@ -37,13 +37,11 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   (`.config/deny.toml`). Extending the license allowlist requires a note here.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
-  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls),
-  BSL-1.0 (added 2026-10-06 for `clipboard-win` and `error-code`, the
-  Windows clipboard behind egui's copy and paste; permissive, and it
-  requires no notice in binary distributions).
+  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
+  `cargo deny` checks the `x86_64-unknown-linux-gnu` dependency graph only.
 - One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
   MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
-  `dirs-sys` (M9, ADR-0012) and cannot be removed without forking
+  `dirs-sys` (ADR-0012) and cannot be removed without forking
   librqbit. MPL-2.0 is copyleft per file: we use it unmodified, so the
   obligation is to ship its notice and point to its source. The exception
   in `.config/deny.toml` covers only this crate; MPL-2.0 is not on the general
@@ -54,26 +52,15 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   Cineo loads it at runtime with `libloading` (ADR-0014). Our bindings are
   written from mpv's ISC-licensed headers (`client.h`, `render.h`,
   `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
-  not use the LGPL `libmpv2` crates. Linux and macOS builds use the
-  system's libmpv and ship none.
-- The Windows executable contains an unmodified **LGPL** build of
-  `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later; zhongfly/mpv-winbuild,
-  pinned in `scripts/libmpv-windows.env`), added 2026-10-12. It is written
-  to disk and loaded as a separate shared library, and a DLL placed next to
-  the executable is loaded first, so users can replace it (LGPL-2.1 §6).
-  Every release ships `cineo-licenses.zip` with the LGPL-2.1 text and a
-  notice naming the binary, the mpv commit and the build scripts with the
-  library sources (`scripts/package.sh`); the archive is mirrored in this
-  repository's releases. We point to upstream sources and do not host a
-  full source copy ourselves (UNKNOWN whether that suffices for every
-  bundled library; see TECHNICAL_DEBT.md).
+  not use the LGPL `libmpv2` crates. Cineo uses the system's libmpv and
+  ships none.
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),
 unmodified and not sold on their own, as the OFL requires. Each license
 text ships next to its files and must accompany binary distributions: in
-`cineo-licenses.zip` next to the executables in every release, which the
-install scripts copy beside the installed app.
+`cineo-licenses.zip` next to the executable in every release, which
+`install.sh` copies to `$XDG_DATA_HOME/doc/cineo`.
 Added 2026-10-07.
 
 Cineo's logo, app icon and loading animation
@@ -100,9 +87,9 @@ supplied by the owner on 2026-10-07 (logo updated and animation added
   has **not** been done.
 - Cineo handles the `stremio://` URL scheme for interoperability with
   addon install links and page links that addon sites publish. It does not
-  present itself as Stremio. If the official app is also installed, the OS
-  decides which handler runs (per-platform behavior is UNKNOWN). Cineo never
-  silently takes over the scheme from another installed handler.
+  present itself as Stremio. Registration is opt-in from Settings and makes
+  Cineo the `xdg-mime` default for both schemes; Cineo never takes over the
+  scheme without that click.
 
 ## User-provided media and external addons
 - Cineo ships no content and no content addons. Users choose which addons to
@@ -121,14 +108,12 @@ supplied by the owner on 2026-10-07 (logo updated and animation added
 - Cineo must disclose this before the first P2P stream and offer a setting
   that disables P2P sources entirely. Addons flagged `behaviorHints.p2p` are
   labelled at install time.
-- Archive and NZB sources fetch from servers the addon names (for NZB, Usenet
-  servers with user credentials). The same disclosure principle applies.
 
 ## Metadata providers
 Metadata (titles, posters, descriptions) comes from addons, which source it
 from their providers (for example IMDb-derived data via Cinemeta). Cineo
-displays it and caches it locally. It does not redistribute it. Any future
-caching or export feature must be reviewed against provider terms.
+displays it and keeps library entries locally. It does not redistribute
+it.
 
 ## Adapted code
 

@@ -48,18 +48,14 @@ impl From<rusqlite::Error> for StoreError {
     }
 }
 
-/// The platform data directory for Cineo: `$XDG_DATA_HOME/cineo` (default
-/// `~/.local/share/cineo`) on Linux, `%APPDATA%\Cineo\data` on Windows,
-/// `~/Library/Application Support/Cineo` on macOS. `None` if the platform
-/// reports no home directory.
+/// The data directory for Cineo: `$XDG_DATA_HOME/cineo` (default
+/// `~/.local/share/cineo`). `None` if there is no home directory.
 pub fn default_data_dir() -> Option<PathBuf> {
     app_strategy().map(|s| s.data_dir())
 }
 
-/// The platform cache directory for Cineo (torrent data): `$XDG_CACHE_HOME/cineo`
-/// (default `~/.cache/cineo`) on Linux, `%LOCALAPPDATA%\Cineo\cache` on
-/// Windows, `~/Library/Caches/Cineo` on macOS. `None` if the platform
-/// reports no home directory.
+/// The cache directory for Cineo (torrent data): `$XDG_CACHE_HOME/cineo`
+/// (default `~/.cache/cineo`). `None` if there is no home directory.
 pub fn default_cache_dir() -> Option<PathBuf> {
     app_strategy().map(|s| s.cache_dir())
 }
@@ -298,7 +294,6 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
-    #[cfg(unix)]
     std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
     builder.create(dir)
 }
