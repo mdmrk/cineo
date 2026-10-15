@@ -95,7 +95,7 @@ _Last reviewed: 2026-10-13._
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single executable with `install.sh` |
+| Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh` |
 | Windows, macOS | Unsupported | Removed 2026-10-13 (ADR-0022) |
 | Android / iOS / Web | Unsupported | |
 

@@ -536,8 +536,8 @@ Three workflows start runs; each stage waits for the one before it:
 | `release.yml` | tag `vX.Y.Z` | checks (`ci.yml`) → build → publish `vX.Y.Z` |
 
 `build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
-x86_64, puts the files into `dist/` with `scripts/package.sh`, and attests
-build provenance (check a file with
+x86_64 at the `x86-64-v2` level, puts the files into `dist/` with
+`scripts/package.sh`, and attests build provenance (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It never publishes. The
 `cineo` CLI is not shipped.
 
@@ -546,7 +546,7 @@ Every release has these files, with the same names in every release so that
 
 | File | What |
 |------|------|
-| `cineo-x86_64-linux` | The executable; uses the system libmpv |
+| `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv |
 | `cineo-licenses.zip` | Cineo's license and the font licenses |
 | `cineo.png` | App icon, used by `install.sh` |
 | `install.sh` | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
@@ -562,10 +562,12 @@ Every release has these files, with the same names in every release so that
 
 ### Prerelease builds
 
-Every push to `main` (or a manual run on `main`) runs `prerelease.yml`. It
-does not run the tests itself (`ci.yml` runs them in parallel). It deletes
-the previous `prerelease` GitHub release and its tag and recreates both at
-the pushed commit.
+Every push to `main` (or a manual run on `main`) runs `prerelease.yml`,
+except a push whose head commit starts with `chore(release):`; that commit
+gets the real release from its tag instead. It does not run the tests
+itself (`ci.yml` runs them in parallel). It deletes the previous
+`prerelease` GitHub release and its tag and recreates both at the pushed
+commit.
 
 Release artifacts are not code-signed; build provenance attestations and
 `SHA256SUMS` are the integrity checks.

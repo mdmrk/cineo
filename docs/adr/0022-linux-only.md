@@ -31,6 +31,8 @@ Cineo supports Linux x86_64 only.
   registration uses `xdg-mime` only.
 - Code may use `std::os::unix` without `cfg` guards.
 - `cargo deny` checks the `x86_64-unknown-linux-gnu` graph only.
+- Release builds target the `x86-64-v2` microarchitecture level
+  (added 2026-10-15).
 
 ## Consequences
 - Less platform code and no LGPL binary in releases; `cineo-licenses.zip`
