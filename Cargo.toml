@@ -82,4 +82,4 @@ panic = "abort"
 opt-level = 2
 
 [patch.crates-io]
-librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "5ff9afda1947a8c680b0ea0931da9fbf95be1f13" }
+librqbit = { git = "https://github.com/mdmrk/rqbit", rev = "032c4a9359f2451eb649c75ae0beb4aacd126641" }

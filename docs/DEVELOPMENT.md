@@ -429,7 +429,7 @@ Re-check them when adding.
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
 | `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
-| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/feat/stream-window) at `5ff9afda` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
+| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/feat/stream-window) at `032c4a93` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
@@ -472,7 +472,8 @@ pinned to a commit of branch `fix/urgent-piece-helpers`: upstream `main`
 plus our streaming patch (ADR-0016). Since 2026-10-09 the pin is on
 branch `feat/stream-window`, which adds the stream window (ADR-0019) on
 top of it, and since 2026-10-15 the lookahead setter of ADR-0023
-(`5ff9afda`). To update: rebase both branches on upstream, push, and change
+(`5ff9afda`), and a fix so a peer helping with an urgent piece never
+steals that same piece (`032c4a93`). To update: rebase both branches on upstream, push, and change
 `rev`. Dropping the fork once upstream
 releases the patch is the goal.
 
