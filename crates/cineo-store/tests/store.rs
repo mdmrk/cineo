@@ -62,9 +62,21 @@ fn user_version(path: &Path) -> i64 {
 fn fresh_database_is_created_at_the_latest_schema_version() {
     let dir = temp_dir("fresh").join("nested");
     let store = Store::open_in(&dir).unwrap();
-    assert!(store.addons().unwrap().is_empty());
     assert!(store.library().unwrap().is_empty());
     assert_eq!(user_version(&dir.join(DB_FILE)), SCHEMA_VERSION);
+}
+
+#[test]
+fn a_fresh_database_starts_with_cinemeta_and_keeps_its_removal() {
+    let dir = temp_dir("first-run");
+    let mut store = Store::open_in(&dir).unwrap();
+    assert_eq!(
+        store.addons().unwrap(),
+        vec![addon("https://v3-cinemeta.strem.io/manifest.json")]
+    );
+    store.save_addons(&[]).unwrap();
+    drop(store);
+    assert!(Store::open_in(&dir).unwrap().addons().unwrap().is_empty());
 }
 
 #[test]

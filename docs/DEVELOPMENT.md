@@ -346,8 +346,8 @@ and result in the PR.
 
 | # | Do | Expect |
 |---|----|--------|
-| 1 | Start `cineo-desktop --data-dir <tmp> -v` | Empty Board with "No addons installed…" |
-| 2 | Addons → paste `https://v3-cinemeta.strem.io/manifest.json` → Install | "Installed Cinemeta"; Board shows rows with posters |
+| 1 | Start `cineo-desktop --data-dir <tmp> -v` | Board shows Cinemeta rows with posters |
+| 2 | Addons | Cinemeta is the only installed addon; Discover addons shows the Official and Community lists |
 | 3 | Install the stream addon (`http://127.0.0.1:8000/manifest.json` for the local one) | It appears second in the list; Move up/down reorders |
 | 4 | Search "Night of the Living Dead" → open the 1968 film | Detail page: backdrop, poster, facts, description |
 | 5 | Streams list | One group per stream addon; the local stream has an enabled Play |

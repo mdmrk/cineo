@@ -155,7 +155,7 @@ async fn addons_are_added_listed_and_removed_across_runs() {
     );
     assert_eq!(
         stdout_of(&run(&["addon", "list"])),
-        format!("1\t{manifest}\n")
+        format!("1\thttps://v3-cinemeta.strem.io/manifest.json\n2\t{manifest}\n")
     );
 
     let again = run(&["addon", "add", &manifest]);
@@ -172,7 +172,10 @@ async fn addons_are_added_listed_and_removed_across_runs() {
         stdout_of(&run(&["addon", "remove", &manifest])),
         "removed\n"
     );
-    assert_eq!(stdout_of(&run(&["addon", "list"])), "");
+    assert_eq!(
+        stdout_of(&run(&["addon", "list"])),
+        "1\thttps://v3-cinemeta.strem.io/manifest.json\n"
+    );
 }
 
 #[tokio::test]
@@ -194,7 +197,7 @@ async fn an_addon_with_an_invalid_manifest_is_not_installed() {
     assert!(!out.status.success());
     assert_eq!(
         stdout_of(&cineo(&[&base[..], &["addon", "list"]].concat())),
-        ""
+        "1\thttps://v3-cinemeta.strem.io/manifest.json\n"
     );
 }
 
@@ -211,7 +214,7 @@ fn doctor_reports_on_the_database() {
     let healthy = stdout_of(&cineo(&["--data-dir", &dir, "doctor"]));
     assert!(
         healthy.contains(
-            "schema version: 4 (supported: 4)\naddons: 0\nlibrary items: 0\nintegrity: ok\n"
+            "schema version: 4 (supported: 4)\naddons: 1\nlibrary items: 0\nintegrity: ok\n"
         ),
         "{healthy}"
     );

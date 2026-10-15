@@ -1,4 +1,4 @@
-use rusqlite::{Connection, TransactionBehavior};
+use rusqlite::{Connection, TransactionBehavior, params};
 use tracing::info;
 
 use crate::store::StoreError;
@@ -25,6 +25,8 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "ALTER TABLE library_items ADD COLUMN stream TEXT;",
     "ALTER TABLE library_items ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;",
 ];
+
+const FIRST_RUN_ADDONS: &[&str] = &["https://v3-cinemeta.strem.io/manifest.json"];
 
 #[expect(
     clippy::cast_possible_wrap,
@@ -56,6 +58,14 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), 
                 to: index + 1,
                 source,
             })?;
+    }
+    if found == 0 {
+        for (position, addon) in (0_i64..).zip(FIRST_RUN_ADDONS) {
+            tx.execute(
+                "INSERT INTO addons (position, transport_url) VALUES (?1, ?2)",
+                params![position, addon],
+            )?;
+        }
     }
     tx.pragma_update(None, "user_version", latest)?;
     tx.commit()?;
