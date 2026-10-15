@@ -237,6 +237,9 @@ pub enum Action {
         duration_ms: u64,
         now_ms: u64,
     },
+    PlaybackBuffered {
+        seconds: u64,
+    },
     PlaybackFailed(String),
     PlaybackStopped,
     PlaybackEnded,
@@ -490,6 +493,13 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             item.updated_ms = now_ms;
             effects.push(Effect::SaveLibraryItem(item.clone()));
             effects
+        }
+        Action::PlaybackBuffered { seconds } => {
+            let Some(torrent) = state.torrent.as_mut() else {
+                return Vec::new();
+            };
+            torrent.buffered_s = Some(seconds);
+            lookahead_effect(torrent).into_iter().collect()
         }
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
@@ -1596,6 +1606,8 @@ fn start_playback(
                 status: TorrentStatus::Starting,
                 pending: Some(request),
                 duration_ms: 0,
+                buffered_s: None,
+                filling: true,
                 lookahead: None,
             });
             effects.push(Effect::StartTorrent(torrent));

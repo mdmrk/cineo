@@ -1098,7 +1098,7 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
 }
 
 #[test]
-fn the_torrent_lookahead_is_five_seconds_at_the_average_bitrate() {
+fn the_torrent_fills_up_to_thirty_seconds_and_resumes_below_twenty_five() {
     let mut state = detail_with_p2p_accepted();
     update(&mut state, PLAY_TORRENT);
     let effects = update(
@@ -1111,49 +1111,61 @@ fn the_torrent_lookahead_is_five_seconds_at_the_average_bitrate() {
     let [Effect::Play(play)] = effects.as_slice() else {
         panic!("{effects:?}");
     };
-    let progress = |time_ms, duration_ms| Action::PlaybackProgress {
+    let progress = Action::PlaybackProgress {
         meta_id: play.meta_id.clone(),
         video_id: play.video_id.clone(),
-        time_ms,
-        duration_ms,
+        time_ms: 1000,
+        duration_ms: 7_200_000,
         now_ms: 1,
     };
-    let lookaheads = |effects: Vec<Effect>| -> Vec<Effect> {
-        effects
-            .into_iter()
-            .filter(|e| matches!(e, Effect::SetTorrentLookahead { .. }))
-            .collect()
-    };
-    let streaming = |size| Action::TorrentStatus {
+    let streaming = Action::TorrentStatus {
         info_hash: FIXTURE_HASH.into(),
         status: TorrentStatus::Streaming {
             peers: 1,
             download_bytes_per_sec: 0,
             downloaded: 0,
-            size,
+            size: 1_440_000_000,
         },
     };
+    let lookahead = |state: &mut _, action| -> Option<u64> {
+        let effects = update(state, action);
+        let found: Vec<u64> = effects
+            .iter()
+            .filter_map(|e| match e {
+                Effect::SetTorrentLookahead { info_hash, bytes } => {
+                    assert_eq!(info_hash, FIXTURE_HASH);
+                    Some(*bytes)
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(found.len() <= 1, "{found:?}");
+        found.first().copied()
+    };
+    let buffered = |seconds| Action::PlaybackBuffered { seconds };
 
-    assert!(lookaheads(update(&mut state, progress(1000, 7_200_000))).is_empty());
+    assert_eq!(lookahead(&mut state, buffered(0)), None, "no size yet");
+    assert_eq!(lookahead(&mut state, streaming), None, "no duration yet");
     assert_eq!(
-        lookaheads(update(&mut state, streaming(1_440_000_000))),
-        vec![Effect::SetTorrentLookahead {
-            info_hash: FIXTURE_HASH.into(),
-            bytes: 1_000_000,
-        }]
+        lookahead(&mut state, progress),
+        Some(6_000_000),
+        "30 s at 200 kB/s while nothing is buffered"
     );
-    assert!(
-        lookaheads(update(&mut state, progress(2000, 7_200_000))).is_empty(),
-        "sent once while it stays the same"
-    );
+    assert_eq!(lookahead(&mut state, buffered(10)), Some(4_000_000));
+    assert_eq!(lookahead(&mut state, buffered(29)), Some(0), "full");
+    assert_eq!(lookahead(&mut state, buffered(27)), None, "stays stopped");
+    assert_eq!(lookahead(&mut state, buffered(25)), None);
     assert_eq!(
-        lookaheads(update(&mut state, progress(3000, 3_600_000))),
-        vec![Effect::SetTorrentLookahead {
-            info_hash: FIXTURE_HASH.into(),
-            bytes: 2_000_000,
-        }]
+        lookahead(&mut state, buffered(24)),
+        Some(1_200_000),
+        "below 25 s it fills up to 30 s again"
     );
-    assert!(lookaheads(update(&mut state, progress(4000, 0))).is_empty());
+    assert_eq!(lookahead(&mut state, buffered(26)), Some(800_000));
+    assert_eq!(
+        lookahead(&mut state, buffered(0)),
+        Some(6_000_000),
+        "a seek"
+    );
 }
 
 #[test]

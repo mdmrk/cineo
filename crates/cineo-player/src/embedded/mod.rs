@@ -648,6 +648,10 @@ impl EventLoop {
                 };
                 self.update(|s| replace_cached(&mut s.cached, ranges));
             }
+            CACHE_DURATION => {
+                self.update(|s| apply_stat(&mut s.stats, id, value));
+                return matches!(value, Value::Double(_)).then_some(Input::Buffered(number));
+            }
             _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }
         None

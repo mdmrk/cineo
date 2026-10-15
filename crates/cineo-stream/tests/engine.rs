@@ -394,6 +394,31 @@ async fn a_short_lookahead_downloads_only_the_pieces_being_read() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_zero_lookahead_downloads_nothing_until_it_is_raised() {
+    let seeder = seeder("zero-lookahead").await;
+    let engine = Engine::start(memory_options("zero-lookahead", &seeder))
+        .await
+        .unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    engine.set_lookahead(&seeder.info_hash, 0);
+
+    let addr = engine.local_addr();
+    let path = url.path().to_owned();
+    let read = tokio::spawn(async move { http(addr, "GET", &path, &[]).await });
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(downloaded(&engine), 0, "a waiting reader gets nothing");
+    assert!(!read.is_finished());
+
+    engine.set_lookahead(&seeder.info_hash, 64 * 1024);
+    let full = tokio::time::timeout(Duration::from_secs(30), read)
+        .await
+        .expect("the read resumes")
+        .unwrap();
+    assert!(full.body == seeder.film, "the whole film arrives intact");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn disk_mode_keeps_only_its_window_on_disk() {
     let seeder = seeder("disk-window").await;
     let opts = EngineOptions {

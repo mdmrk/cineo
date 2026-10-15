@@ -703,6 +703,10 @@ async fn forward_events(
                 send(Action::PlaybackFailed(reason));
                 break;
             }
+            PlayerEvent::Buffered { seconds } => {
+                send(Action::PlaybackBuffered { seconds });
+                continue;
+            }
         };
         if time_ms > 0 {
             send(Action::PlaybackProgress {

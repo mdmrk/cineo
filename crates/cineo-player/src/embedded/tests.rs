@@ -297,7 +297,7 @@ fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
             .iter()
             .any(|t| t.kind == TrackKind::Audio && t.selected);
         match events.try_recv() {
-            Ok(PlayerEvent::Progress { .. }) => {}
+            Ok(PlayerEvent::Progress { .. } | PlayerEvent::Buffered { .. }) => {}
             Ok(event) => break Some(event),
             Err(_) if std::time::Instant::now() > deadline => break None,
             Err(_) => std::thread::sleep(Duration::from_millis(5)),
@@ -328,7 +328,7 @@ fn next_end(
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
         match events.try_recv() {
-            Ok(PlayerEvent::Progress { .. }) => {}
+            Ok(PlayerEvent::Progress { .. } | PlayerEvent::Buffered { .. }) => {}
             Ok(event) => return Some(event),
             Err(_) if std::time::Instant::now() > deadline => return None,
             Err(_) if player.status().loaded && player.status().position_s > 1.0 => {

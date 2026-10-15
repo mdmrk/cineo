@@ -10,6 +10,7 @@ pub(crate) enum Input {
     Duration(f64),
     FileLoaded,
     EndFile(EndReason),
+    Buffered(f64),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +34,7 @@ pub(crate) struct Tracker {
     duration_ms: u64,
     last_report: Option<Instant>,
     started: bool,
+    buffered_s: Option<u64>,
 }
 
 impl Tracker {
@@ -43,6 +45,7 @@ impl Tracker {
             duration_ms: 0,
             last_report: None,
             started: false,
+            buffered_s: None,
         }
     }
 
@@ -77,6 +80,16 @@ impl Tracker {
             ))),
             Input::EndFile(EndReason::Other) if self.started => finish(self.closed()),
             Input::EndFile(EndReason::Other) => Step::default(),
+            Input::Buffered(seconds) => {
+                let seconds = seconds_to_ms(seconds) / 1000;
+                if self.buffered_s.replace(seconds) == Some(seconds) {
+                    return Step::default();
+                }
+                Step {
+                    event: Some(PlayerEvent::Buffered { seconds }),
+                    ..Step::default()
+                }
+            }
         }
     }
 
@@ -130,6 +143,17 @@ fn seconds_to_ms(seconds: f64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn buffered_seconds_are_reported_when_the_whole_second_changes() {
+        let mut tracker = Tracker::new(0);
+        let t0 = Instant::now();
+        let buffered = |seconds| Some(PlayerEvent::Buffered { seconds });
+        assert_eq!(tracker.on(Input::Buffered(0.4), t0).event, buffered(0));
+        assert_eq!(tracker.on(Input::Buffered(0.9), t0).event, None);
+        assert_eq!(tracker.on(Input::Buffered(29.7), t0).event, buffered(29));
+        assert_eq!(tracker.on(Input::Buffered(f64::NAN), t0).event, buffered(0));
+    }
 
     fn progress(time_ms: u64, duration_ms: u64) -> Option<PlayerEvent> {
         Some(PlayerEvent::Progress {

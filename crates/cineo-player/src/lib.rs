@@ -11,6 +11,7 @@ pub enum PlayerEvent {
     Ended { time_ms: u64, duration_ms: u64 },
     Failed(String),
     Closed { time_ms: u64, duration_ms: u64 },
+    Buffered { seconds: u64 },
 }
 
 /// Why playback could not start.

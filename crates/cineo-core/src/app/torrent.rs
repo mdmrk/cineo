@@ -140,6 +140,8 @@ pub struct TorrentPlayback {
     pub status: TorrentStatus,
     pub(crate) pending: Option<PlayRequest>,
     pub(crate) duration_ms: u64,
+    pub(crate) buffered_s: Option<u64>,
+    pub(crate) filling: bool,
     pub(crate) lookahead: Option<u64>,
 }
 
@@ -151,21 +153,36 @@ impl TorrentPlayback {
     }
 }
 
-const LOOKAHEAD_MS: u128 = 5000;
+const FULL_S: u64 = 30;
+const RESUME_S: u64 = 25;
 
-pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64) -> Option<u64> {
+pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
     if size == 0 || duration_ms == 0 {
         return None;
     }
-    let bytes = u128::from(size) * LOOKAHEAD_MS / u128::from(duration_ms);
+    if seconds == 0 {
+        return Some(0);
+    }
+    let bytes = u128::from(size) * u128::from(seconds) * 1000 / u128::from(duration_ms);
     Some(u64::try_from(bytes).unwrap_or(u64::MAX).max(1))
 }
 
 pub(crate) fn lookahead_effect(torrent: &mut TorrentPlayback) -> Option<Effect> {
+    let buffered = torrent.buffered_s?;
+    if buffered + 1 >= FULL_S {
+        torrent.filling = false;
+    } else if buffered < RESUME_S {
+        torrent.filling = true;
+    }
     let TorrentStatus::Streaming { size, .. } = torrent.status else {
         return None;
     };
-    let bytes = lookahead_bytes(size, torrent.duration_ms)?;
+    let seconds = if torrent.filling {
+        FULL_S - buffered
+    } else {
+        0
+    };
+    let bytes = lookahead_bytes(size, torrent.duration_ms, seconds)?;
     if torrent.lookahead == Some(bytes) {
         return None;
     }
