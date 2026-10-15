@@ -39,6 +39,12 @@ fn linux_tries_vaapi_before_the_other_hardware_decoders() {
 }
 
 #[test]
+fn mpv_buffers_at_most_thirty_seconds_ahead() {
+    let cache = OPTIONS.iter().find(|(name, _)| *name == "cache-secs");
+    assert_eq!(cache, Some(&("cache-secs", "30")));
+}
+
+#[test]
 fn mpv_warnings_log_as_info_and_errors_as_errors() {
     assert_eq!(log_level("fatal"), tracing::Level::ERROR);
     assert_eq!(log_level("error"), tracing::Level::ERROR);
