@@ -180,6 +180,7 @@ pub(crate) struct CineoApp {
     engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
     torrent_generation: Arc<AtomicU64>,
     torrent_task: Option<tokio::task::AbortHandle>,
+    torrent_lookahead: tokio::sync::watch::Sender<Option<(String, u64)>>,
     seq: u64,
     pending_link: Option<String>,
 }
@@ -208,6 +209,7 @@ impl CineoApp {
             engine: Arc::default(),
             torrent_generation: Arc::default(),
             torrent_task: None,
+            torrent_lookahead: tokio::sync::watch::Sender::new(None),
             seq: 0,
             pending_link: None,
         };
@@ -298,12 +300,8 @@ impl CineoApp {
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
             Effect::SetTorrentLookahead { info_hash, bytes } => {
-                let engine = Arc::clone(&self.engine);
-                self.io.runtime.spawn(async move {
-                    if let Some(engine) = engine.lock().await.as_ref() {
-                        engine.set_lookahead(&info_hash, bytes);
-                    }
-                });
+                self.torrent_lookahead
+                    .send_replace(Some((info_hash, bytes)));
             }
             Effect::CheckForUpdate(url) => self.spawn(async move {
                 let result = client.fetch_latest_release(&url).await.map_err(|err| {
@@ -320,6 +318,7 @@ impl CineoApp {
         let current = Arc::clone(&self.torrent_generation);
         let engine = Arc::clone(&self.engine);
         let options = engine_options(&self.io.engine, &self.state.settings);
+        let mut lookahead = self.torrent_lookahead.subscribe();
         let send = self.sender();
         let task = self.io.runtime.spawn(async move {
             let info_hash = request.info_hash.clone();
@@ -343,7 +342,18 @@ impl CineoApp {
             let mut ticks = tokio::time::interval(TORRENT_STATUS_INTERVAL);
             let mut last = None;
             loop {
-                ticks.tick().await;
+                tokio::select! {
+                    _ = ticks.tick() => {}
+                    Ok(()) = lookahead.changed() => {
+                        let latest = lookahead.borrow_and_update().clone();
+                        if let Some((hash, bytes)) = latest.filter(|(h, _)| *h == info_hash)
+                            && let Some(engine) = engine.lock().await.as_ref()
+                        {
+                            engine.set_lookahead(&hash, bytes);
+                        }
+                        continue;
+                    }
+                }
                 if current.load(Ordering::SeqCst) != generation {
                     return;
                 }
