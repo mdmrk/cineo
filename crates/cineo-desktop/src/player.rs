@@ -48,6 +48,7 @@ pub struct Controls {
     next_requested: bool,
     next_shown_at: Option<f64>,
     started: bool,
+    click_toggled_pause: bool,
 }
 
 impl Controls {
@@ -129,8 +130,14 @@ pub fn show(
     let video = ui.interact(rect, ui.id().with("video"), Sense::click());
     if video.double_clicked() {
         toggle_fullscreen(ui);
-    } else if video.clicked() && controls.menu.take().is_none() {
-        out.push(PlayerCommand::TogglePause);
+        if std::mem::take(&mut controls.click_toggled_pause) {
+            out.push(PlayerCommand::TogglePause);
+        }
+    } else if video.clicked() {
+        controls.click_toggled_pause = controls.menu.take().is_none();
+        if controls.click_toggled_pause {
+            out.push(PlayerCommand::TogglePause);
+        }
     }
 
     let first_load = first_load(controls, status);
