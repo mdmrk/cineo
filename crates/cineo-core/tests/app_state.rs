@@ -297,6 +297,34 @@ fn addon_lists_load_when_asked_and_only_failed_ones_retry() {
 }
 
 #[test]
+fn listed_addons_are_sorted_by_name() {
+    let mut state = restore(&[LISTS]);
+    update(&mut state, loaded(LISTS, "basic/manifest-addon-lists.json"));
+    update(&mut state, Action::LoadAddonLists);
+    let mut addons = parse_addon_catalog_response(&fixture("quirks/addon-catalog-mixed.json"))
+        .unwrap()
+        .value;
+    addons.reverse();
+    addons[1].manifest.name = "catalog Fixture".into();
+    update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("official"),
+            result: Ok(addons),
+        },
+    );
+    let names: Vec<_> = state.addon_lists.as_ref().unwrap()[0]
+        .addons
+        .ready()
+        .unwrap()
+        .iter()
+        .map(|a| a.manifest.name.as_str())
+        .collect();
+    assert_eq!(names, vec!["catalog Fixture", "Subtitles Fixture"]);
+}
+
+#[test]
 fn addon_lists_follow_the_installed_addons() {
     let mut state = restore(&[BASIC]);
     update(&mut state, Action::LoadAddonLists);

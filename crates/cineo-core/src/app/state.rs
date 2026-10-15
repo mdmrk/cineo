@@ -616,7 +616,12 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .flatten()
                 .find(|l| l.target.addon == addon && l.target.path == path)
             {
-                list.addons = result.into();
+                list.addons = result
+                    .map(|mut addons| {
+                        addons.sort_by_cached_key(|a| a.manifest.name.to_lowercase());
+                        addons
+                    })
+                    .into();
             }
             Vec::new()
         }

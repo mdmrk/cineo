@@ -135,7 +135,7 @@ change which addons are asked.
 | meta | `{ "meta": Meta }` | Missing/null `meta` or a meta without valid `id`/`type` is an error; `videos` sorted by (season, episode); video `title` falls back to `name` (VERIFIED-REF alias), `overview` to `description`; invalid videos skipped |
 | stream | `{ "streams": [Stream] }` | Source chosen by field presence in reference order (`url`, `ytId`, `infoHash`, `externalUrl`, archives, `nzbUrl`); `infoHash` must be 40 hex chars; `title` backs `description`; invalid items skipped |
 | subtitles | `{ "subtitles": [Subtitle] }` | `url` must be http(s); missing `lang` → `und` |
-| addon_catalog | `{ "addons": [{ "transportUrl", "manifest" }] }` | Missing `addons` is an error; an entry needs a valid transport URL (legacy `/stremio/v1` URLs are skipped) and a manifest that passes the normal manifest validation, or it is skipped with a warning; a repeated `transportUrl` is skipped (first wins). Other entry fields (`transportName`, `flags`) are ignored. The listed manifest is only shown: installing fetches the addon's own manifest |
+| addon_catalog | `{ "addons": [{ "transportUrl", "manifest" }] }` | Missing `addons` is an error; an entry needs a valid transport URL (legacy `/stremio/v1` URLs are skipped) and a manifest that passes the normal manifest validation, or it is skipped with a warning; a repeated `transportUrl` is skipped (first wins). Other entry fields (`transportName`, `flags`) are ignored. The listed manifest is only shown: installing fetches the addon's own manifest. Cineo sorts the list by manifest `name`, ignoring case, instead of keeping the response order |
 
 ### MetaPreview fields Cineo keeps
 
