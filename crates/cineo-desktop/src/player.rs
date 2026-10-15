@@ -888,17 +888,15 @@ fn seek_bar(
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "fractions in 0..=1")]
-fn cached_spans(status: &Status) -> Vec<(f32, f32)> {
-    if status.duration_s <= 0.0 {
-        return Vec::new();
-    }
-    let fraction = |s: f64| (s / status.duration_s).clamp(0.0, 1.0) as f32;
+fn cached_spans(status: &Status) -> impl Iterator<Item = (f32, f32)> + '_ {
+    let duration = status.duration_s;
+    let fraction = move |s: f64| (s / duration).clamp(0.0, 1.0) as f32;
     status
         .cached
         .iter()
-        .map(|&(start, end)| (fraction(start), fraction(end)))
+        .filter(move |_| duration > 0.0)
+        .map(move |&(start, end)| (fraction(start), fraction(end)))
         .filter(|(start, end)| end > start)
-        .collect()
 }
 
 fn volume_slider(
@@ -1301,9 +1299,12 @@ mod tests {
             cached: std::sync::Arc::from([(0.0, 25.0), (50.0, 150.0), (200.0, 300.0)]),
             ..Status::default()
         };
-        assert!(cached_spans(&status).is_empty(), "no duration yet");
+        assert_eq!(cached_spans(&status).count(), 0, "no duration yet");
         status.duration_s = 100.0;
-        assert_eq!(cached_spans(&status), vec![(0.0, 0.25), (0.5, 1.0)]);
+        assert_eq!(
+            cached_spans(&status).collect::<Vec<_>>(),
+            vec![(0.0, 0.25), (0.5, 1.0)]
+        );
     }
 
     #[test]

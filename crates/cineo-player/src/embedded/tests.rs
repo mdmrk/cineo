@@ -170,8 +170,8 @@ fn cached_ranges_come_from_the_seekable_ranges() {
     assert!(parse_cached_ranges("not json").is_empty());
 
     let mut cached: Arc<[(f64, f64)]> = Arc::from([]);
-    assert!(replace_cached(&mut cached, vec![(0.0, 1.0)]));
-    assert!(!replace_cached(&mut cached, vec![(0.0, 1.0)]));
+    assert!(replace_shared(&mut cached, vec![(0.0, 1.0)]));
+    assert!(!replace_shared(&mut cached, vec![(0.0, 1.0)]));
 }
 
 #[test]
@@ -208,9 +208,9 @@ fn an_unchanged_track_list_keeps_its_snapshot() {
     let json = r#"[{"id":1,"type":"audio","selected":true}]"#;
     let mut tracks: Arc<[Track]> = parse_tracks(json).into();
     let before = Arc::clone(&tracks);
-    assert!(!replace_tracks(&mut tracks, parse_tracks(json)));
+    assert!(!replace_shared(&mut tracks, parse_tracks(json)));
     assert!(Arc::ptr_eq(&tracks, &before));
-    assert!(replace_tracks(&mut tracks, Vec::new()));
+    assert!(replace_shared(&mut tracks, Vec::new()));
     assert!(tracks.is_empty());
 }
 

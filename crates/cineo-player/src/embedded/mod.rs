@@ -639,14 +639,14 @@ impl EventLoop {
                     Value::Text(json) => parse_tracks(json),
                     _ => Vec::new(),
                 };
-                self.update(|s| replace_tracks(&mut s.tracks, tracks));
+                self.update(|s| replace_shared(&mut s.tracks, tracks));
             }
             CACHE_STATE => {
                 let ranges = match value {
                     Value::Text(json) => parse_cached_ranges(json),
                     _ => Vec::new(),
                 };
-                self.update(|s| replace_cached(&mut s.cached, ranges));
+                self.update(|s| replace_shared(&mut s.cached, ranges));
             }
             CACHE_DURATION => {
                 self.update(|s| apply_stat(&mut s.stats, id, value));
@@ -670,18 +670,10 @@ fn replace<T: PartialEq>(slot: &mut T, value: T) -> bool {
     changed
 }
 
-fn replace_cached(slot: &mut Arc<[(f64, f64)]>, ranges: Vec<(f64, f64)>) -> bool {
-    let changed = **slot != *ranges;
+fn replace_shared<T: PartialEq>(slot: &mut Arc<[T]>, items: Vec<T>) -> bool {
+    let changed = **slot != *items;
     if changed {
-        *slot = ranges.into();
-    }
-    changed
-}
-
-fn replace_tracks(slot: &mut Arc<[Track]>, tracks: Vec<Track>) -> bool {
-    let changed = **slot != *tracks;
-    if changed {
-        *slot = tracks.into();
+        *slot = items.into();
     }
     changed
 }

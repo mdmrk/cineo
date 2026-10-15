@@ -93,7 +93,7 @@ Format:
 ### Streaming engine: torrent data can exceed its window
 - Where: [memory.rs](../crates/cineo-stream/src/memory.rs), [storage.rs](../crates/cineo-stream/src/storage.rs) and
   `torrent_state/live/mod.rs` in our librqbit fork
-  ([commit 7b7b4dfb](https://github.com/mdmrk/rqbit/commit/7b7b4dfbbfc781e14d18626bf6c2d1f1bb1dd93d), ADR-0019)
+  ([commit b815c324](https://github.com/mdmrk/rqbit/commit/b815c324922179f7693f506bb9499430bedd9907), ADR-0019)
 - Gap: only validated pieces count toward the window. Pieces in flight
   come on top, and a partial piece whose peer died and that no stream
   needs again stays in memory or on disk until the torrent stops. A piece forgotten
