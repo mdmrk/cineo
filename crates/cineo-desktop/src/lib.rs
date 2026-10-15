@@ -6,6 +6,7 @@ pub mod i18n;
 mod images;
 pub mod instance;
 mod keep_awake;
+mod mpris;
 pub mod player;
 mod register;
 pub mod settings;

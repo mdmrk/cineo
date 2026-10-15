@@ -27,6 +27,7 @@ use crate::brand;
 use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
 use crate::keep_awake::KeepAwake;
+use crate::mpris::{Mpris, Remote};
 use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
@@ -206,6 +207,7 @@ pub(crate) struct CineoApp {
     seq: u64,
     pending_link: Option<String>,
     keep_awake: KeepAwake,
+    mpris: Mpris,
 }
 
 impl CineoApp {
@@ -216,6 +218,7 @@ impl CineoApp {
         store_tx: Sender<Effect>,
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
+        let mpris = Mpris::new(ctx.clone());
         let mut app = Self {
             state: State::default(),
             view: ViewState {
@@ -236,6 +239,7 @@ impl CineoApp {
             seq: 0,
             pending_link: None,
             keep_awake: KeepAwake::new(),
+            mpris,
         };
         for action in restore {
             app.dispatch(action);
@@ -595,6 +599,19 @@ impl CineoApp {
         embedded.minimized = minimized;
     }
 
+    fn remote(&self, remote: Remote) {
+        if remote == Remote::Raise {
+            self.ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            return;
+        }
+        let Some(embedded) = &self.playback else {
+            return;
+        };
+        if let Some(command) = remote_command(remote, embedded.player.status().paused) {
+            embedded.player.send(command);
+        }
+    }
+
     fn show_connecting(&mut self, ui: &mut egui::Ui) -> bool {
         let Some(torrent) = &self.state.torrent else {
             return false;
@@ -787,11 +804,18 @@ async fn forward_events(
 impl eframe::App for CineoApp {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.pause_on_minimize(ctx);
-        let playing = self
+        for remote in self.mpris.take() {
+            self.remote(remote);
+        }
+        let status = self.playback.as_ref().map(|e| e.player.status());
+        self.keep_awake
+            .set(status.as_ref().is_some_and(keeps_screen_awake));
+        let shown = self
             .playback
             .as_ref()
-            .is_some_and(|embedded| keeps_screen_awake(&embedded.player.status()));
-        self.keep_awake.set(playing);
+            .zip(status.filter(|s| s.loaded))
+            .map(|(e, s)| (e.title.as_str(), s.paused));
+        self.mpris.set(shown);
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
@@ -904,6 +928,16 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     )]
     let volume = Percent::new(volume?.round().max(0.0) as u32);
     (settings.remember_volume && settings.volume != volume).then_some(volume)
+}
+
+fn remote_command(remote: Remote, paused: bool) -> Option<PlayerCommand> {
+    match remote {
+        Remote::PlayPause => Some(PlayerCommand::TogglePause),
+        Remote::Play if paused => Some(PlayerCommand::TogglePause),
+        Remote::Pause if !paused => Some(PlayerCommand::TogglePause),
+        Remote::Stop => Some(PlayerCommand::Stop),
+        Remote::Play | Remote::Pause | Remote::Raise => None,
+    }
 }
 
 fn keeps_screen_awake(status: &Status) -> bool {
@@ -1105,5 +1139,22 @@ mod tests {
         };
         assert!(!keeps_screen_awake(&paused));
         assert!(!keeps_screen_awake(&Status::default()), "not loaded yet");
+    }
+
+    #[test]
+    fn media_keys_become_player_commands() {
+        let toggle = Some(PlayerCommand::TogglePause);
+        for paused in [false, true] {
+            assert_eq!(remote_command(Remote::PlayPause, paused), toggle);
+            assert_eq!(
+                remote_command(Remote::Stop, paused),
+                Some(PlayerCommand::Stop)
+            );
+            assert_eq!(remote_command(Remote::Raise, paused), None);
+        }
+        assert_eq!(remote_command(Remote::Play, true), toggle);
+        assert_eq!(remote_command(Remote::Play, false), None, "already playing");
+        assert_eq!(remote_command(Remote::Pause, false), toggle);
+        assert_eq!(remote_command(Remote::Pause, true), None, "already paused");
     }
 }

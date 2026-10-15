@@ -282,3 +282,14 @@ Format:
   screen may sleep during playback.
 - Exit: add the Wayland `idle-inhibit` protocol on the window surface, and
   test it on the desktops Cineo targets.
+
+### Desktop: MPRIS covers play, pause and stop only
+- Where: [mpris.rs](../crates/cineo-desktop/src/mpris.rs)
+- Gap: the MPRIS service offers play, pause, stop and raise, with the title
+  as metadata. It has no seek, position, volume, next or previous, and
+  nothing tests it against a real desktop or a real headset.
+- Why: media keys on headphones only needed play and pause.
+- Instead: next and previous do nothing, and the desktop shows no
+  progress bar for Cineo.
+- Exit: add `Position`, `Seek`, `SetPosition`, `Volume` and next episode,
+  and a test that talks to the service over a private bus.

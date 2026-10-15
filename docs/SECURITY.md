@@ -164,6 +164,14 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   Installing from a list takes the same path as a typed URL: the addon's own
   manifest is fetched under the network policy and validated; the listed
   manifest is never trusted (`addon_lists_install_listed_addons_and_mark_installed_ones`).
+- While a video plays, Cineo serves MPRIS (`org.mpris.MediaPlayer2.cineo.instance<pid>`)
+  on the session D-Bus, so media keys and the desktop's media controls
+  work. Any process in the user's session can then play, pause or stop the
+  video, raise the window and read the title shown in the player. Stream
+  URLs and file paths are not exposed. The service goes away when playback
+  ends.
+- While a video plays, Cineo asks the session D-Bus
+  `org.freedesktop.ScreenSaver` to keep the screen awake.
 
 ### Code and CI rules
 

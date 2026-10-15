@@ -430,7 +430,7 @@ Re-check them when adding.
 | `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/feat/stream-window) at `b815c324` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
-| `zbus` (`async-io`, `blocking-api`; no default features) | 5.19.0, already in the tree through `accesskit_unix` | Keeps the screen awake during playback over the session D-Bus (desktop) | MIT |
+| `zbus` (`async-io`, `blocking-api`; no default features) | 5.19.0, already in the tree through `accesskit_unix` | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop) | MIT |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
