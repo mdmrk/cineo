@@ -852,11 +852,11 @@ fn seek_bar(
         .rect_filled(track, radius, Color32::from_white_alpha(60));
     for (start, end) in cached_spans(status) {
         let span = Rect::from_min_max(
-            pos2(track.left() + track.width() * start, track.top()),
-            pos2(track.left() + track.width() * end, track.bottom()),
+            pos2(track.left() + track.width() * start, track.bottom() + 2.0),
+            pos2(track.left() + track.width() * end, track.bottom() + 4.0),
         );
         ui.painter()
-            .rect_filled(span, radius, Color32::from_white_alpha(130));
+            .rect_filled(span, CornerRadius::same(1), Color32::from_white_alpha(150));
     }
     let played = controls.seek_drag.unwrap_or(if seekable {
         (status.position_s / status.duration_s).clamp(0.0, 1.0)
