@@ -88,6 +88,7 @@ pub struct Status {
     pub volume: f64,
     pub muted: bool,
     pub tracks: Arc<[Track]>,
+    pub cached: Arc<[(f64, f64)]>,
     pub stats: Stats,
 }
 
@@ -129,8 +130,9 @@ const VIDEO_BITRATE: u64 = 12;
 const HWDEC_CURRENT: u64 = 13;
 const FRAME_DROPS: u64 = 14;
 const SEEKING: u64 = 15;
+const CACHE_STATE: u64 = 16;
 
-const OBSERVED: [(u64, &str, std::ffi::c_int); 15] = [
+const OBSERVED: [(u64, &str, std::ffi::c_int); 16] = [
     (TIME_POS, "time-pos", ffi::FORMAT_DOUBLE),
     (DURATION, "duration", ffi::FORMAT_DOUBLE),
     (PAUSE, "pause", ffi::FORMAT_FLAG),
@@ -146,6 +148,7 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 15] = [
     (HWDEC_CURRENT, "hwdec-current", ffi::FORMAT_STRING),
     (FRAME_DROPS, "frame-drop-count", ffi::FORMAT_DOUBLE),
     (SEEKING, "seeking", ffi::FORMAT_FLAG),
+    (CACHE_STATE, "demuxer-cache-state", ffi::FORMAT_STRING),
 ];
 
 const OPTIONS: &[(&str, &str)] = &[
@@ -462,6 +465,23 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
     Some(args)
 }
 
+fn parse_cached_ranges(json: &str) -> Vec<(f64, f64)> {
+    let Ok(state) = serde_json::from_str::<Json>(json) else {
+        return Vec::new();
+    };
+    let Some(ranges) = state.get("seekable-ranges").and_then(Json::as_array) else {
+        return Vec::new();
+    };
+    ranges
+        .iter()
+        .filter_map(|range| {
+            let start = range.get("start")?.as_f64()?;
+            let end = range.get("end")?.as_f64()?;
+            (start.is_finite() && end.is_finite() && end > start).then_some((start.max(0.0), end))
+        })
+        .collect()
+}
+
 fn parse_tracks(json: &str) -> Vec<Track> {
     let Ok(Json::Array(items)) = serde_json::from_str::<Json>(json) else {
         return Vec::new();
@@ -621,6 +641,13 @@ impl EventLoop {
                 };
                 self.update(|s| replace_tracks(&mut s.tracks, tracks));
             }
+            CACHE_STATE => {
+                let ranges = match value {
+                    Value::Text(json) => parse_cached_ranges(json),
+                    _ => Vec::new(),
+                };
+                self.update(|s| replace_cached(&mut s.cached, ranges));
+            }
             _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }
         None
@@ -636,6 +663,14 @@ impl EventLoop {
 fn replace<T: PartialEq>(slot: &mut T, value: T) -> bool {
     let changed = *slot != value;
     *slot = value;
+    changed
+}
+
+fn replace_cached(slot: &mut Arc<[(f64, f64)]>, ranges: Vec<(f64, f64)>) -> bool {
+    let changed = **slot != *ranges;
+    if changed {
+        *slot = ranges.into();
+    }
     changed
 }
 

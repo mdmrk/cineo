@@ -162,6 +162,19 @@ fn stats_take_mpv_values_and_drop_unavailable_ones() {
 }
 
 #[test]
+fn cached_ranges_come_from_the_seekable_ranges() {
+    let json = r#"{"seekable-ranges":[{"start":0,"end":12.5},{"start":-1,"end":40},
+        {"start":50,"end":50},{"start":"x","end":60},{"end":70}],"cache-end":40}"#;
+    assert_eq!(parse_cached_ranges(json), vec![(0.0, 12.5), (0.0, 40.0)]);
+    assert!(parse_cached_ranges(r#"{"cache-end":3}"#).is_empty());
+    assert!(parse_cached_ranges("not json").is_empty());
+
+    let mut cached: Arc<[(f64, f64)]> = Arc::from([]);
+    assert!(replace_cached(&mut cached, vec![(0.0, 1.0)]));
+    assert!(!replace_cached(&mut cached, vec![(0.0, 1.0)]));
+}
+
+#[test]
 fn status_snapshots_share_the_track_list() {
     let status = Status {
         tracks: parse_tracks(r#"[{"id":1,"type":"audio","selected":true}]"#).into(),
@@ -275,7 +288,9 @@ fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
 
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     let mut saw_audio_track = false;
+    let mut saw_cached = false;
     let last = loop {
+        saw_cached |= !player.status().cached.is_empty();
         saw_audio_track |= player
             .status()
             .tracks
@@ -299,6 +314,10 @@ fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
         "{last:?}"
     );
     assert!(saw_audio_track, "track-list arrives as JSON and is parsed");
+    assert!(
+        saw_cached,
+        "demuxer-cache-state arrives as JSON and is parsed"
+    );
     drop(player);
 }
 

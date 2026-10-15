@@ -850,6 +850,14 @@ fn seek_bar(
     let radius = CornerRadius::same(3);
     ui.painter()
         .rect_filled(track, radius, Color32::from_white_alpha(60));
+    for (start, end) in cached_spans(status) {
+        let span = Rect::from_min_max(
+            pos2(track.left() + track.width() * start, track.top()),
+            pos2(track.left() + track.width() * end, track.bottom()),
+        );
+        ui.painter()
+            .rect_filled(span, radius, Color32::from_white_alpha(130));
+    }
     let played = controls.seek_drag.unwrap_or(if seekable {
         (status.position_s / status.duration_s).clamp(0.0, 1.0)
     } else {
@@ -877,6 +885,20 @@ fn seek_bar(
         }
         response.on_hover_cursor(CursorIcon::PointingHand);
     }
+}
+
+#[expect(clippy::cast_possible_truncation, reason = "fractions in 0..=1")]
+fn cached_spans(status: &Status) -> Vec<(f32, f32)> {
+    if status.duration_s <= 0.0 {
+        return Vec::new();
+    }
+    let fraction = |s: f64| (s / status.duration_s).clamp(0.0, 1.0) as f32;
+    status
+        .cached
+        .iter()
+        .map(|&(start, end)| (fraction(start), fraction(end)))
+        .filter(|(start, end)| end > start)
+        .collect()
 }
 
 fn volume_slider(
@@ -1271,6 +1293,17 @@ mod tests {
             !first_load(&mut controls, &status),
             "later waits are not the first load"
         );
+    }
+
+    #[test]
+    fn cached_ranges_become_fractions_of_the_duration() {
+        let mut status = Status {
+            cached: std::sync::Arc::from([(0.0, 25.0), (50.0, 150.0), (200.0, 300.0)]),
+            ..Status::default()
+        };
+        assert!(cached_spans(&status).is_empty(), "no duration yet");
+        status.duration_s = 100.0;
+        assert_eq!(cached_spans(&status), vec![(0.0, 0.25), (0.5, 1.0)]);
     }
 
     #[test]
