@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-cli"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "anyhow",
  "cineo-core",
@@ -971,7 +971,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-core"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "percent-encoding",
  "semver",
@@ -982,7 +982,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-desktop"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "anyhow",
  "cineo-core",
@@ -1009,7 +1009,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-net"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "cineo-core",
  "reqwest",
@@ -1023,7 +1023,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-player"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "cineo-core",
  "libloading 0.9.0",
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-store"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "cineo-core",
  "etcetera",
@@ -1047,7 +1047,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-stream"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "anyhow",
  "bytes",
