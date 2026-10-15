@@ -26,6 +26,7 @@ use tracing::{debug, error, warn};
 use crate::brand;
 use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
+use crate::keep_awake::KeepAwake;
 use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
@@ -204,6 +205,7 @@ pub(crate) struct CineoApp {
     player_feed: tokio::sync::watch::Sender<Option<Feed>>,
     seq: u64,
     pending_link: Option<String>,
+    keep_awake: KeepAwake,
 }
 
 impl CineoApp {
@@ -233,6 +235,7 @@ impl CineoApp {
             player_feed: tokio::sync::watch::Sender::new(None),
             seq: 0,
             pending_link: None,
+            keep_awake: KeepAwake::new(),
         };
         for action in restore {
             app.dispatch(action);
@@ -784,6 +787,11 @@ async fn forward_events(
 impl eframe::App for CineoApp {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.pause_on_minimize(ctx);
+        let playing = self
+            .playback
+            .as_ref()
+            .is_some_and(|embedded| keeps_screen_awake(&embedded.player.status()));
+        self.keep_awake.set(playing);
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
@@ -896,6 +904,10 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     )]
     let volume = Percent::new(volume?.round().max(0.0) as u32);
     (settings.remember_volume && settings.volume != volume).then_some(volume)
+}
+
+fn keeps_screen_awake(status: &Status) -> bool {
+    status.loaded && !status.paused
 }
 
 fn should_pause_on_minimize(settings: &Settings, status: &Status) -> bool {
@@ -1078,5 +1090,20 @@ mod tests {
             ..playing
         };
         assert!(!should_pause_on_minimize(&on, &paused));
+    }
+
+    #[test]
+    fn only_a_playing_video_keeps_the_screen_awake() {
+        let playing = Status {
+            loaded: true,
+            ..Status::default()
+        };
+        assert!(keeps_screen_awake(&playing));
+        let paused = Status {
+            paused: true,
+            ..playing
+        };
+        assert!(!keeps_screen_awake(&paused));
+        assert!(!keeps_screen_awake(&Status::default()), "not loaded yet");
     }
 }

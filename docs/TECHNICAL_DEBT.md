@@ -269,3 +269,16 @@ Format:
 - Why: only links needed a handover.
 - Instead: second windows share the database.
 - Exit: hand plain launches to the running window too, which raises it.
+
+### Desktop: the screen stays awake only through `org.freedesktop.ScreenSaver`
+- Where: [keep_awake.rs](../crates/cineo-desktop/src/keep_awake.rs)
+- Gap: while a video plays, Cineo inhibits the screen saver only over the
+  session D-Bus `org.freedesktop.ScreenSaver` interface. There is no
+  Wayland `idle-inhibit` and no XDG portal `Inhibit`, and nothing tests it
+  against a real desktop.
+- Why: the interface covers KDE Plasma and GNOME with one D-Bus call. With
+  the libmpv render API, mpv does not do this itself (INFERRED).
+- Instead: on a desktop without the interface, a warning is logged and the
+  screen may sleep during playback.
+- Exit: add the Wayland `idle-inhibit` protocol on the window surface, and
+  test it on the desktops Cineo targets.
