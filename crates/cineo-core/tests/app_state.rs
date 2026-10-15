@@ -1098,7 +1098,7 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
 }
 
 #[test]
-fn the_torrent_fills_up_to_thirty_seconds_and_resumes_below_twenty_five() {
+fn the_torrent_fills_up_to_two_minutes_and_resumes_below_100_seconds() {
     let mut state = detail_with_p2p_accepted();
     update(&mut state, PLAY_TORRENT);
     let effects = update(
@@ -1148,22 +1148,22 @@ fn the_torrent_fills_up_to_thirty_seconds_and_resumes_below_twenty_five() {
     assert_eq!(lookahead(&mut state, streaming), None, "no duration yet");
     assert_eq!(
         lookahead(&mut state, progress),
-        Some(6_000_000),
-        "30 s at 200 kB/s while nothing is buffered"
+        Some(24_000_000),
+        "120 s at 200 kB/s while nothing is buffered"
     );
-    assert_eq!(lookahead(&mut state, buffered(10)), Some(4_000_000));
-    assert_eq!(lookahead(&mut state, buffered(29)), Some(0), "full");
-    assert_eq!(lookahead(&mut state, buffered(27)), None, "stays stopped");
-    assert_eq!(lookahead(&mut state, buffered(25)), None);
+    assert_eq!(lookahead(&mut state, buffered(10)), Some(22_000_000));
+    assert_eq!(lookahead(&mut state, buffered(119)), Some(0), "full");
+    assert_eq!(lookahead(&mut state, buffered(117)), None, "stays stopped");
+    assert_eq!(lookahead(&mut state, buffered(100)), None);
     assert_eq!(
-        lookahead(&mut state, buffered(24)),
-        Some(1_200_000),
-        "below 25 s it fills up to 30 s again"
+        lookahead(&mut state, buffered(99)),
+        Some(4_200_000),
+        "below 100 s it fills up to 120 s again"
     );
-    assert_eq!(lookahead(&mut state, buffered(26)), Some(800_000));
+    assert_eq!(lookahead(&mut state, buffered(101)), Some(3_800_000));
     assert_eq!(
         lookahead(&mut state, buffered(0)),
-        Some(6_000_000),
+        Some(24_000_000),
         "a seek"
     );
 }

@@ -38,7 +38,8 @@ old one *Superseded by NNNN*.
 | [0020](0020-torrent-data-on-disk-bounded-by-the-window.md) | Torrent data on disk, bounded by the same window | Accepted |
 | [0021](0021-localization-with-rust-i18n.md) | Localization: rust-i18n catalogs instead of Fluent | Accepted |
 | [0022](0022-linux-only.md) | Linux only | Accepted |
-| [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted |
+| [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |
+| [0024](0024-a-two-minute-buffer.md) | A two-minute buffer | Accepted |
 
 ## What we took from the reference projects
 

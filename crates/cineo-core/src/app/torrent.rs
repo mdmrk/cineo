@@ -153,8 +153,8 @@ impl TorrentPlayback {
     }
 }
 
-const FULL_S: u64 = 30;
-const RESUME_S: u64 = 25;
+const FULL_S: u64 = 120;
+const RESUME_S: u64 = 100;
 
 pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
     if size == 0 || duration_ms == 0 {

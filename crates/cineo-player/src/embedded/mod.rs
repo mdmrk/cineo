@@ -167,7 +167,8 @@ const OPTIONS: &[(&str, &str)] = &[
     ("keep-open", "no"),
     ("video-timing-offset", "0"),
     ("audio-client-name", "Cineo"),
-    ("cache-secs", "30"),
+    ("cache-secs", "120"),
+    ("demuxer-max-bytes", "512MiB"),
 ];
 
 /// A playback running in this process. Dropping it stops playback; mpv shuts

@@ -190,7 +190,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Max decoded body | 8 MiB |
 | Request timeout / connect timeout | 20 s / 10 s |
 | Max redirects | 5, no https→http |
-| mpv | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only |
+| mpv | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; forward cache at most 120 s and 512 MiB (ADR-0024) |
 
 ## Unsafe code
 

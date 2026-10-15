@@ -1,6 +1,6 @@
 # 0023. Torrent downloads keep 25 to 30 s ahead of the playhead
 
-- Status: Accepted
+- Status: Accepted (30 s and 25 s: superseded by 0024, now 120 s and 100 s)
 - Date: 2026-10-15
 
 ## Context
