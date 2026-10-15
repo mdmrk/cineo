@@ -178,7 +178,7 @@ pub fn show(
     }
 
     top_bar(ui, rect, title, &mut out);
-    if status.loaded {
+    if !first_load {
         bottom_bar(ui, rect, playback, controls, &mut out);
     }
     out

@@ -7,17 +7,20 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
 use cineo_core::app::{
-    Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
-    TorrentRequest, parse_link, update,
+    Action, Effect, Language, Lookahead, Notice, Percent, PlayRequest, Setting, Settings, State,
+    TorrentRequest, TorrentStatus, parse_link, update,
 };
 use cineo_core::diagnostics::Parsed;
 use cineo_net::{AddonClient, FetchError, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
-use cineo_player::embedded::{Player, PlayerCommand, ProcAddress, Renderer, Status, Video};
+use cineo_player::embedded::{
+    Display, Player, PlayerCommand, ProcAddress, Renderer, Status, Video,
+};
 use cineo_store::Store;
 use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
+use raw_window_handle::{HasDisplayHandle as _, RawDisplayHandle};
 use tracing::{debug, error, warn};
 
 use crate::brand;
@@ -68,6 +71,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         runtime: runtime.handle().clone(),
         client: Arc::clone(&client),
         gl: None,
+        display: None,
         engine: EngineOptions {
             allow_private_network,
             ..EngineOptions::new(options.cache_dir)
@@ -95,6 +99,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
+            io.display = native_display(cc);
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
             if let Err(err) = instance::listen(&data_dir, move |link| {
                 let _ = tx.send(Msg::Link(link));
@@ -136,7 +141,23 @@ pub(crate) struct Io {
     pub(crate) runtime: tokio::runtime::Handle,
     pub(crate) client: Arc<AddonClient>,
     pub(crate) gl: Option<ProcAddress>,
+    pub(crate) display: Option<Display>,
     pub(crate) engine: EngineOptions,
+}
+
+fn native_display(cc: &eframe::CreationContext<'_>) -> Option<Display> {
+    match cc.display_handle().ok()?.as_raw() {
+        RawDisplayHandle::Wayland(handle) => Some(Display::Wayland(handle.display)),
+        RawDisplayHandle::Xlib(handle) => handle.display.map(Display::X11),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Feed {
+    url: url::Url,
+    buffered_s: Option<u64>,
+    duration_ms: u64,
 }
 
 const TORRENT_STATUS_INTERVAL: Duration = Duration::from_secs(1);
@@ -180,7 +201,7 @@ pub(crate) struct CineoApp {
     engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
     torrent_generation: Arc<AtomicU64>,
     torrent_task: Option<tokio::task::AbortHandle>,
-    torrent_lookahead: tokio::sync::watch::Sender<Option<(String, u64)>>,
+    player_feed: tokio::sync::watch::Sender<Option<Feed>>,
     seq: u64,
     pending_link: Option<String>,
 }
@@ -209,7 +230,7 @@ impl CineoApp {
             engine: Arc::default(),
             torrent_generation: Arc::default(),
             torrent_task: None,
-            torrent_lookahead: tokio::sync::watch::Sender::new(None),
+            player_feed: tokio::sync::watch::Sender::new(None),
             seq: 0,
             pending_link: None,
         };
@@ -299,10 +320,6 @@ impl CineoApp {
             Effect::Play(request) => self.play(&request),
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
-            Effect::SetTorrentLookahead { info_hash, bytes } => {
-                self.torrent_lookahead
-                    .send_replace(Some((info_hash, bytes)));
-            }
             Effect::CheckForUpdate(url) => self.spawn(async move {
                 let result = client.fetch_latest_release(&url).await.map_err(|err| {
                     debug!(%err, "update check failed");
@@ -318,7 +335,7 @@ impl CineoApp {
         let current = Arc::clone(&self.torrent_generation);
         let engine = Arc::clone(&self.engine);
         let options = engine_options(&self.io.engine, &self.state.settings);
-        let mut lookahead = self.torrent_lookahead.subscribe();
+        let mut feed = self.player_feed.subscribe();
         let send = self.sender();
         let task = self.io.runtime.spawn(async move {
             let info_hash = request.info_hash.clone();
@@ -329,46 +346,58 @@ impl CineoApp {
                 }
                 open_torrent(&mut engine, options, &request).await
             };
-            match opened {
-                Ok(url) => send(Action::TorrentReady {
-                    info_hash: info_hash.clone(),
-                    url,
-                }),
+            let url = match opened {
+                Ok(url) => url,
                 Err(reason) => {
                     send(Action::TorrentFailed { info_hash, reason });
                     return;
                 }
-            }
+            };
+            send(Action::TorrentReady {
+                info_hash: info_hash.clone(),
+                url: url.clone(),
+            });
             let mut ticks = tokio::time::interval(TORRENT_STATUS_INTERVAL);
             let mut last = None;
+            let mut lookahead = Lookahead::default();
+            let mut size = None;
             loop {
-                tokio::select! {
-                    _ = ticks.tick() => {}
-                    Ok(()) = lookahead.changed() => {
-                        let latest = lookahead.borrow_and_update().clone();
-                        if let Some((hash, bytes)) = latest.filter(|(h, _)| *h == info_hash)
-                            && let Some(engine) = engine.lock().await.as_ref()
-                        {
-                            engine.set_lookahead(&hash, bytes);
-                        }
-                        continue;
-                    }
-                }
+                let ticked = tokio::select! {
+                    _ = ticks.tick() => true,
+                    Ok(()) = feed.changed() => false,
+                };
                 if current.load(Ordering::SeqCst) != generation {
                     return;
                 }
-                let status = engine.lock().await.as_ref().and_then(Engine::status);
-                match status {
-                    Some((hash, status)) if hash == info_hash => {
-                        if last.as_ref() != Some(&status) {
-                            last = Some(status.clone());
-                            send(Action::TorrentStatus {
-                                info_hash: info_hash.clone(),
-                                status,
-                            });
-                        }
+                let running = engine.lock().await;
+                let Some(running) = running.as_ref() else {
+                    return;
+                };
+                if ticked {
+                    let status = match running.status() {
+                        Some((hash, status)) if hash == info_hash => status,
+                        _ => return,
+                    };
+                    if let TorrentStatus::Streaming { size: bytes, .. } = status {
+                        size = Some(bytes);
                     }
-                    _ => return,
+                    if last.as_ref() != Some(&status) {
+                        last = Some(status.clone());
+                        send(Action::TorrentStatus {
+                            info_hash: info_hash.clone(),
+                            status,
+                        });
+                    }
+                }
+                let player = feed
+                    .borrow_and_update()
+                    .as_ref()
+                    .filter(|feed| feed.url == url)
+                    .and_then(|feed| Some((feed.buffered_s?, feed.duration_ms)));
+                if let (Some((buffered_s, duration_ms)), Some(size)) = (player, size)
+                    && let Some(bytes) = lookahead.update(buffered_s, size, duration_ms)
+                {
+                    running.set_lookahead(&info_hash, bytes);
                 }
             }
         });
@@ -422,14 +451,21 @@ impl CineoApp {
         let video = Video {
             get_proc_address: gl,
             on_frame: Box::new(move || on_frame.request_repaint()),
+            display: self.io.display,
         };
         let (player, renderer, events) =
             Player::start(request, Arc::new(move || repaint.request_repaint()), video)?;
         let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
         let send = self.sender();
+        self.player_feed.send_replace(Some(Feed {
+            url: request.url.clone(),
+            buffered_s: None,
+            duration_ms: 0,
+        }));
+        let feed = self.player_feed.clone();
         let forward = self.io.runtime.spawn(async move {
             let mut events = events;
-            forward_events(&mut events, meta_id, video_id, send).await;
+            forward_events(&mut events, meta_id, video_id, &feed, send).await;
         });
         Ok(Embedded {
             player,
@@ -693,6 +729,7 @@ async fn forward_events(
     events: &mut tokio::sync::mpsc::UnboundedReceiver<PlayerEvent>,
     meta_id: String,
     video_id: String,
+    feed: &tokio::sync::watch::Sender<Option<Feed>>,
     send: impl Fn(Action),
 ) {
     while let Some(event) = events.recv().await {
@@ -714,10 +751,20 @@ async fn forward_events(
                 break;
             }
             PlayerEvent::Buffered { seconds } => {
-                send(Action::PlaybackBuffered { seconds });
+                feed.send_if_modified(|feed| {
+                    feed.as_mut()
+                        .is_some_and(|feed| feed.buffered_s.replace(seconds) != Some(seconds))
+                });
                 continue;
             }
         };
+        if duration_ms > 0 {
+            feed.send_if_modified(|feed| {
+                feed.as_mut().is_some_and(|feed| {
+                    std::mem::replace(&mut feed.duration_ms, duration_ms) != duration_ms
+                })
+            });
+        }
         if time_ms > 0 {
             send(Action::PlaybackProgress {
                 meta_id: meta_id.clone(),

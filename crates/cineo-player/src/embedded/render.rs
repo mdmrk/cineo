@@ -1,6 +1,7 @@
 #![allow(unsafe_code, reason = "FFI to libmpv; ADR-0014, docs/SECURITY.md")]
 
 use std::ffi::{CStr, c_char, c_int, c_void};
+use std::ptr::NonNull;
 use std::sync::Arc;
 
 use super::ffi::{self, Core, OpenGlFbo, OpenGlInitParams, RenderContext, RenderParam};
@@ -13,6 +14,15 @@ pub type ProcAddress = Arc<dyn Fn(&CStr) -> *const c_void + Send + Sync>;
 /// Called by mpv, from its own threads, when a new frame should be drawn.
 /// It must only schedule a repaint.
 pub type OnFrame = Box<dyn Fn() + Send + Sync>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Display {
+    Wayland(NonNull<c_void>),
+    X11(NonNull<c_void>),
+}
+
+unsafe impl Send for Display {}
+unsafe impl Sync for Display {}
 
 /// mpv's OpenGL renderer for one playback.
 pub struct Renderer {
@@ -47,6 +57,7 @@ impl Renderer {
         core: Arc<Core>,
         get_proc_address: ProcAddress,
         on_frame: OnFrame,
+        display: Option<Display>,
     ) -> Result<Self, PlayerError> {
         let lib = core.lib();
         let proc = Box::new(get_proc_address);
@@ -63,6 +74,20 @@ impl Renderer {
             RenderParam {
                 kind: ffi::RENDER_PARAM_OPENGL_INIT_PARAMS,
                 data: std::ptr::from_mut(&mut init).cast(),
+            },
+            match display {
+                Some(Display::Wayland(display)) => RenderParam {
+                    kind: ffi::RENDER_PARAM_WL_DISPLAY,
+                    data: display.as_ptr(),
+                },
+                Some(Display::X11(display)) => RenderParam {
+                    kind: ffi::RENDER_PARAM_X11_DISPLAY,
+                    data: display.as_ptr(),
+                },
+                None => RenderParam {
+                    kind: ffi::RENDER_PARAM_INVALID,
+                    data: std::ptr::null_mut(),
+                },
             },
             RenderParam {
                 kind: ffi::RENDER_PARAM_INVALID,

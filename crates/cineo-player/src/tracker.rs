@@ -23,13 +23,11 @@ pub(crate) enum EndReason {
 #[derive(Debug, Default, PartialEq)]
 pub(crate) struct Step {
     pub(crate) event: Option<PlayerEvent>,
-    pub(crate) seek_to: Option<f64>,
     pub(crate) done: bool,
 }
 
 #[derive(Debug)]
 pub(crate) struct Tracker {
-    start_ms: u64,
     time_ms: u64,
     duration_ms: u64,
     last_report: Option<Instant>,
@@ -38,9 +36,8 @@ pub(crate) struct Tracker {
 }
 
 impl Tracker {
-    pub(crate) fn new(start_ms: u64) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            start_ms,
             time_ms: 0,
             duration_ms: 0,
             last_report: None,
@@ -61,15 +58,7 @@ impl Tracker {
             }
             Input::FileLoaded => {
                 self.started = true;
-                #[expect(
-                    clippy::cast_precision_loss,
-                    reason = "milliseconds of a video fit in f64"
-                )]
-                let seek_to = (self.start_ms > 0).then(|| self.start_ms as f64 / 1000.0);
-                Step {
-                    seek_to,
-                    ..Step::default()
-                }
+                Step::default()
             }
             Input::EndFile(EndReason::Eof) => finish(PlayerEvent::Ended {
                 time_ms: self.time_ms,
@@ -121,7 +110,6 @@ impl Tracker {
 fn finish(event: PlayerEvent) -> Step {
     Step {
         event: Some(event),
-        seek_to: None,
         done: true,
     }
 }
@@ -146,7 +134,7 @@ mod tests {
 
     #[test]
     fn buffered_seconds_are_reported_when_the_whole_second_changes() {
-        let mut tracker = Tracker::new(0);
+        let mut tracker = Tracker::new();
         let t0 = Instant::now();
         let buffered = |seconds| Some(PlayerEvent::Buffered { seconds });
         assert_eq!(tracker.on(Input::Buffered(0.4), t0).event, buffered(0));
@@ -165,7 +153,7 @@ mod tests {
     #[test]
     fn progress_is_throttled_and_skips_zero() {
         let t0 = Instant::now();
-        let mut tracker = Tracker::new(0);
+        let mut tracker = Tracker::new();
         assert_eq!(
             tracker.on(Input::Duration(600.0), t0).event,
             None,
@@ -190,23 +178,9 @@ mod tests {
     }
 
     #[test]
-    fn resumes_after_the_file_loads() {
-        let mut tracker = Tracker::new(61_500);
-        let step = tracker.on(Input::FileLoaded, Instant::now());
-        assert_eq!(step.seek_to, Some(61.5));
-        assert!(!step.done);
-        assert_eq!(
-            Tracker::new(0)
-                .on(Input::FileLoaded, Instant::now())
-                .seek_to,
-            None
-        );
-    }
-
-    #[test]
     fn end_reasons_map_to_events() {
         let now = Instant::now();
-        let mut tracker = Tracker::new(0);
+        let mut tracker = Tracker::new();
         tracker.on(Input::TimePos(5.0), now);
         let ended = tracker.on(Input::EndFile(EndReason::Eof), now);
         assert!(ended.done);
@@ -218,7 +192,7 @@ mod tests {
             })
         );
 
-        let failed = Tracker::new(0).on(Input::EndFile(EndReason::Error("x".into())), now);
+        let failed = Tracker::new().on(Input::EndFile(EndReason::Error("x".into())), now);
         assert_eq!(
             failed.event,
             Some(PlayerEvent::Failed(
@@ -230,7 +204,7 @@ mod tests {
     #[test]
     fn a_stop_counts_only_after_the_file_loaded() {
         let now = Instant::now();
-        let mut tracker = Tracker::new(0);
+        let mut tracker = Tracker::new();
         assert_eq!(
             tracker.on(Input::EndFile(EndReason::Other), now),
             Step::default()

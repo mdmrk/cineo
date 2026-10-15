@@ -74,6 +74,7 @@ const EVENT_SHUTDOWN: c_int = 1;
 const EVENT_LOG_MESSAGE: c_int = 2;
 const EVENT_END_FILE: c_int = 7;
 const EVENT_FILE_LOADED: c_int = 8;
+const EVENT_PLAYBACK_RESTART: c_int = 21;
 const EVENT_PROPERTY_CHANGE: c_int = 22;
 
 pub(crate) const FORMAT_STRING: c_int = 1;
@@ -88,6 +89,8 @@ pub(crate) const RENDER_PARAM_API_TYPE: c_int = 1;
 pub(crate) const RENDER_PARAM_OPENGL_INIT_PARAMS: c_int = 2;
 pub(crate) const RENDER_PARAM_OPENGL_FBO: c_int = 3;
 pub(crate) const RENDER_PARAM_FLIP_Y: c_int = 4;
+pub(crate) const RENDER_PARAM_X11_DISPLAY: c_int = 8;
+pub(crate) const RENDER_PARAM_WL_DISPLAY: c_int = 9;
 pub(crate) const RENDER_PARAM_BLOCK_FOR_TARGET_TIME: c_int = 12;
 
 pub(crate) const RENDER_API_TYPE_OPENGL: &CStr = c"opengl";
@@ -103,6 +106,8 @@ pub(crate) struct Lib {
     terminate_destroy: unsafe extern "C" fn(*mut Handle),
     set_option_string: unsafe extern "C" fn(*mut Handle, *const c_char, *const c_char) -> c_int,
     set_property_string: unsafe extern "C" fn(*mut Handle, *const c_char, *const c_char) -> c_int,
+    set_property_async:
+        unsafe extern "C" fn(*mut Handle, u64, *const c_char, c_int, *mut c_void) -> c_int,
     command: unsafe extern "C" fn(*mut Handle, *mut *const c_char) -> c_int,
     command_async: unsafe extern "C" fn(*mut Handle, u64, *mut *const c_char) -> c_int,
     observe_property: unsafe extern "C" fn(*mut Handle, u64, *const c_char, c_int) -> c_int,
@@ -193,6 +198,7 @@ fn resolve(library: libloading::Library) -> Result<Lib, String> {
         terminate_destroy: sym!(b"mpv_terminate_destroy\0"),
         set_option_string: sym!(b"mpv_set_option_string\0"),
         set_property_string: sym!(b"mpv_set_property_string\0"),
+        set_property_async: sym!(b"mpv_set_property_async\0"),
         command: sym!(b"mpv_command\0"),
         command_async: sym!(b"mpv_command_async\0"),
         observe_property: sym!(b"mpv_observe_property\0"),
@@ -229,6 +235,7 @@ pub(crate) enum Event {
         text: String,
     },
     FileLoaded,
+    PlaybackRestart,
     EndFile {
         eof: Result<bool, String>,
     },
@@ -320,6 +327,20 @@ impl Core {
         })
     }
 
+    pub(crate) fn set_property_async(&self, name: &str, value: &str) -> Result<(), MpvError> {
+        let (name, value) = (cstring(name)?, cstring(value)?);
+        let mut data = value.as_ptr();
+        self.check(unsafe {
+            (self.lib.set_property_async)(
+                self.handle,
+                0,
+                name.as_ptr(),
+                FORMAT_STRING,
+                (&raw mut data).cast(),
+            )
+        })
+    }
+
     pub(crate) fn command(&self, args: &[&str]) -> Result<(), MpvError> {
         let (_owned, mut argv) = argv(args)?;
         self.check(unsafe { (self.lib.command)(self.handle, argv.as_mut_ptr()) })
@@ -369,6 +390,7 @@ unsafe fn decode(lib: &Lib, event: &RawEvent) -> Event {
         EVENT_NONE => Event::None,
         EVENT_SHUTDOWN => Event::Shutdown,
         EVENT_FILE_LOADED => Event::FileLoaded,
+        EVENT_PLAYBACK_RESTART => Event::PlaybackRestart,
         EVENT_LOG_MESSAGE if !event.data.is_null() => {
             let log = unsafe { &*event.data.cast::<RawLogMessage>() };
             unsafe {

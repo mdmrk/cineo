@@ -30,4 +30,7 @@ pub use state::{
     Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest,
     Playing, Row, State, StreamGroup, SubtitleGroup, update,
 };
-pub use torrent::{TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file};
+pub use torrent::{
+    Lookahead, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file,
+    is_engine_url,
+};

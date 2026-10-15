@@ -13,8 +13,9 @@ use cineo_core::addon::{
     parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, SavedStream,
-    Setting, Settings, State, TorrentRequest, TorrentStatus, WatchedAt, continue_watching, update,
+    Action, Effect, Language, LibraryItem, Loadable, Lookahead, Notice, PlaybackFailure, Problem,
+    SavedStream, Setting, Settings, State, TorrentRequest, TorrentStatus, WatchedAt,
+    continue_watching, update,
 };
 
 fn player_failed(reason: &str, pick_another: bool) -> Notice {
@@ -1098,71 +1099,30 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
 }
 
 #[test]
-fn the_torrent_fills_up_to_two_minutes_and_resumes_below_100_seconds() {
-    let mut state = detail_with_p2p_accepted();
-    update(&mut state, PLAY_TORRENT);
-    let effects = update(
-        &mut state,
-        Action::TorrentReady {
-            info_hash: FIXTURE_HASH.into(),
-            url: url::Url::parse("http://127.0.0.1:40000/token/0").unwrap(),
-        },
-    );
-    let [Effect::Play(play)] = effects.as_slice() else {
-        panic!("{effects:?}");
-    };
-    let progress = Action::PlaybackProgress {
-        meta_id: play.meta_id.clone(),
-        video_id: play.video_id.clone(),
-        time_ms: 1000,
-        duration_ms: 7_200_000,
-        now_ms: 1,
-    };
-    let streaming = Action::TorrentStatus {
-        info_hash: FIXTURE_HASH.into(),
-        status: TorrentStatus::Streaming {
-            peers: 1,
-            download_bytes_per_sec: 0,
-            downloaded: 0,
-            size: 1_440_000_000,
-        },
-    };
-    let lookahead = |state: &mut _, action| -> Option<u64> {
-        let effects = update(state, action);
-        let found: Vec<u64> = effects
-            .iter()
-            .filter_map(|e| match e {
-                Effect::SetTorrentLookahead { info_hash, bytes } => {
-                    assert_eq!(info_hash, FIXTURE_HASH);
-                    Some(*bytes)
-                }
-                _ => None,
-            })
-            .collect();
-        assert!(found.len() <= 1, "{found:?}");
-        found.first().copied()
-    };
-    let buffered = |seconds| Action::PlaybackBuffered { seconds };
-
-    assert_eq!(lookahead(&mut state, buffered(0)), None, "no size yet");
-    assert_eq!(lookahead(&mut state, streaming), None, "no duration yet");
+fn the_torrent_fills_up_to_two_minutes_and_resumes_at_100_seconds() {
+    let mut fill = Lookahead::default();
+    let (size, duration_ms) = (1_440_000_000, 7_200_000);
+    assert_eq!(fill.update(0, 0, duration_ms), None, "no size yet");
+    assert_eq!(fill.update(0, size, 0), None, "no duration yet");
     assert_eq!(
-        lookahead(&mut state, progress),
+        fill.update(0, size, duration_ms),
         Some(24_000_000),
         "120 s at 200 kB/s while nothing is buffered"
     );
-    assert_eq!(lookahead(&mut state, buffered(10)), Some(22_000_000));
-    assert_eq!(lookahead(&mut state, buffered(119)), Some(0), "full");
-    assert_eq!(lookahead(&mut state, buffered(117)), None, "stays stopped");
-    assert_eq!(lookahead(&mut state, buffered(100)), None);
+    assert_eq!(fill.update(0, size, duration_ms), None, "unchanged");
+    assert_eq!(fill.update(10, size, duration_ms), Some(22_000_000));
+    assert_eq!(fill.update(119, size, duration_ms), Some(200_000));
+    assert_eq!(fill.update(120, size, duration_ms), Some(0), "full");
+    assert_eq!(fill.update(117, size, duration_ms), None, "stays stopped");
+    assert_eq!(fill.update(101, size, duration_ms), None);
     assert_eq!(
-        lookahead(&mut state, buffered(99)),
-        Some(4_200_000),
-        "below 100 s it fills up to 120 s again"
+        fill.update(100, size, duration_ms),
+        Some(4_000_000),
+        "at 100 s it fills up to 120 s again"
     );
-    assert_eq!(lookahead(&mut state, buffered(101)), Some(3_800_000));
+    assert_eq!(fill.update(101, size, duration_ms), Some(3_800_000));
     assert_eq!(
-        lookahead(&mut state, buffered(0)),
+        fill.update(0, size, duration_ms),
         Some(24_000_000),
         "a seek"
     );

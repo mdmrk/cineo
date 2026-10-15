@@ -10,12 +10,14 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
 use cineo_core::addon::is_safe_header;
-use cineo_core::app::{AudioOutput, Language, PlayRequest, Settings, SubtitleFont};
+use cineo_core::app::{
+    AudioOutput, Language, Lookahead, PlayRequest, Settings, SubtitleFont, is_engine_url,
+};
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
-pub use render::{OnFrame, ProcAddress, Renderer};
+pub use render::{Display, OnFrame, ProcAddress, Renderer};
 
 use self::ffi::{Core, Event, Value};
 use crate::tracker::{EndReason, Input, Tracker};
@@ -27,6 +29,7 @@ pub struct Video {
     pub get_proc_address: ProcAddress,
     /// Schedules a repaint of the window.
     pub on_frame: OnFrame,
+    pub display: Option<Display>,
 }
 
 impl std::fmt::Debug for Video {
@@ -75,7 +78,7 @@ pub struct Track {
 /// A snapshot of the playback for the UI.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Status {
-    /// The file has loaded and its first frame is on its way.
+    /// Playback has started: the file loaded and mpv played after its first seek.
     pub loaded: bool,
     pub position_s: f64,
     pub duration_s: f64,
@@ -223,7 +226,14 @@ impl Player {
         let lib = ffi::lib().map_err(PlayerError::LibmpvUnavailable)?;
         let fail = |err: ffi::MpvError| PlayerError::Libmpv(err.0);
         let core = Arc::new(Core::create(lib).map_err(fail)?);
-        let preferences = settings_options(&request.settings);
+        let mut preferences = settings_options(&request.settings);
+        if request.start_ms > 0 {
+            preferences.push(("start", start_option(request.start_ms)));
+        }
+        if is_engine_url(&request.url) {
+            preferences.push(("demuxer-hysteresis-secs", Lookahead::RESUME_S.to_string()));
+            preferences.push(("network-timeout", "0".to_owned()));
+        }
         let preferences = preferences
             .iter()
             .map(|(name, value)| (*name, value.as_str()));
@@ -247,7 +257,14 @@ impl Player {
             core.observe(id, name, format).map_err(fail)?;
         }
         let renderer = video
-            .map(|video| Renderer::new(Arc::clone(&core), video.get_proc_address, video.on_frame))
+            .map(|video| {
+                Renderer::new(
+                    Arc::clone(&core),
+                    video.get_proc_address,
+                    video.on_frame,
+                    video.display,
+                )
+            })
             .transpose()?;
         for (name, value) in &request.headers {
             if is_safe_header(name, value) {
@@ -275,7 +292,7 @@ impl Player {
             finished: Arc::clone(&finished),
             notify,
             events: tx,
-            tracker: Tracker::new(request.start_ms),
+            tracker: Tracker::new(),
         };
         std::thread::Builder::new()
             .name("mpv-events".into())
@@ -319,7 +336,7 @@ impl Player {
 
     pub fn set_subtitle_style(&self, settings: &Settings) {
         for (name, value) in style_properties(settings) {
-            if let Err(err) = self.core.set_property(name, &value) {
+            if let Err(err) = self.core.set_property_async(name, &value) {
                 warn!(property = name, %err, "subtitle style not applied");
             }
         }
@@ -336,6 +353,10 @@ impl Player {
             warn!(%err, ?command, "mpv command failed");
         }
     }
+}
+
+fn start_option(start_ms: u64) -> String {
+    format!("{}.{:03}", start_ms / 1000, start_ms % 1000)
 }
 
 fn settings_options(settings: &Settings) -> Vec<(&'static str, String)> {
@@ -574,9 +595,10 @@ impl EventLoop {
                     }
                     None
                 }
-                Event::FileLoaded => {
+                Event::FileLoaded => Some(Input::FileLoaded),
+                Event::PlaybackRestart => {
                     self.update(|status| replace(&mut status.loaded, true));
-                    Some(Input::FileLoaded)
+                    None
                 }
                 Event::EndFile { eof } => Some(Input::EndFile(match eof {
                     Ok(true) => EndReason::Eof,
@@ -591,12 +613,6 @@ impl EventLoop {
                 continue;
             }
             let step = self.tracker.on(input, Instant::now());
-            if let Some(seconds) = step.seek_to {
-                let target = format!("{seconds:.3}");
-                if let Err(err) = self.core.command_async(&["seek", &target, "absolute"]) {
-                    warn!(%err, "resume seek failed");
-                }
-            }
             if let Some(event) = step.event {
                 let _ = self.events.send(event);
             }
@@ -651,7 +667,7 @@ impl EventLoop {
             }
             CACHE_DURATION => {
                 self.update(|s| apply_stat(&mut s.stats, id, value));
-                return matches!(value, Value::Double(_)).then_some(Input::Buffered(number));
+                return Some(Input::Buffered(number));
             }
             _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }

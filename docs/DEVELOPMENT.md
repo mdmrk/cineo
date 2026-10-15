@@ -437,6 +437,7 @@ Re-check them when adding.
 | `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
 | `rust-i18n` | 4.2.4 | UI message catalogs, embedded at compile time (desktop, ADR-0021) | MIT |
 | `sys-locale` | 0.3.2 | The OS locale for the default UI language (desktop) | MIT/Apache |
+| `raw-window-handle` | 0.6.2 | The window's Wayland or Xlib display for mpv's hardware-decoding interop (desktop); already in the tree through eframe | MIT/Apache/Zlib |
 | `libloading` | 0.9.0 | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC |
 
 `tokio` features `io-util` and `sync` serve the mpv player; `process` was

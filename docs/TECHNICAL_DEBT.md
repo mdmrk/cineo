@@ -36,20 +36,22 @@ Format:
 - Exit: report the file size and name from the player or the engine, and
   compute the OpenSubtitles hash in `cineo-stream`.
 
-### Embedded player: no hardware-decoding interop display, subtitles under the controls
-- Where: [render.rs](../crates/cineo-player/src/embedded/render.rs),
-  [player.rs](../crates/cineo-desktop/src/player.rs)
-- Gap: the render context gets no `X11_DISPLAY`/`WL_DISPLAY` parameter, so
-  mpv may not use zero-copy hardware decoding (VA-API interop). Subtitles
-  stay at their position while the controls are shown and can sit under
-  the bottom bar.
-- Why: passing the display needs the window's raw display handle from
-  eframe; moving subtitles needs a `sub-margin-y` change tied to the
-  controls' visibility. Neither was built.
-- Instead: mpv decodes with a copy-back or software path (UNKNOWN which on a
-  given machine); subtitles can be covered for up to 2.5 s after input.
-- Exit: pass the raw display handle at render-context creation; adjust
-  `sub-margin-y` when the controls show and hide.
+### Embedded player: subtitles under the controls
+- Where: [player.rs](../crates/cineo-desktop/src/player.rs)
+- Gap: subtitles stay at their position while the controls are shown and
+  can sit under the bottom bar.
+- Why: moving subtitles needs a `sub-margin-y` change tied to the
+  controls' visibility, which was not built.
+- Instead: subtitles can be covered for up to 2.5 s after input.
+- Exit: adjust `sub-margin-y` when the controls show and hide.
+
+### Embedded player: VA-API interop not seen working
+- Where: [render.rs](../crates/cineo-player/src/embedded/render.rs)
+- Gap: the render context now gets the window's Wayland or Xlib display,
+  which mpv's VA-API interop needs; that it then decodes in hardware is
+  UNKNOWN (not run). XCB-only X11 sessions get no display.
+- Exit: check `hwdec-current` in the stats overlay on Intel/AMD under
+  Wayland and X11.
 
 ### Embedded player: GL thread assumption
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs)

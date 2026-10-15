@@ -1,6 +1,6 @@
 use url::Url;
 
-use super::state::{Effect, PlayRequest};
+use super::state::PlayRequest;
 use crate::addon::{Stream, StreamSource};
 
 /// A torrent the engine should serve, built from an addon's stream.
@@ -139,10 +139,6 @@ pub struct TorrentPlayback {
     pub info_hash: String,
     pub status: TorrentStatus,
     pub(crate) pending: Option<PlayRequest>,
-    pub(crate) duration_ms: u64,
-    pub(crate) buffered_s: Option<u64>,
-    pub(crate) filling: bool,
-    pub(crate) lookahead: Option<u64>,
 }
 
 impl TorrentPlayback {
@@ -153,10 +149,7 @@ impl TorrentPlayback {
     }
 }
 
-const FULL_S: u64 = 120;
-const RESUME_S: u64 = 100;
-
-pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
+fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
     if size == 0 || duration_ms == 0 {
         return None;
     }
@@ -167,33 +160,46 @@ pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Opti
     Some(u64::try_from(bytes).unwrap_or(u64::MAX).max(1))
 }
 
-pub(crate) fn lookahead_effect(torrent: &mut TorrentPlayback) -> Option<Effect> {
-    let buffered = torrent.buffered_s?;
-    if buffered + 1 >= FULL_S {
-        torrent.filling = false;
-    } else if buffered < RESUME_S {
-        torrent.filling = true;
-    }
-    let TorrentStatus::Streaming { size, .. } = torrent.status else {
-        return None;
-    };
-    let seconds = if torrent.filling {
-        FULL_S - buffered
-    } else {
-        0
-    };
-    let bytes = lookahead_bytes(size, torrent.duration_ms, seconds)?;
-    if torrent.lookahead == Some(bytes) {
-        return None;
-    }
-    torrent.lookahead = Some(bytes);
-    Some(Effect::SetTorrentLookahead {
-        info_hash: torrent.info_hash.clone(),
-        bytes,
-    })
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lookahead {
+    filling: bool,
+    sent: Option<u64>,
 }
 
-pub(crate) fn is_engine_url(url: &Url) -> bool {
+impl Default for Lookahead {
+    fn default() -> Self {
+        Self {
+            filling: true,
+            sent: None,
+        }
+    }
+}
+
+impl Lookahead {
+    pub const FULL_S: u64 = 120;
+    pub const RESUME_S: u64 = 100;
+
+    pub fn update(&mut self, buffered_s: u64, size: u64, duration_ms: u64) -> Option<u64> {
+        if buffered_s >= Self::FULL_S {
+            self.filling = false;
+        } else if buffered_s <= Self::RESUME_S {
+            self.filling = true;
+        }
+        let seconds = if self.filling {
+            Self::FULL_S.saturating_sub(buffered_s)
+        } else {
+            0
+        };
+        let bytes = lookahead_bytes(size, duration_ms, seconds)?;
+        if self.sent == Some(bytes) {
+            return None;
+        }
+        self.sent = Some(bytes);
+        Some(bytes)
+    }
+}
+
+pub fn is_engine_url(url: &Url) -> bool {
     url.scheme() == "http"
         && match url.host() {
             Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
