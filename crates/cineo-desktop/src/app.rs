@@ -297,6 +297,14 @@ impl CineoApp {
             Effect::Play(request) => self.play(&request),
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
+            Effect::SetTorrentLookahead { info_hash, bytes } => {
+                let engine = Arc::clone(&self.engine);
+                self.io.runtime.spawn(async move {
+                    if let Some(engine) = engine.lock().await.as_ref() {
+                        engine.set_lookahead(&info_hash, bytes);
+                    }
+                });
+            }
             Effect::CheckForUpdate(url) => self.spawn(async move {
                 let result = client.fetch_latest_release(&url).await.map_err(|err| {
                     debug!(%err, "update check failed");

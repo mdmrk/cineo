@@ -1,6 +1,6 @@
 # 0019. Torrent data in memory, bounded by a sliding window
 
-- Status: Accepted
+- Status: Accepted (the fixed lookahead: changed by 0023)
 - Date: 2026-10-09
 
 ## Context

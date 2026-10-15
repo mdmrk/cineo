@@ -9,7 +9,9 @@ use super::message::{Notice, PlaybackFailure, Problem};
 use super::plan::{self, CatalogTarget};
 use super::release;
 use super::settings::{Setting, Settings};
-use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
+use super::torrent::{
+    TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url, lookahead_effect,
+};
 use crate::addon::{
     AddonDescriptor, ContentType, ExtraValue, Manifest, Meta, MetaPreview, ResourcePath, Stream,
     StreamSource, Subtitle, TransportUrl, Video,
@@ -333,6 +335,10 @@ pub enum Effect {
     Play(Box<PlayRequest>),
     StartTorrent(TorrentRequest),
     StopTorrent,
+    SetTorrentLookahead {
+        info_hash: String,
+        bytes: u64,
+    },
     CheckForUpdate(Url),
 }
 
@@ -461,6 +467,10 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 return Vec::new();
             }
             let mut effects = check_next(state, now_ms);
+            if let Some(torrent) = state.torrent.as_mut().filter(|_| duration_ms > 0) {
+                torrent.duration_ms = duration_ms;
+                effects.extend(lookahead_effect(torrent));
+            }
             let mut stream = None;
             if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_id == meta_id) {
                 playing.resumed = false;
@@ -653,10 +663,11 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::TorrentReady { info_hash, url } => torrent_ready(state, &info_hash, url),
         Action::TorrentStatus { info_hash, status } => {
-            if let Some(torrent) = state.torrent.as_mut().filter(|t| t.info_hash == info_hash) {
-                torrent.status = status;
-            }
-            Vec::new()
+            let Some(torrent) = state.torrent.as_mut().filter(|t| t.info_hash == info_hash) else {
+                return Vec::new();
+            };
+            torrent.status = status;
+            lookahead_effect(torrent).into_iter().collect()
         }
         Action::TorrentFailed { info_hash, reason } => {
             if state
@@ -1584,6 +1595,8 @@ fn start_playback(
                 info_hash: torrent.info_hash.clone(),
                 status: TorrentStatus::Starting,
                 pending: Some(request),
+                duration_ms: 0,
+                lookahead: None,
             });
             effects.push(Effect::StartTorrent(torrent));
         }

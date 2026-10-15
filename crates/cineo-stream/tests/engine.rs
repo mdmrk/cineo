@@ -351,6 +351,49 @@ async fn memory_mode_plays_a_file_larger_than_its_window_without_disk() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_lookahead_of_one_byte_still_streams_the_whole_file() {
+    let seeder = seeder("tiny-lookahead").await;
+    let engine = Engine::start(memory_options("tiny-lookahead", &seeder))
+        .await
+        .unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    engine.set_lookahead(&"f".repeat(40), 1);
+    engine.set_lookahead(&seeder.info_hash, 1);
+
+    let full = tokio::time::timeout(
+        Duration::from_secs(30),
+        http(engine.local_addr(), "GET", url.path(), &[]),
+    )
+    .await
+    .expect("the stream never stalls");
+    assert!(full.body == seeder.film, "the whole film arrives intact");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_short_lookahead_downloads_only_the_pieces_being_read() {
+    let seeder = seeder("short-lookahead").await;
+    let engine = Engine::start(memory_options("short-lookahead", &seeder))
+        .await
+        .unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+    engine.set_lookahead(&seeder.info_hash, 1);
+
+    let first = http(
+        engine.local_addr(),
+        "GET",
+        url.path(),
+        &[("Range", "bytes=0-0")],
+    )
+    .await;
+    assert_eq!(first.status, 206);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let held = downloaded(&engine);
+    assert!(held <= 2 * 32 * 1024, "{held} bytes for a one-byte read");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn disk_mode_keeps_only_its_window_on_disk() {
     let seeder = seeder("disk-window").await;
     let opts = EngineOptions {

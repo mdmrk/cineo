@@ -1098,6 +1098,65 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
 }
 
 #[test]
+fn the_torrent_lookahead_is_five_seconds_at_the_average_bitrate() {
+    let mut state = detail_with_p2p_accepted();
+    update(&mut state, PLAY_TORRENT);
+    let effects = update(
+        &mut state,
+        Action::TorrentReady {
+            info_hash: FIXTURE_HASH.into(),
+            url: url::Url::parse("http://127.0.0.1:40000/token/0").unwrap(),
+        },
+    );
+    let [Effect::Play(play)] = effects.as_slice() else {
+        panic!("{effects:?}");
+    };
+    let progress = |time_ms, duration_ms| Action::PlaybackProgress {
+        meta_id: play.meta_id.clone(),
+        video_id: play.video_id.clone(),
+        time_ms,
+        duration_ms,
+        now_ms: 1,
+    };
+    let lookaheads = |effects: Vec<Effect>| -> Vec<Effect> {
+        effects
+            .into_iter()
+            .filter(|e| matches!(e, Effect::SetTorrentLookahead { .. }))
+            .collect()
+    };
+    let streaming = |size| Action::TorrentStatus {
+        info_hash: FIXTURE_HASH.into(),
+        status: TorrentStatus::Streaming {
+            peers: 1,
+            download_bytes_per_sec: 0,
+            downloaded: 0,
+            size,
+        },
+    };
+
+    assert!(lookaheads(update(&mut state, progress(1000, 7_200_000))).is_empty());
+    assert_eq!(
+        lookaheads(update(&mut state, streaming(1_440_000_000))),
+        vec![Effect::SetTorrentLookahead {
+            info_hash: FIXTURE_HASH.into(),
+            bytes: 1_000_000,
+        }]
+    );
+    assert!(
+        lookaheads(update(&mut state, progress(2000, 7_200_000))).is_empty(),
+        "sent once while it stays the same"
+    );
+    assert_eq!(
+        lookaheads(update(&mut state, progress(3000, 3_600_000))),
+        vec![Effect::SetTorrentLookahead {
+            info_hash: FIXTURE_HASH.into(),
+            bytes: 2_000_000,
+        }]
+    );
+    assert!(lookaheads(update(&mut state, progress(4000, 0))).is_empty());
+}
+
+#[test]
 fn an_engine_url_that_is_not_loopback_http_is_refused() {
     let mut state = detail_with_p2p_accepted();
     update(&mut state, PLAY_TORRENT);

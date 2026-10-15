@@ -1,6 +1,6 @@
 use url::Url;
 
-use super::state::PlayRequest;
+use super::state::{Effect, PlayRequest};
 use crate::addon::{Stream, StreamSource};
 
 /// A torrent the engine should serve, built from an addon's stream.
@@ -139,6 +139,8 @@ pub struct TorrentPlayback {
     pub info_hash: String,
     pub status: TorrentStatus,
     pub(crate) pending: Option<PlayRequest>,
+    pub(crate) duration_ms: u64,
+    pub(crate) lookahead: Option<u64>,
 }
 
 impl TorrentPlayback {
@@ -147,6 +149,31 @@ impl TorrentPlayback {
     pub fn connecting(&self) -> Option<&PlayRequest> {
         self.pending.as_ref()
     }
+}
+
+const LOOKAHEAD_MS: u128 = 5000;
+
+pub(crate) fn lookahead_bytes(size: u64, duration_ms: u64) -> Option<u64> {
+    if size == 0 || duration_ms == 0 {
+        return None;
+    }
+    let bytes = u128::from(size) * LOOKAHEAD_MS / u128::from(duration_ms);
+    Some(u64::try_from(bytes).unwrap_or(u64::MAX).max(1))
+}
+
+pub(crate) fn lookahead_effect(torrent: &mut TorrentPlayback) -> Option<Effect> {
+    let TorrentStatus::Streaming { size, .. } = torrent.status else {
+        return None;
+    };
+    let bytes = lookahead_bytes(size, torrent.duration_ms)?;
+    if torrent.lookahead == Some(bytes) {
+        return None;
+    }
+    torrent.lookahead = Some(bytes);
+    Some(Effect::SetTorrentLookahead {
+        info_hash: torrent.info_hash.clone(),
+        bytes,
+    })
 }
 
 pub(crate) fn is_engine_url(url: &Url) -> bool {

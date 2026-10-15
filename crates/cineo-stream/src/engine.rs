@@ -315,6 +315,19 @@ impl Engine {
         Some((served.info_hash.clone(), status))
     }
 
+    pub fn set_lookahead(&self, info_hash: &str, bytes: u64) {
+        let Some(served) = self.ctx.current.read().ok().and_then(|c| c.clone()) else {
+            return;
+        };
+        if served.info_hash != info_hash {
+            return;
+        }
+        match served.torrent.set_stream_lookahead(Some(bytes)) {
+            Ok(()) => debug!(bytes, "torrent lookahead set"),
+            Err(err) => debug!(error = %format!("{err:#}"), "setting the lookahead failed"),
+        }
+    }
+
     /// Stops the current torrent and deletes its data.
     pub async fn stop(&self) {
         if let Ok(mut current) = self.ctx.current.write() {
