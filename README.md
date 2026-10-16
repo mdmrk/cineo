@@ -26,7 +26,7 @@ Stremio-protocol addons.
 
 Linux x86_64 only.
 
-## Install
+## Install and update
 
 ```sh
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
