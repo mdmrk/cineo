@@ -20,7 +20,7 @@ cineo-stream = { path = "crates/cineo-stream" }
 anyhow = "1.0.104"
 bytes = "1.12.1"
 clap = { version = "4.6.7", features = ["derive"] }
-eframe = { version = "0.36.2", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit", "links"] }
+eframe = { version = "0.37.0", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit", "links"] }
 iconflow = { version = "2.1.0", default-features = false, features = ["pack-tabler"] }
 etcetera = "0.11.0"
 fast_image_resize = "6.1.0"
@@ -41,14 +41,14 @@ semver = "1.0.28"
 sys-locale = "0.3.2"
 serde_json = "1.0.154"
 thiserror = "2.0.21"
-zbus = { version = "5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
+zbus = { version = "6.0.0", default-features = false, features = ["default-rt", "service"] }
 tokio = { version = "1.53.3", features = ["macros", "rt-multi-thread", "net", "time", "io-util", "sync"] }
 tokio-util = { version = "0.7.20", default-features = false, features = ["io"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 url = "2.5.8"
 
-egui_kittest = { version = "0.36.2", default-features = false }
+egui_kittest = { version = "0.37.0", default-features = false }
 wiremock = "0.6.5"
 
 [workspace.lints.rust]

@@ -3,10 +3,8 @@ use std::sync::mpsc::{self, Receiver, Sender};
 
 use eframe::egui;
 use tracing::warn;
-use zbus::blocking::Connection;
-use zbus::blocking::connection::Builder;
-use zbus::interface;
-use zbus::zvariant::{ObjectPath, OwnedValue, Str};
+use zbus::connection::Builder;
+use zbus::{Connection, ObjectPath, OwnedVariant, Str, interface};
 
 const PATH: &str = "/org/mpris/MediaPlayer2";
 const TRACK: ObjectPath<'static> =
@@ -96,11 +94,11 @@ fn run(rx: &Receiver<Option<Playing>>, sink: &Sink) {
         };
         let result = match bus.take() {
             Some(conn) => {
-                let changed = change(&conn, playing);
+                let changed = zbus::block_on(change(&conn, playing));
                 bus = Some(conn);
                 changed
             }
-            None => serve(playing, sink).map(|conn| bus = Some(conn)),
+            None => zbus::block_on(serve(playing, sink)).map(|conn| bus = Some(conn)),
         };
         if let Err(err) = result {
             warn!(%err, "media keys and the desktop's media controls may not work");
@@ -108,35 +106,36 @@ fn run(rx: &Receiver<Option<Playing>>, sink: &Sink) {
     }
 }
 
-fn serve(playing: Playing, sink: &Sink) -> zbus::Result<Connection> {
-    Builder::session()?
-        .serve_at(PATH, Root { sink: sink.clone() })?
+async fn serve(playing: Playing, sink: &Sink) -> zbus::Result<Connection> {
+    Builder::session()
+        .serve_at(PATH, Root { sink: sink.clone() })
         .serve_at(
             PATH,
             Player {
                 playing,
                 sink: sink.clone(),
             },
-        )?
+        )
         .name(format!(
             "org.mpris.MediaPlayer2.cineo.instance{}",
             std::process::id()
-        ))?
+        ))
         .build()
+        .await
 }
 
-fn change(conn: &Connection, playing: Playing) -> zbus::Result<()> {
-    let iface = conn.object_server().interface::<_, Player>(PATH)?;
-    let mut player = iface.get_mut();
+async fn change(conn: &Connection, playing: Playing) -> zbus::Result<()> {
+    let iface = conn.object_server().interface::<_, Player>(PATH).await?;
+    let mut player = iface.get_mut().await;
     let status = player.playing.paused != playing.paused;
     let title = player.playing.title != playing.title;
     player.playing = playing;
     let emitter = iface.signal_emitter();
     if status {
-        zbus::block_on(player.playback_status_changed(emitter))?;
+        player.playback_status_changed(emitter).await?;
     }
     if title {
-        zbus::block_on(player.metadata_changed(emitter))?;
+        player.metadata_changed(emitter).await?;
     }
     Ok(())
 }
@@ -221,12 +220,12 @@ impl Player {
     }
 
     #[zbus(property)]
-    fn metadata(&self) -> HashMap<String, OwnedValue> {
+    fn metadata(&self) -> HashMap<String, OwnedVariant> {
         HashMap::from([
-            ("mpris:trackid".to_owned(), OwnedValue::from(TRACK)),
+            ("mpris:trackid".to_owned(), OwnedVariant::from(TRACK)),
             (
                 "xesam:title".to_owned(),
-                OwnedValue::from(Str::from(self.playing.title.clone())),
+                OwnedVariant::from(Str::from(self.playing.title.clone())),
             ),
         ])
     }

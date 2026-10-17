@@ -1,7 +1,7 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use tracing::warn;
-use zbus::blocking::Connection;
+use zbus::Connection;
 
 const SERVICE: &str = "org.freedesktop.ScreenSaver";
 const PATH: &str = "/org/freedesktop/ScreenSaver";
@@ -46,7 +46,7 @@ fn run(rx: &Receiver<bool>) {
         }
         let conn = match &bus {
             Some(conn) => conn,
-            None => match Connection::session() {
+            None => match zbus::block_on(Connection::session()) {
                 Ok(conn) => bus.insert(conn),
                 Err(err) => {
                     warn!(%err, "no session bus; the screen may sleep during playback");
@@ -60,7 +60,13 @@ fn run(rx: &Receiver<bool>) {
                 Err(err) => warn!(%err, "could not keep the screen awake"),
             }
         } else if let Some(id) = cookie.take()
-            && let Err(err) = conn.call_method(Some(SERVICE), PATH, Some(SERVICE), "UnInhibit", &id)
+            && let Err(err) = zbus::block_on(conn.call_method(
+                Some(SERVICE),
+                PATH,
+                Some(SERVICE),
+                "UnInhibit",
+                &id,
+            ))
         {
             warn!(%err, "could not let the screen sleep again");
         }
@@ -68,13 +74,13 @@ fn run(rx: &Receiver<bool>) {
 }
 
 fn inhibit(conn: &Connection) -> zbus::Result<u32> {
-    conn.call_method(
+    zbus::block_on(conn.call_method(
         Some(SERVICE),
         PATH,
         Some(SERVICE),
         "Inhibit",
         &("Cineo", "Playing a video"),
-    )?
+    ))?
     .body()
     .deserialize()
 }

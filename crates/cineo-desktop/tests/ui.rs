@@ -19,7 +19,9 @@ use cineo_core::app::{
 use cineo_desktop::i18n::Locale;
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;
-use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
+use eframe::egui::{
+    Event, Key, Modifiers, MouseWheelSource, MouseWheelUnit, TouchPhase, pos2, vec2,
+};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -868,6 +870,7 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
         delta: vec2(0.0, -1.0e6),
         phase: TouchPhase::Move,
         modifiers: Modifiers::NONE,
+        source: MouseWheelSource::Wheel,
     });
     harness.run_steps(60);
     harness.run();

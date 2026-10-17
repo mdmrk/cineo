@@ -424,13 +424,13 @@ Re-check them when adding.
 | `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
 | `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
 | `etcetera` | 0.11.0 | XDG data and cache directories (store) | MIT/Apache |
-| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
+| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.37.0 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
 | `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
 | `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
-| `egui_kittest` (dev, no default features) | 0.36.2 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
+| `egui_kittest` (dev, no default features) | 0.37.0 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/feat/stream-window) at `b815c324` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
-| `zbus` (`async-io`, `blocking-api`; no default features) | 5.19.0, already in the tree through `accesskit_unix` | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop) | MIT |
+| `zbus` (`default-rt`, `service`; no default features) | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6 | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop) | MIT |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
 | `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |

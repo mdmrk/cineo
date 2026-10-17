@@ -155,7 +155,7 @@ fn fonts() -> FontDefinitions {
 }
 
 fn applied_id() -> egui::Id {
-    egui::Id::new("cineo-theme-applied")
+    egui::Id::unique("cineo-theme-applied")
 }
 
 pub(crate) fn ensure(ctx: &egui::Context) -> bool {

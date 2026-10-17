@@ -14,8 +14,8 @@ use cineo_core::app::{
 };
 use eframe::egui::{
     self, Align, Align2, Button, Color32, ComboBox, CornerRadius, FontId, Frame, Image, Key, Label,
-    Layout, Margin, Mesh, Modal, Modifiers, Pos2, Rect, Response, RichText, ScrollArea, Sense,
-    Spinner, Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, WidgetType,
+    Layout, Margin, Mesh, Modal, Modifiers, Pos2, Rect, Response, RichText, Role, ScrollArea,
+    Sense, Spinner, Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo,
     pos2, scroll_area::ScrollBarVisibility, style::ScrollAnimation, text::LayoutJob, vec2,
 };
 use url::Url;
@@ -450,7 +450,7 @@ fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
         let link = ui
             .add(egui::Link::new(job))
             .on_hover_text(t!("update-available-help"));
-        link.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &text));
+        link.widget_info(|| WidgetInfo::labeled(Role::Link, true, &text));
         if link.clicked() {
             ui.ctx()
                 .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
@@ -471,7 +471,7 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
     let rect = Rect::from_min_size(window.min + vec2(left, theme::LOGO_BLEED.y), size);
     let height = window.min.y + theme::NAV_TOP - ui.cursor().min.y;
     let (_, response) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Image, true, "Cineo"));
+    response.widget_info(|| WidgetInfo::labeled(Role::Image, true, "Cineo"));
     let sidebar = Rect::from_min_max(window.min, pos2(window.min.x + sidebar_width, window.max.y));
     let painter = ui
         .ctx()
@@ -528,7 +528,7 @@ const LOGO_FADE_ROWS: u32 = 24;
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, &label));
+    response.widget_info(|| WidgetInfo::selected(Role::Button, true, selected, &label));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()
@@ -686,7 +686,7 @@ pub(crate) fn dialog(
     accept: &str,
 ) -> Option<bool> {
     let mut answer = None;
-    let modal = Modal::new(egui::Id::new(id))
+    let modal = Modal::new(egui::Id::unique(id))
         .frame(
             Frame::new()
                 .fill(theme::PANEL)
@@ -1168,7 +1168,7 @@ fn addon_lists(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         Loadable::Ready(addons) => {
             let width = ui.available_width();
             for addon in addons {
-                let id = ui.id().with(("listed", &addon.transport));
+                let id = ui.scope_id().with(("listed", &addon.transport));
                 let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
                 if let Some(size) = known
                     && !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, size))
@@ -1359,7 +1359,7 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
         )
     };
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -1517,8 +1517,7 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
     let height = 32.0;
     let (rect, response) =
         ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click());
-    response
-        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
+    response.widget_info(|| WidgetInfo::selected(Role::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()
@@ -1706,7 +1705,7 @@ fn stream_group(
                     continue;
                 }
                 shown += 1;
-                let id = ui.id().with(("stream", index, stream_index));
+                let id = ui.scope_id().with(("stream", index, stream_index));
                 let width = ui.available_width();
                 let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
                 if let Some(size) = known
@@ -1846,8 +1845,7 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
-        response
-            .widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), t!("play")));
+        response.widget_info(|| WidgetInfo::labeled(Role::Button, ui.is_enabled(), t!("play")));
         if ui.is_rect_visible(rect) {
             let hover = ui.ctx().animate_bool_with_time(
                 response.id,
@@ -1906,7 +1904,7 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
 fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
     let galley = ui.painter().layout_job(caps(text, theme::tag(), ink));
     let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(10.0, 2.0), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, galley.text()));
+    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, galley.text()));
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
         let radius = CornerRadius::same(theme::RADIUS);
@@ -2123,7 +2121,7 @@ fn poster_strip(
         ),
     );
     let max_offset = (output.content_size.x - inner.width()).max(0.0);
-    let offset = output.state.offset.x;
+    let offset = output.state.clamped_offset().x;
     let hovered = ui.rect_contains_pointer(inner);
     let shown = ui
         .ctx()
@@ -2151,7 +2149,7 @@ fn pager(ui: &Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> R
         t!("scroll-left")
     };
     let response = ui.interact(rect, strip.with(right), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -2305,7 +2303,7 @@ fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool {
     let response = ui
         .interact(rect, field.id.with("clear"), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, t!("clear-field")));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, t!("clear-field")));
     let ink = if response.hovered() {
         theme::TEXT_BRIGHT
     } else {
@@ -2330,9 +2328,9 @@ fn card_button(
 ) -> bool {
     let rect = Rect::from_center_size(center, vec2(28.0, 28.0));
     let response = ui
-        .interact(rect, ui.id().with((&item.id, role)), Sense::click())
+        .interact(rect, ui.scope_id().with((&item.id, role)), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
     if shown > 0.0 && ui.is_rect_visible(rect) {
         let painter = ui.painter();
         let fill = if response.hovered() {
@@ -2362,7 +2360,7 @@ fn card(
 ) -> Response {
     let size = card_size(width, shape);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), name));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, ui.is_enabled(), name));
     if !ui.is_rect_visible(rect) {
         return response;
     }
@@ -2474,7 +2472,7 @@ pub(crate) fn paint_cover(
     let opacity = if fade_in {
         let ready = matches!(poll, Some(egui::load::TexturePoll::Ready { .. }));
         ui.ctx().animate_bool_with_time_and_easing(
-            egui::Id::new(("cover-fade", src)),
+            egui::Id::unique(("cover-fade", src)),
             ready,
             COVER_FADE,
             egui::emath::easing::cubic_out,
@@ -2570,8 +2568,7 @@ fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
         .layout_no_wrap(text.to_owned(), theme::body(), ink);
     let size = galley.size() + vec2(24.0, 12.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response
-        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
+    response.widget_info(|| WidgetInfo::selected(Role::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
         let fill = if selected {
             theme::TEXT_BRIGHT
@@ -2858,8 +2855,8 @@ pub(crate) fn paint_loading(ui: &Ui, center: Pos2, width: f32, tint: Color32) {
 }
 
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
-    let response = ui.interact(rect, ui.id().with(label), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let response = ui.interact(rect, ui.scope_id().with(label), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
     let painter = ui.painter();
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
