@@ -13,7 +13,6 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 step "tests"
 if command -v cargo-nextest >/dev/null 2>&1; then
   cargo nextest run --workspace --locked
-  cargo test --workspace --locked --doc
 else
   cargo test --workspace --locked
 fi

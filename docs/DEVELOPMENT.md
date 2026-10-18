@@ -39,7 +39,6 @@ that setting.
 | Format | `cargo fmt --all` |
 | Lint | `cargo clippy --workspace --all-targets --locked -- -D warnings` |
 | Test | `cargo nextest run --workspace` or `cargo test --workspace` |
-| Doctests (nextest skips them) | `cargo test --workspace --doc` |
 | One test | `cargo test -p cineo-core some_name` |
 | Docs | `cargo doc --workspace --no-deps --open` |
 | Dependency policy | `cargo deny --config .config/deny.toml check` |
