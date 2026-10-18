@@ -89,7 +89,7 @@ _Last reviewed: 2026-10-13._
 | Update notice | Supported | Cineo-only: once per start, GitHub's latest release is compared with the running version; a newer one shows as "vX.Y.Z available" under the version in the sidebar and opens its release page. Settings → About turns the check off (`restoring_settings_checks_for_an_update_once`, `a_newer_release_is_offered_and_an_older_one_is_not`, `with_update_checks_off_nothing_is_fetched_or_shown`, `the_latest_release_version_comes_from_its_tag`, `a_newer_release_shows_in_the_sidebar_and_opens_its_page`, `update_checks_can_be_turned_off_in_about`). No in-app install: the user runs the installer again |
 | Casting | Unsupported | |
 | Account / cloud sync | Unsupported | Out of scope (owner decision 2026-10-06) |
-| Data export / import | Unsupported | Copy `cineo.db` to move between machines |
+| Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
 
 ## Platforms
 

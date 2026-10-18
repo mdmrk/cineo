@@ -86,6 +86,8 @@ impl Store {
     fn init(mut conn: Connection) -> Result<Self, StoreError> {
         conn.busy_timeout(BUSY_TIMEOUT)?;
         migrate(&mut conn, MIGRATIONS)?;
+        conn.pragma_update(None, "journal_mode", "WAL")?;
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
         Ok(Self { conn })
     }
 

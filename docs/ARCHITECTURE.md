@@ -121,7 +121,11 @@ library items, progress). The core defines what is stored: the
 `SaveAddons`, `SaveLibraryItem` and `DeleteLibraryItem` effects, which
 `Store::apply` executes. The store defines how: one SQLite file, the schema
 version in `PRAGMA user_version`, append-only migrations run in one
-transaction, and a fixture per released schema (`tests/store/`).
+transaction, and a fixture per released schema (`tests/store/`). After
+migrating, the file uses write-ahead logging with `synchronous = NORMAL`
+(`file_databases_use_write_ahead_logging`): a commit does not wait for
+an fsync, and a power loss can drop the last commits but not corrupt the
+file.
 The API is blocking; async shells call it off the runtime's worker threads.
 
 ### UI boundary (ADR-0011)

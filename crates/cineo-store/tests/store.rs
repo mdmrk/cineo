@@ -65,6 +65,21 @@ fn fresh_database_is_created_at_the_latest_schema_version() {
 }
 
 #[test]
+fn file_databases_use_write_ahead_logging() {
+    let dir = temp_dir("wal");
+    let path = dir.join(DB_FILE);
+    let store = Store::open(&path).unwrap();
+    store.save_library_item(&item("tt1", 1, 1)).unwrap();
+    let mode: String = rusqlite::Connection::open(&path)
+        .unwrap()
+        .pragma_query_value(None, "journal_mode", |row| row.get(0))
+        .unwrap();
+    assert_eq!(mode, "wal");
+    drop(store);
+    assert_eq!(Store::open(&path).unwrap().library().unwrap().len(), 1);
+}
+
+#[test]
 fn a_fresh_database_starts_with_cinemeta_and_keeps_its_removal() {
     let dir = temp_dir("first-run");
     let mut store = Store::open_in(&dir).unwrap();

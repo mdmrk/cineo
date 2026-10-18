@@ -194,6 +194,8 @@ first.
 
 Installed addons and the library live in one SQLite database, by default
 `$XDG_DATA_HOME/cineo/cineo.db` (`~/.local/share/cineo/cineo.db`).
+The database uses write-ahead logging, so while Cineo runs recent writes
+live in `cineo.db-wal`; copy `cineo.db` only after closing it.
 `--data-dir <dir>` uses another directory. `addon list` prints full addon
 URLs, which can contain your addon configuration; do not paste them publicly.
 A database that is corrupt or from a newer Cineo is never modified: commands
