@@ -74,7 +74,6 @@ pub(crate) fn logo(ctx: &egui::Context) -> Option<TextureId> {
     .map(|texture| texture.id())
 }
 
-/// Paints the animated logo filling `rect`, which should have [`LOADING_SIZE`]'s aspect.
 pub(crate) fn paint_loading(ui: &Ui, rect: Rect, tint: Color32) {
     if !ui.is_rect_visible(rect) {
         return;
@@ -204,7 +203,6 @@ fn grain_image([width, height]: [usize; 2]) -> ColorImage {
     ColorImage::new([width, height], pixels)
 }
 
-/// How much of the sidebar backdrop shows at `t` (0 top, 1 bottom).
 pub(crate) fn fade(t: f32) -> f32 {
     let fade = 1.0 - t.clamp(0.0, 1.0);
     fade * fade * (3.0 - 2.0 * fade)

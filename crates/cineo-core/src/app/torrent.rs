@@ -3,21 +3,15 @@ use url::Url;
 use super::state::PlayRequest;
 use crate::addon::{Stream, StreamSource};
 
-/// A torrent the engine should serve, built from an addon's stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TorrentRequest {
-    /// 40 lowercase hex characters (checked when the stream was parsed).
     pub info_hash: String,
-    /// The addon's `fileIdx`.
     pub file_idx: Option<u32>,
-    /// The addon's `behaviorHints.filename`.
     pub filename: Option<String>,
-    /// `http(s)` and `udp` trackers from the stream's `sources`.
     pub trackers: Vec<Url>,
 }
 
 impl TorrentRequest {
-    /// The request for a torrent stream; `None` for other sources.
     pub fn from_stream(stream: &Stream) -> Option<Self> {
         let StreamSource::Torrent {
             info_hash,
@@ -35,8 +29,6 @@ impl TorrentRequest {
         })
     }
 
-    /// `magnet:?xt=urn:btih:<hash>`, naming the torrent until the engine
-    /// serves it.
     pub fn magnet(&self) -> Url {
         let raw = format!("magnet:?xt=urn:btih:{}", self.info_hash);
         Url::parse(&raw).unwrap_or_else(|_| unreachable_magnet())
@@ -68,10 +60,8 @@ fn trackers(sources: &[String]) -> Vec<Url> {
     out
 }
 
-/// One file of a torrent, as the engine sees it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TorrentFile<'a> {
-    /// Path inside the torrent, `/`-separated. Display only.
     pub path: &'a str,
     pub len: u64,
 }
@@ -80,9 +70,6 @@ const VIDEO_EXTENSIONS: &[&str] = &[
     "mkv", "mp4", "m4v", "avi", "mov", "webm", "wmv", "mpg", "mpeg", "ts", "m2ts", "flv", "ogv",
 ];
 
-/// Picks the file to play: `fileIdx` if it names a file; else the file whose
-/// name equals the `filename` hint (ignoring case and folders); else the
-/// largest video file; else the largest file. `None` for an empty torrent.
 pub fn choose_file(
     files: &[TorrentFile<'_>],
     file_idx: Option<u32>,
@@ -121,7 +108,6 @@ fn is_video(path: &str) -> bool {
         .is_some_and(|(_, ext)| VIDEO_EXTENSIONS.iter().any(|v| ext.eq_ignore_ascii_case(v)))
 }
 
-/// What the engine reports about the torrent being streamed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TorrentStatus {
     Starting,
@@ -133,7 +119,6 @@ pub enum TorrentStatus {
     },
 }
 
-/// The torrent being played, from the Play click until playback stops.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TorrentPlayback {
     pub info_hash: String,
@@ -142,8 +127,6 @@ pub struct TorrentPlayback {
 }
 
 impl TorrentPlayback {
-    /// The playback the engine is still preparing the file for; `None`
-    /// once it has been handed to the player.
     pub fn connecting(&self) -> Option<&PlayRequest> {
         self.pending.as_ref()
     }

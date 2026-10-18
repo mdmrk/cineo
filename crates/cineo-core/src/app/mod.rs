@@ -1,6 +1,3 @@
-//! Application state machine (ADR-0001): pure `update(state, action)`
-//! returning effects for the shell to execute. No IO happens here.
-
 mod language;
 mod library;
 mod link;

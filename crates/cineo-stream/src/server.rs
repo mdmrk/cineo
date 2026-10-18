@@ -1,8 +1,3 @@
-//! The loopback HTTP server that hands torrent files to the player
-//! (SECURITY.md §Streaming engine): `127.0.0.1` only, a random per-session
-//! path token, a `Host` check against DNS rebinding, single byte ranges, no
-//! CORS headers.
-
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};

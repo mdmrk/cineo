@@ -18,7 +18,6 @@ const URI_COMPONENT: &AsciiSet = &NON_ALPHANUMERIC
 
 const MANIFEST_SUFFIX: &str = "/manifest.json";
 
-/// The URL of an addon's `manifest.json`, the identity of an installed addon.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TransportUrl(Url);
 
@@ -55,9 +54,6 @@ impl TransportUrl {
         url
     }
 
-    /// Builds the URL for `path`:
-    /// `{base}/{resource}/{type}/{id}[/{extra}].json[?{query}]`, where `base`
-    /// is the transport URL without the trailing `/manifest.json`.
     pub fn resource_url(&self, path: &ResourcePath) -> Url {
         let mut url = self.0.clone();
         let base = url
@@ -101,7 +97,6 @@ impl fmt::Display for TransportUrl {
     }
 }
 
-/// One `name=value` extra argument, e.g. `search=matrix` or `skip=100`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExtraValue {
     pub name: String,
@@ -117,13 +112,11 @@ impl ExtraValue {
     }
 }
 
-/// A request for one addon resource, independent of which addon serves it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourcePath {
     pub resource: ResourceName,
     pub content_type: ContentType,
     pub id: String,
-    /// Order is preserved in the URL. Repeated names are allowed.
     pub extra: Vec<ExtraValue>,
 }
 
@@ -143,9 +136,6 @@ impl ResourcePath {
         self
     }
 
-    /// `{resource}/{type}/{id}.json` or `{resource}/{type}/{id}/{extra}.json`,
-    /// each component encoded like `encodeURIComponent`. The extra segment is
-    /// `name=value` pairs joined by `&`, with `=` and `&` left literal.
     pub fn to_url_path(&self) -> String {
         let enc = |s| utf8_percent_encode(s, URI_COMPONENT);
         let mut out = format!(

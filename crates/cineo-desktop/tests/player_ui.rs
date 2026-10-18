@@ -1,7 +1,3 @@
-//! The playback screen's controls, rendered headlessly: which commands
-//! clicks and keys produce. Playback itself is tested in
-//! `cineo-player`.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

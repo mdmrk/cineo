@@ -1,5 +1,3 @@
-//! `cineo-store` against real SQLite files in a temporary directory.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

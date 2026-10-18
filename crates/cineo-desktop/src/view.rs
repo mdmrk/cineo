@@ -1,7 +1,3 @@
-//! Rendering. [`show`] draws a [`State`] snapshot and returns the
-//! [`Action`]s the user triggered; it performs no IO and holds no business
-//! rules (ADR-0001, ADR-0011). Addon strings are shown as plain text only.
-
 use std::time::Duration;
 
 use cineo_core::addon::{
@@ -25,7 +21,6 @@ use crate::i18n::{self, Locale, t};
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
 
-/// The top-level pages in the sidebar.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub enum Page {
     #[default]
@@ -80,18 +75,13 @@ impl From<StartPage> for Page {
     }
 }
 
-/// Presentation-only state: the open page and text being typed.
 #[derive(Debug, Clone, Default)]
 pub struct ViewState {
     pub page: Page,
     pub addon_input: String,
     pub search_input: String,
-    /// Season shown on a series detail page; `None` means the first one.
     pub season: Option<u32>,
-    /// When the search text last changed (egui time, seconds); a search
-    /// runs once typing pauses.
     pub search_edited_at: Option<f64>,
-    /// Focus the search field on the next frame.
     pub focus_search: bool,
     pub settings_jump: Option<Section>,
     pub addon_list: Option<(TransportUrl, ResourcePath)>,
@@ -233,7 +223,6 @@ impl StreamFilter {
 }
 
 const SEARCH_DEBOUNCE: f64 = 0.45;
-/// Draws the whole window and returns the actions to dispatch.
 pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     let mut out = Vec::new();
     i18n::set(Locale::resolve(

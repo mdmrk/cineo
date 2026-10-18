@@ -1,7 +1,3 @@
-//! Addon subtitle files for the current playback: fetched through
-//! `cineo-net`, written to a private directory for mpv, and deleted when the
-//! playback ends (SECURITY.md §Subtitles).
-
 use std::collections::HashMap;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};

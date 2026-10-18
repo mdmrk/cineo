@@ -1,9 +1,3 @@
-//! The playback screen: the video fills the window under Cineo's own
-//! controls (ADR-0014). [`show`] is pure rendering over a player
-//! [`Status`]; it returns the [`PlayerCommand`]s the user triggered and
-//! performs no IO. Track names come from the media file and are shown as
-//! plain text only.
-
 use cineo_core::app::{Action, SeekStep, Settings, TorrentStatus};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{
@@ -32,7 +26,6 @@ const STYLE_GAP: f32 = 8.0;
 const AUTO_NEXT_S: f64 = 10.0;
 const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
 
-/// Presentation-only state of the playback screen.
 #[derive(Debug, Clone, Default)]
 pub struct Controls {
     last_activity: f64,
@@ -52,8 +45,6 @@ pub struct Controls {
 }
 
 impl Controls {
-    /// The addon subtitle the user picked since the last call, to fetch and
-    /// load.
     pub fn take_addon_subtitle(&mut self) -> Option<Url> {
         self.addon_request.take()
     }
@@ -67,8 +58,6 @@ impl Controls {
     }
 }
 
-/// A subtitle from an addon, offered in the Subtitles menu. `selected` is
-/// true when its file is loaded and is the current track.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AddonSubtitle {
     pub url: Url,
@@ -102,8 +91,6 @@ pub struct NextUp<'a> {
     pub image: Option<&'a str>,
 }
 
-/// Draws the controls over `rect` (the video) and returns the commands to
-/// send to the player.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
@@ -409,7 +396,6 @@ fn toggle_fullscreen(ui: &Ui) {
     ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(on));
 }
 
-/// Leaves fullscreen; called when playback ends.
 pub fn leave_fullscreen(ctx: &egui::Context) {
     if is_fullscreen(ctx) {
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));

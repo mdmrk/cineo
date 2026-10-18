@@ -5,9 +5,6 @@ use super::ResponseError;
 use super::json::{self, Object, field};
 use crate::diagnostics::{Parsed, Warnings};
 
-/// Where a stream's bytes come from. The variant is chosen by which field is
-/// present, in reference-client order: `url`, `ytId`, `infoHash`,
-/// `externalUrl`, archive lists, `nzbUrl`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StreamSource {
     Url(Url),
@@ -38,7 +35,6 @@ pub enum ArchiveKind {
     Tar,
 }
 
-/// The kind of a stream source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceKind {
     Http,
@@ -51,8 +47,6 @@ pub enum SourceKind {
 }
 
 impl StreamSource {
-    /// Whether Cineo can play this source today (see COMPATIBILITY.md):
-    /// `http(s)` URLs, and torrents through the streaming engine.
     pub fn is_playable(&self) -> bool {
         match self {
             Self::Url(url) => matches!(url.scheme(), "http" | "https"),
@@ -61,7 +55,6 @@ impl StreamSource {
         }
     }
 
-    /// Whether playing this source means peer-to-peer traffic.
     pub fn is_p2p(&self) -> bool {
         matches!(self, Self::Torrent { .. })
     }
@@ -79,43 +72,32 @@ impl StreamSource {
     }
 }
 
-/// One stream offered by an addon.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stream {
     pub source: StreamSource,
-    /// Usually the quality, e.g. `1080p`.
     pub name: Option<String>,
-    /// `description`, falling back to the deprecated `title`.
     pub description: Option<String>,
     pub subtitles: Vec<Subtitle>,
     pub not_web_ready: bool,
     pub binge_group: Option<String>,
     pub filename: Option<String>,
     pub video_size: Option<u64>,
-    /// OpenSubtitles hash of the file (`behaviorHints.videoHash`).
     pub video_hash: Option<String>,
-    /// Validated `behaviorHints.proxyHeaders.request` entries.
     pub request_headers: Vec<(String, String)>,
 }
 
-/// A subtitle track offered by an addon.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Subtitle {
     pub id: String,
-    /// Always `http(s)`.
     pub url: Url,
-    /// ISO 639-2 code or free text.
     pub lang: String,
     pub label: Option<String>,
 }
 
-/// Parses a stream response. Missing `streams` is an error, `null` is empty,
-/// and streams with no recognizable source are skipped with a warning.
 pub fn parse_stream_response(bytes: &[u8]) -> Result<Parsed<Vec<Stream>>, ResponseError> {
     json::response_list(bytes, "streams", parse_stream)
 }
 
-/// Parses a subtitles response (`{ "subtitles": [...] }`).
 pub fn parse_subtitles_response(bytes: &[u8]) -> Result<Parsed<Vec<Subtitle>>, ResponseError> {
     json::response_list(bytes, "subtitles", parse_subtitle)
 }
@@ -268,7 +250,6 @@ fn parse_source(obj: &Object, loc: &str, warnings: &mut Warnings) -> Option<Stre
     json::opt_any_url(obj, "nzbUrl", loc, warnings).map(|url| StreamSource::Nzb { url })
 }
 
-/// Whether `name` is an HTTP token and `value` has no CR, LF or NUL.
 pub fn is_safe_header(name: &str, value: &str) -> bool {
     !name.is_empty()
         && name

@@ -1,7 +1,3 @@
-//! Images for egui, fetched through `cineo-net` (ADR-0011,
-//! docs/SECURITY.md §Desktop UI) and decoded off the UI thread. Only
-//! `http(s)` URIs are handled.
-
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;

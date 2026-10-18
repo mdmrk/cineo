@@ -8,10 +8,8 @@ use super::request::{ExtraValue, ResourcePath};
 use super::types::{ContentType, ResourceName};
 use crate::diagnostics::{Parsed, Warnings};
 
-/// A validated addon manifest.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Manifest {
-    /// Dot-separated identifier chosen by the addon author. Non-empty.
     pub id: String,
     pub version: semver::Version,
     pub name: String,
@@ -19,26 +17,20 @@ pub struct Manifest {
     pub logo: Option<Url>,
     pub background: Option<Url>,
     pub contact_email: Option<String>,
-    /// Manifest-level types, inherited by short-form resources.
     pub types: Vec<ContentType>,
-    /// Declared resources, de-duplicated by name (first wins).
     pub resources: Vec<Resource>,
-    /// Catalogs, de-duplicated by `(type, id)` (first wins).
     pub catalogs: Vec<CatalogDef>,
     pub addon_catalogs: Vec<CatalogDef>,
     pub behavior_hints: BehaviorHints,
 }
 
-/// A resource the addon serves, with inheritance already resolved.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Resource {
     pub name: ResourceName,
-    /// Types this resource answers for. Empty means it answers for none.
     pub types: Vec<ContentType>,
     pub ids: IdFilter,
 }
 
-/// Which content ids a resource answers for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IdFilter {
     Any,
@@ -61,27 +53,22 @@ impl IdFilter {
     }
 }
 
-/// A catalog (or addon catalog) declared in the manifest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogDef {
     pub content_type: ContentType,
     pub id: String,
     pub name: Option<String>,
-    /// Extra properties, de-duplicated by name (first wins).
     pub extra: Vec<ExtraProp>,
 }
 
-/// A declared catalog extra property such as `search`, `genre` or `skip`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtraProp {
     pub name: String,
     pub is_required: bool,
     pub options: Vec<String>,
-    /// Maximum number of values that may be sent for this property. `>= 1`.
     pub options_limit: usize,
 }
 
-/// Why a set of extra values is not acceptable for a catalog.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExtraError {
@@ -94,8 +81,6 @@ pub enum ExtraError {
 }
 
 impl CatalogDef {
-    /// Checks extra values against the declaration: every name declared,
-    /// every required name present, and no name exceeding its `optionsLimit`.
     pub fn check_extra(&self, values: &[ExtraValue]) -> Result<(), ExtraError> {
         for value in values {
             let Some(prop) = self.extra.iter().find(|p| p.name == value.name) else {
@@ -117,14 +102,11 @@ impl CatalogDef {
         Ok(())
     }
 
-    /// Whether the catalog can be requested without any user input, i.e. it
-    /// has no required extra properties. Such catalogs appear on the board.
     pub fn is_browsable(&self) -> bool {
         !self.extra.iter().any(|p| p.is_required)
     }
 }
 
-/// Manifest-level behavior hints. Unknown hints are ignored.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct BehaviorHints {
     pub adult: bool,
@@ -134,7 +116,6 @@ pub struct BehaviorHints {
 }
 
 impl Manifest {
-    /// Whether this addon should be asked for `path`.
     pub fn supports(&self, path: &ResourcePath) -> bool {
         let catalog_match = |catalogs: &[CatalogDef]| {
             catalogs.iter().any(|c| {
@@ -161,7 +142,6 @@ impl Manifest {
     }
 }
 
-/// A manifest that cannot be used at all.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ManifestError {
@@ -175,7 +155,6 @@ pub enum ManifestError {
     InvalidField { field: &'static str, reason: String },
 }
 
-/// Parses and validates a manifest document.
 pub fn parse_manifest(bytes: &[u8]) -> Result<Parsed<Manifest>, ManifestError> {
     manifest_from_value(serde_json::from_slice(bytes)?)
 }

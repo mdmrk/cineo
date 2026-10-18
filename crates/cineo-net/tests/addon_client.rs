@@ -1,7 +1,3 @@
-//! `AddonClient` against a local mock addon. The mock listens on loopback, so
-//! most tests opt into `allow_private_networks`; one test proves the default
-//! policy refuses it.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

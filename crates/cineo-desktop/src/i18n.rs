@@ -1,10 +1,7 @@
-//! Message catalogs (ADR-0021).
-
 use std::cell::Cell;
 
 use cineo_core::app::UiLanguage;
 
-/// A language of Cineo's own text.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Locale {
     #[default]

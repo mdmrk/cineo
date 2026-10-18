@@ -15,14 +15,12 @@ use crate::addon::{
     StreamSource, Subtitle, TransportUrl, Video,
 };
 
-/// An installed addon: identity (transport URL) plus its manifest.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstalledAddon {
     pub transport: TransportUrl,
     pub manifest: Manifest,
 }
 
-/// The state of one asynchronous value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Loadable<T> {
     Loading,
@@ -52,24 +50,19 @@ impl<T> From<Result<T, String>> for Loadable<T> {
     }
 }
 
-/// A row of catalog items (board, search).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Row {
     pub target: CatalogTarget,
     pub items: Loadable<Vec<MetaPreview>>,
 }
 
-/// The Discover page: one catalog, an optional genre, paged with `skip`.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Discover {
     pub target: Option<CatalogTarget>,
     pub genre: Option<String>,
     pub items: Vec<MetaPreview>,
-    /// The page request in flight, if any.
     pub pending: Option<ResourcePath>,
     pub error: Option<Problem>,
-    /// `skip` value of the next page, if the catalog supports paging and the
-    /// last page was not empty.
     pub next_skip: Option<usize>,
 }
 
@@ -79,7 +72,6 @@ pub struct AddonList {
     pub addons: Loadable<Vec<AddonDescriptor>>,
 }
 
-/// Streams from one addon.
 #[derive(Debug, Clone, PartialEq)]
 pub struct StreamGroup {
     pub addon: TransportUrl,
@@ -88,42 +80,31 @@ pub struct StreamGroup {
     pub streams: Loadable<Vec<Stream>>,
 }
 
-/// The detail page of one item.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Detail {
     pub content_type: ContentType,
     pub id: String,
-    /// Shown while the full meta loads.
     pub preview: Option<MetaPreview>,
     pub meta: Loadable<Meta>,
-    /// Remaining meta addons to try if the current one fails.
     pub meta_fallbacks: Vec<(TransportUrl, ResourcePath)>,
     pub meta_request: Option<(TransportUrl, ResourcePath)>,
     pub selected_video: Option<String>,
     pub streams: Vec<StreamGroup>,
 }
 
-/// What the player shell needs to start playback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayRequest {
-    /// Always `http(s)` (checked by [`update`]); for a torrent, the engine's
-    /// loopback URL.
     pub url: Url,
     pub title: String,
-    /// The item's logo art (meta `logo`), shown while the file loads.
     pub logo: Option<Url>,
-    /// The item's backdrop (meta `background`), shown behind the logo.
     pub background: Option<Url>,
     pub headers: Vec<(String, String)>,
-    /// The settings when playback was asked for.
     pub settings: Settings,
     pub start_ms: u64,
     pub meta_id: String,
     pub video_id: String,
 }
 
-/// Subtitles for the current playback from one addon. `path` is `None` for
-/// the subtitles that came with the stream itself.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubtitleGroup {
     pub addon: TransportUrl,
@@ -134,14 +115,9 @@ pub struct SubtitleGroup {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct State {
-    /// Every installed addon in user order, including those still loading
-    /// or whose manifest failed to load. This is what gets saved.
     pub installed: Vec<TransportUrl>,
-    /// The installed addons whose manifest loaded, in user order.
     pub addons: Vec<InstalledAddon>,
-    /// Addons whose manifests are being (re)loaded, e.g. at startup.
     pub addons_loading: Vec<TransportUrl>,
-    /// Result of the last install attempt, for the addon screen.
     pub install: Option<Loadable<String>>,
     pub addon_lists: Option<Vec<AddonList>>,
     pub board: Vec<Row>,
@@ -150,29 +126,21 @@ pub struct State {
     pub search: Vec<Row>,
     pub detail: Option<Detail>,
     pub library: Vec<LibraryItem>,
-    /// Last playback problem to show to the user.
     pub notice: Option<Notice>,
     pub settings: Settings,
-    /// A torrent stream (`group`, `stream`) waiting for the user to accept
-    /// the P2P notice.
     pub p2p_prompt: Option<(usize, usize)>,
     pub link_prompt: Option<TransportUrl>,
     pub torrent: Option<TorrentPlayback>,
-    /// Addon subtitles for the current playback, stream subtitles first.
     pub subtitles: Vec<SubtitleGroup>,
     pub playing: Option<Playing>,
     pub update: Option<Version>,
     pub update_checked: bool,
 }
 
-/// The playback in progress, until it stops or fails.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Playing {
     pub meta_id: String,
-    /// Replays a saved stream that has not progressed yet; if it fails, the
-    /// detail page opens instead.
     pub resumed: bool,
-    /// Saved on the item once playback progresses.
     pub stream: Option<Box<SavedStream>>,
     pub content_type: ContentType,
     pub video_id: String,
@@ -222,7 +190,6 @@ pub enum Action {
     },
     CloseDetail,
     SelectVideo(String),
-    /// Plays a library item from its saved stream, or opens its detail page.
     Resume(String),
     Play {
         group: usize,
@@ -298,7 +265,6 @@ pub enum Action {
     },
 }
 
-/// Side effects requested by [`update`]; executed by the shell.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     FetchManifest {
@@ -336,7 +302,6 @@ pub enum Effect {
     CheckForUpdate(Url),
 }
 
-/// Applies `action` to `state` and returns the effects to run.
 pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
     match action {
         Action::Restore { addons, library } => {
@@ -759,7 +724,6 @@ impl State {
             .filter(|_| self.settings.check_for_updates)
     }
 
-    /// Installed addons whose manifest failed to load.
     pub fn unavailable_addons(&self) -> Vec<&TransportUrl> {
         self.installed
             .iter()

@@ -1,6 +1,3 @@
-//! Torrent data on disk: one directory per torrent, named by its info hash,
-//! kept only while that torrent plays (SECURITY.md §Streaming engine).
-
 use std::io;
 use std::path::Path;
 

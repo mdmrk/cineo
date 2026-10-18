@@ -25,25 +25,16 @@ use crate::server::{self, Ctx, Served};
 use crate::storage::{CacheStorageFactory, torrent_dir};
 use crate::{blocklist, cache, socks};
 
-/// How the engine runs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngineOptions {
-    /// Holds the data of the torrent being played and DHT state. Created
-    /// private to the user. Torrent data is deleted when the torrent stops
-    /// and, if a run did not stop cleanly, when the engine starts.
     pub cache_dir: PathBuf,
-    /// Allow peers and trackers on loopback/private addresses (the same
-    /// user choice as `NetPolicy`'s private networks).
     pub allow_private_network: bool,
-    /// Find peers through the DHT.
     pub dht: bool,
     pub upload: bool,
     pub download_limit_bps: Option<NonZeroU32>,
     pub upload_limit_bps: Option<NonZeroU32>,
     pub peer_limit: Option<usize>,
-    /// Peers to contact for every torrent, e.g. a local seeder in tests.
     pub extra_peers: Vec<SocketAddr>,
-    /// How long to wait for a torrent's file list.
     pub metadata_timeout: Duration,
     pub window: Option<NonZeroU64>,
     pub in_memory: bool,
@@ -52,8 +43,6 @@ pub struct EngineOptions {
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
 
 impl EngineOptions {
-    /// Defaults: private networks blocked, DHT and upload on, no rate
-    /// limits, 60 s metadata timeout.
     pub fn new(cache_dir: PathBuf) -> Self {
         Self {
             cache_dir,
@@ -88,7 +77,6 @@ pub enum StreamError {
     NoFiles,
 }
 
-/// A running engine. One torrent is served at a time.
 pub struct Engine {
     session: Arc<Session>,
     ctx: Arc<Ctx>,
@@ -115,8 +103,6 @@ fn random_token() -> Result<String, StreamError> {
 }
 
 impl Engine {
-    /// Prepares the cache, binds the server and starts the session. Must
-    /// run inside a tokio runtime.
     pub async fn start(options: EngineOptions) -> Result<Self, StreamError> {
         let cache_dir = options.cache_dir.clone();
         let prepared = tokio::task::spawn_blocking({
@@ -204,13 +190,10 @@ impl Engine {
         &self.options
     }
 
-    /// The server's address (always loopback).
     pub fn local_addr(&self) -> SocketAddr {
         self.ctx.addr
     }
 
-    /// Starts serving the torrent of `request`, replacing any other, and
-    /// returns the URL for the player.
     pub async fn open(&self, request: &TorrentRequest) -> Result<Url, StreamError> {
         self.stop().await;
         let hash = request.info_hash.to_ascii_lowercase();
@@ -289,7 +272,6 @@ impl Engine {
         .map_err(|err| StreamError::Start(err.to_string()))
     }
 
-    /// The status of the torrent being served, if any.
     pub fn status(&self) -> Option<(String, TorrentStatus)> {
         let served = self.ctx.current.read().ok()?.clone()?;
         let stats = served.torrent.stats();
@@ -328,7 +310,6 @@ impl Engine {
         }
     }
 
-    /// Stops the current torrent and deletes its data.
     pub async fn stop(&self) {
         if let Ok(mut current) = self.ctx.current.write() {
             *current = None;
@@ -349,8 +330,6 @@ impl Engine {
         }
     }
 
-    /// Stops everything: the torrent, the session and the server. Returns
-    /// without librqbit's 1 s grace period.
     pub async fn shutdown(self) {
         self.stop().await;
         let _ = tokio::time::timeout(SESSION_STOP_GRACE, self.session.stop()).await;

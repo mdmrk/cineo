@@ -1,7 +1,3 @@
-//! Protocol behavior pinned against the fixtures in `tests/addons`.
-//! Each test names the documented behavior it protects
-//! (`docs/ADDON_PROTOCOL.md`).
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

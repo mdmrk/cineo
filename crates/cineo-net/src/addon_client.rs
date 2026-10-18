@@ -20,15 +20,12 @@ use crate::policy::{BlockReason, NetPolicy};
 const RELEASE_LIMIT: usize = 1024 * 1024;
 const USER_AGENT: &str = concat!("Cineo/", env!("CARGO_PKG_VERSION"));
 
-/// Fetches and parses addon resources under a [`NetPolicy`].
 #[derive(Debug, Clone)]
 pub struct AddonClient {
     http: reqwest::Client,
     policy: Arc<NetPolicy>,
 }
 
-/// Why an addon request failed. Every variant is safe to show to users: none
-/// contains the full addon URL, which may embed user configuration.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum FetchError {
@@ -84,7 +81,6 @@ impl AddonClient {
         Ok(Self { http, policy })
     }
 
-    /// Fetches and validates `manifest.json`.
     pub async fn fetch_manifest(
         &self,
         addon: &TransportUrl,
@@ -95,8 +91,6 @@ impl AddonClient {
             .await
     }
 
-    /// Fetches a catalog page. The caller decides whether the addon supports
-    /// the path (see `Manifest::supports`); this method only transports.
     pub async fn fetch_catalog(
         &self,
         addon: &TransportUrl,
@@ -115,7 +109,6 @@ impl AddonClient {
             .await
     }
 
-    /// Fetches `meta/{type}/{id}.json`.
     pub async fn fetch_meta(
         &self,
         addon: &TransportUrl,
@@ -124,7 +117,6 @@ impl AddonClient {
         self.fetch_resource(addon, path, parse_meta_response).await
     }
 
-    /// Fetches `stream/{type}/{videoId}.json`.
     pub async fn fetch_streams(
         &self,
         addon: &TransportUrl,
@@ -134,7 +126,6 @@ impl AddonClient {
             .await
     }
 
-    /// Fetches `subtitles/{type}/{id}[/{extra}].json`.
     pub async fn fetch_subtitles(
         &self,
         addon: &TransportUrl,
@@ -144,8 +135,6 @@ impl AddonClient {
             .await
     }
 
-    /// Fetches an image (poster, background, logo) under the same network
-    /// policy, with `max_bytes` as the size limit. Returns the raw bytes.
     pub async fn fetch_image(&self, url: &Url, max_bytes: usize) -> Result<Vec<u8>, FetchError> {
         let span = info_span!("image_request", req = next_request_id(), origin = %origin(url));
         self.get_limited(url.clone(), max_bytes, "image/*")
@@ -153,8 +142,6 @@ impl AddonClient {
             .await
     }
 
-    /// Fetches a subtitle file under the same network policy and body limit.
-    /// Returns the raw bytes; mpv parses them.
     pub async fn fetch_subtitle(&self, url: &Url) -> Result<Vec<u8>, FetchError> {
         let span = info_span!("subtitle_request", req = next_request_id(), origin = %origin(url));
         self.get_limited(url.clone(), self.policy.max_body_bytes, "*/*")

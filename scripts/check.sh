@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# The local definition of "done": the same gates CI runs.
-# Usage: scripts/check.sh [--quick]   (--quick skips docs and cargo-deny)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

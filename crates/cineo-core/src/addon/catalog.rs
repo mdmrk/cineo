@@ -6,7 +6,6 @@ use super::json;
 use super::types::ContentType;
 use crate::diagnostics::{Parsed, Warnings};
 
-/// Aspect ratio hint for a poster image.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PosterShape {
     #[default]
@@ -15,14 +14,10 @@ pub enum PosterShape {
     Landscape,
 }
 
-/// A catalog entry. Only fields Cineo uses are kept; see
-/// `docs/ADDON_PROTOCOL.md` for ignored fields.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MetaPreview {
-    /// Non-empty content id, e.g. `tt0111161`.
     pub id: String,
     pub content_type: ContentType,
-    /// May be empty: some addons omit it, and the reference client accepts that.
     pub name: String,
     pub poster: Option<Url>,
     pub poster_shape: PosterShape,
@@ -39,7 +34,6 @@ pub struct CatalogResponse {
     pub metas: Vec<MetaPreview>,
 }
 
-/// Parses a catalog response.
 pub fn parse_catalog_response(bytes: &[u8]) -> Result<Parsed<CatalogResponse>, ResponseError> {
     let Parsed { value, warnings } = json::response_list(bytes, "metas", parse_meta_preview)?;
     Ok(Parsed {

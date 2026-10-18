@@ -1,6 +1,3 @@
-//! Playback inside the host window through libmpv, loaded at runtime
-//! (ADR-0014).
-
 mod ffi;
 mod render;
 
@@ -23,11 +20,8 @@ use self::ffi::{Core, Event, Value};
 use crate::tracker::{EndReason, Input, Tracker};
 use crate::{PlayerError, PlayerEvent};
 
-/// The host window's OpenGL access, for drawing the video.
 pub struct Video {
-    /// Resolves OpenGL functions in the window's context.
     pub get_proc_address: ProcAddress,
-    /// Schedules a repaint of the window.
     pub on_frame: OnFrame,
     pub display: Option<Display>,
 }
@@ -38,7 +32,6 @@ impl std::fmt::Debug for Video {
     }
 }
 
-/// What the UI can ask of a running playback.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[non_exhaustive]
 pub enum PlayerCommand {
@@ -53,7 +46,6 @@ pub enum PlayerCommand {
     Stop,
 }
 
-/// The kind of a media track.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackKind {
     Video,
@@ -61,8 +53,6 @@ pub enum TrackKind {
     Subtitle,
 }
 
-/// One track of the playing file. `title` and `lang` come from the media
-/// file: untrusted, show them as plain text only.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Track {
     pub id: i64,
@@ -70,24 +60,18 @@ pub struct Track {
     pub title: Option<String>,
     pub lang: Option<String>,
     pub selected: bool,
-    /// The file an external track was loaded from (`external-filename`).
     pub external_file: Option<String>,
     pub codec: Option<String>,
 }
 
-/// A snapshot of the playback for the UI.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Status {
-    /// Playback has started: the file loaded and mpv played after its first seek.
     pub loaded: bool,
     pub position_s: f64,
     pub duration_s: f64,
     pub paused: bool,
-    /// Waiting for the network.
     pub buffering: bool,
-    /// A seek has not finished yet.
     pub seeking: bool,
-    /// Percent, 0–100.
     pub volume: f64,
     pub muted: bool,
     pub tracks: Arc<[Track]>,
@@ -96,24 +80,18 @@ pub struct Status {
 }
 
 impl Status {
-    /// Playback is held up by the network or by an unfinished seek.
     pub fn is_waiting(&self) -> bool {
         self.buffering || self.seeking
     }
 }
 
-/// Streaming and decoding figures; `None` while mpv has no value.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Stats {
-    /// Bytes per second read from the network into the cache.
     pub cache_speed: Option<f64>,
-    /// Seconds buffered ahead of the playhead.
     pub cache_s: Option<f64>,
     pub width: Option<f64>,
     pub height: Option<f64>,
-    /// Bits per second.
     pub video_bitrate: Option<f64>,
-    /// The hardware decoder in use, `no` for software decoding.
     pub hwdec: Option<String>,
     pub dropped_frames: Option<f64>,
 }
@@ -174,8 +152,6 @@ const OPTIONS: &[(&str, &str)] = &[
     ("demuxer-max-bytes", "512MiB"),
 ];
 
-/// A playback running in this process. Dropping it stops playback; mpv shuts
-/// down once the last [`Renderer`] for it is dropped too.
 pub struct Player {
     core: Arc<Core>,
     status: Arc<Mutex<Status>>,
@@ -199,9 +175,6 @@ impl Drop for Player {
 }
 
 impl Player {
-    /// Starts playing `request` with its video drawn by the returned
-    /// [`Renderer`]. Events arrive on the returned channel. `notify` is
-    /// called (from another thread) whenever [`Self::status`] changes.
     pub fn start(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
@@ -309,7 +282,6 @@ impl Player {
         ))
     }
 
-    /// The latest playback state.
     pub fn status(&self) -> Status {
         self.status
             .lock()
@@ -317,13 +289,10 @@ impl Player {
             .clone()
     }
 
-    /// The playback is over and mpv has shut down (or is shutting down).
     pub fn is_finished(&self) -> bool {
         self.finished.load(Ordering::SeqCst)
     }
 
-    /// Loads a subtitle file Cineo wrote and selects it. `title` and `lang`
-    /// are shown in the track list.
     pub fn add_subtitle(&self, path: &Path, title: &str, lang: &str) -> Result<(), PlayerError> {
         let args = sub_add_args(path, title, lang).ok_or_else(|| {
             PlayerError::Libmpv("subtitle path is not an absolute UTF-8 path".into())
@@ -342,7 +311,6 @@ impl Player {
         }
     }
 
-    /// Sends `command` without waiting for it.
     pub fn send(&self, command: PlayerCommand) {
         let Some(args) = command_args(command) else {
             return;
@@ -446,8 +414,6 @@ fn language_list(languages: impl Iterator<Item = Language>) -> String {
         .join(",")
 }
 
-/// `sub-add` with `cached`: adding the same file again selects the loaded
-/// track. Only absolute local paths, so a value is never read as a protocol.
 fn sub_add_args<'a>(path: &'a Path, title: &'a str, lang: &'a str) -> Option<[&'a str; 5]> {
     if !path.is_absolute() {
         return None;

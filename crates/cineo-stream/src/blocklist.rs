@@ -1,8 +1,3 @@
-//! Non-public address ranges that peer connections and trackers may not use
-//! unless the user allowed private networks (ADR-0012, SECURITY.md
-//! §Streaming engine). Enforced by the SOCKS proxy ([`crate::socks`]) and
-//! the tracker filter.
-
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::sync::LazyLock;
 

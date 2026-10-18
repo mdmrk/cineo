@@ -34,20 +34,14 @@ use crate::theme;
 use crate::view::{self, Page, ViewState};
 use crate::{instance, register};
 
-/// Startup options (command line).
 #[derive(Debug, Clone)]
 pub struct Options {
-    /// Directory holding `cineo.db`.
     pub data_dir: PathBuf,
-    /// Directory for torrent data.
     pub cache_dir: PathBuf,
-    /// Allow addons, images and torrent peers on loopback/LAN addresses
-    /// (docs/SECURITY.md).
     pub allow_private_network: bool,
     pub link: Option<String>,
 }
 
-/// Opens the store, restores state and runs the window until it is closed.
 pub fn run(options: Options) -> anyhow::Result<()> {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

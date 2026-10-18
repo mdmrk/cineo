@@ -3,15 +3,10 @@ use std::time::Duration;
 
 use url::{Host, Url};
 
-/// Limits applied to every outbound request.
 #[derive(Debug, Clone)]
 pub struct NetPolicy {
-    /// Allow loopback, private (RFC 1918), link-local and similar addresses.
-    /// Off by default; turned on explicitly for self-hosted addons and tests.
     pub allow_private_networks: bool,
-    /// Maximum decoded body size, in bytes.
     pub max_body_bytes: usize,
-    /// Total time allowed for one request, including reading the body.
     pub timeout: Duration,
     pub connect_timeout: Duration,
     pub max_redirects: usize,
@@ -29,7 +24,6 @@ impl Default for NetPolicy {
     }
 }
 
-/// Why the policy refused a destination.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum BlockReason {
@@ -46,9 +40,6 @@ pub enum BlockReason {
 }
 
 impl NetPolicy {
-    /// Checks a URL before connecting. Hostnames are checked again after DNS
-    /// resolution (see `addon_client`); IP literals and `localhost` are
-    /// checked here because they never reach the resolver.
     pub fn check_url(&self, url: &Url) -> Result<(), BlockReason> {
         if !matches!(url.scheme(), "http" | "https") {
             return Err(BlockReason::Scheme(url.scheme().to_owned()));
@@ -81,8 +72,6 @@ impl NetPolicy {
         }
     }
 
-    /// Checks one redirect hop. `hops` is the number of redirects already
-    /// followed before this one.
     pub fn check_redirect(&self, from: &Url, to: &Url, hops: usize) -> Result<(), BlockReason> {
         if hops >= self.max_redirects {
             return Err(BlockReason::TooManyRedirects(self.max_redirects));

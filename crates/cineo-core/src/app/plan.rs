@@ -1,7 +1,6 @@
 use super::state::InstalledAddon;
 use crate::addon::{CatalogDef, ContentType, ExtraValue, ResourceName, ResourcePath, TransportUrl};
 
-/// A catalog request; `name` falls back to the catalog id.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogTarget {
     pub addon: TransportUrl,
@@ -10,15 +9,12 @@ pub struct CatalogTarget {
     pub name: String,
 }
 
-/// Board rows: every catalog that needs no user input (no required extra).
 pub fn board_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
     catalogs(addons, CatalogDef::is_browsable)
         .map(|(addon, catalog)| catalog_target(addon, catalog))
         .collect()
 }
 
-/// Search rows: catalogs declaring `search` whose other required extras are
-/// none (so `search` alone is a valid request).
 pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarget> {
     catalogs(addons, |c| {
         c.extra.iter().any(|e| e.name == "search")
@@ -66,8 +62,6 @@ pub(super) fn catalogs(
     })
 }
 
-/// Addons that serve `meta` for this item, in user order. The first that
-/// answers successfully wins.
 pub fn meta_candidates(
     addons: &[InstalledAddon],
     content_type: &ContentType,
@@ -76,7 +70,6 @@ pub fn meta_candidates(
     targets(addons, ResourceName::Meta, content_type, id)
 }
 
-/// Addons that serve `stream` for this video, in user order. All are asked.
 pub fn stream_targets(
     addons: &[InstalledAddon],
     content_type: &ContentType,
@@ -85,8 +78,6 @@ pub fn stream_targets(
     targets(addons, ResourceName::Stream, content_type, video_id)
 }
 
-/// Addons that serve `subtitles` for this video, in user order. All are
-/// asked.
 pub fn subtitle_targets(
     addons: &[InstalledAddon],
     content_type: &ContentType,

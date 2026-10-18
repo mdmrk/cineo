@@ -1,9 +1,3 @@
-//! A loopback SOCKS5 proxy (RFC 1928, with RFC 1929 username/password)
-//! that every peer connection goes through. It is the one place where peer
-//! addresses are checked: `librqbit`'s own blocklist does not cover the
-//! connections made while fetching a magnet's metadata (VERIFIED in its
-//! 9.0.1 source and by `loopback_peers_are_blocked_unless_private_networks_are_allowed`).
-
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;

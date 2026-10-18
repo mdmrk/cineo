@@ -1,6 +1,3 @@
-//! Persistence for Cineo: installed addons in order, library items and watch
-//! progress, and user settings, in one SQLite database.
-
 mod doctor;
 mod migrate;
 mod store;

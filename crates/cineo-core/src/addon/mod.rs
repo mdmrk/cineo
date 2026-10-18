@@ -1,5 +1,3 @@
-//! The addon protocol model.
-
 mod addon_catalog;
 mod catalog;
 mod json;
@@ -23,7 +21,6 @@ pub use stream::{
 };
 pub use types::{ContentType, ResourceName};
 
-/// Errors for a response that cannot be interpreted at all.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ResponseError {

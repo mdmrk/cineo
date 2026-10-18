@@ -1,6 +1,3 @@
-//! The application state machine (ADR-0001), driven by actions and fake IO
-//! results. Asserts on state and on the effects requested.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

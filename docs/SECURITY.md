@@ -206,7 +206,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 must:
 1. Lift the lint for that crate only.
 2. Justify it in an ADR.
-3. Document every `unsafe` block with a `// SAFETY:` comment.
+3. Keep `unsafe` inside the modules that lift the lint, with a `reason`.
 
 The one exception is `cineo-player` (ADR-0014): its own lint
 table sets `unsafe_code = "deny"`, and only the modules `embedded::ffi`

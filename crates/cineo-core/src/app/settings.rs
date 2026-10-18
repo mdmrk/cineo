@@ -342,7 +342,6 @@ macro_rules! settings {
         $(#[$doc:meta])*
         $field:ident: $ty:ty = $default:expr => $variant:ident($key:literal),
     )*) => {
-        /// User settings. Every field holds a valid value by its type.
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub struct Settings {
             $($(#[$doc])* pub $field: $ty,)*
@@ -397,13 +396,8 @@ macro_rules! settings {
 }
 
 settings! {
-    /// Torrent streams are shown and playable. When off, nothing
-    /// torrent-related runs.
     p2p_enabled: bool = true => P2pEnabled("p2p_enabled"),
-    /// The user has seen and accepted the P2P notice. Until then, playing a
-    /// torrent asks first.
     p2p_acknowledged: bool = false => P2pAcknowledged("p2p_acknowledged"),
-    /// Subtitles in this language are selected when a playback starts.
     subtitle_language: Option<Language> = None => SubtitleLanguage("subtitle_language"),
     secondary_subtitle_language: Option<Language> = None
         => SecondarySubtitleLanguage("secondary_subtitle_language"),

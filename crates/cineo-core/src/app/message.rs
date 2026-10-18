@@ -1,6 +1,5 @@
 use crate::addon::{SourceKind, TransportUrl};
 
-/// Why a value could not load; the shell words it (ADR-0017).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Problem {
     AlreadyInstalled,
@@ -11,7 +10,6 @@ pub enum Problem {
     Request(String),
 }
 
-/// A message for the notice bar; the shell words it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Notice {
     AddonUnavailable(String),

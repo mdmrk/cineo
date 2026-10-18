@@ -1,5 +1,3 @@
-//! Cineo's desktop GUI shell (eframe/egui, ADR-0011).
-
 mod app;
 mod brand;
 pub mod i18n;

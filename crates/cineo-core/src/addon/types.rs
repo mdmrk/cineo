@@ -1,6 +1,5 @@
 use std::fmt;
 
-/// A content type such as `movie`, `series`, `channel` or `tv`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ContentType(String);
 
@@ -10,7 +9,6 @@ impl ContentType {
     pub const CHANNEL: &'static str = "channel";
     pub const TV: &'static str = "tv";
 
-    /// Returns `None` if `value` is empty or has surrounding whitespace.
     pub fn new(value: impl Into<String>) -> Option<Self> {
         let value = value.into();
         if value.is_empty() || value.trim() != value {
@@ -30,8 +28,6 @@ impl fmt::Display for ContentType {
     }
 }
 
-/// An addon resource name. Unknown names are preserved, not rejected, so that
-/// manifests using newer resources still load.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResourceName {
     Catalog,

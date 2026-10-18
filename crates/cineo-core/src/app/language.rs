@@ -1,4 +1,3 @@
-/// A language Cineo offers: one byte, an index into its table.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Language(u8);
 
@@ -58,7 +57,6 @@ impl Language {
         (0..TABLE.len()).filter_map(|i| u8::try_from(i).ok().map(Self))
     }
 
-    /// The language saved as `code`, if Cineo offers it.
     pub fn from_code(code: &str) -> Option<Self> {
         Self::all().find(|l| l.code() == code)
     }
@@ -71,7 +69,6 @@ impl Language {
         &TABLE[usize::from(self.0)]
     }
 
-    /// Whether a track or addon language tag means this language.
     pub fn matches(&self, tag: &str) -> bool {
         let tag = tag.trim();
         let base = tag.split(['-', '_']).next().unwrap_or_default();
@@ -79,7 +76,6 @@ impl Language {
             .any(|c| c.eq_ignore_ascii_case(tag) || c.eq_ignore_ascii_case(base))
     }
 
-    /// Every tag this language goes by, its code first.
     pub fn codes(self) -> impl Iterator<Item = &'static str> {
         let info = self.info();
         std::iter::once(info.code).chain(info.aliases.iter().copied())

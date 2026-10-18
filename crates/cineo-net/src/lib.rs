@@ -1,5 +1,3 @@
-//! Network IO for Cineo.
-
 mod addon_client;
 mod policy;
 

@@ -6,39 +6,28 @@ use super::catalog::{MetaPreview, parse_meta_preview};
 use super::json;
 use crate::diagnostics::{Parsed, Warnings};
 
-/// Detailed metadata for one item.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Meta {
-    /// The fields shared with catalog entries.
     pub preview: MetaPreview,
     pub runtime: Option<String>,
     pub cast: Vec<String>,
     pub director: Vec<String>,
-    /// Episodes / uploads. Empty for single-video items (movies), whose only
-    /// video id is the meta id.
     pub videos: Vec<Video>,
-    /// `behaviorHints.defaultVideoId`: open this video's streams directly.
     pub default_video_id: Option<String>,
 }
 
-/// One playable video of a meta item (an episode, an upload, ...).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Video {
-    /// Non-empty, e.g. `tt0386676:2:1`.
     pub id: String,
-    /// `title`, or `name` (reference client alias). May be empty.
     pub title: String,
-    /// ISO 8601 as sent by the addon; not interpreted yet.
     pub released: Option<String>,
     pub season: Option<u32>,
     pub episode: Option<u32>,
     pub thumbnail: Option<Url>,
-    /// `overview`, falling back to `description`.
     pub overview: Option<String>,
 }
 
 impl Meta {
-    /// Distinct season numbers in ascending order; season 0 (specials) last.
     pub fn seasons(&self) -> Vec<u32> {
         let mut seasons: Vec<u32> = self.videos.iter().filter_map(|v| v.season).collect();
         seasons.sort_unstable_by_key(|s| (*s == 0, *s));
@@ -79,9 +68,6 @@ fn epoch_ms(text: &str) -> Option<i64> {
     Some((days * 86_400 + seconds) * 1000)
 }
 
-/// Parses a meta response. Fails if there is no `meta` object or it lacks a
-/// valid `id`/`type`. Videos are sorted by season, then episode; invalid
-/// videos are skipped with a warning.
 pub fn parse_meta_response(bytes: &[u8]) -> Result<Parsed<Meta>, ResponseError> {
     let obj = json::root(bytes)?;
     let Some(meta) = obj.get("meta").filter(|m| !m.is_null()) else {

@@ -10,7 +10,6 @@ use url::Url;
 
 use crate::migrate::{MIGRATIONS, migrate};
 
-/// File name of the database inside the data directory.
 pub const DB_FILE: &str = "cineo.db";
 
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -48,14 +47,10 @@ impl From<rusqlite::Error> for StoreError {
     }
 }
 
-/// The data directory for Cineo: `$XDG_DATA_HOME/cineo` (default
-/// `~/.local/share/cineo`). `None` if there is no home directory.
 pub fn default_data_dir() -> Option<PathBuf> {
     app_strategy().map(|s| s.data_dir())
 }
 
-/// The cache directory for Cineo (torrent data): `$XDG_CACHE_HOME/cineo`
-/// (default `~/.cache/cineo`). `None` if there is no home directory.
 pub fn default_cache_dir() -> Option<PathBuf> {
     app_strategy().map(|s| s.cache_dir())
 }
@@ -69,26 +64,21 @@ fn app_strategy() -> Option<impl AppStrategy> {
     .ok()
 }
 
-/// An open, migrated Cineo database.
 #[derive(Debug)]
 pub struct Store {
     conn: Connection,
 }
 
 impl Store {
-    /// Opens `dir/cineo.db`, creating the directory (private to the user on
-    /// Unix) and the database if needed, and migrates it.
     pub fn open_in(dir: &Path) -> Result<Self, StoreError> {
         create_private_dir(dir).map_err(StoreError::CreateDir)?;
         Self::open(&dir.join(DB_FILE))
     }
 
-    /// Opens (or creates) the database at `path` and migrates it.
     pub fn open(path: &Path) -> Result<Self, StoreError> {
         Self::init(Connection::open(path)?)
     }
 
-    /// A private in-memory database, for tests.
     pub fn open_in_memory() -> Result<Self, StoreError> {
         Self::init(Connection::open_in_memory()?)
     }
@@ -99,8 +89,6 @@ impl Store {
         Ok(Self { conn })
     }
 
-    /// Installed addons in user order. Rows that are no longer valid
-    /// transport URLs are skipped with a warning.
     pub fn addons(&self) -> Result<Vec<TransportUrl>, StoreError> {
         let mut stmt = self
             .conn
@@ -116,8 +104,6 @@ impl Store {
         Ok(addons)
     }
 
-    /// Replaces the installed addon list; the order is kept. Duplicates keep
-    /// their first position.
     pub fn save_addons(&mut self, addons: &[TransportUrl]) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM addons", [])?;
@@ -134,8 +120,6 @@ impl Store {
         Ok(())
     }
 
-    /// All library items, most recently updated first. Rows that no longer
-    /// satisfy the domain invariants are skipped with a warning.
     pub fn library(&self) -> Result<Vec<LibraryItem>, StoreError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, content_type, name, poster, video_id,
@@ -153,7 +137,6 @@ impl Store {
         Ok(items)
     }
 
-    /// Inserts or replaces the item with the same meta id.
     pub fn save_library_item(&self, item: &LibraryItem) -> Result<(), StoreError> {
         self.conn.execute(
             "INSERT INTO library_items
@@ -186,7 +169,6 @@ impl Store {
         Ok(())
     }
 
-    /// Removes the item with meta id `id`, if any.
     pub fn delete_library_item(&self, id: &str) -> Result<(), StoreError> {
         self.conn
             .execute("DELETE FROM library_items WHERE id = ?1", [id])?;
@@ -198,7 +180,6 @@ impl Store {
         Ok(())
     }
 
-    /// The saved settings; defaults for anything never saved or unreadable.
     pub fn settings(&self) -> Result<Settings, StoreError> {
         let mut settings = Settings::default();
         let mut stmt = self.conn.prepare("SELECT key, value FROM settings")?;
@@ -231,8 +212,6 @@ impl Store {
         Ok(())
     }
 
-    /// Runs a persistence effect from the core. Other effects are ignored
-    /// and return `false`.
     pub fn apply(&mut self, effect: &Effect) -> Result<bool, StoreError> {
         match effect {
             Effect::SaveAddons(addons) => self.save_addons(addons)?,

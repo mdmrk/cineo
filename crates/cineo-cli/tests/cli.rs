@@ -1,5 +1,3 @@
-//! End-to-end: the `cineo` binary against a local mock addon.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,

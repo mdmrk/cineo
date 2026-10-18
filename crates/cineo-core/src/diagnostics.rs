@@ -1,18 +1,13 @@
-//! Non-fatal findings produced while interpreting untrusted input.
-
 use std::fmt;
 
-/// A value together with the non-fatal warnings produced while building it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parsed<T> {
     pub value: T,
     pub warnings: Vec<Warning>,
 }
 
-/// A non-fatal problem found in untrusted input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Warning {
-    /// JSON-pointer-like location of the problem, e.g. `catalogs[2].extra[0]`.
     pub location: String,
     pub kind: WarningKind,
 }

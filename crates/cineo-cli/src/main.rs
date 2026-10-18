@@ -1,5 +1,3 @@
-//! `cineo` — headless shell over the Cineo core.
-
 #![allow(clippy::print_stdout, reason = "the CLI's job is printing")]
 
 use std::fmt::Write as _;

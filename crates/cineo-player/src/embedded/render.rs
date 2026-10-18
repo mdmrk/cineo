@@ -7,12 +7,8 @@ use std::sync::Arc;
 use super::ffi::{self, Core, OpenGlFbo, OpenGlInitParams, RenderContext, RenderParam};
 use crate::PlayerError;
 
-/// Resolves OpenGL function names in the host's context (eframe's
-/// `CreationContext::get_proc_address`).
 pub type ProcAddress = Arc<dyn Fn(&CStr) -> *const c_void + Send + Sync>;
 
-/// Called by mpv, from its own threads, when a new frame should be drawn.
-/// It must only schedule a repaint.
 pub type OnFrame = Box<dyn Fn() + Send + Sync>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,7 +20,6 @@ pub enum Display {
 unsafe impl Send for Display {}
 unsafe impl Sync for Display {}
 
-/// mpv's OpenGL renderer for one playback.
 pub struct Renderer {
     context: *mut RenderContext,
     core: Arc<Core>,
@@ -118,9 +113,6 @@ impl Renderer {
         })
     }
 
-    /// Draws the current video frame into framebuffer `fbo` of
-    /// `width`×`height` pixels, letterboxed. `fbo` 0 is the window. Never
-    /// waits for the frame's display time.
     pub fn draw(&mut self, fbo: u32, width: u32, height: u32) {
         let lib = self.core.lib();
         let (Ok(fbo), Ok(w), Ok(h)) = (

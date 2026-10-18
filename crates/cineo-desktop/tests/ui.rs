@@ -1,7 +1,3 @@
-//! UI smoke tests: the real view over core states built from fixtures,
-//! rendered headlessly. They check what is shown and which actions clicks
-//! produce; behavior itself is tested in `cineo-core`.
-
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -882,7 +878,6 @@ fn open_section(harness: &mut Harness<'_, Ui>, name: &str) {
     harness.run_steps(30);
 }
 
-/// Settles the settings page, whose About animation repaints forever.
 fn settle(harness: &mut Harness<'_, Ui>) {
     harness.run_steps(4);
 }

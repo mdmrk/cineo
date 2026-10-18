@@ -4,27 +4,20 @@ use url::Url;
 use super::settings::WatchedAt;
 use crate::addon::{ContentType, Stream, TransportUrl, parse_stream_json, stream_to_json};
 
-/// Progress for one meta item; the last watched video wins.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryItem {
-    /// Meta id, e.g. `tt0386676`.
     pub id: String,
     pub content_type: ContentType,
     pub name: String,
     pub poster: Option<Url>,
-    /// The video last played, e.g. `tt0386676:1:1`.
     pub video_id: String,
     pub time_offset_ms: u64,
     pub duration_ms: u64,
     pub updated_ms: u64,
-    /// Set when favourited: a number that grows with each new favourite.
     pub favorited: Option<u64>,
-    /// The stream `video_id` was last played from.
     pub stream: Option<Box<SavedStream>>,
 }
 
-/// A played stream, kept to resume without asking the addons again. The
-/// source is always playable.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SavedStream {
     pub addon: TransportUrl,
@@ -48,7 +41,6 @@ impl SavedStream {
         Some(Value::Object(obj).to_string())
     }
 
-    /// Parses [`Self::to_json`] output; `None` if it is no longer valid.
     pub fn parse(json: &str) -> Option<Self> {
         let value: Value = serde_json::from_str(json).ok()?;
         let url = |key| {
@@ -84,7 +76,6 @@ impl LibraryItem {
         p
     }
 
-    /// Playback progressed at least once.
     pub fn was_played(&self) -> bool {
         self.updated_ms > 0
     }
@@ -97,8 +88,6 @@ impl LibraryItem {
         f64::from(self.progress()) >= watched_at.fraction()
     }
 
-    /// Where to resume `video_id`: the saved offset if it is the same,
-    /// unfinished video; otherwise the start.
     pub fn resume_ms(&self, video_id: &str, watched_at: WatchedAt) -> u64 {
         if self.video_id == video_id && !self.is_finished(watched_at) {
             self.time_offset_ms
@@ -108,7 +97,6 @@ impl LibraryItem {
     }
 }
 
-/// Unfinished items with progress, most recently watched first.
 pub fn continue_watching(items: &[LibraryItem], watched_at: WatchedAt) -> Vec<&LibraryItem> {
     let mut list: Vec<&LibraryItem> = items
         .iter()
