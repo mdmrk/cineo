@@ -87,6 +87,7 @@ pub struct ViewState {
     pub addon_list: Option<(TransportUrl, ResourcePath)>,
     pub confirm: Option<Confirm>,
     pub streams: StreamFilter,
+    pub stream_facts: StreamFacts,
     pub system_locale: Locale,
     pub register_links: bool,
     pub links_registered: Option<Result<(), String>>,
@@ -99,6 +100,7 @@ impl ViewState {
             sort: self.streams.sort,
             ..StreamFilter::default()
         };
+        self.stream_facts = StreamFacts::default();
     }
 }
 
@@ -131,21 +133,85 @@ impl StreamSort {
         }
     }
 
-    fn order(self, streams: &[Stream]) -> Vec<usize> {
-        let mut order: Vec<usize> = (0..streams.len()).collect();
-        let key = match self {
+    fn order(self, facts: &[Facts]) -> Vec<usize> {
+        let mut order: Vec<usize> = (0..facts.len()).collect();
+        let key: fn(&Facts) -> Option<u64> = match self {
             Self::AddonOrder => return order,
-            Self::Quality => |stream: &Stream| {
-                Quality::of(stream).and_then(|q| {
-                    let rank = QUALITIES.iter().position(|l| *l == q.label)?;
-                    u64::try_from(QUALITIES.len() - rank).ok()
-                })
-            },
-            Self::Seeders => seeders,
-            Self::Size => size_bytes,
+            Self::Quality => Facts::quality_rank,
+            Self::Seeders => |facts| facts.seeders,
+            Self::Size => |facts| facts.size,
         };
-        order.sort_by_cached_key(|&i| std::cmp::Reverse(key(&streams[i])));
+        order.sort_by_key(|&i| std::cmp::Reverse(key(&facts[i])));
         order
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Facts {
+    quality: Option<Quality>,
+    seeders: Option<u64>,
+    size: Option<u64>,
+    text: String,
+}
+
+impl Facts {
+    fn of(stream: &Stream) -> Self {
+        Self {
+            quality: Quality::of(stream),
+            seeders: seeders(stream),
+            size: size_bytes(stream),
+            text: stream_text(stream)
+                .map(str::to_lowercase)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        }
+    }
+
+    fn quality_rank(&self) -> Option<u64> {
+        let label = self.quality?.label;
+        let rank = QUALITIES.iter().position(|l| *l == label)?;
+        u64::try_from(QUALITIES.len() - rank).ok()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct StreamFacts {
+    groups: Vec<GroupFacts>,
+}
+
+impl StreamFacts {
+    fn group(&mut self, index: usize, streams: &[Stream]) -> &mut GroupFacts {
+        if self.groups.len() <= index {
+            self.groups.resize_with(index + 1, GroupFacts::default);
+        }
+        let group = &mut self.groups[index];
+        let source = (streams.as_ptr().addr(), streams.len());
+        if group.source != Some(source) {
+            *group = GroupFacts {
+                source: Some(source),
+                streams: streams.iter().map(Facts::of).collect(),
+                ..GroupFacts::default()
+            };
+        }
+        group
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct GroupFacts {
+    source: Option<(usize, usize)>,
+    streams: Vec<Facts>,
+    sorted_by: Option<StreamSort>,
+    order: Vec<usize>,
+}
+
+impl GroupFacts {
+    fn sorted(&mut self, sort: StreamSort) -> (&[usize], &[Facts]) {
+        if self.sorted_by != Some(sort) {
+            self.order = sort.order(&self.streams);
+            self.sorted_by = Some(sort);
+        }
+        (&self.order, &self.streams)
     }
 }
 
@@ -201,23 +267,17 @@ impl StreamFilter {
         !self.query.trim().is_empty() || self.quality.is_some() || self.addon.is_some()
     }
 
-    fn matcher(&self) -> impl Fn(&Stream) -> bool + '_ {
+    fn matcher(&self) -> impl Fn(&Facts) -> bool + '_ {
         let words: Vec<String> = self
             .query
             .split_whitespace()
             .map(str::to_lowercase)
             .collect();
-        move |stream| {
-            if self.quality.is_some() && Quality::of(stream).map(|q| q.label) != self.quality {
+        move |facts| {
+            if self.quality.is_some() && facts.quality.map(|q| q.label) != self.quality {
                 return false;
             }
-            if words.is_empty() {
-                return true;
-            }
-            let text: Vec<String> = stream_text(stream).map(str::to_lowercase).collect();
-            words
-                .iter()
-                .all(|word| text.iter().any(|t| t.contains(word.as_str())))
+            words.iter().all(|word| facts.text.contains(word.as_str()))
         }
     }
 }
@@ -1319,10 +1379,24 @@ fn detail_page(
                     if detail.streams.is_empty() {
                         empty(ui, &t!("streams-unavailable"));
                     }
-                    stream_filters(ui, &detail.streams, p2p_enabled, &mut view.streams);
+                    stream_filters(
+                        ui,
+                        &detail.streams,
+                        p2p_enabled,
+                        &mut view.streams,
+                        &mut view.stream_facts,
+                    );
                     for (index, group) in detail.streams.iter().enumerate() {
                         if view.streams.addon.is_none_or(|addon| addon == index) {
-                            stream_group(ui, index, group, p2p_enabled, &view.streams, out);
+                            stream_group(
+                                ui,
+                                index,
+                                group,
+                                p2p_enabled,
+                                &view.streams,
+                                &mut view.stream_facts,
+                                out,
+                            );
                         }
                     }
                 }
@@ -1560,6 +1634,7 @@ fn stream_filters(
     groups: &[StreamGroup],
     p2p_enabled: bool,
     filter: &mut StreamFilter,
+    facts: &mut StreamFacts,
 ) {
     let shown = |group| shown_streams(group, p2p_enabled);
     if groups.iter().flat_map(shown).nth(1).is_none() {
@@ -1587,9 +1662,21 @@ fn stream_filters(
     );
     ui.add_space(theme::GAP);
     let mut found = [false; QUALITIES.len()];
-    for quality in groups.iter().flat_map(shown).filter_map(Quality::of) {
-        if let Some(rank) = QUALITIES.iter().position(|l| *l == quality.label) {
-            found[rank] = true;
+    for (index, group) in groups.iter().enumerate() {
+        let Some(streams) = group.streams.ready() else {
+            continue;
+        };
+        let group_facts = facts.group(index, streams);
+        for (stream, stream_facts) in streams.iter().zip(&group_facts.streams) {
+            if !p2p_enabled && stream.source.is_p2p() {
+                continue;
+            }
+            if let Some(rank) = stream_facts
+                .quality
+                .and_then(|q| QUALITIES.iter().position(|l| *l == q.label))
+            {
+                found[rank] = true;
+            }
         }
     }
     let present = QUALITIES
@@ -1654,6 +1741,7 @@ fn stream_group(
     group: &StreamGroup,
     p2p_enabled: bool,
     filter: &StreamFilter,
+    facts: &mut StreamFacts,
     out: &mut Vec<Action>,
 ) {
     ui.add_space(2.0);
@@ -1682,15 +1770,16 @@ fn stream_group(
         Loadable::Ready(streams) => {
             ui.spacing_mut().item_spacing.y = 4.0;
             let matches = filter.matcher();
+            let (order, stream_facts) = facts.group(index, streams).sorted(filter.sort);
             let mut hidden = 0;
             let mut shown = 0;
-            for stream_index in filter.sort.order(streams) {
+            for &stream_index in order {
                 let stream = &streams[stream_index];
                 if stream.source.is_p2p() && !p2p_enabled {
                     hidden += 1;
                     continue;
                 }
-                if !matches(stream) {
+                if !matches(&stream_facts[stream_index]) {
                     continue;
                 }
                 shown += 1;
@@ -1912,7 +2001,7 @@ enum Tier {
     Cam,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Quality {
     label: &'static str,
     tier: Tier,
@@ -3174,10 +3263,37 @@ mod tests {
             stream(Some("4k"), Some("👤 5 💾 15.77 GB")),
             stream(Some("1080p"), Some("👤 39 💾 1.5 GB")),
         ];
-        assert_eq!(StreamSort::AddonOrder.order(&streams), [0, 1, 2, 3]);
-        assert_eq!(StreamSort::Quality.order(&streams), [2, 3, 0, 1]);
-        assert_eq!(StreamSort::Seeders.order(&streams), [3, 0, 2, 1]);
-        assert_eq!(StreamSort::Size.order(&streams), [2, 3, 0, 1]);
+        let facts: Vec<Facts> = streams.iter().map(Facts::of).collect();
+        assert_eq!(StreamSort::AddonOrder.order(&facts), [0, 1, 2, 3]);
+        assert_eq!(StreamSort::Quality.order(&facts), [2, 3, 0, 1]);
+        assert_eq!(StreamSort::Seeders.order(&facts), [3, 0, 2, 1]);
+        assert_eq!(StreamSort::Size.order(&facts), [2, 3, 0, 1]);
+    }
+
+    #[test]
+    fn stream_facts_are_kept_until_the_streams_or_the_sort_change() {
+        let first = [
+            stream(Some("720p"), Some("👤 5")),
+            stream(Some("1080p"), Some("👤 39")),
+        ];
+        let mut facts = StreamFacts::default();
+        assert_eq!(facts.group(1, &first).sorted(StreamSort::Seeders).0, [1, 0]);
+        assert_eq!(
+            facts.group(1, &first).sorted(StreamSort::AddonOrder).0,
+            [0, 1]
+        );
+        let group = facts.group(1, &first);
+        assert_eq!(group.streams[0].quality.map(|q| q.label), Some("720p"));
+        group.streams[0].seeders = Some(100);
+        assert_eq!(
+            facts.group(1, &first).sorted(StreamSort::Seeders).0,
+            [0, 1],
+            "the same streams reuse their facts"
+        );
+        let second = [stream(Some("4k"), None)];
+        let (order, fresh) = facts.group(1, &second).sorted(StreamSort::Seeders);
+        assert_eq!(order, [0]);
+        assert_eq!(fresh[0].quality.map(|q| q.label), Some("4K"));
     }
 
     #[test]
@@ -3189,7 +3305,8 @@ mod tests {
             addon: None,
             sort: StreamSort::AddonOrder,
         };
-        let matches = |query: &str, quality| filter(query, quality).matcher()(&s);
+        let facts = Facts::of(&s);
+        let matches = |query: &str, quality| filter(query, quality).matcher()(&facts);
         assert!(matches("", None));
         assert!(matches("web-dl  TORRENTIO", None));
         assert!(!matches("web-dl hevc", None));

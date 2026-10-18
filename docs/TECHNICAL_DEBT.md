@@ -253,6 +253,19 @@ Format:
 - Instead: scrolling brings the others into the tree.
 - Exit: report skipped rows to AccessKit with their remembered rect.
 
+### Desktop UI: stream facts are keyed by the list's address
+- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`StreamFacts`)
+- Gap: the quality, seeders, size, search text and sort order of each
+  addon's streams are computed once and reused while the list keeps the
+  same address and length.
+- Why: the core's `Vec<Stream>` has no version or identity to compare, and
+  rebuilding the facts every frame cost several allocations per stream.
+- Instead: if a list were replaced between two frames by one of the same
+  length at the same address, the old facts would stay until the detail
+  page is left. Stream indexes stay valid, so Play still picks the stream
+  shown at that index.
+- Exit: a generation number or `Arc` for each stream group in the core.
+
 ### Player settings: pause on minimize depends on frames while minimized
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`pause_on_minimize`)
 - Gap: the check runs in eframe's `logic`, once per frame. Whether frames
