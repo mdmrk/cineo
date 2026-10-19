@@ -184,6 +184,10 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - GitHub workflows: pin actions by full commit SHA (with a version comment);
   default `permissions: contents: read`; `persist-credentials: false`; pass
   inputs through `env:`, never by interpolating them into `run:`.
+- Build caches (`Swatinem/rust-cache`) are written only by runs on `main`.
+  `build.yml` reuses `main`'s cache for prereleases, but a tag build never
+  restores one, so a release binary is always built from a clean target
+  directory.
 - Any change to a security default updates this document and adds a test
   that pins the new behavior.
 

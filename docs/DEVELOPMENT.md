@@ -539,7 +539,9 @@ Three workflows start runs; each stage waits for the one before it:
 `build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
 x86_64 at the `x86-64-v2` level, puts the files into `dist/` with
 `scripts/package.sh`, and attests build provenance (check a file with
-`gh attestation verify <file> --repo <owner>/cineo`). It never publishes. The
+`gh attestation verify <file> --repo <owner>/cineo`). It never publishes.
+Lint, test and prerelease builds restore the compiled dependencies from the
+cache saved by the last run on `main`; tag builds start without a cache. The
 `cineo` CLI is not shipped.
 
 Every release has these files, with the same names in every release so that
