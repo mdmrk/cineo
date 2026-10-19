@@ -7,7 +7,7 @@ use eframe::egui::{
 
 use url::Url;
 
-use crate::i18n::t;
+use crate::i18n::{Text, t};
 use crate::settings::subtitle_controls;
 use crate::theme;
 use crate::view::{IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_loading};
@@ -269,7 +269,7 @@ fn toggle_stats_shown(ctx: &egui::Context) {
     ctx.data_mut(|d| d.insert_temp(stats_id(), shown));
 }
 
-fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(String, String)> {
+fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(Text, String)> {
     let mut rows = Vec::new();
     if let Some(TorrentStatus::Streaming {
         peers,
@@ -288,7 +288,7 @@ fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(String, S
         rows.push((t!("stats-peers"), peers.to_string()));
         rows.push((
             t!("stats-downloaded"),
-            t!("stats-of", done = bytes(done), total = bytes(total)),
+            t!("stats-of", done = bytes(done), total = bytes(total)).into_owned(),
         ));
     }
     let stats = &status.stats;
@@ -317,7 +317,7 @@ fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(String, S
     }
     if let Some(hwdec) = &stats.hwdec {
         let decoder = if hwdec == "no" {
-            t!("stats-software")
+            t!("stats-software").into_owned()
         } else {
             plain_text(hwdec)
         };
@@ -344,7 +344,7 @@ fn bytes(count: f64) -> String {
     }
 }
 
-fn stats_overlay(ui: &Ui, rect: Rect, rows: &[(String, String)]) {
+fn stats_overlay(ui: &Ui, rect: Rect, rows: &[(Text, String)]) {
     if rows.is_empty() {
         return;
     }
@@ -948,7 +948,7 @@ fn track_menu(
     out: &mut Vec<PlayerCommand>,
 ) -> (Rect, bool) {
     let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
-    let mut entries: Vec<(Entry, String, bool)> = Vec::new();
+    let mut entries: Vec<(Entry, Text, bool)> = Vec::new();
     if kind == TrackKind::Subtitle {
         entries.push((
             Entry::Track(None),
@@ -967,7 +967,7 @@ fn track_menu(
         let source = s.label.as_deref().unwrap_or(&s.addon_name);
         (
             Entry::Addon(s.url.clone()),
-            plain_text(&format!("{} · {source}", s.lang)),
+            plain_text(&format!("{} · {source}", s.lang)).into(),
             s.selected,
         )
     }));
@@ -1041,7 +1041,7 @@ fn track_menu(
                                 .with_min_x(item.left() + 30.0)
                                 .with_max_x(item.right() - 8.0);
                             let response = if paint_elided(painter, text, &label, color) {
-                                response.on_hover_text(&label)
+                                response.on_hover_text(&*label)
                             } else {
                                 response
                             };
@@ -1157,7 +1157,7 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
     let cells = [
         (-1000, "−1 s", t!("subtitles-earlier", amount = "1 s")),
         (-100, "−0.1 s", t!("subtitles-earlier", amount = "0.1 s")),
-        (0, "", String::new()),
+        (0, "", Text::Borrowed("")),
         (100, "+0.1 s", t!("subtitles-later", amount = "0.1 s")),
         (1000, "+1 s", t!("subtitles-later", amount = "1 s")),
     ];
@@ -1213,7 +1213,7 @@ fn delay_label(ms: i32) -> String {
     format!("{:+.1} s", f64::from(ms) / 1000.0)
 }
 
-fn track_label(track: &Track, number: usize) -> String {
+fn track_label(track: &Track, number: usize) -> Text {
     let parts: Vec<&str> = [track.lang.as_deref(), track.title.as_deref()]
         .into_iter()
         .flatten()
@@ -1221,7 +1221,7 @@ fn track_label(track: &Track, number: usize) -> String {
     if parts.is_empty() {
         t!("track", number = number)
     } else {
-        plain_text(&parts.join(" · "))
+        plain_text(&parts.join(" · ")).into()
     }
 }
 

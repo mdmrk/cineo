@@ -17,7 +17,7 @@ use eframe::egui::{
 use url::Url;
 
 use crate::brand;
-use crate::i18n::{self, Locale, t};
+use crate::i18n::{self, Locale, Text, t};
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
 
@@ -42,7 +42,7 @@ impl Page {
         Self::Settings,
     ];
 
-    pub(crate) fn label(self) -> String {
+    pub(crate) fn label(self) -> Text {
         match self {
             Self::Board => t!("page-home"),
             Self::Discover => t!("page-discover"),
@@ -124,7 +124,7 @@ pub enum StreamSort {
 impl StreamSort {
     const ALL: [Self; 4] = [Self::AddonOrder, Self::Quality, Self::Seeders, Self::Size];
 
-    fn label(self) -> String {
+    fn label(self) -> Text {
         match self {
             Self::AddonOrder => t!("sort-addon-order"),
             Self::Quality => t!("sort-quality"),
@@ -639,7 +639,7 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                         18.0,
                         theme::WARNING,
                     );
-                    ui.label(RichText::new(&notice).color(theme::TEXT_BRIGHT));
+                    ui.label(RichText::new(&*notice).color(theme::TEXT_BRIGHT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if ui.button(t!("dismiss")).clicked() {
                             out.push(Action::DismissNotice);
@@ -672,14 +672,14 @@ pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> 
     out
 }
 
-fn buttons_width(ui: &Ui, labels: &[String]) -> f32 {
+fn buttons_width(ui: &Ui, labels: &[Text]) -> f32 {
     let style = ui.style();
     let font = egui::TextStyle::Button.resolve(style);
     let text: f32 = labels
         .iter()
         .map(|label| {
             ui.painter()
-                .layout_no_wrap(label.clone(), font.clone(), theme::TEXT_DIM)
+                .layout_no_wrap(label.to_string(), font.clone(), theme::TEXT_DIM)
                 .size()
                 .x
         })
@@ -837,7 +837,7 @@ fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
                 .show_ui(ui, |ui| {
                     if !required
                         && ui
-                            .selectable_label(discover.genre.is_none(), &all)
+                            .selectable_label(discover.genre.is_none(), &*all)
                             .clicked()
                     {
                         out.push(Action::SetDiscoverGenre(None));
@@ -1430,7 +1430,7 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
     };
     let painter = ui.painter();
     painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-    let galley = painter.layout_no_wrap(text, theme::body(), theme::TEXT_BRIGHT);
+    let galley = painter.layout_no_wrap(text.into_owned(), theme::body(), theme::TEXT_BRIGHT);
     let left = rect.center().x - (16.0 + 6.0 + galley.size().x) / 2.0;
     paint_icon(painter, icon, pos2(left + 8.0, rect.center().y), 16.0, ink);
     painter.galley(
@@ -3009,7 +3009,7 @@ fn faint(text: &str) -> RichText {
     RichText::new(text).small().color(theme::TEXT_FAINT)
 }
 
-fn season_label(season: u32) -> String {
+fn season_label(season: u32) -> Text {
     if season == 0 {
         t!("specials")
     } else {
@@ -3017,23 +3017,23 @@ fn season_label(season: u32) -> String {
     }
 }
 
-fn catalog_title(target: &CatalogTarget) -> String {
+fn catalog_title(target: &CatalogTarget) -> Text {
     let content_type = &target.path.content_type;
     let kind = match content_type.as_str() {
         ContentType::MOVIE => t!("type-movie"),
         ContentType::SERIES => t!("type-series"),
         ContentType::CHANNEL => t!("type-channel"),
         ContentType::TV => t!("type-tv"),
-        other => other.to_owned(),
+        other => other.to_owned().into(),
     };
     t!("catalog-title", name = target.name.as_str(), kind = kind)
 }
 
-fn target_label(target: &CatalogTarget) -> String {
-    format!("{} — {}", catalog_title(target), target.addon_name)
+fn target_label(target: &CatalogTarget) -> Text {
+    format!("{} — {}", catalog_title(target), target.addon_name).into()
 }
 
-fn source_name(kind: SourceKind) -> String {
+fn source_name(kind: SourceKind) -> Text {
     match kind {
         SourceKind::Http => t!("source-http"),
         SourceKind::OtherUrl => t!("source-url"),
@@ -3045,18 +3045,18 @@ fn source_name(kind: SourceKind) -> String {
     }
 }
 
-fn problem_text(problem: &Problem) -> String {
+fn problem_text(problem: &Problem) -> Text {
     match problem {
         Problem::AlreadyInstalled => t!("problem-already-installed"),
         Problem::ConfigurationRequired(_) => t!("problem-configuration-required"),
         Problem::InvalidAddonUrl(detail) => t!("problem-invalid-url", detail = detail.as_str()),
         Problem::NoMetaAddon => t!("problem-no-meta"),
         Problem::UnsupportedFilter => t!("problem-unsupported-filter"),
-        Problem::Request(detail) => detail.clone(),
+        Problem::Request(detail) => detail.clone().into(),
     }
 }
 
-fn notice_text(notice: &Notice) -> String {
+fn notice_text(notice: &Notice) -> Text {
     match notice {
         Notice::AddonUnavailable(detail) => {
             t!("notice-addon-unavailable", detail = detail.as_str())
@@ -3072,8 +3072,8 @@ fn notice_text(notice: &Notice) -> String {
             failure,
             pick_another,
         } => {
-            let reason = match failure {
-                PlaybackFailure::Player(detail) => detail.clone(),
+            let reason: Text = match failure {
+                PlaybackFailure::Player(detail) => detail.clone().into(),
                 PlaybackFailure::Torrent(detail) => {
                     t!("notice-torrent-failed", detail = detail.as_str())
                 }

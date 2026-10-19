@@ -11,7 +11,7 @@ use eframe::egui::{
 };
 
 use crate::brand;
-use crate::i18n::{Locale, t};
+use crate::i18n::{Locale, Text, t};
 use crate::theme;
 use crate::view::{
     Icon, Page, ViewState, append_icon, compact, dialog, dim, lerp_color, page_title, paint_icon,
@@ -44,7 +44,7 @@ impl Section {
         Self::About,
     ];
 
-    fn label(self) -> String {
+    fn label(self) -> Text {
         match self {
             Self::Interface => t!("section-interface"),
             Self::Player => t!("section-player"),
@@ -543,7 +543,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     let alpha = u8::try_from(s.subtitle_opacity.get() * 255 / 100).unwrap_or(u8::MAX);
     let ink = Color32::from_rgba_unmultiplied(r, g, b, alpha);
     let galley = painter.layout_no_wrap(
-        t!("subtitle-preview"),
+        t!("subtitle-preview").into_owned(),
         FontId::new(22.0 * scale, family),
         ink,
     );
@@ -584,7 +584,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     );
 }
 
-fn font_name(font: SubtitleFont) -> String {
+fn font_name(font: SubtitleFont) -> Text {
     match font {
         SubtitleFont::Sans => t!("font-sans"),
         SubtitleFont::Serif => t!("font-serif"),
@@ -592,7 +592,7 @@ fn font_name(font: SubtitleFont) -> String {
     }
 }
 
-fn color_name(color: SubtitleColor) -> String {
+fn color_name(color: SubtitleColor) -> Text {
     match color {
         SubtitleColor::White => t!("color-white"),
         SubtitleColor::Yellow => t!("color-yellow"),
@@ -601,7 +601,7 @@ fn color_name(color: SubtitleColor) -> String {
     }
 }
 
-fn outline_name(outline: SubtitleOutline) -> String {
+fn outline_name(outline: SubtitleOutline) -> Text {
     match outline {
         SubtitleOutline::Black => t!("outline-black"),
         SubtitleOutline::Gray => t!("outline-gray"),
@@ -609,7 +609,7 @@ fn outline_name(outline: SubtitleOutline) -> String {
     }
 }
 
-fn background_name(background: SubtitleBackground) -> String {
+fn background_name(background: SubtitleBackground) -> Text {
     match background {
         SubtitleBackground::None => t!("background-none"),
         SubtitleBackground::Black => t!("background-black"),
@@ -692,35 +692,35 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     );
 }
 
-fn ui_language_name(language: UiLanguage, system: Locale) -> String {
+fn ui_language_name(language: UiLanguage, system: Locale) -> Text {
     match language {
         UiLanguage::System => t!("ui-language-system", language = system.endonym()),
-        UiLanguage::English => Locale::English.endonym().to_owned(),
-        UiLanguage::Spanish => Locale::Spanish.endonym().to_owned(),
-        UiLanguage::Russian => Locale::Russian.endonym().to_owned(),
-        UiLanguage::Italian => Locale::Italian.endonym().to_owned(),
+        UiLanguage::English => Locale::English.endonym().into(),
+        UiLanguage::Spanish => Locale::Spanish.endonym().into(),
+        UiLanguage::Russian => Locale::Russian.endonym().into(),
+        UiLanguage::Italian => Locale::Italian.endonym().into(),
     }
 }
 
-fn output_name(output: AudioOutput) -> String {
+fn output_name(output: AudioOutput) -> Text {
     match output {
         AudioOutput::Auto => t!("output-auto"),
         AudioOutput::Stereo => t!("output-stereo"),
     }
 }
 
-fn download_name(limit: DownloadLimit) -> String {
+fn download_name(limit: DownloadLimit) -> Text {
     match limit {
         DownloadLimit::Unlimited => t!("no-limit"),
-        DownloadLimit::M1 => "1 MB/s".to_owned(),
-        DownloadLimit::M2 => "2 MB/s".to_owned(),
-        DownloadLimit::M5 => "5 MB/s".to_owned(),
-        DownloadLimit::M10 => "10 MB/s".to_owned(),
-        DownloadLimit::M20 => "20 MB/s".to_owned(),
+        DownloadLimit::M1 => "1 MB/s".into(),
+        DownloadLimit::M2 => "2 MB/s".into(),
+        DownloadLimit::M5 => "5 MB/s".into(),
+        DownloadLimit::M10 => "10 MB/s".into(),
+        DownloadLimit::M20 => "20 MB/s".into(),
     }
 }
 
-fn storage_name(storage: TorrentStorage) -> String {
+fn storage_name(storage: TorrentStorage) -> Text {
     match storage {
         TorrentStorage::Ram256 => t!("storage-memory", size = "256 MB"),
         TorrentStorage::Ram512 => t!("storage-memory", size = "512 MB"),
@@ -732,49 +732,49 @@ fn storage_name(storage: TorrentStorage) -> String {
     }
 }
 
-fn upload_name(limit: UploadLimit) -> String {
+fn upload_name(limit: UploadLimit) -> Text {
     match limit {
         UploadLimit::Unlimited => t!("no-limit"),
-        UploadLimit::K100 => "100 kB/s".to_owned(),
-        UploadLimit::K500 => "500 kB/s".to_owned(),
-        UploadLimit::M1 => "1 MB/s".to_owned(),
-        UploadLimit::M5 => "5 MB/s".to_owned(),
+        UploadLimit::K100 => "100 kB/s".into(),
+        UploadLimit::K500 => "500 kB/s".into(),
+        UploadLimit::M1 => "1 MB/s".into(),
+        UploadLimit::M5 => "5 MB/s".into(),
     }
 }
 
-fn peer_name(limit: PeerLimit) -> String {
+fn peer_name(limit: PeerLimit) -> Text {
     match limit {
         PeerLimit::P50 => "50",
         PeerLimit::P128 => "128",
         PeerLimit::P200 => "200",
     }
-    .to_owned()
+    .into()
 }
 
-fn scale_name(scale: InterfaceScale) -> String {
-    format!("{} %", scale.percent())
+fn scale_name(scale: InterfaceScale) -> Text {
+    format!("{} %", scale.percent()).into()
 }
 
-fn start_name(page: StartPage) -> String {
+fn start_name(page: StartPage) -> Text {
     Page::from(page).label()
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "a whole percentage")]
-fn watched_name(at: WatchedAt) -> String {
+fn watched_name(at: WatchedAt) -> Text {
     t!(
         "watched-percent",
         percent = (at.fraction() * 100.0).round() as u32
     )
 }
 
-fn notice_name(notice: NextVideoNotice) -> String {
+fn notice_name(notice: NextVideoNotice) -> Text {
     match notice {
         NextVideoNotice::Off => t!("next-notice-off"),
         _ => seconds(notice.seconds()),
     }
 }
 
-fn seconds(count: f64) -> String {
+fn seconds(count: f64) -> Text {
     t!("seconds", count = count)
 }
 
@@ -804,7 +804,7 @@ fn pick<T: Copy + PartialEq>(
     help: &str,
     current: T,
     options: &[T],
-    name: impl Fn(T) -> String,
+    name: impl Fn(T) -> Text,
     setting: fn(T) -> Setting,
 ) {
     row(ui, title, help, |ui| {
@@ -908,10 +908,10 @@ fn sort_key(name: &str) -> String {
         .collect()
 }
 
-fn language_name(language: Option<Language>) -> String {
+fn language_name(language: Option<Language>) -> Text {
     language.map_or_else(
         || t!("language-none"),
-        |l| t!(&format!("language-{}", l.code())),
+        |l| t!(&format!("language-{}", l.code())).into_owned().into(),
     )
 }
 
@@ -993,7 +993,7 @@ fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
     label: &str,
     current: T,
     options: impl FnOnce() -> I,
-    name: impl Fn(T) -> String,
+    name: impl Fn(T) -> Text,
 ) -> Option<T> {
     let (rect, response) = ui.allocate_exact_size(
         vec2(ui.available_width().min(CONTROL_WIDTH), 30.0),
@@ -1001,7 +1001,7 @@ fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
     );
     response.widget_info(|| {
         let mut info = WidgetInfo::labeled(Role::ComboBox, ui.is_enabled(), label);
-        info.current_text_value = Some(name(current));
+        info.current_text_value = Some(name(current).into_owned());
         info
     });
     if ui.is_rect_visible(rect) {
@@ -1142,7 +1142,7 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::i18n::{self, Locale};
+    use crate::i18n::{self, Locale, Text};
 
     #[test]
     fn every_section_icon_exists_in_the_tabler_set() {
@@ -1154,11 +1154,11 @@ mod tests {
     #[test]
     fn languages_sort_by_their_translated_name_ignoring_accents() {
         i18n::set(Locale::Spanish);
-        let mut names: Vec<String> = cineo_core::app::Language::all()
+        let mut names: Vec<Text> = cineo_core::app::Language::all()
             .map(|l| super::language_name(Some(l)))
             .collect();
         names.sort_by_cached_key(|n| super::sort_key(n));
-        assert_eq!(names.first().map(String::as_str), Some("Alemán"));
-        assert_eq!(names.get(1).map(String::as_str), Some("Árabe"));
+        assert_eq!(names.first().map(|n| &**n), Some("Alemán"));
+        assert_eq!(names.get(1).map(|n| &**n), Some("Árabe"));
     }
 }

@@ -70,6 +70,8 @@ impl Locale {
     }
 }
 
+pub(crate) type Text = std::borrow::Cow<'static, str>;
+
 thread_local! {
     static CURRENT: Cell<Locale> = const { Cell::new(Locale::English) };
 }
@@ -87,7 +89,7 @@ macro_rules! t {
         match $id {
             id => {
                 let id: &str = id;
-                rust_i18n::t!(id, locale = $crate::i18n::tag() $(, $name = $value)*).into_owned()
+                rust_i18n::t!(id, locale = $crate::i18n::tag() $(, $name = $value)*)
             }
         }
     };
