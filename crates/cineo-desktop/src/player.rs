@@ -639,7 +639,9 @@ fn bottom_bar(
             let ctx = ui.ctx();
             let keep = ctx
                 .pointer_hover_pos()
-                .is_some_and(|p| panel.expand(STYLE_GAP).contains(p))
+                .is_some_and(|p| {
+                    panel.expand(STYLE_GAP).contains(p) || menu.expand(STYLE_GAP).contains(p)
+                })
                 || ctx.dragged_id().is_some()
                 || egui::Popup::is_any_open(ctx);
             controls.style_open = style_hovered || (controls.style_open && keep);
