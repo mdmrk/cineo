@@ -1,6 +1,6 @@
 # 0009. Pinned stable toolchain; MSRV equals the pin
 
-- Status: Accepted
+- Status: Superseded by 0025
 - Date: 2026-10-06
 
 ## Context

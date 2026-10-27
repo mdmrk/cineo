@@ -24,7 +24,7 @@ old one *Superseded by NNNN*.
 | [0006](0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
 | [0007](0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
 | [0008](0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Superseded by 0013 |
-| [0009](0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Accepted |
+| [0009](0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Superseded by 0025 |
 | [0010](0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012; cache: superseded by 0015) |
 | [0011](0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 | [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015) |
@@ -40,6 +40,7 @@ old one *Superseded by NNNN*.
 | [0022](0022-linux-only.md) | Linux only | Accepted |
 | [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |
 | [0024](0024-a-two-minute-buffer.md) | A two-minute buffer | Accepted |
+| [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Accepted |
 
 ## What we took from the reference projects
 
@@ -60,7 +61,7 @@ old one *Superseded by NNNN*.
 | Private account API + library sync | **Reject** | Not public; cloud sync not planned for now (owner decision 2026-10-06) |
 | 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
 | Watched bitfield encoding | **Defer** | Revisit with series progress (M4) |
-| MSRV CI job | **Modify** | We are an application: MSRV = pinned toolchain (ADR-0009) |
+| MSRV CI job | **Reject** | We are an application built with the latest stable Rust (ADR-0025) |
 
 ### stremio-web (GPL-2.0): ideas only, no code
 - The core runs separately from the UI (in a worker) and the UI renders state

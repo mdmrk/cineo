@@ -12,7 +12,7 @@ language, simplicity and agent-friendliness.
 
 Research, crates.io 2026-10-06:
 - `eframe` and `egui_extras` 0.36.2 are MIT OR Apache-2.0, with MSRV 1.95
-  (below our pin of 1.99).
+  (below the stable Rust of the time, 1.99).
 - eframe offers a `wgpu` backend (the default) and a `glow` (OpenGL)
   backend.
 - `egui_extras`' `http` image loader uses its own HTTP client (`ehttp`),

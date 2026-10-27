@@ -5,7 +5,6 @@ members = ["crates/*"]
 [workspace.package]
 version = "1.4.2"
 edition = "2024"
-rust-version = "1.99"
 license = "MIT"
 repository = "https://github.com/mdmrk/cineo"
 publish = false

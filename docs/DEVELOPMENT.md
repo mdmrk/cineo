@@ -13,10 +13,9 @@ holds the details it links to.
 
 ## Setup
 
-1. Install Rust with [rustup](https://rustup.rs). The pinned toolchain in
-   `rust-toolchain.toml` (1.99.0, with rustfmt and clippy) installs itself on
-   first use. If your rustup does not auto-install it, run
-   `rustup toolchain install`.
+1. Install the latest stable Rust with [rustup](https://rustup.rs), with
+   rustfmt and clippy (ADR-0025):
+   `rustup toolchain install stable --component rustfmt,clippy`.
 2. Optional tools, which CI always runs:
    ```sh
    cargo install --locked cargo-nextest cargo-deny
@@ -24,8 +23,8 @@ holds the details it links to.
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
    runtime (ADR-0014).
 
-If you build with a distro-packaged Rust instead of rustup, make sure the
-version matches the pin. Some distro builds expect a cross linker name; if
+If you build with a distro-packaged Rust instead of rustup, make sure it is a
+current stable release. Some distro builds expect a cross linker name; if
 linking fails with `linker 'x86_64-linux-gnu-gcc' not found`, set
 `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=cc` in your shell. Do not commit
 that setting.
@@ -105,11 +104,10 @@ updated `Cargo.lock`.
 - `unsafe_code = "forbid"`, except in two modules of `cineo-player` (see [SECURITY.md](SECURITY.md) for the
   exception process).
 
-### Toolchain bumps (ADR-0009)
+### New stable Rust releases (ADR-0025)
 
-1. Update `channel` in `rust-toolchain.toml` and `rust-version` in
-   `Cargo.toml`.
-2. Fix new lints.
+CI always uses the latest stable Rust. When a release brings new lints, fix
+them.
 
 ## Testing
 

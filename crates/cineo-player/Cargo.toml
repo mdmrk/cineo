@@ -3,7 +3,6 @@ name = "cineo-player"
 description = "Cineo player backend: libmpv, loaded at runtime, drawing into the window."
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish.workspace = true
