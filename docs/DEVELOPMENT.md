@@ -31,16 +31,16 @@ that setting.
 
 ## Everyday commands
 
-| Task | Command |
-|------|---------|
-| Everything CI checks | `scripts/check.sh` (`--quick` skips docs and deny) |
-| Run the desktop app | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
-| Format | `cargo fmt --all` |
-| Lint | `cargo clippy --workspace --all-targets --locked -- -D warnings` |
-| Test | `cargo nextest run --workspace` or `cargo test --workspace` |
-| One test | `cargo test -p cineo-core some_name` |
-| Docs | `cargo doc --workspace --no-deps --open` |
-| Dependency policy | `cargo deny --config .config/deny.toml check` |
+| Task                 | Command                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| Everything CI checks | `scripts/check.sh` (`--quick` skips docs and deny)                                          |
+| Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
+| Format               | `cargo fmt --all`                                                                           |
+| Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
+| Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
+| One test             | `cargo test -p cineo-core some_name`                                                        |
+| Docs                 | `cargo doc --workspace --no-deps --open`                                                    |
+| Dependency policy    | `cargo deny --config .config/deny.toml check`                                               |
 
 `--locked` is used everywhere in CI. If you change dependencies, commit the
 updated `Cargo.lock`.
@@ -123,15 +123,15 @@ first test needs it.
       ┌───┴───────────────────┴───┐  many: unit + protocol fixtures (pure core, fast)
 ```
 
-| Layer | Where | Tools | Runs in CI |
-|-------|-------|-------|-----------|
-| Unit | `#[cfg(test)] mod tests` next to the code | std test harness | always |
-| Protocol fixtures | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures | always |
-| Network integration | `crates/cineo-net/tests/` | local mock HTTP server (`wiremock`) | always |
-| Persistence | `crates/cineo-store/tests/` | temp-dir SQLite, fixture DBs per schema version | always |
-| Player | `crates/cineo-player/src/` (unit tests) | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
-| E2E | `crates/cineo-cli/tests/` | built binary (`CARGO_BIN_EXE_cineo`) + mock addon | always |
-| Live addons | `scripts/` (manual) | real public addons | never in CI (flaky, external) |
+| Layer               | Where                                        | Tools                                                                                                                              | Runs in CI                         |
+| ------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| Unit                | `#[cfg(test)] mod tests` next to the code    | std test harness                                                                                                                   | always                             |
+| Protocol fixtures   | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures                                                                                                                      | always                             |
+| Network integration | `crates/cineo-net/tests/`                    | local mock HTTP server (`wiremock`)                                                                                                | always                             |
+| Persistence         | `crates/cineo-store/tests/`                  | temp-dir SQLite, fixture DBs per schema version                                                                                    | always                             |
+| Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
+| E2E                 | `crates/cineo-cli/tests/`                    | built binary (`CARGO_BIN_EXE_cineo`) + mock addon                                                                                  | always                             |
+| Live addons         | `scripts/` (manual)                          | real public addons                                                                                                                 | never in CI (flaky, external)      |
 
 ### Rules
 
@@ -156,16 +156,16 @@ Commands are under [Everyday commands](#everyday-commands).
 
 ### Per-subsystem strategy
 
-| Subsystem | Strategy |
-|-----------|----------|
-| Protocol parsing | Fixtures for basic, quirks and invalid cases; every lenient rule has a fixture case |
-| URL building | Table tests including the docs' example, reserved chars, unicode, prefix and query transport URLs |
-| Filtering/planning | Fixture manifests × request matrix |
-| Network policy | Pure IP/URL classification tables + mock-server tests (blocked loopback, redirects, size, gzip bomb, timeout, no URL leak in errors) |
-| Aggregation | Reducer tests: effects emitted, partial failure, stale responses dropped |
-| Player (ADR-0014) | Commands built from typed values; event mapping tables; real-libmpv playback `#[ignore]`; controls via kittest |
-| Persistence | Round-trip; migration from each historical schema fixture; corruption handling |
-| GUI | Core-level tests carry the logic; `egui_kittest` tests drive the views headlessly |
+| Subsystem          | Strategy                                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Protocol parsing   | Fixtures for basic, quirks and invalid cases; every lenient rule has a fixture case                                                  |
+| URL building       | Table tests including the docs' example, reserved chars, unicode, prefix and query transport URLs                                    |
+| Filtering/planning | Fixture manifests × request matrix                                                                                                   |
+| Network policy     | Pure IP/URL classification tables + mock-server tests (blocked loopback, redirects, size, gzip bomb, timeout, no URL leak in errors) |
+| Aggregation        | Reducer tests: effects emitted, partial failure, stale responses dropped                                                             |
+| Player (ADR-0014)  | Commands built from typed values; event mapping tables; real-libmpv playback `#[ignore]`; controls via kittest                       |
+| Persistence        | Round-trip; migration from each historical schema fixture; corruption handling                                                       |
+| GUI                | Core-level tests carry the logic; `egui_kittest` tests drive the views headlessly                                                    |
 
 ## Command-line tool
 
@@ -222,10 +222,10 @@ subsystem logs and how to diagnose it.
 
 #### Span conventions
 
-| Span | Fields | Emitted by |
-|------|--------|-----------|
+| Span            | Fields                                                                               | Emitted by  |
+| --------------- | ------------------------------------------------------------------------------------ | ----------- |
 | `addon_request` | `req` (process-unique id), `addon` (origin only), `resource` (encoded resource path) | `cineo-net` |
-| `image_request` | `req`, `origin` | `cineo-net` |
+| `image_request` | `req`, `origin`                                                                      | `cineo-net` |
 
 **Never log** full transport URLs, query strings of addon URLs, stream URLs
 with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
@@ -296,6 +296,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 ### Reproducible bug reports
 
 A good report contains:
+
 1. The exact command or UI steps.
 2. `-v` logs, scrubbed of personal data.
 3. The version (`cineo --version`) and OS.
@@ -341,23 +342,23 @@ and result in the PR.
 
 ### Steps
 
-| # | Do | Expect |
-|---|----|--------|
-| 1 | Start `cineo-desktop --data-dir <tmp> -v` | Board shows Cinemeta rows with posters |
-| 2 | Addons | Cinemeta is the only installed addon; Discover addons shows the Official and Community lists |
-| 3 | Install the stream addon (`http://127.0.0.1:8000/manifest.json` for the local one) | It appears second in the list; Move up/down reorders |
-| 4 | Search "Night of the Living Dead" → open the 1968 film | Detail page: backdrop, poster, facts, description |
-| 5 | Streams list | One group per stream addon; the local stream has an enabled Play |
-| 6 | Play | The player opens in the window and plays. Total time from step 2: under a minute |
-| 7 | Seek to ~10 minutes, wait 10 s, press Back | Board shows "Continue watching" with a progress bar |
-| 8 | Quit Cineo, start it again with the same `--data-dir` | Addons (in order) and Continue watching are back |
-| 9 | Open the item from Continue watching → Play | Playback resumes at ~10 minutes |
-| 10 | Discover → pick "Popular — Cinemeta", a genre, "Load more" | Items change with the genre; more items append |
-| 11 | Open a series → choose a season → an episode | Episode list for that season; streams load for the episode |
-| 12 | Torrent streams | See [Torrents](#torrents) |
-| 13 | Library → Remove the item | It disappears, and stays gone after a restart |
-| 14 | Install `http://127.0.0.1:9/manifest.json` without `--allow-private-network` | Error mentions the network policy; nothing crashes |
-| 15 | Addons → Discover addons → Official, then Community → Install one | Lists load; installed addons show "Installed"; the new addon joins the installed list |
+| #   | Do                                                                                 | Expect                                                                                       |
+| --- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1   | Start `cineo-desktop --data-dir <tmp> -v`                                          | Board shows Cinemeta rows with posters                                                       |
+| 2   | Addons                                                                             | Cinemeta is the only installed addon; Discover addons shows the Official and Community lists |
+| 3   | Install the stream addon (`http://127.0.0.1:8000/manifest.json` for the local one) | It appears second in the list; Move up/down reorders                                         |
+| 4   | Search "Night of the Living Dead" → open the 1968 film                             | Detail page: backdrop, poster, facts, description                                            |
+| 5   | Streams list                                                                       | One group per stream addon; the local stream has an enabled Play                             |
+| 6   | Play                                                                               | The player opens in the window and plays. Total time from step 2: under a minute             |
+| 7   | Seek to ~10 minutes, wait 10 s, press Back                                         | Board shows "Continue watching" with a progress bar                                          |
+| 8   | Quit Cineo, start it again with the same `--data-dir`                              | Addons (in order) and Continue watching are back                                             |
+| 9   | Open the item from Continue watching → Play                                        | Playback resumes at ~10 minutes                                                              |
+| 10  | Discover → pick "Popular — Cinemeta", a genre, "Load more"                         | Items change with the genre; more items append                                               |
+| 11  | Open a series → choose a season → an episode                                       | Episode list for that season; streams load for the episode                                   |
+| 12  | Torrent streams                                                                    | See [Torrents](#torrents)                                                                    |
+| 13  | Library → Remove the item                                                          | It disappears, and stays gone after a restart                                                |
+| 14  | Install `http://127.0.0.1:9/manifest.json` without `--allow-private-network`       | Error mentions the network policy; nothing crashes                                           |
+| 15  | Addons → Discover addons → Official, then Community → Install one                  | Lists load; installed addons show "Installed"; the new addon joins the installed list        |
 
 Also watch the `-v` log: no panics, and no full addon or stream URLs (only
 origins and resource paths).
@@ -370,22 +371,22 @@ its page). Add a stream to the local addon above, in front of the
 `Local` entry:
 
 ```json
-{"name":"Torrent","infoHash":"<40 hex characters>","fileIdx":0}
+{ "name": "Torrent", "infoHash": "<40 hex characters>", "fileIdx": 0 }
 ```
 
 Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 
-| # | Do | Expect |
-|---|----|--------|
-| T1 | Open the film; Play the torrent stream | The "Peer-to-peer streaming" notice; nothing appears in the cache directory yet |
-| T2 | Cancel | No playback, no engine log lines (`-v`) |
-| T3 | Play again → Accept and play | The player opens at once with Back and the film's logo (or, without one, its title) pulsing in the middle; the video starts once the engine serves the file |
-| T4 | Seek forward and back | Playback resumes within a few seconds |
-| T5 | Back (or Esc) | The detail page returns; the log shows the torrent stopped. Back while still connecting cancels the torrent too |
-| T6 | Play it again | No notice this time. While it plays, the cache directory holds its `<info hash>` folder with only `<piece index>` files (no torrent file names) |
-| T7 | Settings → untick "Show and play torrent streams"; open the film | The torrent stream is gone; "1 torrent stream hidden…" is shown |
-| T8 | Restart with the same directories | The setting is kept |
-| T9 | Back, then look in the cache directory | Only `dht.json`: the torrent's data was deleted when it stopped |
+| #   | Do                                                               | Expect                                                                                                                                                      |
+| --- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1  | Open the film; Play the torrent stream                           | The "Peer-to-peer streaming" notice; nothing appears in the cache directory yet                                                                             |
+| T2  | Cancel                                                           | No playback, no engine log lines (`-v`)                                                                                                                     |
+| T3  | Play again → Accept and play                                     | The player opens at once with Back and the film's logo (or, without one, its title) pulsing in the middle; the video starts once the engine serves the file |
+| T4  | Seek forward and back                                            | Playback resumes within a few seconds                                                                                                                       |
+| T5  | Back (or Esc)                                                    | The detail page returns; the log shows the torrent stopped. Back while still connecting cancels the torrent too                                             |
+| T6  | Play it again                                                    | No notice this time. While it plays, the cache directory holds its `<info hash>` folder with only `<piece index>` files (no torrent file names)             |
+| T7  | Settings → untick "Show and play torrent streams"; open the film | The torrent stream is gone; "1 torrent stream hidden…" is shown                                                                                             |
+| T8  | Restart with the same directories                                | The setting is kept                                                                                                                                         |
+| T9  | Back, then look in the cache directory                           | Only `dht.json`: the torrent's data was deleted when it stopped                                                                                             |
 
 ## Dependencies
 
@@ -393,7 +394,7 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 2. Research it: current version, license, maintenance, MSRV, alternatives.
 3. Add it to `[workspace.dependencies]` with minimal features. Crates use
    `dep.workspace = true`.
-4. Add a row to the *In use* table below.
+4. Add a row to the _In use_ table below.
 5. `cargo deny --config .config/deny.toml check` must pass. A new license needs a
    [LEGAL.md](LEGAL.md) note.
 
@@ -406,37 +407,37 @@ Re-check them when adding.
 
 ### In use
 
-| Crate | Version | Purpose | License |
-|-------|---------|---------|---------|
-| `percent-encoding` | 2.3.2 | `encodeURIComponent` path encoding (core) | MIT/Apache |
-| `semver` | 1.0.28 | Manifest `version` (core), release versions (core, net, desktop) | MIT/Apache |
-| `serde_json` | 1.0.151 | JSON documents (core) | MIT/Apache |
-| `thiserror` | 2.0.21 | Library errors | MIT/Apache |
-| `url` | 2.5.8 | URLs (core, net) | MIT/Apache |
-| `reqwest` | 0.13.5 | Addon HTTP client (net) | MIT/Apache |
-| `tokio` | 1.53.2 | Async runtime (net, shells) | MIT |
-| `tracing` / `tracing-subscriber` | 0.1.44 / 0.3.23 | Logging | MIT |
-| `anyhow` | 1.0.104 | Shell errors (cli) | MIT/Apache |
-| `clap` | 4.6.7 | CLI arguments (cli) | MIT/Apache |
-| `wiremock` (dev) | 0.6.5 | Mock addon servers in tests | MIT/Apache |
-| `rusqlite` (`bundled`, no default features) | 0.40.2 | SQLite database (store) | MIT; bundled SQLite is public domain |
-| `etcetera` | 0.11.0 | XDG data and cache directories (store) | MIT/Apache |
-| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.37.0 | Desktop window and egui (desktop, ADR-0011) | MIT/Apache |
-| `iconflow` (`pack-tabler` only; no default features) | 2.1.0 | Tabler icon font and codepoints for the desktop UI (desktop) | MIT; Tabler font MIT |
-| `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
-| `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
-| `egui_kittest` (dev, no default features) | 0.37.0 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
-| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
-| `zbus` (`default-rt`, `service`; no default features) | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6 | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop) | MIT |
-| `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
-| `bytes` | 1.12.1 | Response bodies (stream) | MIT |
-| `futures-util` (no default features) | 0.3.34 | Stream adapters for bodies (stream) | MIT/Apache |
-| `tokio-util` (`io`) | 0.7.19 | `ReaderStream` from a torrent file reader (stream) | MIT |
-| `getrandom` | 0.4.3 | Per-session path token and proxy password (stream) | MIT/Apache |
-| `rust-i18n` | 4.2.4 | UI message catalogs, embedded at compile time (desktop, ADR-0021) | MIT |
-| `sys-locale` | 0.3.2 | The OS locale for the default UI language (desktop) | MIT/Apache |
-| `raw-window-handle` | 0.6.2 | The window's Wayland or Xlib display for mpv's hardware-decoding interop (desktop); already in the tree through eframe | MIT/Apache/Zlib |
-| `libloading` | 0.9.0 | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC |
+| Crate                                                                                  | Version                                                                                                                                | Purpose                                                                                                                                         | License                              |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `percent-encoding`                                                                     | 2.3.2                                                                                                                                  | `encodeURIComponent` path encoding (core)                                                                                                       | MIT/Apache                           |
+| `semver`                                                                               | 1.0.28                                                                                                                                 | Manifest `version` (core), release versions (core, net, desktop)                                                                                | MIT/Apache                           |
+| `serde_json`                                                                           | 1.0.151                                                                                                                                | JSON documents (core)                                                                                                                           | MIT/Apache                           |
+| `thiserror`                                                                            | 2.0.21                                                                                                                                 | Library errors                                                                                                                                  | MIT/Apache                           |
+| `url`                                                                                  | 2.5.8                                                                                                                                  | URLs (core, net)                                                                                                                                | MIT/Apache                           |
+| `reqwest`                                                                              | 0.13.5                                                                                                                                 | Addon HTTP client (net)                                                                                                                         | MIT/Apache                           |
+| `tokio`                                                                                | 1.53.2                                                                                                                                 | Async runtime (net, shells)                                                                                                                     | MIT                                  |
+| `tracing` / `tracing-subscriber`                                                       | 0.1.44 / 0.3.23                                                                                                                        | Logging                                                                                                                                         | MIT                                  |
+| `anyhow`                                                                               | 1.0.104                                                                                                                                | Shell errors (cli)                                                                                                                              | MIT/Apache                           |
+| `clap`                                                                                 | 4.6.7                                                                                                                                  | CLI arguments (cli)                                                                                                                             | MIT/Apache                           |
+| `wiremock` (dev)                                                                       | 0.6.5                                                                                                                                  | Mock addon servers in tests                                                                                                                     | MIT/Apache                           |
+| `rusqlite` (`bundled`, no default features)                                            | 0.40.2                                                                                                                                 | SQLite database (store)                                                                                                                         | MIT; bundled SQLite is public domain |
+| `etcetera`                                                                             | 0.11.0                                                                                                                                 | XDG data and cache directories (store)                                                                                                          | MIT/Apache                           |
+| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.37.0                                                                                                                                 | Desktop window and egui (desktop, ADR-0011)                                                                                                     | MIT/Apache                           |
+| `iconflow` (`pack-tabler` only; no default features)                                   | 2.1.0                                                                                                                                  | Tabler icon font and codepoints for the desktop UI (desktop)                                                                                    | MIT; Tabler font MIT                 |
+| `image` (`jpeg`, `png`, `webp` only)                                                   | 0.25.10                                                                                                                                | Image header checks and decoding (desktop)                                                                                                      | MIT/Apache                           |
+| `fast_image_resize` (default features)                                                 | 6.1.0                                                                                                                                  | SIMD downscaling of posters and backdrops (desktop)                                                                                             | MIT/Apache                           |
+| `egui_kittest` (dev, no default features)                                              | 0.37.0                                                                                                                                 | Headless UI tests via AccessKit (desktop)                                                                                                       | MIT/Apache                           |
+| `librqbit` (`rust-tls`, `disable-upload`, no default features)                         | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012)                                                                                                           | Apache-2.0                           |
+| `zbus` (`default-rt`, `service`; no default features)                                  | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6                                              | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop)                                         | MIT                                  |
+| `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util`                | 1.12.0 / 0.1.21 / 0.1.5                                                                                                                | Loopback HTTP server for the player (stream)                                                                                                    | MIT                                  |
+| `bytes`                                                                                | 1.12.1                                                                                                                                 | Response bodies (stream)                                                                                                                        | MIT                                  |
+| `futures-util` (no default features)                                                   | 0.3.34                                                                                                                                 | Stream adapters for bodies (stream)                                                                                                             | MIT/Apache                           |
+| `tokio-util` (`io`)                                                                    | 0.7.19                                                                                                                                 | `ReaderStream` from a torrent file reader (stream)                                                                                              | MIT                                  |
+| `getrandom`                                                                            | 0.4.3                                                                                                                                  | Per-session path token and proxy password (stream)                                                                                              | MIT/Apache                           |
+| `rust-i18n`                                                                            | 4.2.4                                                                                                                                  | UI message catalogs, embedded at compile time (desktop, ADR-0021)                                                                               | MIT                                  |
+| `sys-locale`                                                                           | 0.3.2                                                                                                                                  | The OS locale for the default UI language (desktop)                                                                                             | MIT/Apache                           |
+| `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop (desktop); already in the tree through eframe                          | MIT/Apache/Zlib                      |
+| `libloading`                                                                           | 0.9.0                                                                                                                                  | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC                                  |
 
 `tokio` features `io-util` and `sync` serve the mpv player; `process` was
 dropped with the external mpv player (2026-10-07). The player uses
@@ -505,25 +506,24 @@ alpha (`colour_and_transparency_survive_downscaling`).
 
 ### Deliberately not used
 
-| Crate | Reason |
-|-------|--------|
-| `libmpv2` (LGPL-2.1) | Would compile LGPL code into the binary and link libmpv at build time; own bindings loaded at runtime instead (ADR-0014) |
-| `slint` | GPL or proprietary licensing |
-| `serde_with` | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit |
-| `chrono` / `jiff` / `time` | The only date parsed is `released`, by a small ISO 8601 reader in the core (`addon::meta`) |
-| `directories` 6.0.0 | Pulls in `option-ext` (MPL-2.0, not in the `.config/deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths (2026-10-06) |
-| `sqlx` / `redb` | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen instead |
-| `async-trait` | Native async fn in traits is enough; effects are data (ADR-0001) |
-| `figment` / config crates | No configuration file; settings live in SQLite |
-| OpenSSL (`native-tls`) | rustls only; banned in `.config/deny.toml` |
+| Crate                      | Reason                                                                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `libmpv2` (LGPL-2.1)       | Would compile LGPL code into the binary and link libmpv at build time; own bindings loaded at runtime instead (ADR-0014)               |
+| `slint`                    | GPL or proprietary licensing                                                                                                           |
+| `serde_with`               | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit                                                           |
+| `chrono` / `jiff` / `time` | The only date parsed is `released`, by a small ISO 8601 reader in the core (`addon::meta`)                                             |
+| `directories` 6.0.0        | Pulls in `option-ext` (MPL-2.0, not in the `.config/deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths (2026-10-06) |
+| `sqlx` / `redb`            | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen instead                  |
+| `async-trait`              | Native async fn in traits is enough; effects are data (ADR-0001)                                                                       |
+| `figment` / config crates  | No configuration file; settings live in SQLite                                                                                         |
+| OpenSSL (`native-tls`)     | rustls only; banned in `.config/deny.toml`                                                                                             |
 
 ### Tools (not crate dependencies)
 
-| Tool | Version | Use |
-|------|---------|-----|
-| cargo-nextest | 0.9.146 | CI test runner |
-| cargo-deny | 0.20.2 | Licenses, advisories, bans, sources |
-| zizmor | via action v0.6.4 | GitHub Actions security lint |
+| Tool          | Version | Use                                 |
+| ------------- | ------- | ----------------------------------- |
+| cargo-nextest | 0.9.150 | CI test runner                      |
+| cargo-deny    | 0.20.2  | Licenses, advisories, bans, sources |
 
 ## Releasing
 
@@ -532,49 +532,49 @@ alpha (`colour_and_transparency_survive_downscaling`).
 - **Tags:** `vMAJOR.MINOR.PATCH`, with an optional pre-release suffix
   (`v1.0.1-rc.1`). Tags containing `-` become GitHub pre-releases.
 
-Three workflows start runs; each stage waits for the one before it:
+One workflow, `ci.yml`, runs everything; each job waits for the one before
+it:
 
-| Workflow | Trigger | Stages |
-|----------|---------|--------|
-| `ci.yml` | push, pull request | lint, test, cargo-deny, zizmor |
-| `prerelease.yml` | push to `main` | build → publish `prerelease` |
-| `release.yml` | tag `vX.Y.Z` | checks (`ci.yml`) → build → publish `vX.Y.Z` |
+| Trigger                  | Jobs                                 |
+| ------------------------ | ------------------------------------ |
+| pull request, manual run | check                                |
+| push to `main`           | check → build → publish `prerelease` |
+| tag `vX.Y.Z`             | check → build → publish `vX.Y.Z`     |
 
-`build.yml` is the shared build stage: it builds `cineo-desktop` for Linux
-x86_64 at the `x86-64-v2` level, puts the files into `dist/` with
-`scripts/package.sh`, and attests build provenance (check a file with
-`gh attestation verify <file> --repo <owner>/cineo`). It never publishes.
-Lint, test and prerelease builds restore the compiled dependencies from the
-cache saved by the last run on `main`; tag builds start without a cache. The
-`cineo` CLI is not shipped.
+`check` runs `scripts/check.sh` (fmt, clippy, nextest with the `ci` profile,
+docs, cargo-deny). `build` builds `cineo-desktop` for Linux x86_64 at the
+`x86-64-v2` level, puts the files into `dist/` with `scripts/package.sh`,
+writes `SHA256SUMS` and attests build provenance (check a file with
+`gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
+write to the repository. `check` and prerelease builds restore the compiled
+dependencies from the cache saved by the last run on `main`; tag builds
+start without a cache. The `cineo` CLI is not shipped.
 
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
 
-| File | What |
-|------|------|
-| `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv |
-| `cineo-licenses.zip` | Cineo's license and the font licenses |
-| `cineo.png` | App icon, used by `install.sh` |
-| `install.sh` | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
-| `SHA256SUMS` | Checksums of all of the above; the installer verifies them |
+| File                 | What                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
+| `cineo-licenses.zip` | Cineo's license and the font licenses                                                                               |
+| `cineo.png`          | App icon, used by `install.sh`                                                                                      |
+| `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
+| `SHA256SUMS`         | Checksums of all of the above; the installer verifies them                                                          |
 
 ### Steps
 
 1. On `main` with green CI: bump `version` in `Cargo.toml`.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
-4. `release.yml` runs every CI gate, builds, and publishes the release
+4. `ci.yml` runs every check, builds, and publishes the release
    `vX.Y.Z` with notes generated from the commits since the previous tag.
 
 ### Prerelease builds
 
-Every push to `main` (or a manual run on `main`) runs `prerelease.yml`,
-except a push whose head commit starts with `chore(release):`; that commit
-gets the real release from its tag instead. It does not run the tests
-itself (`ci.yml` runs them in parallel). It deletes the previous
-`prerelease` GitHub release and its tag and recreates both at the pushed
-commit.
+Every push to `main` builds a prerelease once `check` passes, except a push
+whose head commit starts with `chore(release):`; that commit gets the real
+release from its tag instead. It deletes the previous `prerelease` GitHub
+release and its tag and recreates both at the pushed commit.
 
 Release artifacts are not code-signed; build provenance attestations and
 `SHA256SUMS` are the integrity checks.
