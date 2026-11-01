@@ -2,12 +2,12 @@ use cineo_core::app::{
     Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice,
     PeerLimit, SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
     SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
+    TorrentPort, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Label, Layout, Popup,
-    PopupCloseBehavior, Rect, Response, RichText, Role, ScrollArea, Sense, TextFormat, Ui,
-    UiBuilder, WidgetInfo, pos2, text::LayoutJob, vec2,
+    PopupCloseBehavior, Rect, Response, RichText, Role, ScrollArea, Sense, TextEdit, TextFormat,
+    Ui, UiBuilder, WidgetInfo, pos2, text::LayoutJob, vec2,
 };
 
 use crate::brand;
@@ -682,6 +682,11 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
         s.torrent_dht,
         Setting::TorrentDht,
     );
+    row(ui, &t!("torrent-port"), &t!("torrent-port-help"), |ui| {
+        if let Some(port) = port_field(ui, s.torrent_port) {
+            out.push(Action::ChangeSetting(Setting::TorrentPort(port)));
+        }
+    });
     switch(
         ui,
         out,
@@ -890,6 +895,37 @@ fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32
     }
     response.on_hover_cursor(egui::CursorIcon::PointingHand);
     (new != value).then_some(new)
+}
+
+fn port_field(ui: &mut Ui, port: TorrentPort) -> Option<TorrentPort> {
+    let id = egui::Id::new("torrent-port");
+    let draft = id.with("draft");
+    let mut text = ui
+        .data(|d| d.get_temp::<String>(draft))
+        .unwrap_or_else(|| port.get().to_string());
+    let response = ui.add(
+        TextEdit::singleline(&mut text)
+            .id(id)
+            .char_limit(5)
+            .desired_width(80.0),
+    );
+    let mut chosen = None;
+    if response.lost_focus() {
+        chosen = text
+            .trim()
+            .parse::<u32>()
+            .ok()
+            .filter(|v| (TorrentPort::MIN..=TorrentPort::MAX).contains(v))
+            .map(TorrentPort::new)
+            .filter(|new| *new != port);
+        ui.data_mut(|d| d.remove::<String>(draft));
+    } else if response.has_focus() {
+        let digits: String = text.chars().filter(char::is_ascii_digit).collect();
+        ui.data_mut(|d| d.insert_temp(draft, digits));
+    } else {
+        ui.data_mut(|d| d.remove::<String>(draft));
+    }
+    chosen
 }
 
 fn sort_key(name: &str) -> String {

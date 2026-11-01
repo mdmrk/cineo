@@ -68,12 +68,15 @@ Format:
 ### Streaming engine: UDP trackers and the DHT bypass the address filter
 - Where: [engine.rs](../crates/cineo-stream/src/engine.rs)
 - Gap: a UDP tracker given by host name may resolve to a private address
-  and still be contacted; DHT traffic (UDP) is not filtered either.
+  and still be contacted; this includes the eight built-in fallback
+  trackers (ADR-0026). DHT traffic (UDP) is not filtered either; the peer
+  addresses it returns are (ADR-0026).
 - Why: SOCKS5 `CONNECT` covers TCP only, and librqbit 9.0.1 sends UDP
   tracker and DHT packets from its own sockets (INFERRED from its source:
   `librqbit-tracker-comms` `tracker_comms_udp.rs`).
-- Instead: peer TCP connections and HTTP trackers are filtered by the
-  proxy; trackers on a literal non-public IP are dropped from the magnet.
+- Instead: HTTP trackers are filtered by the proxy, peer addresses by
+  librqbit's blocklist; trackers on a literal non-public IP are dropped
+  from the magnet.
 - Exit: resolve UDP tracker host names ourselves and drop non-public ones,
   or an upstream hook for UDP destinations; for the DHT, an upstream
   address filter.

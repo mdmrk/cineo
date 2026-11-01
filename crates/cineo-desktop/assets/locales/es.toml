@@ -242,6 +242,8 @@ peer-limit = "Pares por torrent"
 peer-limit-help = "Más pares puede ser más rápido, pero usa más conexiones."
 dht = "Buscar pares mediante la DHT"
 dht-help = "Encuentra pares sin trackers. Desactivarla significa menos pares para muchos torrents."
+torrent-port = "Puerto de escucha"
+torrent-port-help = "Los pares pueden conectarse a Cineo en este puerto, por TCP y uTP. Ábrelo en tu router para tener más pares. Si está ocupado, se usa uno al azar. Se aplica desde el siguiente torrent que reproduzcas."
 private-network = "Permitir direcciones de la red local"
 private-network-help = "Permite acceder a add-ons, imágenes y pares torrent en 127.0.0.1 o en tu red doméstica, para add-ons alojados por ti. Desactivado es más seguro. Se aplica al reiniciar Cineo."
 

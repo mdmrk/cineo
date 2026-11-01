@@ -175,6 +175,8 @@ Torrent streams (`infoHash`, ADR-0012):
   (`choose_file` unit tests in `cineo-core`).
 - `sources` entries `tracker:<url>` add `http(s)`/`udp` trackers. `dht:`
   entries add nothing, since DHT is always used. Other entries are ignored.
+  Cineo always adds eight public UDP trackers of its own (ADR-0026); what
+  Stremio adds is UNKNOWN.
 - Real addons may send no `sources` at all: Torrentio's streams had only
   `infoHash`, `fileIdx` and `behaviorHints.filename` (VERIFIED 2026-10-06).
 

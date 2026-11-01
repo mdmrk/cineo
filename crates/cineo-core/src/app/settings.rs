@@ -336,6 +336,7 @@ impl WatchedAt {
 pub type SubtitleSize = Ranged<50, 200>;
 pub type SubtitlePosition = Ranged<0, 20>;
 pub type SubtitleOpacity = Ranged<25, 100>;
+pub type TorrentPort = Ranged<1024, 65535>;
 
 macro_rules! settings {
     ($(
@@ -433,6 +434,7 @@ settings! {
     upload_limit: UploadLimit = UploadLimit::Unlimited => UploadLimit("upload_limit"),
     peer_limit: PeerLimit = PeerLimit::P128 => PeerLimit("peer_limit"),
     torrent_dht: bool = true => TorrentDht("torrent_dht"),
+    torrent_port: TorrentPort = TorrentPort::new(42713) => TorrentPort("torrent_port"),
     allow_private_network: bool = false => AllowPrivateNetwork("allow_private_network"),
     interface_scale: InterfaceScale = InterfaceScale::S100 => InterfaceScale("interface_scale"),
     start_page: StartPage = StartPage::Home => StartPage("start_page"),

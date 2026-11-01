@@ -910,6 +910,7 @@ fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
         peer_limit: Some(settings.peer_limit.peers()),
         window: NonZeroU64::new(settings.torrent_storage.window_bytes()),
         in_memory: settings.torrent_storage.in_memory(),
+        listen_port: u16::try_from(settings.torrent_port.get()).unwrap_or(u16::MAX),
         ..base.clone()
     }
 }
@@ -996,7 +997,7 @@ fn supersedes(later: &Effect, earlier: &Effect) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cineo_core::app::{DownloadLimit, PeerLimit, TorrentStorage, UploadLimit};
+    use cineo_core::app::{DownloadLimit, PeerLimit, TorrentPort, TorrentStorage, UploadLimit};
 
     #[test]
     fn queued_saves_keep_only_the_last_write_of_each_key() {
@@ -1063,6 +1064,7 @@ mod tests {
                 peer_limit: Some(128),
                 window: NonZeroU64::new(1024 * 1024 * 1024),
                 in_memory: true,
+                listen_port: 42713,
                 ..base.clone()
             },
             "the defaults match librqbit's"
@@ -1074,9 +1076,11 @@ mod tests {
             upload_limit: UploadLimit::K100,
             peer_limit: PeerLimit::P50,
             torrent_storage: TorrentStorage::Disk8192,
+            torrent_port: TorrentPort::new(51000),
             ..Settings::default()
         };
         let options = engine_options(&base, &settings);
+        assert_eq!(options.listen_port, 51000);
         assert!(!options.upload && !options.dht);
         assert_eq!(options.window, NonZeroU64::new(8 << 30));
         assert!(!options.in_memory);

@@ -76,9 +76,53 @@ pub(crate) fn is_blocked(ip: IpAddr) -> bool {
     }
 }
 
+pub(crate) fn p2p_list() -> String {
+    let mut out = String::new();
+    for &range in V4 {
+        let (start, end) = v4_bounds(range);
+        out.push_str(&format!(
+            "cineo:{}-{}\n",
+            Ipv4Addr::from_bits(start),
+            Ipv4Addr::from_bits(end)
+        ));
+    }
+    for &(start, end) in V6_RANGES.iter() {
+        out.push_str(&format!(
+            "cineo:{}-{}\n",
+            Ipv6Addr::from_bits(start),
+            Ipv6Addr::from_bits(end)
+        ));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn listed(list: &str) -> Vec<(IpAddr, IpAddr)> {
+        list.lines()
+            .map(|line| {
+                let (name, range) = line.split_once(':').unwrap();
+                assert_eq!(name, "cineo");
+                let (start, end) = range.split_once('-').unwrap();
+                (ip(start), ip(end))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_p2p_list_has_every_blocked_range_and_only_those() {
+        let ranges = listed(&p2p_list());
+        assert_eq!(ranges.len(), V4.len() + V6_RANGES.len());
+        assert!(ranges.contains(&(ip("10.0.0.0"), ip("10.255.255.255"))));
+        assert!(ranges.contains(&(ip("fc00::"), ip("fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"))));
+        assert!(ranges.contains(&(ip("::ffff:192.168.0.0"), ip("::ffff:192.168.255.255"))));
+        for (start, end) in ranges {
+            assert!(is_blocked(start), "{start}");
+            assert!(is_blocked(end), "{end}");
+        }
+    }
 
     fn ip(s: &str) -> IpAddr {
         s.parse().unwrap_or_else(|e| panic!("{s}: {e}"))

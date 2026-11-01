@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::fmt::Write as _;
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::num::{NonZeroU32, NonZeroU64};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
@@ -12,8 +12,8 @@ use librqbit::dht::DhtPersistenceConfig;
 use librqbit::limits::LimitsConfig;
 use librqbit::storage::StorageFactoryExt as _;
 use librqbit::{
-    AddTorrent, AddTorrentOptions, AddTorrentResponse, ConnectionOptions, DhtSessionConfig,
-    Session, SessionOptions,
+    AddTorrent, AddTorrentOptions, AddTorrentResponse, DhtSessionConfig, ListenerMode,
+    ListenerOptions, Session, SessionOptions,
 };
 use tokio::net::TcpListener;
 use tracing::{debug, info, warn};
@@ -37,9 +37,84 @@ pub struct EngineOptions {
     pub metadata_timeout: Duration,
     pub window: Option<NonZeroU64>,
     pub in_memory: bool,
+    pub listen_port: u16,
+    pub trackers: Vec<Url>,
 }
 
 const SESSION_STOP_GRACE: Duration = Duration::from_millis(50);
+
+const FALLBACK_TRACKERS: &[&str] = &[
+    "udp://tracker.opentrackr.org:1337/announce",
+    "udp://open.stealth.si:80/announce",
+    "udp://open.demonii.com:1337/announce",
+    "udp://open.tracker.cl:1337/announce",
+    "udp://tracker.qu.ax:6969/announce",
+    "udp://tracker.ducks.party:1984/announce",
+    "udp://explodie.org:6969/announce",
+    "udp://tracker.tryhackx.org:6969/announce",
+];
+
+fn fallback_trackers() -> Vec<Url> {
+    FALLBACK_TRACKERS
+        .iter()
+        .filter_map(|t| Url::parse(t).ok())
+        .collect()
+}
+
+struct SessionPlan<'a> {
+    options: &'a EngineOptions,
+    proxy_url: &'a str,
+    blocklist_url: Option<&'a str>,
+}
+
+impl SessionPlan<'_> {
+    fn session_options(&self, port: u16) -> SessionOptions {
+        let options = self.options;
+        let cache_dir = &options.cache_dir;
+        let dht = options.dht.then(|| DhtSessionConfig {
+            persistence: Some(DhtPersistenceConfig {
+                config_filename: Some(cache_dir.join("dht.json")),
+                ..DhtPersistenceConfig::default()
+            }),
+            ..DhtSessionConfig::default()
+        });
+        SessionOptions {
+            dht,
+            persistence: None,
+            fastresume: false,
+            listen: Some(ListenerOptions {
+                mode: ListenerMode::TcpAndUtp,
+                listen_addr: (Ipv6Addr::UNSPECIFIED, port).into(),
+                enable_upnp_port_forwarding: false,
+                ..ListenerOptions::default()
+            }),
+            disable_local_service_discovery: true,
+            connect: None,
+            http_proxy_url: Some(self.proxy_url.to_owned()),
+            blocklist_url: self.blocklist_url.map(str::to_owned),
+            trackers: options.trackers.iter().cloned().collect(),
+            default_storage_factory: Some(
+                CacheStorageFactory {
+                    cache: cache_dir.clone(),
+                }
+                .boxed(),
+            ),
+            disable_upload: !options.upload,
+            ratelimits: LimitsConfig {
+                download_bps: options.download_limit_bps,
+                upload_bps: options.upload_limit_bps,
+            },
+            peer_limit: options.peer_limit,
+            ..SessionOptions::default()
+        }
+    }
+}
+
+fn write_blocklist(cache_dir: &Path) -> std::io::Result<Url> {
+    let path = cache_dir.join("blocklist.txt");
+    std::fs::write(&path, blocklist::p2p_list())?;
+    Url::from_file_path(&path).map_err(|()| std::io::Error::other("the cache path is not absolute"))
+}
 
 impl EngineOptions {
     pub fn new(cache_dir: PathBuf) -> Self {
@@ -55,6 +130,8 @@ impl EngineOptions {
             metadata_timeout: Duration::from_secs(60),
             window: None,
             in_memory: false,
+            listen_port: 0,
+            trackers: fallback_trackers(),
         }
     }
 }
@@ -103,16 +180,18 @@ fn random_token() -> Result<String, StreamError> {
 impl Engine {
     pub async fn start(options: EngineOptions) -> Result<Self, StreamError> {
         let cache_dir = options.cache_dir.clone();
+        let block = !options.allow_private_network;
         let prepared = tokio::task::spawn_blocking({
             let cache_dir = cache_dir.clone();
             move || {
                 cache::create_private_dir(&cache_dir)?;
-                cache::remove_all(&cache_dir)
+                cache::remove_all(&cache_dir)?;
+                block.then(|| write_blocklist(&cache_dir)).transpose()
             }
         })
         .await
         .map_err(|err| StreamError::Cache(std::io::Error::other(err)))?;
-        prepared.map_err(StreamError::Cache)?;
+        let blocklist_url = prepared.map_err(StreamError::Cache)?;
         let proxy = TcpListener::bind((IpAddr::from([127, 0, 0, 1]), 0))
             .await
             .map_err(StreamError::Server)?;
@@ -124,45 +203,33 @@ impl Engine {
         });
         let proxy_url = format!("socks5://{}:{}@{proxy_addr}", policy.user, policy.password);
         let proxy = tokio::spawn(socks::run(proxy, policy));
-        let dht = options.dht.then(|| DhtSessionConfig {
-            persistence: Some(DhtPersistenceConfig {
-                config_filename: Some(cache_dir.join("dht.json")),
-                ..DhtPersistenceConfig::default()
-            }),
-            ..DhtSessionConfig::default()
-        });
-        let session = Session::new_with_opts(
+        let plan = SessionPlan {
+            options: &options,
+            proxy_url: &proxy_url,
+            blocklist_url: blocklist_url.as_ref().map(Url::as_str),
+        };
+        let session = match Session::new_with_opts(
             cache_dir.clone(),
-            SessionOptions {
-                dht,
-                persistence: None,
-                fastresume: false,
-                listen: None,
-                disable_local_service_discovery: true,
-                connect: Some(ConnectionOptions {
-                    proxy_url: Some(proxy_url),
-                    ..ConnectionOptions::default()
-                }),
-                default_storage_factory: Some(
-                    CacheStorageFactory {
-                        cache: cache_dir.clone(),
-                    }
-                    .boxed(),
-                ),
-                disable_upload: !options.upload,
-                ratelimits: LimitsConfig {
-                    download_bps: options.download_limit_bps,
-                    upload_bps: options.upload_limit_bps,
-                },
-                peer_limit: options.peer_limit,
-                ..SessionOptions::default()
-            },
+            plan.session_options(options.listen_port),
         )
         .await
+        {
+            Ok(session) => Ok(session),
+            Err(err) if options.listen_port != 0 => {
+                warn!(
+                    port = options.listen_port,
+                    error = %format!("{err:#}"),
+                    "the torrent port is not usable, listening on a random one"
+                );
+                Session::new_with_opts(cache_dir.clone(), plan.session_options(0)).await
+            }
+            Err(err) => Err(err),
+        }
         .map_err(|err| {
             proxy.abort();
             StreamError::Start(format!("{err:#}"))
         })?;
+        info!(port = ?session.listen_addr().map(|a| a.port()), "torrent engine listening");
 
         let listener = TcpListener::bind((IpAddr::from([127, 0, 0, 1]), 0))
             .await
@@ -388,6 +455,21 @@ mod tests {
         list.iter()
             .map(|s| Url::parse(s).unwrap_or_else(|e| panic!("{s}: {e}")))
             .collect()
+    }
+
+    #[test]
+    fn the_fallback_trackers_are_udp_trackers_with_a_host_name() {
+        let trackers = fallback_trackers();
+        assert_eq!(trackers.len(), FALLBACK_TRACKERS.len());
+        for tracker in &trackers {
+            assert_eq!(tracker.scheme(), "udp", "{tracker}");
+            assert!(
+                matches!(tracker.host(), Some(url::Host::Domain(_))),
+                "{tracker}"
+            );
+            assert!(tracker.port().is_some(), "{tracker}");
+        }
+        assert_eq!(EngineOptions::new(PathBuf::from("/tmp")).trackers, trackers);
     }
 
     #[test]

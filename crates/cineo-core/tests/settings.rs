@@ -4,7 +4,8 @@ use cineo_core::app::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice, PeerLimit,
     Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
     SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
+    SubtitlePosition, SubtitleSize, TorrentPort, TorrentStorage, UiLanguage, UploadLimit,
+    WatchedAt,
 };
 
 #[test]
@@ -43,6 +44,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::UploadLimit(UploadLimit::K100),
         Setting::PeerLimit(PeerLimit::P50),
         Setting::TorrentDht(false),
+        Setting::TorrentPort(TorrentPort::new(51000)),
         Setting::AllowPrivateNetwork(true),
         Setting::InterfaceScale(InterfaceScale::S125),
         Setting::StartPage(StartPage::Library),
@@ -113,6 +115,7 @@ fn saved_keys_never_change() {
             "upload_limit",
             "peer_limit",
             "torrent_dht",
+            "torrent_port",
             "allow_private_network",
             "interface_scale",
             "start_page",
@@ -124,6 +127,19 @@ fn saved_keys_never_change() {
         ]
     );
     assert_eq!(Setting::SubtitleLanguage(None).value(), "");
+}
+
+#[test]
+fn the_torrent_port_stays_between_1024_and_65535() {
+    assert_eq!(Settings::default().torrent_port.get(), 42713);
+    assert_eq!(
+        Setting::parse("torrent_port", "80"),
+        Ok(Setting::TorrentPort(TorrentPort::new(1024)))
+    );
+    assert_eq!(
+        Setting::parse("torrent_port", "70000"),
+        Ok(Setting::TorrentPort(TorrentPort::new(65535)))
+    );
 }
 
 #[test]

@@ -242,6 +242,8 @@ peer-limit = "Peer per torrent"
 peer-limit-help = "Più peer possono essere più veloci ma usano più connessioni."
 dht = "Trova peer tramite la DHT"
 dht-help = "Trova peer senza tracker. Disattivandola, molti torrent avranno meno peer."
+torrent-port = "Porta di ascolto"
+torrent-port-help = "I peer possono connettersi a Cineo su questa porta, via TCP e uTP. Aprila sul router per avere più peer. Se è occupata, se ne usa una a caso. Si applica dal prossimo torrent che riproduci."
 private-network = "Consenti indirizzi della rete locale"
 private-network-help = "Permette di raggiungere add-on, immagini e peer torrent su 127.0.0.1 o sulla rete di casa, per add-on ospitati in proprio. Disattivato è più sicuro. Ha effetto dopo il riavvio di Cineo."
 

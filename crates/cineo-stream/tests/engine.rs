@@ -114,6 +114,7 @@ fn options(name: &str, seeder: &Seeder) -> EngineOptions {
         dht: false,
         extra_peers: vec![seeder.addr],
         metadata_timeout: Duration::from_secs(20),
+        trackers: Vec::new(),
         ..EngineOptions::new(temp_dir(&format!("{name}-cache")))
     }
 }
@@ -524,6 +525,7 @@ async fn leftover_torrent_data_is_deleted_at_start() {
     std::fs::write(leftover.join("0"), b"data").unwrap();
     let engine = Engine::start(EngineOptions {
         dht: false,
+        trackers: Vec::new(),
         ..EngineOptions::new(cache)
     })
     .await
@@ -537,6 +539,7 @@ async fn shutdown_while_waiting_for_metadata_is_quick() {
     let options = EngineOptions {
         dht: false,
         metadata_timeout: Duration::from_secs(30),
+        trackers: Vec::new(),
         ..EngineOptions::new(temp_dir("quick-shutdown-cache"))
     };
     let engine = std::sync::Arc::new(Engine::start(options).await.unwrap());
@@ -635,6 +638,7 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
         dht: false,
         extra_peers: vec![slow, fast],
         metadata_timeout: Duration::from_secs(20),
+        trackers: Vec::new(),
         ..EngineOptions::new(temp_dir("slow-peer-cache"))
     })
     .await
@@ -688,4 +692,43 @@ async fn the_download_limit_slows_the_torrent_down() {
         on >= Duration::from_millis(1500) && on > off * 2,
         "1.5 MB at 400 kB/s after a one-second burst: off {off:?}, on {on:?}"
     );
+}
+
+fn free_port() -> u16 {
+    std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
+}
+
+fn quiet_options(name: &str, listen_port: u16) -> EngineOptions {
+    EngineOptions {
+        dht: false,
+        listen_port,
+        trackers: Vec::new(),
+        ..EngineOptions::new(temp_dir(name))
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_engine_accepts_peers_on_its_port() {
+    let port = free_port();
+    let engine = Engine::start(quiet_options("listen-port", port))
+        .await
+        .unwrap();
+    TcpStream::connect((Ipv4Addr::LOCALHOST, port))
+        .await
+        .expect("the engine listens on the configured port");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_taken_port_falls_back_to_a_random_one() {
+    let taken = std::net::TcpListener::bind((std::net::Ipv6Addr::UNSPECIFIED, 0)).unwrap();
+    let port = taken.local_addr().unwrap().port();
+    let engine = Engine::start(quiet_options("taken-port", port))
+        .await
+        .expect("the engine starts anyway");
+    engine.shutdown().await;
 }

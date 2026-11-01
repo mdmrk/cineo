@@ -479,7 +479,9 @@ Since 2026-11-01 the dependency tracks branch `main` of the fork, which
 is upstream `main` (9.1.0) with `feat/stream-window` merged in
 (`19dfd1fc`). Since `57b643b6` a peer helping with an urgent piece
 requests its chunks from the end, and no peer requests a chunk that
-already arrived. To update: merge upstream `main` into the fork's `main`,
+already arrived. `b1745a32` adds `SessionOptions.http_proxy_url`, a
+proxy for the HTTP client only, and `87ea5b88` filters peer addresses by
+the blocklist before metadata is asked for (ADR-0026). To update: merge upstream `main` into the fork's `main`,
 push, and run `cargo update -p librqbit`. Dropping the fork once upstream
 releases the patch is the goal.
 
