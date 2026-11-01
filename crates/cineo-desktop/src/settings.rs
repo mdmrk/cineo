@@ -683,7 +683,7 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
         Setting::TorrentDht,
     );
     row(ui, &t!("torrent-port"), &t!("torrent-port-help"), |ui| {
-        if let Some(port) = port_field(ui, s.torrent_port) {
+        if let Some(port) = port_field(ui, &t!("torrent-port"), s.torrent_port) {
             out.push(Action::ChangeSetting(Setting::TorrentPort(port)));
         }
     });
@@ -897,18 +897,20 @@ fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32
     (new != value).then_some(new)
 }
 
-fn port_field(ui: &mut Ui, port: TorrentPort) -> Option<TorrentPort> {
+fn port_field(ui: &mut Ui, label: &str, port: TorrentPort) -> Option<TorrentPort> {
     let id = egui::Id::unique("torrent-port");
     let draft = id.with("draft");
     let mut text = ui
         .data(|d| d.get_temp::<String>(draft))
         .unwrap_or_else(|| port.get().to_string());
-    let response = ui.add(
-        TextEdit::singleline(&mut text)
-            .id(id)
-            .char_limit(5)
-            .desired_width(80.0),
-    );
+    let response = ui
+        .add(
+            TextEdit::singleline(&mut text)
+                .id(id)
+                .char_limit(5)
+                .desired_width(80.0),
+        )
+        .accessible_name(label);
     let mut chosen = None;
     if response.lost_focus() {
         chosen = text

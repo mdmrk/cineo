@@ -711,13 +711,16 @@ fn settings_take_a_torrent_port_and_ignore_one_out_of_range() {
     };
     let mut harness = harness(State::default(), view);
     open_section(&mut harness, "Torrents");
-    harness.get_by_label("Listening port");
     for typed in ["80", "51000"] {
-        harness.get_by_role(Role::TextInput).focus();
+        harness
+            .get_by_role_and_label(Role::TextInput, "Listening port")
+            .focus();
         harness.run();
         harness.key_press_modifiers(Modifiers::COMMAND, Key::A);
         harness.key_press(Key::Backspace);
-        harness.get_by_role(Role::TextInput).type_text(typed);
+        harness
+            .get_by_role_and_label(Role::TextInput, "Listening port")
+            .type_text(typed);
         harness.run();
         harness.key_press(Key::Enter);
         harness.run();
