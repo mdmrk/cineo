@@ -419,6 +419,35 @@ async fn a_zero_lookahead_downloads_nothing_until_it_is_raised() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_windowed_torrent_starts_live_without_downloading_before_a_read() {
+    let seeder = seeder("windowed-open").await;
+    let opts = EngineOptions {
+        window: std::num::NonZeroU64::new(WINDOW),
+        ..options("windowed-open", &seeder)
+    };
+    let dir = opts.cache_dir.join(&seeder.info_hash);
+    let engine = Engine::start(opts).await.unwrap();
+    let url = engine.open(&request(&seeder)).await.unwrap();
+
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    let pieces = std::fs::read_dir(&dir).map_or(0, |entries| {
+        entries
+            .map(|e| e.unwrap().metadata().unwrap().len())
+            .sum::<u64>()
+    });
+    assert_eq!(pieces, 0, "no piece of any file before the player reads");
+
+    let full = tokio::time::timeout(
+        Duration::from_secs(30),
+        http(engine.local_addr(), "GET", url.path(), &[]),
+    )
+    .await
+    .expect("the stream starts without an unpause");
+    assert!(full.body == seeder.film, "the whole film arrives intact");
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn disk_mode_keeps_only_its_window_on_disk() {
     let seeder = seeder("disk-window").await;
     let opts = EngineOptions {

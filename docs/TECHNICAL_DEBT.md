@@ -78,19 +78,20 @@ Format:
   or an upstream hook for UDP destinations; for the DHT, an upstream
   address filter.
 
-### Streaming engine: a cancelled open can leave a paused torrent
+### Streaming engine: a cancelled open can leave a torrent running
 - Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`start_torrent`),
-  [engine.rs](../crates/cineo-stream/src/engine.rs) (`open`)
+  [engine.rs](../crates/cineo-stream/src/engine.rs) (`open`, `stop`)
 - Gap: a stop or a new start cancels an `open` still in progress. If that
-  happens after librqbit added the torrent but before the engine recorded
-  it, the torrent stays in the session, paused, until the app exits
-  (INFERRED from the code; not observed).
+  happens after librqbit added the torrent, the torrent stays in the
+  session until the next `open` or `stop`, which delete every torrent in
+  the session. With a window it is added unpaused, so until then it keeps
+  peer connections and DHT and tracker lookups, but downloads no piece
+  because no stream reads it (INFERRED from the code; not observed).
+  Without a window it stays paused.
 - Why: cancelling is what keeps a stuck metadata lookup from blocking the
-  next torrent.
-- Instead: it is paused, so it moves no data; its files are deleted when
-  the engine next starts.
-- Exit: have `open` record the torrent id before awaiting anything else,
-  or remove unknown torrents from the session at the next `open`.
+  next torrent; not pausing keeps the peers found for the metadata.
+- Instead: the next `open` or `stop` removes it and its files.
+- Exit: delete the torrent from the session when the `open` is cancelled.
 
 ### Streaming engine: torrent data can exceed its window
 - Where: [memory.rs](../crates/cineo-stream/src/memory.rs), [storage.rs](../crates/cineo-stream/src/storage.rs) and

@@ -4,7 +4,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::num::{NonZeroU32, NonZeroU64};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use cineo_core::app::{TorrentFile, TorrentRequest, TorrentStatus, choose_file};
 use librqbit::api::TorrentIdOrHash;
@@ -16,7 +16,6 @@ use librqbit::{
     Session, SessionOptions,
 };
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
 use url::Url;
 
@@ -82,7 +81,6 @@ pub struct Engine {
     ctx: Arc<Ctx>,
     options: EngineOptions,
     tasks: [tokio::task::JoinHandle<()>; 2],
-    active: Mutex<Option<(usize, String)>>,
 }
 
 impl std::fmt::Debug for Engine {
@@ -182,7 +180,6 @@ impl Engine {
             ctx,
             options,
             tasks: [server, proxy],
-            active: Mutex::new(None),
         })
     }
 
@@ -196,10 +193,12 @@ impl Engine {
 
     pub async fn open(&self, request: &TorrentRequest) -> Result<Url, StreamError> {
         self.stop().await;
+        let opened = Instant::now();
         let hash = request.info_hash.to_ascii_lowercase();
         let magnet = magnet(&hash, &request.trackers, self.options.allow_private_network);
+        let paused = self.options.window.is_none();
         let add = AddTorrentOptions {
-            paused: true,
+            paused,
             overwrite: true,
             output_folder: Some(self.options.cache_dir.to_string_lossy().into_owned()),
             initial_peers: (!self.options.extra_peers.is_empty())
@@ -220,18 +219,19 @@ impl Engine {
             debug!(error = %format!("{err:#}"), "adding the torrent failed");
             StreamError::Add("no usable metadata".into())
         })?;
-        let (id, torrent) = match added {
-            AddTorrentResponse::Added(id, torrent)
-            | AddTorrentResponse::AlreadyManaged(id, torrent) => (id, torrent),
+        let torrent = match added {
+            AddTorrentResponse::Added(_, torrent)
+            | AddTorrentResponse::AlreadyManaged(_, torrent) => torrent,
             AddTorrentResponse::ListOnly(_) => {
                 return Err(StreamError::Add("unexpected list-only answer".into()));
             }
         };
-        *self.active.lock().await = Some((id, hash.clone()));
+        info!(info_hash = %hash, ms = elapsed_ms(opened), "torrent metadata received");
         tokio::time::timeout(wait, torrent.wait_until_initialized())
             .await
             .map_err(|_| StreamError::MetadataTimeout)?
             .map_err(add_failed)?;
+        info!(info_hash = %hash, ms = elapsed_ms(opened), "torrent initialized");
 
         let mut files: Vec<(String, u64)> = torrent
             .with_metadata(|m| {
@@ -253,7 +253,9 @@ impl Engine {
             .update_only_files(&torrent, &HashSet::from([index]))
             .await
             .map_err(add_failed)?;
-        self.session.unpause(&torrent).await.map_err(add_failed)?;
+        if paused {
+            self.session.unpause(&torrent).await.map_err(add_failed)?;
+        }
 
         if let Ok(mut current) = self.ctx.current.write() {
             *current = Some(Arc::new(Served {
@@ -262,9 +264,17 @@ impl Engine {
                 len,
                 name,
                 torrent,
+                opened,
+                first_bytes: std::sync::Once::new(),
             }));
         }
-        info!(info_hash = %hash, file = index, bytes = len, "serving a torrent");
+        info!(
+            info_hash = %hash,
+            file = index,
+            bytes = len,
+            ms = elapsed_ms(opened),
+            "serving a torrent"
+        );
         Url::parse(&format!(
             "http://{}/{}/{hash}/{index}",
             self.ctx.addr, self.ctx.token
@@ -314,19 +324,22 @@ impl Engine {
         if let Ok(mut current) = self.ctx.current.write() {
             *current = None;
         }
-        let Some((id, hash)) = self.active.lock().await.take() else {
-            return;
-        };
-        if let Err(err) = self.session.delete(TorrentIdOrHash::Id(id), false).await {
-            warn!(error = %format!("{err:#}"), "stopping the torrent failed");
-        }
-        let dir = torrent_dir(&self.options.cache_dir, &hash);
-        let removed = tokio::task::spawn_blocking(move || cache::remove_torrent(&dir))
-            .await
-            .map_err(std::io::Error::other)
-            .and_then(|result| result);
-        if let Err(err) = removed {
-            warn!(%err, "deleting the torrent data failed");
+        let torrents: Vec<(usize, String)> = self.session.with_torrents(|all| {
+            all.map(|(id, torrent)| (id, torrent.info_hash().as_string()))
+                .collect()
+        });
+        for (id, hash) in torrents {
+            if let Err(err) = self.session.delete(TorrentIdOrHash::Id(id), false).await {
+                warn!(error = %format!("{err:#}"), "stopping the torrent failed");
+            }
+            let dir = torrent_dir(&self.options.cache_dir, &hash);
+            let removed = tokio::task::spawn_blocking(move || cache::remove_torrent(&dir))
+                .await
+                .map_err(std::io::Error::other)
+                .and_then(|result| result);
+            if let Err(err) = removed {
+                warn!(%err, "deleting the torrent data failed");
+            }
         }
     }
 
@@ -337,6 +350,10 @@ impl Engine {
             task.abort();
         }
     }
+}
+
+pub(crate) fn elapsed_ms(since: Instant) -> u64 {
+    u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 fn add_failed(err: impl std::fmt::Display) -> StreamError {

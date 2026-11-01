@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Once, RwLock};
+use std::time::Instant;
 
 use bytes::Bytes;
 use futures_util::TryStreamExt as _;
@@ -16,7 +17,9 @@ use librqbit::ManagedTorrent;
 use tokio::io::{AsyncReadExt as _, AsyncSeekExt as _};
 use tokio::net::TcpListener;
 use tokio_util::io::ReaderStream;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
+
+use crate::engine::elapsed_ms;
 
 use crate::range::{Span, span};
 
@@ -28,6 +31,20 @@ pub(crate) struct Served {
     pub(crate) len: u64,
     pub(crate) name: String,
     pub(crate) torrent: Arc<ManagedTorrent>,
+    pub(crate) opened: Instant,
+    pub(crate) first_bytes: Once,
+}
+
+impl Served {
+    fn sent_bytes(&self) {
+        self.first_bytes.call_once(|| {
+            info!(
+                info_hash = %self.info_hash,
+                ms = elapsed_ms(self.opened),
+                "first torrent bytes sent to the player"
+            );
+        });
+    }
 }
 
 pub(crate) type Current = Arc<RwLock<Option<Arc<Served>>>>;
@@ -150,8 +167,14 @@ async fn handle(ctx: &Ctx, req: Request<Incoming>) -> Response<Body> {
                     return empty(StatusCode::INTERNAL_SERVER_ERROR);
                 }
                 let reader = stream.take(length);
-                StreamBody::new(ReaderStream::with_capacity(reader, CHUNK).map_ok(Frame::data))
-                    .boxed()
+                let sent = Arc::clone(&served);
+                StreamBody::new(
+                    ReaderStream::with_capacity(reader, CHUNK).map_ok(move |bytes| {
+                        sent.sent_bytes();
+                        Frame::data(bytes)
+                    }),
+                )
+                .boxed()
             }
             Err(err) => {
                 warn!(%err, "opening the torrent stream failed");
