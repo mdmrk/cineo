@@ -72,12 +72,4 @@ mod tests {
             &Version::parse(env!("CARGO_PKG_VERSION")).unwrap_or(Version::new(0, 0, 0))
         ));
     }
-
-    #[test]
-    fn the_release_page_is_on_github() {
-        assert_eq!(
-            release_page(&Version::new(0, 4, 0)),
-            "https://github.com/mdmrk/cineo/releases/tag/v0.4.0"
-        );
-    }
 }

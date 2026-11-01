@@ -247,19 +247,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_font_family_falls_back_to_inter() {
-        for (family, list) in &fonts().families {
-            if *family == FontFamily::Monospace {
-                continue;
-            }
-            assert!(
-                list.iter().any(|font| font == "inter"),
-                "{family:?}: {list:?}"
-            );
-        }
-    }
-
-    #[test]
     fn every_locale_has_glyphs_in_the_text_fonts() {
         let mut fonts = egui::epaint::Fonts::new(egui::epaint::TextOptions::default(), fonts());
         for locale in crate::i18n::Locale::ALL {

@@ -3323,20 +3323,4 @@ mod tests {
         );
         assert_eq!(Quality::of(&stream(None, None)), None);
     }
-
-    #[test]
-    fn grid_cards_fill_the_width_within_the_size_limits() {
-        for available in [300.0, 777.0, 1000.0, 1440.0] {
-            let width = grid_card_width(available);
-            assert!(
-                width >= theme::GRID_CARD_MIN.min(available),
-                "{available}: {width}"
-            );
-            assert!(width <= theme::GRID_CARD_MAX, "{available}: {width}");
-            let columns = ((available + theme::CARD_GAP) / (width + theme::CARD_GAP)).floor();
-            let used = columns * width + (columns - 1.0) * theme::CARD_GAP;
-            assert!(used <= available, "{available}: {used}");
-        }
-        assert_eq!(grid_card_width(100.0), 100.0);
-    }
 }

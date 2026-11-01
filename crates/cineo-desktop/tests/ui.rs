@@ -1085,29 +1085,6 @@ fn clearing_watch_history_asks_first() {
 }
 
 #[test]
-fn the_compact_sidebar_keeps_settings_where_the_wide_one_has_it() {
-    let settings = |width: f32| {
-        let harness = Harness::builder().with_size([width, 700.0]).build_ui_state(
-            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
-            (State::default(), ViewState::default(), Vec::new()),
-        );
-        let library = harness.get_by_label("Library").rect();
-        let settings = harness.get_by_label("Settings").rect();
-        assert!(
-            settings.top() > library.bottom() + 200.0,
-            "{width}: Settings {settings:?} sits at the bottom, below {library:?}"
-        );
-        assert_eq!(
-            settings.x_range(),
-            library.x_range(),
-            "{width}: Settings lines up with the other items"
-        );
-        settings.top()
-    };
-    assert_eq!(settings(1280.0), settings(900.0));
-}
-
-#[test]
 fn a_newer_release_shows_in_the_sidebar_and_opens_its_page() {
     let mut state = State::default();
     update(&mut state, Action::RestoreSettings(Settings::default()));

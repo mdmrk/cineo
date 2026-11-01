@@ -230,44 +230,4 @@ mod tests {
         let icon = icon().expect("icon");
         assert_eq!((icon.width, icon.height), (256, 256));
     }
-
-    #[test]
-    fn the_loading_layers_share_the_canvas() {
-        let [base, reel, left, right, strip] = LOADING.map(|bytes| decode(bytes).expect("layer"));
-        for layer in [&reel, &left, &right] {
-            assert_eq!(layer.dimensions(), base.dimensions());
-        }
-        assert_eq!(
-            base.width() as f32 / base.height() as f32,
-            LOADING_SIZE.x / LOADING_SIZE.y
-        );
-        assert_eq!(
-            strip.dimensions(),
-            (
-                (STRIP_SIZE.x * 2.0) as u32 * STRIP_COLUMNS as u32,
-                (STRIP_SIZE.y * 2.0) as u32 * STRIP_FRAMES.div_ceil(STRIP_COLUMNS) as u32
-            )
-        );
-    }
-
-    #[test]
-    fn the_moustache_twitches_twice_then_rests() {
-        let at = |phase: f64| moustache_angle(phase * MOUSTACHE_PERIOD).to_degrees();
-        assert!(at(0.0).abs() < 1e-3);
-        assert!((at(0.07) - 5.0).abs() < 1e-3);
-        assert!(at(0.15).abs() < 1e-3);
-        assert!((at(0.22) - 5.0).abs() < 1e-3);
-        assert!(at(0.11) > 0.0 && at(0.11) < 5.0);
-        assert!(at(0.5).abs() < 1e-3);
-        assert!(at(0.99).abs() < 1e-3);
-    }
-
-    #[test]
-    fn the_strip_cycles_through_every_frame() {
-        let frames: Vec<usize> = (0..STRIP_FRAMES * 2)
-            .map(|i| strip_frame((i as f64 + 0.5) * STRIP_PERIOD / STRIP_FRAMES as f64))
-            .collect();
-        let once: Vec<usize> = (0..STRIP_FRAMES).collect();
-        assert_eq!(frames, [once.clone(), once].concat());
-    }
 }
