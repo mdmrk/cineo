@@ -9,7 +9,7 @@ use cineo_desktop::player::{AddonSubtitle, Controls, NextUp, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{Key, Modifiers, ViewportId};
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 
 type Screen = (
     Status,
@@ -387,4 +387,40 @@ fn controls_stay_longer_with_a_longer_hide_delay() {
     let mut harness = harness_full(playing, Vec::new(), settings);
     harness.run_steps(16);
     harness.get_by_label("Pause");
+}
+
+#[test]
+fn a_click_on_the_seek_bar_holds_the_new_time_until_the_player_catches_up() {
+    let mut harness = harness(status());
+    harness.get_by_label("Position").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![PlayerCommand::SeekTo(300.0)]);
+    harness.get_by_label("5:00 / 10:00");
+
+    harness.state_mut().0.position_s = 300.2;
+    harness.run();
+    harness.get_by_label("5:00 / 10:00");
+
+    harness.state_mut().0.position_s = 75.0;
+    harness.run();
+    harness.get_by_label("1:15 / 10:00");
+}
+
+#[test]
+fn a_volume_click_holds_the_new_level_until_the_player_reports_it() {
+    let mut harness = harness(status());
+    harness.get_by_label("Volume").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![PlayerCommand::SetVolume(50.0)]);
+    let level = |harness: &Harness<'_, Screen>| {
+        harness
+            .get_by_label("Volume")
+            .accesskit_node()
+            .numeric_value()
+    };
+    assert_eq!(level(&harness), Some(50.0));
+
+    harness.state_mut().0.volume = 50.0;
+    harness.run();
+    assert_eq!(level(&harness), Some(50.0));
 }

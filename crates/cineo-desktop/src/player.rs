@@ -25,6 +25,44 @@ const STYLE_MAX_HEIGHT: f32 = 520.0;
 const STYLE_GAP: f32 = 8.0;
 const AUTO_NEXT_S: f64 = 10.0;
 const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
+const SEEK_SETTLE_S: f64 = 1.0;
+const VOLUME_SETTLE: f64 = 0.5;
+const HOLD_TIMEOUT_S: f64 = 2.0;
+
+#[derive(Debug, Clone, Copy, Default)]
+struct Held {
+    drag: Option<f64>,
+    sent: Option<(f64, f64)>,
+    busy_seen: bool,
+}
+
+impl Held {
+    fn value(&self) -> Option<f64> {
+        self.drag.or(self.sent.map(|(value, _)| value))
+    }
+
+    fn or(&self, actual: f64) -> f64 {
+        self.value().unwrap_or(actual)
+    }
+
+    fn commit(&mut self, value: f64, now: f64) {
+        self.drag = None;
+        self.sent = Some((value, now));
+        self.busy_seen = false;
+    }
+
+    fn settle(&mut self, actual: f64, tolerance: f64, busy: bool, now: f64) {
+        let Some((value, at)) = self.sent else {
+            return;
+        };
+        let finished = std::mem::replace(&mut self.busy_seen, busy) && !busy;
+        if self.drag.is_none()
+            && ((actual - value).abs() <= tolerance || finished || now - at > HOLD_TIMEOUT_S)
+        {
+            self.sent = None;
+        }
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Controls {
@@ -32,8 +70,8 @@ pub struct Controls {
     last_pointer: Option<Pos2>,
     menu: Option<TrackKind>,
     style_open: bool,
-    seek_drag: Option<f64>,
-    volume_drag: Option<f64>,
+    seek: Held,
+    volume: Held,
     addon_request: Option<Url>,
     subtitle_delay_ms: i32,
     settings: Vec<Action>,
@@ -45,6 +83,14 @@ pub struct Controls {
 }
 
 impl Controls {
+    fn seek_by(&mut self, delta: f64, status: &Status, now: f64) -> PlayerCommand {
+        if status.duration_s > 0.0 {
+            let target = (self.seek.or(status.position_s) + delta).clamp(0.0, status.duration_s);
+            self.seek.commit(target, now);
+        }
+        PlayerCommand::SeekBy(delta)
+    }
+
     pub fn take_addon_subtitle(&mut self) -> Option<Url> {
         self.addon_request.take()
     }
@@ -111,8 +157,14 @@ pub fn show(
         return out;
     }
     let now = ui.input(|i| i.time);
+    controls
+        .seek
+        .settle(status.position_s, SEEK_SETTLE_S, status.seeking, now);
+    controls
+        .volume
+        .settle(status.volume, VOLUME_SETTLE, false, now);
     track_activity(ui, controls, now);
-    shortcuts(ui, status, settings, &mut out);
+    shortcuts(ui, status, settings, controls, now, &mut out);
 
     let video = ui.interact(rect, ui.scope_id().with("video"), Sense::click());
     if video.double_clicked() {
@@ -157,8 +209,8 @@ pub fn show(
     let visible = status.paused
         || !status.loaded
         || controls.menu.is_some()
-        || controls.seek_drag.is_some()
-        || controls.volume_drag.is_some()
+        || controls.seek.drag.is_some()
+        || controls.volume.drag.is_some()
         || idle < settings.hide_controls.seconds();
     if !visible {
         ui.ctx().set_cursor_icon(CursorIcon::None);
@@ -200,7 +252,14 @@ fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
     }
 }
 
-fn shortcuts(ui: &Ui, status: &Status, settings: &Settings, out: &mut Vec<PlayerCommand>) {
+fn shortcuts(
+    ui: &Ui,
+    status: &Status,
+    settings: &Settings,
+    controls: &mut Controls,
+    now: f64,
+    out: &mut Vec<PlayerCommand>,
+) {
     let fullscreen = is_fullscreen(ui.ctx());
     let mut toggle_full = false;
     let mut toggle_stats = false;
@@ -210,20 +269,20 @@ fn shortcuts(ui: &Ui, status: &Status, settings: &Settings, out: &mut Vec<Player
     );
     ui.input_mut(|i| {
         if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowLeft) {
-            out.push(PlayerCommand::SeekBy(-short));
+            out.push(controls.seek_by(-short, status, now));
         }
         if i.consume_key(egui::Modifiers::SHIFT, Key::ArrowRight) {
-            out.push(PlayerCommand::SeekBy(short));
+            out.push(controls.seek_by(short, status, now));
         }
         let mut key = |k| i.consume_key(egui::Modifiers::NONE, k);
         if key(Key::Space) || key(Key::K) {
             out.push(PlayerCommand::TogglePause);
         }
         if key(Key::ArrowLeft) || key(Key::J) {
-            out.push(PlayerCommand::SeekBy(-step));
+            out.push(controls.seek_by(-step, status, now));
         }
         if key(Key::ArrowRight) || key(Key::L) {
-            out.push(PlayerCommand::SeekBy(step));
+            out.push(controls.seek_by(step, status, now));
         }
         if key(Key::ArrowUp) {
             out.push(PlayerCommand::SetVolume(status.volume + VOLUME_STEP));
@@ -494,6 +553,7 @@ fn bottom_bar(
     out: &mut Vec<PlayerCommand>,
 ) {
     let (status, addon_subtitles) = (playback.status, playback.addon_subtitles);
+    let now = ui.input(|i| i.time);
     let step = playback.settings.seek_step;
     let (back_icon, forward_icon) = seek_icons(step);
     let seconds = step.seconds();
@@ -512,7 +572,7 @@ fn bottom_bar(
         pos2(bar.left() + margin, bar.top() + 34.0),
         pos2(bar.right() - margin, bar.top() + 50.0),
     );
-    seek_bar(ui, seek, status, controls, out);
+    seek_bar(ui, seek, status, &mut controls.seek, now, out);
 
     let y = bar.bottom() - 26.0;
     let mut x = bar.left() + margin + BUTTON / 2.0 - 6.0;
@@ -548,7 +608,7 @@ fn bottom_bar(
     )
     .clicked()
     {
-        out.push(PlayerCommand::SeekBy(-seconds));
+        out.push(controls.seek_by(-seconds, status, now));
     }
     if icon_button(
         ui,
@@ -558,14 +618,11 @@ fn bottom_bar(
     )
     .clicked()
     {
-        out.push(PlayerCommand::SeekBy(seconds));
+        out.push(controls.seek_by(seconds, status, now));
     }
-    let shown = controls
-        .seek_drag
-        .map_or(status.position_s, |f| f * status.duration_s);
     let time = format!(
         "{} / {}",
-        clock(shown, status.duration_s),
+        clock(controls.seek.or(status.position_s), status.duration_s),
         clock(status.duration_s, status.duration_s)
     );
     left_label(
@@ -618,7 +675,7 @@ fn bottom_bar(
         pos2(x - 80.0 + BUTTON / 2.0, y - 8.0),
         pos2(x + BUTTON / 2.0, y + 8.0),
     );
-    volume_slider(ui, volume, status, controls, out);
+    volume_slider(ui, volume, status, &mut controls.volume, now, out);
     let mute = Rect::from_center_size(
         pos2(volume.left() - BUTTON / 2.0 - 4.0, y),
         egui::Vec2::splat(BUTTON),
@@ -828,60 +885,59 @@ fn seek_bar(
     ui: &Ui,
     rect: Rect,
     status: &Status,
-    controls: &mut Controls,
+    seek: &mut Held,
+    now: f64,
     out: &mut Vec<PlayerCommand>,
 ) {
     let response = ui.interact(rect, ui.scope_id().with("seek"), Sense::click_and_drag());
-    response.widget_info(|| WidgetInfo::slider(true, status.position_s, t!("position")));
-    let seekable = status.duration_s > 0.0;
-    let fraction_at = |pos: Pos2| f64::from(((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0));
-    if seekable {
-        if let Some(pos) = response.interact_pointer_pos()
-            && (response.dragged() || response.is_pointer_button_down_on())
-        {
-            controls.seek_drag = Some(fraction_at(pos));
-        }
-        if (response.drag_stopped() || response.clicked())
-            && let Some(fraction) = controls.seek_drag.take()
-        {
-            out.push(PlayerCommand::SeekTo(fraction * status.duration_s));
+    let duration = status.duration_s;
+    let seekable = duration > 0.0;
+    let seconds_at =
+        |pos: Pos2| f64::from(((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0)) * duration;
+    if seekable && let Some(pos) = response.interact_pointer_pos() {
+        let target = seconds_at(pos);
+        if response.drag_stopped() || response.clicked() {
+            seek.commit(target, now);
+            out.push(PlayerCommand::SeekTo(target));
+        } else if response.is_pointer_button_down_on() {
+            seek.drag = Some(target);
         }
     }
-    let hovered = response.hovered() || controls.seek_drag.is_some();
-    let thickness = if hovered { 6.0 } else { 4.0 };
+    let position = seek.or(status.position_s);
+    response.widget_info(|| WidgetInfo::slider(true, position, t!("position")));
+    let active = response.hovered() || seek.drag.is_some();
+    let thickness = if active { 6.0 } else { 4.0 };
     let track = Rect::from_center_size(rect.center(), vec2(rect.width(), thickness));
     let radius = CornerRadius::same(3);
-    ui.painter()
-        .rect_filled(track, radius, Color32::from_white_alpha(60));
+    let painter = ui.painter();
+    painter.rect_filled(track, radius, Color32::from_white_alpha(60));
     for (start, end) in cached_spans(status) {
         let span = Rect::from_min_max(
             pos2(track.left() + track.width() * start, track.bottom() + 2.0),
             pos2(track.left() + track.width() * end, track.bottom() + 4.0),
         );
-        ui.painter()
-            .rect_filled(span, CornerRadius::same(1), Color32::from_white_alpha(150));
+        painter.rect_filled(span, CornerRadius::same(1), Color32::from_white_alpha(150));
     }
-    let played = controls.seek_drag.unwrap_or(if seekable {
-        (status.position_s / status.duration_s).clamp(0.0, 1.0)
+    let played = if seekable {
+        (position / duration).clamp(0.0, 1.0)
     } else {
         0.0
-    });
+    };
     #[expect(clippy::cast_possible_truncation, reason = "a fraction in 0..=1")]
     let played = played as f32;
     let filled = Rect::from_min_max(
         track.min,
         pos2(track.left() + track.width() * played, track.bottom()),
     );
-    ui.painter().rect_filled(filled, radius, theme::ACCENT);
-    if hovered && seekable {
-        ui.painter()
-            .circle_filled(pos2(filled.right(), track.center().y), 7.0, theme::ACCENT);
-        if let Some(pos) = response.hover_pos() {
-            let at = fraction_at(pos) * status.duration_s;
-            ui.painter().text(
-                pos2(pos.x, rect.top() - 10.0),
+    painter.rect_filled(filled, radius, theme::ACCENT);
+    if active && seekable {
+        painter.circle_filled(pos2(filled.right(), track.center().y), 7.0, theme::ACCENT);
+        if let Some(pos) = response.hover_pos().or(response.interact_pointer_pos()) {
+            let x = pos.x.clamp(rect.left(), rect.right());
+            painter.text(
+                pos2(x, rect.top() - 10.0),
                 Align2::CENTER_BOTTOM,
-                clock(at, status.duration_s),
+                clock(seconds_at(pos), duration),
                 theme::caption(),
                 theme::TEXT_BRIGHT,
             );
@@ -906,41 +962,42 @@ fn volume_slider(
     ui: &Ui,
     rect: Rect,
     status: &Status,
-    controls: &mut Controls,
+    volume: &mut Held,
+    now: f64,
     out: &mut Vec<PlayerCommand>,
 ) {
     let response = ui.interact(rect, ui.scope_id().with("volume"), Sense::click_and_drag());
-    response.widget_info(|| WidgetInfo::slider(true, status.volume, t!("volume")));
     if let Some(pos) = response.interact_pointer_pos()
         && (response.dragged() || response.clicked())
     {
-        let percent = f64::from(((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0)) * 100.0;
-        if controls.volume_drag != Some(percent) {
-            controls.volume_drag = Some(percent);
+        let percent =
+            (f64::from(((pos.x - rect.left()) / rect.width()).clamp(0.0, 1.0)) * 100.0).round();
+        if volume.value() != Some(percent) {
             out.push(PlayerCommand::SetVolume(percent));
         }
+        volume.drag = Some(percent);
     }
-    if response.drag_stopped() || response.clicked() || !response.dragged() {
-        controls.volume_drag = None;
+    if !response.dragged()
+        && let Some(percent) = volume.drag
+    {
+        volume.commit(percent, now);
     }
-    let level = if status.muted {
-        0.0
-    } else {
-        controls.volume_drag.unwrap_or(status.volume) / 100.0
-    };
+    let shown = volume.or(status.volume);
+    response.widget_info(|| WidgetInfo::slider(true, shown, t!("volume")));
+    let level = if status.muted { 0.0 } else { shown / 100.0 };
     #[expect(clippy::cast_possible_truncation, reason = "a fraction in 0..=1")]
     let level = level.clamp(0.0, 1.0) as f32;
     let track = Rect::from_center_size(rect.center(), vec2(rect.width(), 4.0));
     let radius = CornerRadius::same(2);
-    ui.painter()
-        .rect_filled(track, radius, Color32::from_white_alpha(60));
+    let painter = ui.painter();
+    painter.rect_filled(track, radius, Color32::from_white_alpha(60));
     let filled = Rect::from_min_max(
         track.min,
         pos2(track.left() + track.width() * level, track.bottom()),
     );
-    ui.painter().rect_filled(filled, radius, theme::TEXT_BRIGHT);
+    painter.rect_filled(filled, radius, theme::TEXT_BRIGHT);
     if response.hovered() {
-        ui.painter().circle_filled(
+        painter.circle_filled(
             pos2(filled.right(), track.center().y),
             6.0,
             theme::TEXT_BRIGHT,
@@ -1292,6 +1349,59 @@ mod tests {
         assert!(
             !first_load(&mut controls, &status),
             "later waits are not the first load"
+        );
+    }
+
+    #[test]
+    fn a_sent_value_is_held_until_the_player_reports_it_or_too_long_passes() {
+        let mut held = Held {
+            drag: Some(40.0),
+            ..Held::default()
+        };
+        held.settle(10.0, SEEK_SETTLE_S, false, 100.0);
+        assert_eq!(held.or(10.0), 40.0, "a drag is never settled");
+        held.commit(42.0, 0.0);
+        held.settle(10.0, SEEK_SETTLE_S, false, 1.0);
+        assert_eq!(held.or(10.0), 42.0);
+        held.settle(42.4, SEEK_SETTLE_S, false, 1.5);
+        assert_eq!(held.or(42.4), 42.4);
+        held.commit(90.0, 0.0);
+        held.settle(10.0, SEEK_SETTLE_S, false, HOLD_TIMEOUT_S + 0.1);
+        assert_eq!(held.value(), None, "a lost update does not pin the bar");
+    }
+
+    #[test]
+    fn a_held_seek_ends_when_the_player_finishes_seeking_off_target() {
+        let mut held = Held::default();
+        held.commit(90.0, 0.0);
+        held.settle(10.0, SEEK_SETTLE_S, true, 0.1);
+        assert_eq!(held.or(10.0), 90.0, "still seeking");
+        held.settle(86.0, SEEK_SETTLE_S, false, 0.2);
+        assert_eq!(held.or(86.0), 86.0, "landed on an earlier keyframe");
+    }
+
+    #[test]
+    fn relative_seeks_add_up_from_the_pending_target_within_the_media() {
+        let mut controls = Controls::default();
+        let status = Status {
+            position_s: 50.0,
+            duration_s: 100.0,
+            ..Status::default()
+        };
+        assert_eq!(
+            controls.seek_by(10.0, &status, 0.0),
+            PlayerCommand::SeekBy(10.0)
+        );
+        controls.seek_by(10.0, &status, 0.0);
+        assert_eq!(controls.seek.value(), Some(70.0));
+        controls.seek_by(60.0, &status, 0.0);
+        assert_eq!(controls.seek.value(), Some(100.0));
+        let mut controls = Controls::default();
+        controls.seek_by(10.0, &Status::default(), 0.0);
+        assert_eq!(
+            controls.seek.value(),
+            None,
+            "nothing to hold without a duration"
         );
     }
 
