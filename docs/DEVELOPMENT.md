@@ -426,7 +426,7 @@ Re-check them when adding.
 | `image` (`jpeg`, `png`, `webp` only) | 0.25.10 | Image header checks and decoding (desktop) | MIT/Apache |
 | `fast_image_resize` (default features) | 6.1.0 | SIMD downscaling of posters and backdrops (desktop) | MIT/Apache |
 | `egui_kittest` (dev, no default features) | 0.37.0 | Headless UI tests via AccessKit (desktop) | MIT/Apache |
-| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.0.1 + upstream `main` and our patch, from the [fork](https://github.com/mdmrk/rqbit/tree/feat/stream-window) at `b815c324` | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
+| `librqbit` (`rust-tls`, `disable-upload`, no default features) | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012) | Apache-2.0 |
 | `zbus` (`default-rt`, `service`; no default features) | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6 | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop) | MIT |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util` | 1.12.0 / 0.1.21 / 0.1.5 | Loopback HTTP server for the player (stream) | MIT |
 | `bytes` | 1.12.1 | Response bodies (stream) | MIT |
@@ -475,8 +475,10 @@ top of it, and since 2026-10-15 the lookahead setter of ADR-0023
 steals that same piece (`032c4a93`). `0415a234` merges upstream `main`
 into it (2026-10-15), and `7b7b4dfb` lets a zero lookahead stop stream
 downloads (ADR-0023); `b815c324` only drops comments and a no-op line.
-To update: rebase both branches on upstream, push, and change
-`rev`. Dropping the fork once upstream
+Since 2026-11-01 the dependency tracks branch `main` of the fork, which
+is upstream `main` (9.1.0) with `feat/stream-window` merged in
+(`19dfd1fc`). To update: merge upstream `main` into the fork's `main`,
+push, and run `cargo update -p librqbit`. Dropping the fork once upstream
 releases the patch is the goal.
 
 UI polish (2026-10-07): not crates, but bundled assets. `cineo-desktop`
