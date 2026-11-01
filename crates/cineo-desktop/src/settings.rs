@@ -898,7 +898,7 @@ fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32
 }
 
 fn port_field(ui: &mut Ui, port: TorrentPort) -> Option<TorrentPort> {
-    let id = egui::Id::new("torrent-port");
+    let id = egui::Id::unique("torrent-port");
     let draft = id.with("draft");
     let mut text = ui
         .data(|d| d.get_temp::<String>(draft))
