@@ -1,6 +1,7 @@
 # 0012. Torrent engine: librqbit, with BitTorrent traffic outside `cineo-net`
 
-- Status: Accepted (the crates.io `librqbit` as is, and its storage
+- Status: Accepted (incoming connections and the peer proxy: amended by 0026;
+  the crates.io `librqbit` as is, and its storage
   layout's use as a cache: superseded by 0015)
 - Date: 2026-10-06
 

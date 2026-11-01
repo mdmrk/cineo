@@ -27,7 +27,7 @@ old one *Superseded by NNNN*.
 | [0009](0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Superseded by 0025 |
 | [0010](0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012; cache: superseded by 0015) |
 | [0011](0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
-| [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015) |
+| [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015; incoming connections and peer proxy: amended by 0026) |
 | [0013](0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
 | [0014](0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted (Windows bundling: superseded by 0022) |
 | [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016; in-memory option: 0019; disk layout: superseded by 0020) |
@@ -41,6 +41,7 @@ old one *Superseded by NNNN*.
 | [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |
 | [0024](0024-a-two-minute-buffer.md) | A two-minute buffer | Accepted |
 | [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Accepted |
+| [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 
 ## What we took from the reference projects
 
