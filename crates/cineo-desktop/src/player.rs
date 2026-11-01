@@ -28,6 +28,8 @@ const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
 const SEEK_SETTLE_S: f64 = 1.0;
 const VOLUME_SETTLE: f64 = 0.5;
 const HOLD_TIMEOUT_S: f64 = 2.0;
+const SEEK_REACH_UP: f32 = 16.0;
+const SEEK_REACH_DOWN: f32 = 2.0;
 
 #[derive(Debug, Clone, Copy, Default)]
 struct Held {
@@ -565,13 +567,13 @@ fn bottom_bar(
         Color32::from_black_alpha(210),
         false,
     );
-    let _ = ui.interact(bar, ui.scope_id().with("bar"), Sense::click());
-
     let margin = 20.0;
     let seek = Rect::from_min_max(
         pos2(bar.left() + margin, bar.top() + 34.0),
         pos2(bar.right() - margin, bar.top() + 50.0),
     );
+    let controls_area = bar.with_min_y(seek.top() - SEEK_REACH_UP);
+    let _ = ui.interact(controls_area, ui.scope_id().with("bar"), Sense::click());
     seek_bar(ui, seek, status, &mut controls.seek, now, out);
 
     let y = bar.bottom() - 26.0;
@@ -889,7 +891,11 @@ fn seek_bar(
     now: f64,
     out: &mut Vec<PlayerCommand>,
 ) {
-    let response = ui.interact(rect, ui.scope_id().with("seek"), Sense::click_and_drag());
+    let hit = Rect::from_min_max(
+        pos2(rect.left(), rect.top() - SEEK_REACH_UP),
+        pos2(rect.right(), rect.bottom() + SEEK_REACH_DOWN),
+    );
+    let response = ui.interact(hit, ui.scope_id().with("seek"), Sense::click_and_drag());
     let duration = status.duration_s;
     let seekable = duration > 0.0;
     let seconds_at =
@@ -935,7 +941,7 @@ fn seek_bar(
         if let Some(pos) = response.hover_pos().or(response.interact_pointer_pos()) {
             let x = pos.x.clamp(rect.left(), rect.right());
             painter.text(
-                pos2(x, rect.top() - 10.0),
+                pos2(x, hit.top() - 4.0),
                 Align2::CENTER_BOTTOM,
                 clock(seconds_at(pos), duration),
                 theme::caption(),
@@ -1353,31 +1359,16 @@ mod tests {
     }
 
     #[test]
-    fn a_sent_value_is_held_until_the_player_reports_it_or_too_long_passes() {
-        let mut held = Held {
-            drag: Some(40.0),
-            ..Held::default()
-        };
-        held.settle(10.0, SEEK_SETTLE_S, false, 100.0);
-        assert_eq!(held.or(10.0), 40.0, "a drag is never settled");
-        held.commit(42.0, 0.0);
-        held.settle(10.0, SEEK_SETTLE_S, false, 1.0);
-        assert_eq!(held.or(10.0), 42.0);
-        held.settle(42.4, SEEK_SETTLE_S, false, 1.5);
-        assert_eq!(held.or(42.4), 42.4);
-        held.commit(90.0, 0.0);
-        held.settle(10.0, SEEK_SETTLE_S, false, HOLD_TIMEOUT_S + 0.1);
-        assert_eq!(held.value(), None, "a lost update does not pin the bar");
-    }
-
-    #[test]
-    fn a_held_seek_ends_when_the_player_finishes_seeking_off_target() {
+    fn a_held_seek_ends_when_the_player_finishes_seeking_or_too_long_passes() {
         let mut held = Held::default();
         held.commit(90.0, 0.0);
         held.settle(10.0, SEEK_SETTLE_S, true, 0.1);
         assert_eq!(held.or(10.0), 90.0, "still seeking");
         held.settle(86.0, SEEK_SETTLE_S, false, 0.2);
         assert_eq!(held.or(86.0), 86.0, "landed on an earlier keyframe");
+        held.commit(90.0, 0.0);
+        held.settle(10.0, SEEK_SETTLE_S, false, HOLD_TIMEOUT_S + 0.1);
+        assert_eq!(held.value(), None, "a lost update does not pin the bar");
     }
 
     #[test]

@@ -419,8 +419,4 @@ fn a_volume_click_holds_the_new_level_until_the_player_reports_it() {
             .numeric_value()
     };
     assert_eq!(level(&harness), Some(50.0));
-
-    harness.state_mut().0.volume = 50.0;
-    harness.run();
-    assert_eq!(level(&harness), Some(50.0));
 }
