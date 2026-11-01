@@ -609,6 +609,13 @@ fn the_interface_follows_the_language_setting_and_the_system() {
     };
     let overridden = harness(english, system);
     overridden.get_by_label("Library");
+
+    let latin_america = ViewState {
+        system_locale: Locale::LatinAmericanSpanish,
+        ..ViewState::default()
+    };
+    let regional = harness(board_state(), latin_america);
+    regional.get_by_label("Configuración");
 }
 
 #[test]
@@ -637,7 +644,8 @@ fn the_interface_language_is_picked_in_settings() {
     settle(&mut harness);
     harness.get_by_label("Idioma").click();
     settle(&mut harness);
-    harness.get_by_label("Sistema (Español)");
+    harness.get_by_label("Sistema (Español de España)");
+    harness.get_by_label("Español de Latinoamérica");
     harness.get_by_label("English").click();
     settle(&mut harness);
     assert_eq!(

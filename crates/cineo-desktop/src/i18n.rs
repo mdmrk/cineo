@@ -7,17 +7,30 @@ pub enum Locale {
     #[default]
     English,
     Spanish,
+    LatinAmericanSpanish,
     Russian,
     Italian,
 }
 
 impl Locale {
-    pub const ALL: [Self; 4] = [Self::English, Self::Spanish, Self::Russian, Self::Italian];
+    pub const ALL: [Self; 5] = [
+        Self::English,
+        Self::Spanish,
+        Self::LatinAmericanSpanish,
+        Self::Russian,
+        Self::Italian,
+    ];
 
     pub fn from_tag(tag: &str) -> Self {
-        let language = tag.split(['-', '_', '.', '@']).next().unwrap_or_default();
+        let tag = tag.split(['.', '@']).next().unwrap_or_default();
+        let mut subtags = tag.split(['-', '_']);
+        let language = subtags.next().unwrap_or_default();
         if language.eq_ignore_ascii_case("es") {
-            Self::Spanish
+            match subtags.find(|s| s.len() != 4) {
+                None => Self::Spanish,
+                Some(region) if region.eq_ignore_ascii_case("es") => Self::Spanish,
+                Some(_) => Self::LatinAmericanSpanish,
+            }
         } else if language.eq_ignore_ascii_case("ru") {
             Self::Russian
         } else if language.eq_ignore_ascii_case("it") {
@@ -36,6 +49,7 @@ impl Locale {
             UiLanguage::System => system,
             UiLanguage::English => Self::English,
             UiLanguage::Spanish => Self::Spanish,
+            UiLanguage::LatinAmericanSpanish => Self::LatinAmericanSpanish,
             UiLanguage::Russian => Self::Russian,
             UiLanguage::Italian => Self::Italian,
         }
@@ -44,7 +58,8 @@ impl Locale {
     pub fn endonym(self) -> &'static str {
         match self {
             Self::English => "English",
-            Self::Spanish => "Español",
+            Self::Spanish => "Español de España",
+            Self::LatinAmericanSpanish => "Español de Latinoamérica",
             Self::Russian => "Русский",
             Self::Italian => "Italiano",
         }
@@ -55,6 +70,7 @@ impl Locale {
         match self {
             Self::English => include_str!("../assets/locales/en.toml"),
             Self::Spanish => include_str!("../assets/locales/es.toml"),
+            Self::LatinAmericanSpanish => include_str!("../assets/locales/es-419.toml"),
             Self::Russian => include_str!("../assets/locales/ru.toml"),
             Self::Italian => include_str!("../assets/locales/it.toml"),
         }
@@ -64,6 +80,7 @@ impl Locale {
         match self {
             Self::English => "en",
             Self::Spanish => "es",
+            Self::LatinAmericanSpanish => "es-419",
             Self::Russian => "ru",
             Self::Italian => "it",
         }
@@ -179,6 +196,11 @@ mod tests {
         assert_eq!(t!("page-library"), "Biblioteca");
         assert_eq!(t!("count-titles", count = 3), "Títulos: 3");
         assert_eq!(t!("no-such-message"), "no-such-message");
+        set(Locale::LatinAmericanSpanish);
+        assert_eq!(t!("page-settings"), "Configuración");
+        assert_eq!(t!("stats-video"), "Video");
+        set(Locale::Spanish);
+        assert_eq!(t!("page-settings"), "Ajustes");
         set(Locale::Russian);
         assert_eq!(t!("count-titles", count = 21), "Названий: 21");
         assert_eq!(t!(&format!("language-{}", "ara")), "Арабский");
@@ -194,8 +216,17 @@ mod tests {
 
     #[test]
     fn the_system_tag_picks_a_locale() {
-        assert_eq!(Locale::from_tag("es-MX"), Locale::Spanish);
+        assert_eq!(Locale::from_tag("es-MX"), Locale::LatinAmericanSpanish);
+        assert_eq!(
+            Locale::from_tag("es_AR.UTF-8"),
+            Locale::LatinAmericanSpanish
+        );
+        assert_eq!(Locale::from_tag("es-419"), Locale::LatinAmericanSpanish);
+        assert_eq!(Locale::from_tag("es-Latn-CO"), Locale::LatinAmericanSpanish);
         assert_eq!(Locale::from_tag("es_ES.UTF-8"), Locale::Spanish);
+        assert_eq!(Locale::from_tag("es-ES"), Locale::Spanish);
+        assert_eq!(Locale::from_tag("es"), Locale::Spanish);
+        assert_eq!(Locale::from_tag("es.UTF-8"), Locale::Spanish);
         assert_eq!(Locale::from_tag("ru_RU.UTF-8"), Locale::Russian);
         assert_eq!(Locale::from_tag("it-IT"), Locale::Italian);
         assert_eq!(Locale::from_tag("en-US"), Locale::English);

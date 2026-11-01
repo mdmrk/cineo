@@ -198,7 +198,7 @@ Format:
 ### Desktop UI: only Latin and Cyrillic, left-to-right UI languages
 - Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
   [assets/locales](../crates/cineo-desktop/assets/locales)
-- Gap: the UI is offered in English, Spanish, Russian and Italian
+- Gap: the UI is offered in English, Spanish (Spain and Latin America), Russian and Italian
   only.
   Right-to-left languages and scripts outside the bundled fonts cannot be
   added.

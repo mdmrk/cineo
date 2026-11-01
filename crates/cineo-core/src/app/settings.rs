@@ -314,7 +314,7 @@ choice! {
 }
 
 choice! {
-    UiLanguage { System = "system", English = "en", Spanish = "es", Russian = "ru", Italian = "it", }
+    UiLanguage { System = "system", English = "en", Spanish = "es", LatinAmericanSpanish = "es-419", Russian = "ru", Italian = "it", }
 }
 
 choice! {

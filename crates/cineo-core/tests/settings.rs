@@ -48,7 +48,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::AllowPrivateNetwork(true),
         Setting::InterfaceScale(InterfaceScale::S125),
         Setting::StartPage(StartPage::Library),
-        Setting::UiLanguage(UiLanguage::Spanish),
+        Setting::UiLanguage(UiLanguage::LatinAmericanSpanish),
         Setting::WatchedAt(WatchedAt::P80),
         Setting::BingeWatching(false),
         Setting::NextVideoNotice(NextVideoNotice::Off),
