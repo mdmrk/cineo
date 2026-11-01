@@ -529,6 +529,17 @@ fn bottom_bar(
     if icon_button(ui, slot(BUTTON + 4.0), icon, &label).clicked() {
         out.push(PlayerCommand::TogglePause);
     }
+    if playback.next.is_some()
+        && icon_button(
+            ui,
+            slot(BUTTON + 4.0),
+            Icon::Named("player-skip-forward"),
+            &t!("next-episode"),
+        )
+        .clicked()
+    {
+        controls.next_requested = true;
+    }
     if icon_button(
         ui,
         slot(BUTTON + 4.0),
@@ -1394,6 +1405,7 @@ mod tests {
             "volume",
             "volume-off",
             "check",
+            "player-skip-forward",
         ] {
             assert!(Icon::Named(name).glyph().is_some(), "{name}");
         }

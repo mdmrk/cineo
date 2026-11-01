@@ -5,7 +5,7 @@
 )]
 
 use cineo_core::app::{Action, HideControls, SeekStep, Setting, Settings, ShortSeekStep};
-use cineo_desktop::player::{AddonSubtitle, Controls, Playback, show};
+use cineo_desktop::player::{AddonSubtitle, Controls, NextUp, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use eframe::egui::{Key, Modifiers, ViewportId};
 use egui_kittest::Harness;
@@ -112,6 +112,48 @@ fn buttons_send_typed_commands() {
             PlayerCommand::ToggleMute,
             PlayerCommand::Stop,
         ]
+    );
+}
+
+fn next_harness(next: bool) -> Harness<'static, (Status, Controls, Settings)> {
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 720.0])
+        .build_ui_state(
+            move |ui, (status, controls, settings): &mut (Status, Controls, Settings)| {
+                let rect = ui.max_rect();
+                let playback = Playback {
+                    status,
+                    title: "A Show",
+                    logo: None,
+                    background: None,
+                    addon_subtitles: &[],
+                    next: next.then_some(NextUp {
+                        title: "Episode 2",
+                        image: None,
+                    }),
+                    torrent: None,
+                    settings,
+                };
+                let _ = show(ui, rect, &playback, controls);
+            },
+            (status(), Controls::default(), Settings::default()),
+        );
+    harness.run_steps(2);
+    harness
+}
+
+#[test]
+fn the_next_button_shows_only_when_something_plays_next() {
+    let harness = next_harness(false);
+    harness.get_by_label("Play");
+    assert!(harness.query_by_label("Next episode").is_none());
+
+    let mut harness = next_harness(true);
+    harness.get_by_label("Next episode").click();
+    harness.run();
+    assert!(
+        harness.state_mut().1.take_next(),
+        "the next episode is asked for"
     );
 }
 
