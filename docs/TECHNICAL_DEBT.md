@@ -303,9 +303,10 @@ Format:
 - Where: [fetch-libmpv.sh](../scripts/fetch-libmpv.sh),
   [libmpv-windows.env](../scripts/libmpv-windows.env)
 - Gap: the Windows build downloads the pinned archive from
-  zhongfly/mpv-winbuild only. Each Cineo release carries a copy, but the
-  build does not fall back to it.
-- Why: no separate mirror release or tag (owner decision 2026-11-03).
+  zhongfly/mpv-winbuild only; Cineo keeps no copy, in releases or
+  elsewhere.
+- Why: releases carry only what users install, and no separate mirror
+  release or tag (owner decisions 2026-11-03).
 - Instead: if upstream deletes that release, the Windows build fails at
   the checksum step until the pin moves to a newer build.
 - Exit: none planned; update the pin when it breaks.

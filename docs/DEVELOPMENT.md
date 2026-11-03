@@ -568,8 +568,7 @@ write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
 start without a cache. The `cineo` CLI is not shipped.
 
-Every release has these files, with the same names in every release (except
-the libmpv archive) so that
+Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
 
 | File                 | What                                                                                                                |
@@ -579,7 +578,6 @@ the libmpv archive) so that
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
-| `mpv-dev-lgpl-x86_64-<date>-git-<commit>.7z` | The unmodified libmpv archive embedded in the Windows executable (LGPL); its name follows the pin in `scripts/libmpv-windows.env` |
 | `install.ps1`        | Per-user Windows installer into `%LOCALAPPDATA%\Programs\Cineo` with a Start menu shortcut. `CINEO_UNINSTALL=1` removes it; `CINEO_VERSION` picks another release |
 | `SHA256SUMS`         | Checksums of all of the above; the installer verifies them                                                          |
 

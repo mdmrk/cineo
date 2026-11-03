@@ -40,9 +40,7 @@ EOT
     cp scripts/install.sh scripts/install.ps1 dist/
     ;;
   windows)
-    source scripts/libmpv-windows.env
     cp target/release/cineo-desktop.exe dist/cineo-x86_64-windows.exe
-    cp "libmpv/$LIBMPV_FILE" dist/
     ;;
   *)
     echo "unknown platform: $1" >&2

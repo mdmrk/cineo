@@ -61,8 +61,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   written to disk and loaded as a separate shared library, and a user's own
   `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).
   `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
-  binary's hash, the mpv commit and the build sources, and every release
-  carries the unmodified archive next to the executable.
+  binary's hash, the mpv commit and the build sources. Releases do not
+  carry the archive itself; `libmpv.md` links to it upstream.
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),
