@@ -20,7 +20,7 @@ Stremio-protocol addons.
   </tr>
 </table>
 
-[Features](#features) · [Install](#install) ·
+[Features](#features) · [Install](#install) · [Uninstall](#uninstall) ·
 [Build from source](#build-from-source) ·
 [Documentation](#documentation) · [License](#license)
 
@@ -42,8 +42,7 @@ the [Releases](https://github.com/mdmrk/cineo/releases) page.
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
 ```
 
-Cineo needs libmpv: install your distribution's mpv package. To
-uninstall, add `-s -- --uninstall` after `sh`.
+Cineo needs libmpv: install your distribution's mpv package.
 
 ### Windows (x86_64)
 
@@ -53,7 +52,24 @@ In PowerShell:
 irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 ```
 
-libmpv is built in. To uninstall, set `$env:CINEO_UNINSTALL=1` first.
+libmpv is built in.
+
+## Uninstall
+
+Linux:
+
+```sh
+curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh -s -- --uninstall
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:CINEO_UNINSTALL=1; irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+```
+
+Your addons and library are kept. To delete them too, remove
+`~/.local/share/cineo` on Linux or `%APPDATA%\Cineo` on Windows.
 
 ## Build from source
 
