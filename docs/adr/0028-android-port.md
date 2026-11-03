@@ -35,6 +35,26 @@ What the workspace looks like today (VERIFIED: source, 2026-11-03):
   reports "usage of the unsafe `no_mangle` attribute"; the spike crate was
   outside the workspace). `jni`'s
   `EnvUnowned::with_env` kept every other call safe.
+- UniFFI 0.32.2 binds the Rust crates to Kotlin (VERIFIED: spike step 4,
+  2026-11-03, same phone). The spike `cdylib` exported, with
+  `#[uniffi::export]`, a sync function over `cineo_core::addon::parse_manifest`
+  and an async one (`async_runtime = "tokio"`) over
+  `AddonClient::fetch_manifest`, returning a `uniffi::Record` and a
+  `uniffi::Error` enum. `uniffi-bindgen generate --library` read the arm64
+  `.so` on the Linux host and wrote the Kotlin (about 1.2k lines). Kotlin
+  got a data class, a sealed exception class and a `suspend` function: a
+  manifest parsed, a bad one threw `InvalidManifest` with `cineo-core`'s
+  reason, and Cinemeta loaded through the coroutine (about 1.2 s on Wi-Fi)
+  while `expired.badssl.com` threw `Fetch`.
+- UniFFI's macros compile under `#![deny(unsafe_code)]` (VERIFIED: same
+  spike). Only the hand-written JNI entry point for the TLS verifier needed
+  `#[allow(unsafe_code)]`, because UniFFI cannot pass a JNI `Context`.
+- UniFFI is MPL-2.0, which `.config/deny.toml` does not allow today. Its
+  generated Kotlin needs JNA 5.19.1 (Apache-2.0 or LGPL-2.1-or-later) and
+  kotlinx-coroutines 1.11.0 (Apache-2.0) at runtime (VERIFIED: crates.io
+  and the Maven Central POMs). BoltFFI 0.32.1 (MIT) is the other generator
+  found; it is much younger (about 124k downloads against UniFFI's 16M) and
+  was not tried.
 - `cineo-store` finds its directories with `etcetera`, which has no notion
   of an Android app's private directories (INFERRED).
 - `cineo-stream` uses the librqbit fork (ADR-0016), tokio and hyper.
@@ -102,7 +122,7 @@ matters for torrent downloads; deep links arrive as intents.
 3. **Native Android UI (Kotlin/Jetpack Compose) over the Rust crates.**
    A new `cineo-android` crate exposes `cineo-core`, `cineo-net`,
    `cineo-store`, `cineo-stream` and `cineo-player` to Kotlin through a
-   binding generator (for example UniFFI; not yet researched). libmpv is
+   binding generator (UniFFI, chosen in spike step 4). libmpv is
    bundled as an arm64 `libmpv.so` in the APK. The best fit for phones and
    Android TV, at the cost of a second UI that does not share code with
    `cineo-desktop`.
@@ -125,7 +145,7 @@ spike first answers the UNKNOWNs above:
    platform verifier initialised. Done (Context).
 4. Choose the Kotlin binding generator (UniFFI or another) after checking
    its current version and docs, and call one `cineo-core` function from
-   Kotlin through it.
+   Kotlin through it. Done: UniFFI (Context).
 
 The spike's results update this ADR, and it is accepted or rejected,
 before any Android code is merged.
@@ -145,9 +165,13 @@ If accepted:
 - ADR-0022/0027's platform scope changes, and `AGENTS.md`,
   `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md` and `docs/DEVELOPMENT.md`
   follow.
-- A new `cineo-android` crate (a new platform IO boundary, ADR-0002) holds
-  the JNI code, with `unsafe_code` allowed in that crate only, as the
-  libmpv FFI is in `cineo-player` (ADR-0014).
+- A new `cineo-android` crate (a new platform IO boundary, ADR-0002)
+  exposes the Rust crates to Kotlin through UniFFI. Its only hand-written
+  JNI is the TLS verifier's initialisation, in one module where
+  `unsafe_code` is allowed, as the libmpv FFI is in `cineo-player`
+  (ADR-0014).
+- `.config/deny.toml` gains an MPL-2.0 exception for the UniFFI crates,
+  and `docs/LEGAL.md` covers UniFFI, JNA and kotlinx-coroutines.
 - The Android app initialises `rustls-platform-verifier` once, at
   startup, before any `cineo-net` call, and ships its Kotlin component at
   the version `Cargo.lock` pins.
