@@ -18,8 +18,15 @@ What the workspace looks like today (VERIFIED: source, 2026-11-03):
   (VERIFIED: the crate's README).
 - `cineo-store` finds its directories with `etcetera`, which has no notion
   of an Android app's private directories (INFERRED).
-- `cineo-stream` uses the librqbit fork (ADR-0016), tokio and hyper. Whether
-  the fork builds for `aarch64-linux-android` is UNKNOWN.
+- `cineo-stream` uses the librqbit fork (ADR-0016), tokio and hyper.
+- `cineo-core`, `cineo-net`, `cineo-store` and `cineo-stream` build for
+  `aarch64-linux-android`, and so do their test binaries and `cineo-cli`,
+  with Rust 1.99.1, NDK r30 and cargo-ndk 4.1.2 at API level 24 (VERIFIED:
+  spike step 1, 2026-11-03, no source changes). At cargo-ndk's default API
+  level 21, `cineo-stream`'s test binaries fail to link: `getifaddrs`,
+  `freeifaddrs` and `pwritev` are missing from Bionic before API 24. They
+  come in through `nix` 0.30.1, used by the librqbit fork (VERIFIED:
+  `cargo tree -i nix`). The binaries were built, not run on a device.
 - `cineo-player` loads libmpv at runtime through `libloading` and renders
   through the render API's `opengl` backend (ADR-0014). `HWDEC` is chosen
   with `cfg(not(windows))`, so Android would get `vaapi,auto-safe`
@@ -67,7 +74,8 @@ desktop shell and is not built for Android.
 Whether we port at all (option 3 against option 1) is not decided yet. A
 spike first answers the UNKNOWNs above:
 1. Cross-compile `cineo-core`, `cineo-net`, `cineo-store` and
-   `cineo-stream` for `aarch64-linux-android` with `cargo-ndk`.
+   `cineo-stream` for `aarch64-linux-android` with `cargo-ndk`. Done: they
+   build at API level 24 (Context).
 2. In a throwaway Kotlin app, load an arm64 `libmpv.so`, render a URL
    through the render API on a GLES context with `hwdec=mediacodec`, and
    survive a background/foreground cycle.
@@ -85,6 +93,8 @@ If accepted:
 - Cineo has two UIs, `cineo-desktop` in Rust and the Android app in
   Kotlin. A user-visible feature is not done on Android until the Kotlin
   UI has it, and `docs/COMPATIBILITY.md` tracks each platform separately.
+- The app's minimum is Android 7.0 (API level 24) or higher, because
+  `cineo-stream` needs symbols Bionic only has from API 24.
 - Kotlin and Gradle join the toolchain. The Android app's dependencies
   need their own license and version review (`docs/DEVELOPMENT.md`,
   `docs/LEGAL.md`).
