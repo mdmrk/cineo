@@ -7,7 +7,8 @@
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, ExtraValue, ResourcePath, TransportUrl};
-use cineo_net::{AddonClient, BlockReason, FetchError, NetPolicy};
+use cineo_core::app::{Action, Effect};
+use cineo_net::{AddonClient, BlockReason, FetchError, NetPolicy, fetch_task};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -307,4 +308,52 @@ async fn the_latest_release_version_comes_from_its_tag() {
         client.fetch_latest_release(&broken).await,
         Err(FetchError::Release(_))
     ));
+}
+
+#[tokio::test]
+async fn fetch_effects_come_back_as_their_loaded_actions() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    let client = AddonClient::new(local_policy()).unwrap();
+    let addon = transport(&server);
+
+    let effect = Effect::FetchManifest {
+        transport: addon.clone(),
+        install: true,
+    };
+    let action = fetch_task(&client, effect).unwrap().await;
+    let Action::ManifestLoaded {
+        transport,
+        result,
+        install,
+    } = action
+    else {
+        panic!("expected ManifestLoaded, got {action:?}");
+    };
+    assert_eq!(transport, addon);
+    assert!(install);
+    assert_eq!(result.unwrap().id, "org.cineo.fixture.basic");
+
+    let path = ResourcePath::catalog(ContentType::new("movie").unwrap(), "top");
+    let effect = Effect::FetchCatalog {
+        addon: addon.clone(),
+        path: path.clone(),
+    };
+    let action = fetch_task(&client, effect).unwrap().await;
+    assert!(
+        matches!(&action, Action::CatalogLoaded { path: p, result: Err(_), .. } if *p == path),
+        "{action:?}"
+    );
+}
+
+#[test]
+fn effects_that_are_not_requests_get_no_task() {
+    let client = AddonClient::new(local_policy()).unwrap();
+    assert!(fetch_task(&client, Effect::StopTorrent).is_none());
+    assert!(fetch_task(&client, Effect::SaveAddons(Vec::new())).is_none());
 }

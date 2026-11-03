@@ -18,6 +18,7 @@ use url::Url;
 use crate::policy::{BlockReason, NetPolicy};
 
 const RELEASE_LIMIT: usize = 1024 * 1024;
+pub const MAX_IMAGE_BYTES: usize = 4 * 1024 * 1024;
 const USER_AGENT: &str = concat!("Cineo/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Clone)]

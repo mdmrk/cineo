@@ -10,8 +10,7 @@ use cineo_core::app::{
     Action, Effect, Language, Lookahead, Notice, Percent, PlayRequest, Setting, Settings, State,
     TorrentRequest, TorrentStatus, parse_link, update,
 };
-use cineo_core::diagnostics::Parsed;
-use cineo_net::{AddonClient, FetchError, NetPolicy};
+use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
 use cineo_player::PlayerEvent;
 use cineo_player::embedded::{
@@ -275,56 +274,18 @@ impl CineoApp {
     }
 
     fn run(&mut self, effect: Effect) {
-        let client = Arc::clone(&self.io.client);
         match effect {
-            Effect::FetchManifest { transport, install } => self.spawn(async move {
-                let result = fetched(client.fetch_manifest(&transport).await).map(Box::new);
-                Action::ManifestLoaded {
-                    transport,
-                    result,
-                    install,
+            effect @ (Effect::FetchManifest { .. }
+            | Effect::FetchCatalog { .. }
+            | Effect::FetchAddonList { .. }
+            | Effect::FetchMeta { .. }
+            | Effect::FetchStreams { .. }
+            | Effect::FetchSubtitles { .. }
+            | Effect::CheckForUpdate(_)) => {
+                if let Some(task) = cineo_net::fetch_task(&self.io.client, effect) {
+                    self.spawn(task);
                 }
-            }),
-            Effect::FetchCatalog { addon, path } => self.spawn(async move {
-                let result = fetched(client.fetch_catalog(&addon, &path).await).map(|c| c.metas);
-                Action::CatalogLoaded {
-                    addon,
-                    path,
-                    result,
-                }
-            }),
-            Effect::FetchAddonList { addon, path } => self.spawn(async move {
-                let result = fetched(client.fetch_addon_list(&addon, &path).await);
-                Action::AddonListLoaded {
-                    addon,
-                    path,
-                    result,
-                }
-            }),
-            Effect::FetchMeta { addon, path } => self.spawn(async move {
-                let result = fetched(client.fetch_meta(&addon, &path).await).map(Box::new);
-                Action::MetaLoaded {
-                    addon,
-                    path,
-                    result,
-                }
-            }),
-            Effect::FetchStreams { addon, path } => self.spawn(async move {
-                let result = fetched(client.fetch_streams(&addon, &path).await);
-                Action::StreamsLoaded {
-                    addon,
-                    path,
-                    result,
-                }
-            }),
-            Effect::FetchSubtitles { addon, path } => self.spawn(async move {
-                let result = fetched(client.fetch_subtitles(&addon, &path).await);
-                Action::SubtitlesLoaded {
-                    addon,
-                    path,
-                    result,
-                }
-            }),
+            }
             effect @ (Effect::SaveAddons(_)
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)
@@ -341,13 +302,6 @@ impl CineoApp {
             Effect::Play(request) => self.play(&request),
             Effect::StartTorrent(request) => self.start_torrent(request),
             Effect::StopTorrent => self.stop_torrent(),
-            Effect::CheckForUpdate(url) => self.spawn(async move {
-                let result = client.fetch_latest_release(&url).await.map_err(|err| {
-                    debug!(%err, "update check failed");
-                    err.to_string()
-                });
-                Action::LatestReleaseLoaded(result)
-            }),
         }
     }
 
@@ -905,12 +859,6 @@ async fn open_torrent(
     })
 }
 
-fn fetched<T>(result: Result<Parsed<T>, FetchError>) -> Result<T, String> {
-    result
-        .map(|parsed| parsed.value)
-        .map_err(|err| err.to_string())
-}
-
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {
     command_line || settings.allow_private_network
 }
@@ -970,98 +918,18 @@ fn now_ms() -> u64 {
 }
 
 pub(crate) fn spawn_store_writer(
-    mut store: Store,
+    store: Store,
     results: Sender<Msg>,
 ) -> std::io::Result<(Sender<Effect>, std::thread::JoinHandle<()>)> {
-    let (tx, rx) = channel::<Effect>();
-    let thread = std::thread::Builder::new()
-        .name("store".into())
-        .spawn(move || {
-            while let Ok(first) = rx.recv() {
-                for effect in coalesce(std::iter::once(first).chain(rx.try_iter()).collect()) {
-                    if let Err(err) = store.apply(&effect) {
-                        error!(error = %err, "saving failed");
-                        let _ = results.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
-                    }
-                }
-            }
-        })?;
-    Ok((tx, thread))
-}
-
-fn coalesce(batch: Vec<Effect>) -> impl Iterator<Item = Effect> {
-    let keep: Vec<bool> = (0..batch.len())
-        .map(|i| {
-            !batch[i + 1..]
-                .iter()
-                .any(|later| supersedes(later, &batch[i]))
-        })
-        .collect();
-    batch
-        .into_iter()
-        .zip(keep)
-        .filter_map(|(effect, keep)| keep.then_some(effect))
-}
-
-fn supersedes(later: &Effect, earlier: &Effect) -> bool {
-    match (later, earlier) {
-        (Effect::SaveSettings(_), Effect::SaveSettings(_))
-        | (Effect::SaveAddons(_), Effect::SaveAddons(_)) => true,
-        (Effect::SaveLibraryItem(later), Effect::SaveLibraryItem(earlier)) => {
-            later.id == earlier.id
-        }
-        _ => false,
-    }
+    cineo_store::spawn_writer(store, move |err| {
+        let _ = results.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use cineo_core::app::{DownloadLimit, PeerLimit, TorrentPort, TorrentStorage, UploadLimit};
-
-    #[test]
-    fn queued_saves_keep_only_the_last_write_of_each_key() {
-        let item = |id: &str, time_offset_ms| {
-            Effect::SaveLibraryItem(cineo_core::app::LibraryItem {
-                id: id.into(),
-                content_type: cineo_core::addon::ContentType::new("movie").unwrap_or_else(|| {
-                    panic!("valid type");
-                }),
-                name: id.into(),
-                poster: None,
-                video_id: id.into(),
-                time_offset_ms,
-                duration_ms: 0,
-                updated_ms: 1,
-                favorited: None,
-                stream: None,
-            })
-        };
-        let quiet = Settings {
-            volume: Percent::new(10),
-            ..Settings::default()
-        };
-        let batch = vec![
-            Effect::SaveSettings(Settings::default()),
-            item("a", 1),
-            item("b", 1),
-            Effect::DeleteLibraryItem("a".into()),
-            item("a", 2),
-            Effect::SaveSettings(quiet),
-            Effect::ClearLibrary,
-        ];
-        let kept: Vec<Effect> = coalesce(batch).collect();
-        assert_eq!(
-            kept,
-            [
-                item("b", 1),
-                Effect::DeleteLibraryItem("a".into()),
-                item("a", 2),
-                Effect::SaveSettings(quiet),
-                Effect::ClearLibrary,
-            ]
-        );
-    }
 
     #[test]
     fn private_networks_stay_blocked_unless_asked_for() {

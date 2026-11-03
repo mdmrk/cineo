@@ -3,7 +3,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 use std::task::Poll;
 
-use cineo_net::AddonClient;
+use cineo_net::{AddonClient, MAX_IMAGE_BYTES};
 use eframe::egui::{
     self, ColorImage,
     load::{ImageLoadResult, ImageLoader, ImagePoll, LoadError, SizeHint},
@@ -14,7 +14,6 @@ use image::{DynamicImage, ImageDecoder};
 use tokio::sync::Semaphore;
 use url::Url;
 
-pub(crate) const MAX_IMAGE_BYTES: usize = 4 * 1024 * 1024;
 pub(crate) const MAX_IMAGE_SIDE: u32 = 4096;
 const SIZE_HEADROOM: f32 = 2.0;
 
