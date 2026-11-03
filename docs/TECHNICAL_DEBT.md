@@ -358,3 +358,21 @@ Format:
   progress bar for Cineo.
 - Exit: add `Position`, `Seek`, `SetPosition`, `Volume` and next episode,
   and a test that talks to the service over a private bus.
+
+### Android: Rust logs go nowhere
+- Where: [shell.rs](../crates/cineo-android/src/shell.rs)
+- Gap: `cineo-android` installs no `tracing` subscriber, so the warnings
+  and errors of the Rust crates (addon warnings, failed saves, request
+  spans) are not in logcat.
+- Why: the first Android slice (ADR-0028) left logging out.
+- Instead: only Kotlin's own output and crashes reach logcat.
+- Exit: a `tracing` layer that writes to Android's log.
+
+### Android: English only
+- Where: [strings.xml](../android/app/src/main/res/values/strings.xml)
+- Gap: the Android UI has only the English texts; the desktop has eight
+  languages (ADR-0021).
+- Why: the first Android slice copied only `en.toml`'s texts.
+- Instead: every Android user sees English.
+- Exit: Android string resources for the desktop's languages, kept in
+  step with `crates/cineo-desktop/assets/locales/`.

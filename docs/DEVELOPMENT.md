@@ -34,6 +34,21 @@ holds the details it links to.
    `CARGO_TARGET_TMPDIR` (`/home/…`) is not, so they fail under wine only.
    CI tests on `windows-latest` (MSVC).
 
+5. To build the Android app (ADR-0028): the Rust target
+   `rustup target add aarch64-linux-android`, `cargo install --locked
+   cargo-ndk@4.1.2`, JDK 21, and the Android SDK with its licenses
+   accepted (`sdkmanager --licenses`) and `ndk;30.0.16248370` installed.
+   Point `ANDROID_HOME` at the SDK, or write `sdk.dir=…` to
+   `android/local.properties`. Then `cd android && ./gradlew assembleDebug`
+   builds `app/build/outputs/apk/debug/app-debug.apk`; `adb install -r`
+   puts it on a device. Gradle's `cargoNdk` task builds `cineo-android`
+   for `arm64-v8a` at API level 26, and `uniffiBindgen` writes the Kotlin
+   bindings from that library into `app/build/generated/rust/kotlin`. The
+   Android build keeps symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`)
+   because `uniffi-bindgen` reads its metadata from them; AGP strips the
+   copy in the APK. CI runs `cargo ndk … clippy -p cineo-android` and the
+   Gradle build (job `check (android)`).
+
 If you build with a distro-packaged Rust instead of rustup, make sure it is a
 current stable release. Some distro builds expect a cross linker name; if
 linking fails with `linker 'x86_64-linux-gnu-gcc' not found`, set
@@ -451,6 +466,9 @@ Re-check them when adding.
 | `sys-locale`                                                                           | 0.3.2                                                                                                                                  | The OS locale for the default UI language (desktop)                                                                                             | MIT/Apache                           |
 | `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop, and the HWND for SMTC on Windows (desktop); already in the tree through eframe | MIT/Apache/Zlib                      |
 | `libloading`                                                                           | 0.9.0                                                                                                                                  | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC                                  |
+| `uniffi` (`cli` only with the `bindgen` feature)                                       | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
+| `jni` (no default features; Android only)                                              | 0.22.4                                                                                                                                 | The one JNI entry point that hands the app `Context` to the TLS verifier (android)                                                              | MIT/Apache                           |
+| `rustls-platform-verifier` (Android only)                                              | 0.7.1, already in the tree through reqwest                                                                                             | `android::init_with_env` for Android's certificate verifier (android)                                                                           | MIT/Apache                           |
 
 `tokio` features `io-util` and `sync` serve the mpv player; `process` was
 dropped with the external mpv player (2026-10-07). The player uses

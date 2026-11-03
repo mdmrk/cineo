@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cineo</string>
+    <string name="start_failed">Cineo could not start: %1$s</string>
+    <string name="loading_addons">Loading addons…</string>
+    <string name="home_empty">No addons installed. Catalogs show up here once you add one by its manifest URL.</string>
+    <string name="addons_install">Install an addon</string>
+    <string name="install">Install</string>
+    <string name="installing">Installing…</string>
+    <string name="installed_addon">Installed %1$s</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="catalog_title">%1$s %2$s</string>
+    <string name="target_label">%1$s — %2$s</string>
+    <string name="type_movie">Movies</string>
+    <string name="type_series">Series</string>
+    <string name="type_channel">Channels</string>
+    <string name="type_tv">TV</string>
+    <string name="problem_already_installed">This addon is already installed</string>
+    <string name="problem_configuration_required">This addon must be configured before it can be installed. Configure it, then install the link it gives you.</string>
+    <string name="problem_invalid_url">Invalid addon URL: %1$s</string>
+    <string name="problem_no_meta">No installed addon provides details for this item</string>
+    <string name="problem_unsupported_filter">This catalog does not support that filter</string>
+    <string name="notice_addon_unavailable">An addon could not be loaded: %1$s</string>
+    <string name="notice_unsupported_scheme">Unsupported stream scheme `%1$s`</string>
+    <string name="notice_torrents_off">Torrent streams are turned off in Settings</string>
+    <string name="notice_unsupported_source">%1$s streams are not supported yet</string>
+    <string name="notice_torrent_failed">The torrent could not be played: %1$s</string>
+    <string name="notice_pick_another">The last stream could not be played, pick another one. %1$s</string>
+    <string name="notice_engine_address">The torrent engine returned an unexpected address</string>
+    <string name="notice_subtitle_failed">Could not load the subtitle: %1$s</string>
+    <string name="notice_save_failed">Could not save changes: %1$s</string>
+    <string name="notice_store_closed">Changes can no longer be saved</string>
+    <string name="notice_invalid_link">That link cannot be opened by Cineo</string>
+    <string name="source_http">HTTP</string>
+    <string name="source_url">URL</string>
+    <string name="source_youtube">YouTube</string>
+    <string name="source_torrent">Torrent</string>
+    <string name="source_external">External</string>
+    <string name="source_archive">Archive</string>
+    <string name="source_usenet">Usenet</string>
+</resources>

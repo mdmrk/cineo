@@ -22,6 +22,8 @@ flowchart TB
   subgraph Shells
     CLI[cineo-cli]
     GUI[cineo-desktop<br/>egui]
+    AND[cineo-android<br/>UniFFI]
+    KT[android/<br/>Kotlin + Compose]
   end
   subgraph IO
     NET[cineo-net<br/>HTTP + net policy]
@@ -34,6 +36,9 @@ flowchart TB
   GUI --> CORE
   CLI --> NET & PLAYER & STORE
   GUI --> NET & PLAYER & STORE & STREAM
+  KT --> AND
+  AND --> CORE
+  AND --> NET & STORE
   NET --> CORE
   PLAYER --> CORE
   STORE --> CORE
@@ -66,6 +71,7 @@ flowchart TB
 | `cineo-store` | Persistence (installed addons, library, progress, settings) with migrations |
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
 | `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010) |
+| `cineo-android` | Rust half of the Android shell (ADR-0028): holds the core `State`, runs effects through the IO crates, and hands Kotlin `AppView` snapshots through UniFFI; the TLS verifier's JNI entry point |
 
 **When to add a crate:** only when the new code has a different dependency
 set or a different IO boundary from an existing crate. A new *concept* is a
@@ -171,6 +177,17 @@ in the crate that does the IO:
 | Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver` | `SetThreadExecutionState` via `keepawake` |
 
 `std::os::unix` and `std::os::windows` need a `cfg`.
+
+On Android (ADR-0028) the UI is Kotlin and Compose in `android/`.
+`cineo-android` runs `update` and the effects on its own `shell` thread,
+the way `cineo-desktop` does on its UI thread, and after each batch of
+messages hands Kotlin an `AppView` (only when it changed) through a
+`StateListener` that Kotlin implements. Kotlin calls methods such as
+`installAddon` that become `Action`s, and words the typed problems and
+notices itself (ADR-0017). Images come through `Cineo.fetchImage`, so they
+use `cineo-net` and its limits like every other request. The network
+effects (`cineo_net::fetch_task`) and the store's writer thread
+(`cineo_store::spawn_writer`) are shared with the desktop.
 
 ## State model and data flow
 

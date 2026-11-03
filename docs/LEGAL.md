@@ -38,8 +38,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
   CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
-  `cargo deny` checks the `x86_64-unknown-linux-gnu` and
-  `x86_64-pc-windows-msvc` dependency graphs.
+  `cargo deny` checks the `x86_64-unknown-linux-gnu`,
+  `x86_64-pc-windows-msvc` and `aarch64-linux-android` dependency graphs.
 - One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
   MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
   `dirs-sys` (ADR-0012) and cannot be removed without forking
@@ -47,6 +47,29 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   obligation is to ship its notice and point to its source. The exception
   in `.config/deny.toml` covers only this crate; MPL-2.0 is not on the general
   allowlist.
+- Crate-scoped exceptions for UniFFI (2026-11-03, ADR-0028): `uniffi`,
+  `uniffi_bindgen`, `uniffi_core`, `uniffi_internal_macros`,
+  `uniffi_macros`, `uniffi_meta`, `uniffi_pipeline` and `uniffi_udl`
+  0.32.2 are MPL-2.0. `cineo-android` uses them, unmodified, to bind Rust
+  to Kotlin; `uniffi_bindgen` and `uniffi_udl` only run at build time.
+  The same MPL-2.0 terms apply as for `option-ext`: ship the notice and
+  point to the source. The Kotlin that `uniffi-bindgen` writes is
+  generated from our crate and is built into the app.
+
+## Android app dependencies
+The Android app (`android/`, ADR-0028) also uses Gradle dependencies,
+which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
+2026-11-03):
+- AndroidX Compose (BOM 2026.09.00), `activity-compose` 1.13.0 and
+  `lifecycle-runtime-compose` 2.11.0: Apache-2.0.
+- `kotlinx-coroutines-android` 1.11.0: Apache-2.0.
+- JNA 5.19.1, needed by the UniFFI Kotlin code: Apache-2.0 or
+  LGPL-2.1-or-later, used under Apache-2.0.
+- `org.rustls:rustls-platform-verifier` 0.2.0, the Kotlin half of
+  `rustls-platform-verifier`: its crate `rustls-platform-verifier-android`
+  0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
+  repository and its POM names no license (INFERRED: same license).
+- No libmpv ships in the Android app yet.
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.
 - libmpv (LGPL-2.1+ or GPL-2.0+, depending on the build) is **not linked**.

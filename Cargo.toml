@@ -21,6 +21,7 @@ bytes = "1.12.1"
 clap = { version = "4.6.7", features = ["derive"] }
 eframe = { version = "0.37.0", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit", "links"] }
 keepawake = { version = "0.6.1", default-features = false }
+jni = { version = "0.22.4", default-features = false }
 iconflow = { version = "2.1.0", default-features = false, features = ["pack-tabler"] }
 etcetera = "0.11.0"
 fast_image_resize = "6.1.0"
@@ -37,6 +38,7 @@ raw-window-handle = "0.6.2"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "gzip", "brotli", "http2"] }
 rusqlite = { version = "0.41.1", default-features = false, features = ["bundled"] }
 rust-i18n = "4.2.4"
+rustls-platform-verifier = "0.7.1"
 semver = "1.0.28"
 sys-locale = "0.3.2"
 serde_json = "1.0.154"
@@ -47,6 +49,7 @@ tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "t
 tokio-util = { version = "0.7.20", default-features = false, features = ["io"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+uniffi = "0.32.2"
 url = "2.5.8"
 
 egui_kittest = { version = "0.37.0", default-features = false }
