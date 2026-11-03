@@ -16,6 +16,25 @@ What the workspace looks like today (VERIFIED: source, 2026-11-03):
   verifier must be initialised from JNI with an Android `Context`, and the
   app must ship its Kotlin component (`rustls-platform-verifier-android`)
   (VERIFIED: the crate's README).
+- `cineo-net` fetches addon manifests over HTTPS on Android, with
+  certificates checked by the platform verifier (VERIFIED: spike step 3,
+  2026-11-03, same phone as step 2). A throwaway `cdylib`, built against
+  the workspace's `Cargo.lock` with `jni` 0.22.4, called
+  `rustls_platform_verifier::android::init_with_env` with the application
+  `Context` and then `AddonClient::fetch_manifest` with `NetPolicy::default()`
+  from a Kotlin thread. The app pulled in the verifier's Kotlin component as
+  `org.rustls:rustls-platform-verifier:0.2.0` from the project's Maven
+  repository. Cinemeta and OpenSubtitles v3 manifests loaded with no
+  warnings. `expired`, `self-signed`, `wrong.host` and `untrusted-root`
+  at badssl.com were all rejected.
+- Without that initialisation, the first HTTPS request panics in Rust and
+  the app crashes (VERIFIED: same spike). The verifier must be initialised
+  before any `cineo-net` call.
+- The spike's JNI functions needed `#[unsafe(no_mangle)]`, which the
+  workspace's `unsafe_code = "forbid"` rejects (VERIFIED: rustc 1.99.1
+  reports "usage of the unsafe `no_mangle` attribute"; the spike crate was
+  outside the workspace). `jni`'s
+  `EnvUnowned::with_env` kept every other call safe.
 - `cineo-store` finds its directories with `etcetera`, which has no notion
   of an Android app's private directories (INFERRED).
 - `cineo-stream` uses the librqbit fork (ADR-0016), tokio and hyper.
@@ -103,7 +122,7 @@ spike first answers the UNKNOWNs above:
    Done on one phone, into a `SurfaceView` rather than through the render
    API (Context).
 3. Fetch an addon manifest over HTTPS through `cineo-net` with the
-   platform verifier initialised.
+   platform verifier initialised. Done (Context).
 4. Choose the Kotlin binding generator (UniFFI or another) after checking
    its current version and docs, and call one `cineo-core` function from
    Kotlin through it.
@@ -129,6 +148,9 @@ If accepted:
 - A new `cineo-android` crate (a new platform IO boundary, ADR-0002) holds
   the JNI code, with `unsafe_code` allowed in that crate only, as the
   libmpv FFI is in `cineo-player` (ADR-0014).
+- The Android app initialises `rustls-platform-verifier` once, at
+  startup, before any `cineo-net` call, and ships its Kotlin component at
+  the version `Cargo.lock` pins.
 - `cineo-store` and `cineo-stream` take their directories from the shell
   instead of finding them themselves on Android.
 - On Android, `cineo-player` hands mpv a `Surface` (`wid`, `vo=gpu`)
