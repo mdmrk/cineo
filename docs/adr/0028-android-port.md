@@ -93,7 +93,17 @@ What the workspace looks like today (VERIFIED: source, 2026-11-03):
   `mediacodec`.
 - The AAR's FFmpeg is built with `--enable-gpl --enable-version3`, so it is
   GPLv3, and the AAR needs API level 26 (VERIFIED: its `libavcodec.so` and
-  manifest).
+  manifest). Its mpv also lists `gpl` among its enabled features.
+- Third-party LGPL builds of libmpv for Android exist, all one-person
+  projects from 2026 with at most one GitHub star (VERIFIED: GitHub,
+  2026-11-03): `purestream711/libmpv-android`, `flow-vid/flowvid-libmpv-android`,
+  `SnowMediaEnt/libmpv-android-lgpl`, `labyrinth-apps/libmpv-builds` and
+  `pa2x2/mpv-android`. `purestream711/libmpv-android` v1.0.1-lgpl is an
+  LGPL rebuild of the spike's AAR, with the same `MPVLib` API: its FFmpeg
+  is configured with `--enable-version3` and without `--enable-gpl`, so it
+  is LGPLv3, and its mpv does not list `gpl` (VERIFIED: its `libavcodec.so`
+  and `libmpv.so`, AAR SHA-256 `820449224af6…`). It was not run on a
+  device. The Windows build we ship is LGPL-2.1-or-later (`docs/LEGAL.md`).
 - `cineo-desktop` (about 9.6k lines) is an eframe/egui shell built for a
   mouse and a keyboard: hover menus (the subtitle style panel opens on
   hover, `docs/COMPATIBILITY.md`), keyboard shortcuts, a single-instance
@@ -181,9 +191,13 @@ If accepted:
   instead of using the render API, sets `hwdec=mediacodec` with
   `ndk_codec=1`, and detaches and reattaches the surface as Android
   destroys and recreates it.
-- We build, pin and ship our own LGPL arm64 `libmpv.so` (and its FFmpeg),
-  which `docs/LEGAL.md` must cover. The spike's AAR cannot ship: its FFmpeg
-  is GPLv3.
+- We ship an LGPL arm64 `libmpv.so` (and its FFmpeg), pinned by hash as
+  on Windows (ADR-0027), which `docs/LEGAL.md` must cover. It is either a
+  third-party build or our own, from mpv-android's buildscripts with mpv's
+  `-Dgpl=false` and FFmpeg without `--enable-gpl`; that choice needs its
+  own decision. The spike's AAR cannot ship: it is GPL. How the LGPL's
+  requirement that users can replace the library applies inside a signed
+  APK is UNKNOWN and must be settled before a release.
 - CI gains an Android build; `cargo deny` gains the Android graph.
 
 ## Rejected alternatives
