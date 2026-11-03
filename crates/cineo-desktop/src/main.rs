@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -57,6 +59,7 @@ fn start(cli: Cli) -> anyhow::Result<()> {
     {
         return Ok(());
     }
+    cineo_desktop::libmpv::install(&cache_dir);
     cineo_desktop::run(cineo_desktop::Options {
         data_dir,
         cache_dir,

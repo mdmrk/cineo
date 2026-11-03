@@ -21,7 +21,18 @@ holds the details it links to.
    cargo install --locked cargo-nextest cargo-deny
    ```
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
-   runtime (ADR-0014).
+   runtime (ADR-0014). On Windows, put a `libmpv-2.dll` next to the
+   executable, or build with `--features bundled-libmpv` and
+   `CINEO_LIBMPV_DLL` set to the DLL's path (`scripts/fetch-libmpv.sh`
+   downloads the pinned one).
+4. To check the Windows build from Linux:
+   `rustup target add x86_64-pc-windows-gnu`, plus the `mingw-w64-gcc`
+   package for the C dependencies, then
+   `cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings`.
+   Run the tests with `CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUNNER=wine`.
+   The engine tests need an absolute Windows path, which a cross-compiled
+   `CARGO_TARGET_TMPDIR` (`/home/…`) is not, so they fail under wine only.
+   CI tests on `windows-latest` (MSVC).
 
 If you build with a distro-packaged Rust instead of rustup, make sure it is a
 current stable release. Some distro builds expect a cross linker name; if
@@ -428,7 +439,9 @@ Re-check them when adding.
 | `fast_image_resize` (default features)                                                 | 6.1.0                                                                                                                                  | SIMD downscaling of posters and backdrops (desktop)                                                                                             | MIT/Apache                           |
 | `egui_kittest` (dev, no default features)                                              | 0.37.0                                                                                                                                 | Headless UI tests via AccessKit (desktop)                                                                                                       | MIT/Apache                           |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features)                         | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012)                                                                                                           | Apache-2.0                           |
-| `zbus` (`default-rt`, `service`; no default features)                                  | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6                                              | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop)                                         | MIT                                  |
+| `zbus` (`default-rt`, `service`; no default features; not on Windows)                  | 6.0.0; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6                                              | Keeps the screen awake and serves MPRIS media controls during playback over the session D-Bus (desktop)                                         | MIT                                  |
+| `souvlaki` (no default features; Windows only)                                         | 0.9.3                                                                                                                                  | System Media Transport Controls for media keys on Windows (desktop, ADR-0027); uses the `windows` 0.62 already in the Windows tree               | MIT                                  |
+| `keepawake` (Windows only)                                                             | 0.6.1                                                                                                                                  | Keeps the screen awake during playback on Windows with `SetThreadExecutionState` (desktop, ADR-0027)                                           | MIT                                  |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util`                | 1.12.0 / 0.1.21 / 0.1.5                                                                                                                | Loopback HTTP server for the player (stream)                                                                                                    | MIT                                  |
 | `bytes`                                                                                | 1.12.1                                                                                                                                 | Response bodies (stream)                                                                                                                        | MIT                                  |
 | `futures-util` (no default features)                                                   | 0.3.34                                                                                                                                 | Stream adapters for bodies (stream)                                                                                                             | MIT/Apache                           |
@@ -436,7 +449,7 @@ Re-check them when adding.
 | `getrandom`                                                                            | 0.4.3                                                                                                                                  | Per-session path token and proxy password (stream)                                                                                              | MIT/Apache                           |
 | `rust-i18n`                                                                            | 4.2.4                                                                                                                                  | UI message catalogs, embedded at compile time (desktop, ADR-0021)                                                                               | MIT                                  |
 | `sys-locale`                                                                           | 0.3.2                                                                                                                                  | The OS locale for the default UI language (desktop)                                                                                             | MIT/Apache                           |
-| `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop (desktop); already in the tree through eframe                          | MIT/Apache/Zlib                      |
+| `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop, and the HWND for SMTC on Windows (desktop); already in the tree through eframe | MIT/Apache/Zlib                      |
 | `libloading`                                                                           | 0.9.0                                                                                                                                  | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC                                  |
 
 `tokio` features `io-util` and `sync` serve the mpv player; `process` was
@@ -537,28 +550,36 @@ it:
 
 | Trigger                  | Jobs                                 |
 | ------------------------ | ------------------------------------ |
-| pull request, manual run | check                                |
-| push to `main`           | check → build → publish `prerelease` |
-| tag `vX.Y.Z`             | check → build → publish `vX.Y.Z`     |
+| pull request, manual run | linux, windows                                |
+| push to `main`           | linux, windows → build → publish `prerelease` |
+| tag `vX.Y.Z`             | linux, windows → build → publish `vX.Y.Z`     |
 
-`check` runs `scripts/check.sh` (fmt, clippy, nextest with the `ci` profile,
-docs, cargo-deny). `build` builds `cineo-desktop` for Linux x86_64 at the
-`x86-64-v2` level, puts the files into `dist/` with `scripts/package.sh`,
-writes `SHA256SUMS` and attests build provenance (check a file with
+The checks show on GitHub as `ci / linux` and `ci / windows`. `linux` runs
+`scripts/check.sh` (fmt, clippy, nextest with the `ci` profile, docs,
+cargo-deny); `windows` runs clippy and nextest on
+`windows-latest`. `build` builds `cineo-desktop` for Linux x86_64 and
+Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
+after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
+into `dist/` with `scripts/package.sh <linux|windows>` and attests build
+provenance; `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
-write to the repository. `check` and prerelease builds restore the compiled
+write to the repository. `linux`, `windows` and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
 start without a cache. The `cineo` CLI is not shipped.
 
-Every release has these files, with the same names in every release so that
+Every release has these files, with the same names in every release (except
+the libmpv archive) so that
 `releases/latest/download/<name>` works:
 
 | File                 | What                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
-| `cineo-licenses.zip` | Cineo's license and the font licenses                                                                               |
+| `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded (ADR-0027)                      |
+| `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
+| `mpv-dev-lgpl-x86_64-<date>-git-<commit>.7z` | The unmodified libmpv archive embedded in the Windows executable (LGPL); its name follows the pin in `scripts/libmpv-windows.env` |
+| `install.ps1`        | Per-user Windows installer into `%LOCALAPPDATA%\Programs\Cineo` with a Start menu shortcut. `CINEO_UNINSTALL=1` removes it; `CINEO_VERSION` picks another release |
 | `SHA256SUMS`         | Checksums of all of the above; the installer verifies them                                                          |
 
 ### Steps
@@ -571,7 +592,7 @@ Every release has these files, with the same names in every release so that
 
 ### Prerelease builds
 
-Every push to `main` builds a prerelease once `check` passes, except a push
+Every push to `main` builds a prerelease once `linux` and `windows` pass, except a push
 whose head commit starts with `chore(release):`; that commit gets the real
 release from its tag instead. It deletes the previous `prerelease` GitHub
 release and its tag and recreates both at the pushed commit.

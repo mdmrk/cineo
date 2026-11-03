@@ -110,7 +110,10 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   link only sets a prompt that shows the full manifest URL
   (`an_install_link_installs_nothing_until_accepted`).
 - A running Cineo accepts links from new launches on `<data dir>/cineo.sock`
-  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`).
+  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`),
+  or on Windows on the named pipe `\\.\pipe\cineo-<hash of the data dir>`,
+  which rejects remote clients and is created as the first instance only.
+  Any process of the same user can connect to the pipe.
   One line of at most 8 KiB is read, and it is handled like any other link.
 - Registering Cineo for `stremio://` and `cineo://` is opt-in from Settings
   and per user only.
@@ -176,6 +179,17 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   ends.
 - While a video plays, Cineo asks the session D-Bus
   `org.freedesktop.ScreenSaver` to keep the screen awake.
+- On Windows the media controls are the System Media Transport Controls
+  of Cineo's window: they show the title and accept play, pause and stop.
+  The screen is kept awake with `SetThreadExecutionState`, and links are
+  registered under `HKCU\Software\Classes` with `reg.exe` (no
+  administrator rights).
+- The Windows release embeds `libmpv-2.dll` from a third-party build
+  (zhongfly/mpv-winbuild), pinned by SHA-256 in
+  `scripts/libmpv-windows.env` and checked before every build. It is
+  written to `<cache dir>\libmpv\<version>\` and replaced when its size
+  differs. A `libmpv-2.dll` next to the executable is loaded first, so
+  anyone who can write there can run code as Cineo.
 
 ### Code and CI rules
 

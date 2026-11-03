@@ -1,7 +1,7 @@
 mod ffi;
 mod render;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
@@ -132,6 +132,15 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 16] = [
     (CACHE_STATE, "demuxer-cache-state", ffi::FORMAT_STRING),
 ];
 
+#[cfg(not(windows))]
+const HWDEC: &str = "vaapi,auto-safe";
+#[cfg(windows)]
+const HWDEC: &str = "auto-safe";
+
+pub fn use_bundled_libmpv(path: PathBuf) {
+    ffi::set_bundled(path);
+}
+
 const OPTIONS: &[(&str, &str)] = &[
     ("config", "no"),
     ("load-scripts", "no"),
@@ -142,7 +151,7 @@ const OPTIONS: &[(&str, &str)] = &[
     ("input-vo-keyboard", "no"),
     ("osd-level", "0"),
     ("osd-bar", "no"),
-    ("hwdec", "vaapi,auto-safe"),
+    ("hwdec", HWDEC),
     ("vo", "libmpv"),
     ("idle", "yes"),
     ("keep-open", "no"),

@@ -287,6 +287,52 @@ Format:
 - Instead: second windows share the database.
 - Exit: hand plain launches to the running window too, which raises it.
 
+### Windows: nothing has run on a Windows machine
+- Where: every `cfg(windows)` path (ADR-0027)
+- Gap: CI compiles and tests on `windows-latest`, and the app starts under
+  wine, but no one has started it on real Windows. Playback with the embedded libmpv over the OpenGL
+  render API, `hwdec=auto-safe`, the named pipe, `reg.exe` registration,
+  SMTC, keep-awake and `install.ps1` are UNKNOWN.
+- Why: there is no Windows machine in development.
+- Instead: Windows is marked Untested in COMPATIBILITY.md.
+- Exit: run the [manual test](DEVELOPMENT.md#manual-gui-test) on Windows
+  10 and 11 and record the results.
+
+### Windows: the bundled libmpv depends on an upstream release
+- Where: [fetch-libmpv.sh](../scripts/fetch-libmpv.sh),
+  [libmpv-windows.env](../scripts/libmpv-windows.env)
+- Gap: the Windows build downloads the pinned archive from
+  zhongfly/mpv-winbuild only. Each Cineo release carries a copy, but the
+  build does not fall back to it.
+- Why: no separate mirror release or tag (owner decision 2026-11-03).
+- Instead: if upstream deletes that release, the Windows build fails at
+  the checksum step until the pin moves to a newer build.
+- Exit: none planned; update the pin when it breaks.
+
+### Windows: the bundled libmpv reads HTTP through libcurl
+- Where: the pinned build in [libmpv-windows.env](../scripts/libmpv-windows.env)
+- Gap: this mpv build opens `http(s)` with libcurl, not FFmpeg. Against a
+  server without `Accept-Ranges`, it treats the stream as not seekable:
+  the duration is estimated and resume and seeking fail. FFmpeg (libmpv
+  0.41 on Linux) tries a range request anyway. Seen under wine,
+  2026-11-03. `--curl-enabled=no` still opened the stream with libcurl.
+- Why: zhongfly builds mpv with `-Dlibcurl=enabled`.
+- Instead: Cineo's own torrent server sends `Accept-Ranges`, and so do
+  the test server and the usual CDNs; an addon stream from a server that
+  does not is not seekable on Windows.
+- Exit: find the mpv option that falls back to FFmpeg's HTTP, or pin a
+  build without libcurl.
+
+### Windows: private files rely on the profile's ACL
+- Where: `create_private_dir` in `cineo-store` and `cineo-stream`,
+  `subtitles.rs`
+- Gap: on Unix these directories and files get mode 0700/0600; on Windows
+  they inherit the ACL of `%APPDATA%` or `%LOCALAPPDATA%`, which is private
+  to the user by default but not checked.
+- Why: setting an explicit ACL needs `unsafe` Win32 calls.
+- Instead: a changed profile ACL is inherited as is.
+- Exit: set an owner-only DACL on creation and test it on Windows.
+
 ### Desktop: the screen stays awake only through `org.freedesktop.ScreenSaver`
 - Where: [keep_awake.rs](../crates/cineo-desktop/src/keep_awake.rs)
 - Gap: while a video plays, Cineo inhibits the screen saver only over the

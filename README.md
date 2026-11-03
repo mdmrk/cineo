@@ -16,15 +16,13 @@ Stremio-protocol addons.
 
 ## Features
 
-- Addons by URL or from the official and community lists
-- Catalogs, discover and search across addons
-- Streams from all addons in one list, with filters and sorting
-- Playback in the app window, torrents included, streamed from memory
-- Subtitles from addons and files, with preferred languages and styling
-- Binge watching, continue watching, favourites and a local library
-- No account and no cloud
+- Stremio addons, catalogs and search
+- Built-in player with torrent streaming
+- Subtitles, binge watching and a local library
+- No account, no cloud
 
-Linux x86_64 only.
+Linux x86_64 and Windows x86_64. Windows builds have not been tried on a
+real machine yet.
 
 ## Install and update
 
@@ -35,6 +33,15 @@ curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | 
 Cineo needs libmpv (the mpv package of your distribution). Or download
 the executable from [Releases](https://github.com/mdmrk/cineo/releases)
 and run it. To uninstall: `… | sh -s -- --uninstall`.
+
+On Windows (PowerShell):
+
+```powershell
+irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+```
+
+The Windows executable carries libmpv. To uninstall, run the same command
+with `$env:CINEO_UNINSTALL=1`.
 
 ## Run from source
 

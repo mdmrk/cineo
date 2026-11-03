@@ -4,6 +4,7 @@ use anyhow::{Context, bail};
 
 const SCHEMES: [&str; 2] = ["stremio", "cineo"];
 
+#[cfg(not(windows))]
 pub(crate) fn register() -> anyhow::Result<()> {
     let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
     let data = std::env::var_os("XDG_DATA_HOME")
@@ -30,6 +31,7 @@ pub(crate) fn register() -> anyhow::Result<()> {
         .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}"))))
 }
 
+#[cfg(not(windows))]
 fn desktop_quote(path: &str) -> String {
     let mut out = String::from("\"");
     for c in path.chars() {
@@ -41,6 +43,44 @@ fn desktop_quote(path: &str) -> String {
     out.push('"');
     out
 }
+
+#[cfg(windows)]
+pub(crate) fn register() -> anyhow::Result<()> {
+    let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
+    let command = format!("\"{}\" \"%1\"", exe.display());
+    for scheme in SCHEMES {
+        let key = format!(r"HKCU\Software\Classes\{scheme}");
+        for args in [
+            vec![
+                key.clone(),
+                "/ve".into(),
+                "/d".into(),
+                format!("URL:{scheme}"),
+            ],
+            vec![
+                key.clone(),
+                "/v".into(),
+                "URL Protocol".into(),
+                "/d".into(),
+                String::new(),
+            ],
+            vec![
+                format!(r"{key}\shell\open\command"),
+                "/ve".into(),
+                "/d".into(),
+                command.clone(),
+            ],
+        ] {
+            let mut reg = Command::new("reg");
+            std::os::windows::process::CommandExt::creation_flags(&mut reg, CREATE_NO_WINDOW);
+            run(reg.arg("add").args(&args).arg("/f"))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 fn run(command: &mut Command) -> anyhow::Result<()> {
     let program = command.get_program().to_string_lossy().into_owned();

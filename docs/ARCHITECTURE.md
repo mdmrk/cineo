@@ -1,7 +1,7 @@
 # Architecture
 
 Decisions are recorded in [adr/](adr/README.md). Cineo runs on Linux
-x86_64 only (ADR-0022).
+x86_64 and Windows x86_64 (ADR-0022, ADR-0027).
 
 ## System overview
 
@@ -155,10 +155,21 @@ In `cineo-desktop`:
 
 ### Platform integration
 
-Linux only (ADR-0022): XDG data and cache directories (`cineo-store`),
-`libmpv.so.2` (`cineo-player`), a Unix socket for the single-instance
-handover and an `xdg-mime` scheme registration (`cineo-desktop`). Code may
-use `std::os::unix` directly.
+Linux and Windows (ADR-0022, ADR-0027). Platform code sits behind `cfg`
+in the crate that does the IO:
+
+| Concern | Linux | Windows |
+|---------|-------|---------|
+| Data and cache directories (`cineo-store`) | XDG | `%APPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` |
+| Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL |
+| Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` |
+| libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) |
+| Single-instance handover (desktop `instance`) | Unix socket | named pipe |
+| Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` |
+| Media keys (desktop `media_keys`) | MPRIS over `zbus` | SMTC via `souvlaki` |
+| Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver` | `SetThreadExecutionState` via `keepawake` |
+
+`std::os::unix` and `std::os::windows` need a `cfg`.
 
 ## State model and data flow
 

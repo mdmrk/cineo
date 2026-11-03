@@ -1,4 +1,4 @@
-name: CI
+name: ci
 
 on:
   push:
@@ -19,8 +19,8 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
-  check:
-    name: check
+  linux:
+    name: linux
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -38,18 +38,50 @@ jobs:
         env:
           NEXTEST_PROFILE: ci
 
+  windows:
+    name: windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2.88.1
+        with:
+          tool: cargo-nextest@0.9.150
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo nextest run --workspace --locked
+        env:
+          NEXTEST_PROFILE: ci
+
   build:
-    name: build
-    needs: check
+    name: build (${{ matrix.platform }})
+    needs: [linux, windows]
     if: >-
       github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') ||
       !startsWith(github.event.head_commit.message, 'chore(release):'))
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { platform: linux, os: ubuntu-latest }
+          - { platform: windows, os: windows-latest, features: bundled-libmpv }
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     permissions:
       contents: read
       id-token: write
       attestations: write
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -59,17 +91,24 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo build -p cineo-desktop --locked --release
+      - name: Fetch libmpv
+        if: matrix.features == 'bundled-libmpv'
+        run: |
+          scripts/fetch-libmpv.sh libmpv
+          echo "CINEO_LIBMPV_DLL=$(cygpath -m "$PWD/libmpv/libmpv-2.dll")" >> "$GITHUB_ENV"
+      - run: cargo build -p cineo-desktop --locked --release ${FEATURES:+--features "$FEATURES"}
         env:
           RUSTFLAGS: -C target-cpu=x86-64-v2
-      - run: scripts/package.sh
-      - run: cd dist && sha256sum -- * > SHA256SUMS
+          FEATURES: ${{ matrix.features }}
+      - run: scripts/package.sh "$PLATFORM"
+        env:
+          PLATFORM: ${{ matrix.platform }}
       - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: dist/*
       - uses: actions/upload-artifact@v7.0.2
         with:
-          name: dist
+          name: dist-${{ matrix.platform }}
           path: dist/*
           if-no-files-found: error
 
@@ -83,8 +122,10 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8.0.2
         with:
-          name: dist
+          pattern: dist-*
           path: dist
+          merge-multiple: true
+      - run: cd dist && sha256sum -- * > SHA256SUMS
       - name: Publish the release or the prerelease
         env:
           GH_TOKEN: ${{ github.token }}

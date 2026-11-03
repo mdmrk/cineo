@@ -27,7 +27,7 @@ use crate::brand;
 use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
 use crate::keep_awake::KeepAwake;
-use crate::mpris::{Mpris, Remote};
+use crate::media_keys::{MediaKeys, Remote};
 use crate::player::{self, Controls, NextUp, Playback};
 use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
@@ -68,6 +68,8 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         client: Arc::clone(&client),
         gl: None,
         display: None,
+        #[cfg(windows)]
+        window: None,
         engine: EngineOptions {
             allow_private_network,
             ..EngineOptions::new(options.cache_dir)
@@ -96,8 +98,12 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
             io.display = native_display(cc);
+            #[cfg(windows)]
+            {
+                io.window = native_window(cc);
+            }
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
-            if let Err(err) = instance::listen(&data_dir, move |link| {
+            if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
                 let _ = tx.send(Msg::Link(link));
                 ctx.request_repaint();
             }) {
@@ -138,6 +144,8 @@ pub(crate) struct Io {
     pub(crate) client: Arc<AddonClient>,
     pub(crate) gl: Option<ProcAddress>,
     pub(crate) display: Option<Display>,
+    #[cfg(windows)]
+    pub(crate) window: Option<isize>,
     pub(crate) engine: EngineOptions,
 }
 
@@ -145,6 +153,15 @@ fn native_display(cc: &eframe::CreationContext<'_>) -> Option<Display> {
     match cc.display_handle().ok()?.as_raw() {
         RawDisplayHandle::Wayland(handle) => Some(Display::Wayland(handle.display)),
         RawDisplayHandle::Xlib(handle) => handle.display.map(Display::X11),
+        _ => None,
+    }
+}
+
+#[cfg(windows)]
+fn native_window(cc: &eframe::CreationContext<'_>) -> Option<isize> {
+    use raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+    match cc.window_handle().ok()?.as_raw() {
+        RawWindowHandle::Win32(handle) => Some(handle.hwnd.get()),
         _ => None,
     }
 }
@@ -201,7 +218,7 @@ pub(crate) struct CineoApp {
     seq: u64,
     pending_link: Option<String>,
     keep_awake: KeepAwake,
-    mpris: Mpris,
+    media_keys: MediaKeys,
 }
 
 impl CineoApp {
@@ -212,7 +229,10 @@ impl CineoApp {
         store_tx: Sender<Effect>,
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
-        let mpris = Mpris::new(ctx.clone());
+        #[cfg(not(windows))]
+        let media_keys = MediaKeys::new(ctx.clone());
+        #[cfg(windows)]
+        let media_keys = MediaKeys::new(ctx.clone(), io.window);
         let mut app = Self {
             state: State::default(),
             view: ViewState {
@@ -233,7 +253,7 @@ impl CineoApp {
             seq: 0,
             pending_link: None,
             keep_awake: KeepAwake::new(),
-            mpris,
+            media_keys,
         };
         for action in restore {
             app.dispatch(action);
@@ -798,7 +818,7 @@ async fn forward_events(
 impl eframe::App for CineoApp {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.pause_on_minimize(ctx);
-        for remote in self.mpris.take() {
+        for remote in self.media_keys.take() {
             self.remote(remote);
         }
         let status = self.playback.as_ref().map(|e| e.player.status());
@@ -809,7 +829,7 @@ impl eframe::App for CineoApp {
             .as_ref()
             .zip(status.filter(|s| s.loaded))
             .map(|(e, s)| (e.title.as_str(), s.paused));
-        self.mpris.set(shown);
+        self.media_keys.set(shown);
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),

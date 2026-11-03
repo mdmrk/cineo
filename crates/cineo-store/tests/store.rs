@@ -92,6 +92,7 @@ fn a_fresh_database_starts_with_cinemeta_and_keeps_its_removal() {
     assert!(Store::open_in(&dir).unwrap().addons().unwrap().is_empty());
 }
 
+#[cfg(unix)]
 #[test]
 fn data_directory_is_private_to_the_user() {
     use std::os::unix::fs::PermissionsExt;

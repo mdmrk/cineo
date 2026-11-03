@@ -1,9 +1,12 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use tracing::warn;
+#[cfg(not(windows))]
 use zbus::Connection;
 
+#[cfg(not(windows))]
 const SERVICE: &str = "org.freedesktop.ScreenSaver";
+#[cfg(not(windows))]
 const PATH: &str = "/org/freedesktop/ScreenSaver";
 
 pub(crate) struct KeepAwake {
@@ -37,6 +40,7 @@ impl KeepAwake {
     }
 }
 
+#[cfg(not(windows))]
 fn run(rx: &Receiver<bool>) {
     let mut bus: Option<Connection> = None;
     let mut cookie: Option<u32> = None;
@@ -73,6 +77,7 @@ fn run(rx: &Receiver<bool>) {
     }
 }
 
+#[cfg(not(windows))]
 fn inhibit(conn: &Connection) -> zbus::Result<u32> {
     zbus::block_on(conn.call_method(
         Some(SERVICE),
@@ -83,4 +88,29 @@ fn inhibit(conn: &Connection) -> zbus::Result<u32> {
     ))?
     .body()
     .deserialize()
+}
+
+#[cfg(windows)]
+fn run(rx: &Receiver<bool>) {
+    let mut held: Option<keepawake::KeepAwake> = None;
+    for on in rx {
+        if !on {
+            held = None;
+            continue;
+        }
+        if held.is_some() {
+            continue;
+        }
+        match keepawake::Builder::default()
+            .display(true)
+            .idle(true)
+            .reason("Playing a video")
+            .app_name("Cineo")
+            .app_reverse_domain("io.github.mdmrk.cineo")
+            .create()
+        {
+            Ok(awake) => held = Some(awake),
+            Err(err) => warn!(%err, "could not keep the screen awake"),
+        }
+    }
 }

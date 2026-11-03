@@ -38,7 +38,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
   CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
-  `cargo deny` checks the `x86_64-unknown-linux-gnu` dependency graph only.
+  `cargo deny` checks the `x86_64-unknown-linux-gnu` and
+  `x86_64-pc-windows-msvc` dependency graphs.
 - One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
   MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
   `dirs-sys` (ADR-0012) and cannot be removed without forking
@@ -52,8 +53,16 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   Cineo loads it at runtime with `libloading` (ADR-0014). Our bindings are
   written from mpv's ISC-licensed headers (`client.h`, `render.h`,
   `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
-  not use the LGPL `libmpv2` crates. Cineo uses the system's libmpv and
-  ships none.
+  not use the LGPL `libmpv2` crates. On Linux, Cineo uses the system's
+  libmpv and ships none.
+- The Windows release (`bundled-libmpv`, ADR-0027) embeds an unmodified
+  LGPL build of `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later) from
+  zhongfly/mpv-winbuild, pinned in `scripts/libmpv-windows.env`. It is
+  written to disk and loaded as a separate shared library, and a user's own
+  `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).
+  `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
+  binary's hash, the mpv commit and the build sources, and every release
+  carries the unmodified archive next to the executable.
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),
@@ -88,7 +97,8 @@ supplied by the owner on 2026-10-07 (logo updated and animation added
 - Cineo handles the `stremio://` URL scheme for interoperability with
   addon install links and page links that addon sites publish. It does not
   present itself as Stremio. Registration is opt-in from Settings and makes
-  Cineo the `xdg-mime` default for both schemes; Cineo never takes over the
+  Cineo the `xdg-mime` default for both schemes (or the `HKCU` handler on
+  Windows); Cineo never takes over the
   scheme without that click.
 
 ## User-provided media and external addons

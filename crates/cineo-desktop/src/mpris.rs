@@ -6,18 +6,11 @@ use tracing::warn;
 use zbus::connection::Builder;
 use zbus::{Connection, ObjectPath, OwnedVariant, Str, interface};
 
+use crate::media_keys::Remote;
+
 const PATH: &str = "/org/mpris/MediaPlayer2";
 const TRACK: ObjectPath<'static> =
     ObjectPath::from_static_str_unchecked("/io/github/mdmrk/cineo/track");
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Remote {
-    Play,
-    Pause,
-    PlayPause,
-    Stop,
-    Raise,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Playing {

@@ -4,10 +4,15 @@ pub mod i18n;
 mod images;
 pub mod instance;
 mod keep_awake;
+pub mod libmpv;
+mod media_keys;
+#[cfg(not(windows))]
 mod mpris;
 pub mod player;
 mod register;
 pub mod settings;
+#[cfg(windows)]
+mod smtc;
 mod subtitles;
 mod theme;
 pub mod view;
