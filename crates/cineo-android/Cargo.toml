@@ -21,6 +21,7 @@ bindgen = ["uniffi/cli"]
 [dependencies]
 cineo-core.workspace = true
 cineo-net.workspace = true
+cineo-player.workspace = true
 cineo-store.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -29,10 +30,14 @@ uniffi.workspace = true
 url.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]
+android_logger.workspace = true
 jni.workspace = true
+log.workspace = true
+tracing = { workspace = true, features = ["log"] }
 rustls-platform-verifier.workspace = true
 
 [dev-dependencies]
+cineo-player.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 wiremock.workspace = true
 

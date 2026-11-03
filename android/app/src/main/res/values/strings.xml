@@ -9,6 +9,17 @@
     <string name="installing">Installing…</string>
     <string name="installed_addon">Installed %1$s</string>
     <string name="dismiss">Dismiss</string>
+    <string name="back">Back</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="seek_back">Seek back %1$d seconds</string>
+    <string name="seek_forward">Seek forward %1$d seconds</string>
+    <string name="episodes">Episodes</string>
+    <string name="season">Season %1$d</string>
+    <string name="specials">Specials</string>
+    <string name="where_to_watch">Where to watch</string>
+    <string name="streams_unavailable">No installed addon provides streams for this item.</string>
+    <string name="streams_empty">No streams</string>
     <string name="catalog_title">%1$s %2$s</string>
     <string name="target_label">%1$s — %2$s</string>
     <string name="type_movie">Movies</string>

@@ -1,5 +1,7 @@
-use cineo_core::addon::{MetaPreview, PosterShape, SourceKind};
-use cineo_core::app::{InstalledAddon, Loadable, Notice, PlaybackFailure, Problem, Row, State};
+use cineo_core::addon::{Meta, MetaPreview, PosterShape, SourceKind, Stream, Video};
+use cineo_core::app::{
+    Detail, InstalledAddon, Loadable, Notice, PlaybackFailure, Problem, Row, State, StreamGroup,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct AppView {
@@ -7,7 +9,69 @@ pub struct AppView {
     pub addons_loading: u32,
     pub install: Option<InstallView>,
     pub board: Vec<RowView>,
+    pub detail: Option<DetailView>,
+    pub playback: Option<PlaybackView>,
     pub notice: Option<NoticeView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct DetailView {
+    pub content_type: String,
+    pub id: String,
+    pub name: Option<String>,
+    pub poster: Option<String>,
+    pub background: Option<String>,
+    pub logo: Option<String>,
+    pub description: Option<String>,
+    pub release_info: Option<String>,
+    pub runtime: Option<String>,
+    pub genres: Vec<String>,
+    pub meta: MetaStatus,
+    pub videos: Vec<VideoView>,
+    pub selected_video: Option<String>,
+    pub streams: Vec<StreamGroupView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum MetaStatus {
+    Loading,
+    Ready,
+    Failed { problem: ProblemView },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct VideoView {
+    pub id: String,
+    pub title: String,
+    pub season: Option<u32>,
+    pub episode: Option<u32>,
+    pub released: Option<String>,
+    pub thumbnail: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct StreamGroupView {
+    pub addon_name: String,
+    pub items: StreamItems,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum StreamItems {
+    Loading,
+    Ready { streams: Vec<StreamView> },
+    Failed { problem: ProblemView },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct StreamView {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub kind: SourceKindView,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PlaybackView {
+    pub title: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -111,7 +175,7 @@ pub enum PlaybackFailureView {
     Torrent { reason: String },
 }
 
-pub(crate) fn view(state: &State) -> AppView {
+pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
     AppView {
         addons: state.addons.iter().map(addon).collect(),
         addons_loading: u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX),
@@ -123,7 +187,78 @@ pub(crate) fn view(state: &State) -> AppView {
             },
         }),
         board: state.board.iter().map(row).collect(),
+        detail: state.detail.as_ref().map(detail),
+        playback: playing.map(|title| PlaybackView {
+            title: title.to_owned(),
+        }),
         notice: state.notice.as_ref().map(notice_view),
+    }
+}
+
+fn detail(detail: &Detail) -> DetailView {
+    let meta = detail.meta.ready();
+    let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
+    let text = |pick: fn(&MetaPreview) -> Option<&String>| preview.and_then(pick).cloned();
+    let url = |pick: fn(&MetaPreview) -> Option<&url::Url>| {
+        preview.and_then(pick).map(ToString::to_string)
+    };
+    DetailView {
+        content_type: detail.content_type.to_string(),
+        id: detail.id.clone(),
+        name: preview.map(|p| p.name.clone()),
+        poster: url(|p| p.poster.as_ref()),
+        background: url(|p| p.background.as_ref()),
+        logo: url(|p| p.logo.as_ref()),
+        description: text(|p| p.description.as_ref()),
+        release_info: text(|p| p.release_info.as_ref()),
+        runtime: meta.and_then(|m: &Meta| m.runtime.clone()),
+        genres: preview.map(|p| p.genres.clone()).unwrap_or_default(),
+        meta: match &detail.meta {
+            Loadable::Loading => MetaStatus::Loading,
+            Loadable::Ready(_) => MetaStatus::Ready,
+            Loadable::Failed(problem) => MetaStatus::Failed {
+                problem: problem_view(problem),
+            },
+        },
+        videos: meta
+            .map(|m| m.videos.iter().map(video).collect())
+            .unwrap_or_default(),
+        selected_video: detail.selected_video.clone(),
+        streams: detail.streams.iter().map(stream_group).collect(),
+    }
+}
+
+fn video(video: &Video) -> VideoView {
+    VideoView {
+        id: video.id.clone(),
+        title: video.title.clone(),
+        season: video.season,
+        episode: video.episode,
+        released: video.released.clone(),
+        thumbnail: video.thumbnail.as_ref().map(ToString::to_string),
+    }
+}
+
+fn stream_group(group: &StreamGroup) -> StreamGroupView {
+    StreamGroupView {
+        addon_name: group.addon_name.clone(),
+        items: match &group.streams {
+            Loadable::Loading => StreamItems::Loading,
+            Loadable::Ready(streams) => StreamItems::Ready {
+                streams: streams.iter().map(stream).collect(),
+            },
+            Loadable::Failed(problem) => StreamItems::Failed {
+                problem: problem_view(problem),
+            },
+        },
+    }
+}
+
+fn stream(stream: &Stream) -> StreamView {
+    StreamView {
+        name: stream.name.clone(),
+        description: stream.description.clone(),
+        kind: source_kind(stream.source.kind()),
     }
 }
 

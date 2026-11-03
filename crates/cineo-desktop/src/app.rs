@@ -12,10 +12,10 @@ use cineo_core::app::{
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
-use cineo_player::PlayerEvent;
 use cineo_player::embedded::{
     Display, Player, PlayerCommand, ProcAddress, Renderer, Status, Video,
 };
+use cineo_player::{EventActions, PlayerEvent, event_actions};
 use cineo_store::Store;
 use cineo_stream::{Engine, EngineOptions};
 use eframe::egui;
@@ -721,49 +721,33 @@ async fn forward_events(
     send: impl Fn(Action),
 ) {
     while let Some(event) = events.recv().await {
-        let (time_ms, duration_ms, last) = match event {
-            PlayerEvent::Progress {
-                time_ms,
-                duration_ms,
-            } => (time_ms, duration_ms, None),
-            PlayerEvent::Ended {
-                time_ms,
-                duration_ms,
-            } => (time_ms, duration_ms, Some(Action::PlaybackEnded)),
-            PlayerEvent::Closed {
-                time_ms,
-                duration_ms,
-            } => (time_ms, duration_ms, Some(Action::PlaybackStopped)),
-            PlayerEvent::Failed(reason) => {
-                send(Action::PlaybackFailed(reason));
-                break;
-            }
+        match &event {
             PlayerEvent::Buffered { seconds } => {
+                let seconds = *seconds;
                 feed.send_if_modified(|feed| {
                     feed.as_mut()
                         .is_some_and(|feed| feed.buffered_s.replace(seconds) != Some(seconds))
                 });
-                continue;
             }
-        };
-        if duration_ms > 0 {
-            feed.send_if_modified(|feed| {
-                feed.as_mut().is_some_and(|feed| {
-                    std::mem::replace(&mut feed.duration_ms, duration_ms) != duration_ms
-                })
-            });
+            PlayerEvent::Progress { duration_ms, .. }
+            | PlayerEvent::Ended { duration_ms, .. }
+            | PlayerEvent::Closed { duration_ms, .. }
+                if *duration_ms > 0 =>
+            {
+                let duration_ms = *duration_ms;
+                feed.send_if_modified(|feed| {
+                    feed.as_mut().is_some_and(|feed| {
+                        std::mem::replace(&mut feed.duration_ms, duration_ms) != duration_ms
+                    })
+                });
+            }
+            _ => {}
         }
-        if time_ms > 0 {
-            send(Action::PlaybackProgress {
-                meta_id: meta_id.clone(),
-                video_id: video_id.clone(),
-                time_ms,
-                duration_ms,
-                now_ms: now_ms(),
-            });
+        let EventActions { actions, last } = event_actions(event, &meta_id, &video_id, now_ms());
+        for action in actions {
+            send(action);
         }
-        if let Some(last) = last {
-            send(last);
+        if last {
             break;
         }
     }

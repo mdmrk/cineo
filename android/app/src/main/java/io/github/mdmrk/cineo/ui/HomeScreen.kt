@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -59,20 +60,9 @@ fun HomeScreen(
     view: AppView?,
     images: Images,
     onInstall: (String) -> Unit,
-    onDismissNotice: () -> Unit,
+    onOpen: (PosterView) -> Unit,
 ) {
-    val snackbar = remember { SnackbarHostState() }
-    val notice = view?.notice?.let { noticeText(it) }
-    val dismiss = stringResource(R.string.dismiss)
-    LaunchedEffect(notice) {
-        if (notice != null) {
-            val result = snackbar.showSnackbar(notice, dismiss, duration = SnackbarDuration.Long)
-            if (result == SnackbarResult.ActionPerformed || result == SnackbarResult.Dismissed) {
-                onDismissNotice()
-            }
-        }
-    }
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+    Scaffold { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
@@ -95,7 +85,7 @@ fun HomeScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                else -> items(view.board, key = { it.key }) { row -> CatalogRow(row, images) }
+                else -> items(view.board, key = { it.key }) { row -> CatalogRow(row, images, onOpen) }
             }
         }
     }
@@ -136,7 +126,7 @@ private fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
 }
 
 @Composable
-private fun CatalogRow(row: RowView, images: Images) {
+private fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             targetLabel(row),
@@ -156,14 +146,14 @@ private fun CatalogRow(row: RowView, images: Images) {
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(items.items, key = { "${it.contentType}/${it.id}" }) { Poster(it, images) }
+                items(items.items, key = { "${it.contentType}/${it.id}" }) { Poster(it, images, onOpen) }
             }
         }
     }
 }
 
 @Composable
-private fun Poster(item: PosterView, images: Images) {
+private fun Poster(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
     val widthPx = with(LocalDensity.current) { PosterWidth.roundToPx() }
     var image by remember(item.poster) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(item.poster) {
@@ -174,7 +164,10 @@ private fun Poster(item: PosterView, images: Images) {
         PosterShapeView.SQUARE -> 1f
         PosterShapeView.LANDSCAPE -> 16f / 9f
     }
-    Card(modifier = Modifier.width(if (ratio > 1f) PosterWidth * 1.8f else PosterWidth)) {
+    Card(
+        onClick = { onOpen(item) },
+        modifier = Modifier.width(if (ratio > 1f) PosterWidth * 1.8f else PosterWidth),
+    ) {
         Box(Modifier.aspectRatio(ratio)) {
             val loaded = image
             if (loaded != null) {
@@ -193,6 +186,24 @@ private fun Poster(item: PosterView, images: Images) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun Notices(view: AppView?, onDismissNotice: () -> Unit) {
+    val snackbar = remember { SnackbarHostState() }
+    val notice = view?.notice?.let { noticeText(it) }
+    val dismiss = stringResource(R.string.dismiss)
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            val result = snackbar.showSnackbar(notice, dismiss, duration = SnackbarDuration.Long)
+            if (result == SnackbarResult.ActionPerformed || result == SnackbarResult.Dismissed) {
+                onDismissNotice()
+            }
+        }
+    }
+    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 

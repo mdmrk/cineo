@@ -75,6 +75,29 @@ val cargoNdk = tasks.register<CargoNdk>("cargoNdk") {
     outputs.upToDateWhen { false }
 }
 
+abstract class LibmpvLibs : DefaultTask() {
+    @get:Internal abstract val built: DirectoryProperty
+    @get:OutputDirectory abstract val jniLibs: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val abi = jniLibs.get().dir("arm64-v8a").asFile
+        abi.deleteRecursively()
+        abi.mkdirs()
+        val libs = built.get().asFile.listFiles { file -> file.name.endsWith(".so") }.orEmpty()
+        if (libs.isEmpty()) {
+            logger.warn("No libmpv at ${built.get().asFile}: the app will build, but cannot play. Run scripts/build-libmpv-android.sh.")
+        }
+        libs.forEach { it.copyTo(abi.resolve(it.name)) }
+    }
+}
+
+val libmpvLibs = tasks.register<LibmpvLibs>("libmpvLibs") {
+    built.set(cargoWorkspace.dir("target/libmpv-android/out/lib"))
+    jniLibs.set(layout.buildDirectory.dir("generated/libmpv/jniLibs"))
+    outputs.upToDateWhen { false }
+}
+
 val uniffiBindgen = tasks.register<UniffiBindgen>("uniffiBindgen") {
     workspace.set(cargoWorkspace)
     jniLibs.set(cargoNdk.flatMap { it.jniLibs })
@@ -105,6 +128,7 @@ android {
 androidComponents {
     onVariants { variant ->
         variant.sources.jniLibs?.addGeneratedSourceDirectory(cargoNdk, CargoNdk::jniLibs)
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpvLibs, LibmpvLibs::jniLibs)
         variant.sources.kotlin?.addGeneratedSourceDirectory(uniffiBindgen, UniffiBindgen::kotlin)
     }
 }

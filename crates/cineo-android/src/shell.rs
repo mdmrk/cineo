@@ -1,16 +1,23 @@
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use cineo_core::app::{Action, Effect, Notice, State, update};
+use cineo_core::addon::ContentType;
+use cineo_core::app::{Action, Effect, Notice, PlayRequest, State, update};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
+use cineo_player::embedded::PlayerCommand;
+use cineo_player::{EventActions, event_actions};
 use cineo_store::Store;
 use tokio::runtime::{Handle, Runtime};
 use tracing::{error, warn};
 use url::Url;
 
+use crate::player::{Mpv, Playback, Players};
 use crate::view::{AppView, view};
+
+const NO_TORRENTS: &str = "torrents cannot be played on Android yet";
 
 #[uniffi::export(foreign)]
 pub trait StateListener: Send + Sync + std::fmt::Debug {
@@ -37,17 +44,39 @@ pub enum ImageError {
     Fetch { reason: String },
 }
 
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct PlayerStatusView {
+    pub loaded: bool,
+    pub position_s: f64,
+    pub duration_s: f64,
+    pub paused: bool,
+    pub waiting: bool,
+}
+
 #[derive(Debug)]
 enum Msg {
     Action(Action),
+    OpenDetail { content_type: String, id: String },
     Notice(Notice),
     Shutdown,
+}
+
+#[derive(Debug, Default)]
+struct Screen {
+    playback: Option<Box<dyn Playback>>,
+    wid: Option<i64>,
+    title: Option<String>,
+}
+
+fn lock(screen: &Mutex<Screen>) -> MutexGuard<'_, Screen> {
+    screen.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 #[derive(Debug, uniffi::Object)]
 pub struct Cineo {
     tx: Sender<Msg>,
     client: AddonClient,
+    screen: Arc<Mutex<Screen>>,
     shell: Option<JoinHandle<()>>,
     runtime: Option<Runtime>,
 }
@@ -56,6 +85,122 @@ pub struct Cineo {
 impl Cineo {
     #[uniffi::constructor]
     pub fn new(data_dir: &str, listener: Arc<dyn StateListener>) -> Result<Arc<Self>, StartError> {
+        Self::start(data_dir, listener, Arc::new(Mpv))
+    }
+
+    pub fn install_addon(&self, url: String) {
+        self.send(Action::InstallAddon(url));
+    }
+
+    pub fn dismiss_notice(&self) {
+        self.send(Action::DismissNotice);
+    }
+
+    pub fn open_detail(&self, content_type: String, id: String) {
+        if self.tx.send(Msg::OpenDetail { content_type, id }).is_err() {
+            warn!("the shell thread has stopped");
+        }
+    }
+
+    pub fn close_detail(&self) {
+        self.send(Action::CloseDetail);
+    }
+
+    pub fn select_video(&self, id: String) {
+        self.send(Action::SelectVideo(id));
+    }
+
+    pub fn play(&self, group: u32, stream: u32) {
+        self.send(Action::Play {
+            group: group as usize,
+            stream: stream as usize,
+        });
+    }
+
+    pub fn stop_playback(&self) {
+        self.command(PlayerCommand::Stop);
+    }
+
+    pub fn toggle_pause(&self) {
+        self.command(PlayerCommand::TogglePause);
+    }
+
+    pub fn seek_to(&self, seconds: f64) {
+        self.command(PlayerCommand::SeekTo(seconds));
+    }
+
+    pub fn seek_by(&self, seconds: f64) {
+        self.command(PlayerCommand::SeekBy(seconds));
+    }
+
+    pub fn player_status(&self) -> Option<PlayerStatusView> {
+        let screen = lock(&self.screen);
+        let status = screen.playback.as_ref()?.status();
+        Some(PlayerStatusView {
+            loaded: status.loaded,
+            position_s: status.position_s,
+            duration_s: status.duration_s,
+            paused: status.paused,
+            waiting: status.is_waiting(),
+        })
+    }
+
+    pub fn attach_surface(&self, wid: i64) {
+        let mut screen = lock(&self.screen);
+        screen.wid = Some(wid);
+        if let Some(playback) = &screen.playback
+            && let Err(err) = playback.attach_surface(wid)
+        {
+            warn!(%err, "the video surface was not attached");
+        }
+    }
+
+    pub fn resize_surface(&self, width: u32, height: u32) {
+        if let Some(playback) = &lock(&self.screen).playback
+            && let Err(err) = playback.resize_surface(width, height)
+        {
+            warn!(%err, "the video surface size was not set");
+        }
+    }
+
+    pub fn detach_surface(&self) {
+        let mut screen = lock(&self.screen);
+        screen.wid = None;
+        if let Some(playback) = &screen.playback
+            && let Err(err) = playback.detach_surface()
+        {
+            warn!(%err, "the video surface was not detached");
+        }
+    }
+
+    pub async fn fetch_image(&self, url: String) -> Result<Vec<u8>, ImageError> {
+        let url = Url::parse(&url).map_err(|err| ImageError::InvalidUrl {
+            reason: err.to_string(),
+        })?;
+        let runtime = self.runtime.as_ref().ok_or_else(|| ImageError::Fetch {
+            reason: "the runtime has stopped".into(),
+        })?;
+        let client = self.client.clone();
+        let task = runtime
+            .handle()
+            .spawn(async move { client.fetch_image(&url, MAX_IMAGE_BYTES).await });
+        match task.await {
+            Ok(result) => result.map_err(|err| ImageError::Fetch {
+                reason: err.to_string(),
+            }),
+            Err(err) => Err(ImageError::Fetch {
+                reason: err.to_string(),
+            }),
+        }
+    }
+}
+
+impl Cineo {
+    pub fn start(
+        data_dir: &str,
+        listener: Arc<dyn StateListener>,
+        players: Arc<dyn Players>,
+    ) -> Result<Arc<Self>, StartError> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -87,6 +232,7 @@ impl Cineo {
             let _ = notices.send(Msg::Notice(Notice::SaveFailed(err.to_string())));
         })
         .map_err(thread_error)?;
+        let screen = Arc::new(Mutex::new(Screen::default()));
         let shell = Shell {
             state: State::default(),
             client: client.clone(),
@@ -94,6 +240,8 @@ impl Cineo {
             tx: tx.clone(),
             store_tx,
             listener,
+            players,
+            screen: Arc::clone(&screen),
             shown: None,
         };
         let restore = [restore, Action::RestoreSettings(settings)];
@@ -109,45 +257,21 @@ impl Cineo {
         Ok(Arc::new(Self {
             tx,
             client,
+            screen,
             shell: Some(shell),
             runtime: Some(runtime),
         }))
     }
 
-    pub fn install_addon(&self, url: String) {
-        self.send(Action::InstallAddon(url));
-    }
-
-    pub fn dismiss_notice(&self) {
-        self.send(Action::DismissNotice);
-    }
-
-    pub async fn fetch_image(&self, url: String) -> Result<Vec<u8>, ImageError> {
-        let url = Url::parse(&url).map_err(|err| ImageError::InvalidUrl {
-            reason: err.to_string(),
-        })?;
-        let runtime = self.runtime.as_ref().ok_or_else(|| ImageError::Fetch {
-            reason: "the runtime has stopped".into(),
-        })?;
-        let client = self.client.clone();
-        let task = runtime
-            .handle()
-            .spawn(async move { client.fetch_image(&url, MAX_IMAGE_BYTES).await });
-        match task.await {
-            Ok(result) => result.map_err(|err| ImageError::Fetch {
-                reason: err.to_string(),
-            }),
-            Err(err) => Err(ImageError::Fetch {
-                reason: err.to_string(),
-            }),
-        }
-    }
-}
-
-impl Cineo {
     fn send(&self, action: Action) {
         if self.tx.send(Msg::Action(action)).is_err() {
             warn!("the shell thread has stopped");
+        }
+    }
+
+    fn command(&self, command: PlayerCommand) {
+        if let Some(playback) = &lock(&self.screen).playback {
+            playback.send(command);
         }
     }
 }
@@ -160,6 +284,7 @@ impl Drop for Cineo {
         {
             error!("the shell thread panicked");
         }
+        lock(&self.screen).playback = None;
         if let Some(runtime) = self.runtime.take() {
             runtime.shutdown_background();
         }
@@ -174,6 +299,8 @@ struct Shell {
     tx: Sender<Msg>,
     store_tx: Sender<Effect>,
     listener: Arc<dyn StateListener>,
+    players: Arc<dyn Players>,
+    screen: Arc<Mutex<Screen>>,
     shown: Option<AppView>,
 }
 
@@ -198,10 +325,31 @@ impl Shell {
     fn handle(&mut self, msg: Msg) -> bool {
         match msg {
             Msg::Action(action) => self.dispatch(action),
+            Msg::OpenDetail { content_type, id } => self.open_detail(content_type, id),
             Msg::Notice(notice) => self.state.notice = Some(notice),
             Msg::Shutdown => return false,
         }
         true
+    }
+
+    fn open_detail(&mut self, content_type: String, id: String) {
+        let Some(content_type) = ContentType::new(content_type) else {
+            return;
+        };
+        let preview = self
+            .state
+            .board
+            .iter()
+            .filter_map(|row| row.items.ready())
+            .flatten()
+            .find(|item| item.id == id && item.content_type == content_type)
+            .cloned()
+            .map(Box::new);
+        self.dispatch(Action::OpenDetail {
+            content_type,
+            id,
+            preview,
+        });
     }
 
     fn dispatch(&mut self, action: Action) {
@@ -235,17 +383,71 @@ impl Shell {
                     self.state.notice = Some(Notice::StoreClosed);
                 }
             }
-            Effect::Play(_) | Effect::StartTorrent(_) | Effect::StopTorrent => {
-                warn!(?effect, "playback is not available on Android yet");
+            Effect::Play(request) => self.play(&request),
+            Effect::StartTorrent(request) => self.dispatch(Action::TorrentFailed {
+                info_hash: request.info_hash,
+                reason: NO_TORRENTS.into(),
+            }),
+            Effect::StopTorrent => {}
+        }
+    }
+
+    fn play(&mut self, request: &PlayRequest) {
+        let old = lock(&self.screen).playback.take();
+        drop(old);
+        match self.players.start(request) {
+            Ok((playback, events)) => {
+                let mut screen = lock(&self.screen);
+                if let Some(wid) = screen.wid
+                    && let Err(err) = playback.attach_surface(wid)
+                {
+                    warn!(%err, "the video surface was not attached");
+                }
+                screen.playback = Some(playback);
+                screen.title = Some(request.title.clone());
+                drop(screen);
+                let tx = self.tx.clone();
+                let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
+                self.runtime.spawn(async move {
+                    let mut events = events;
+                    while let Some(event) = events.recv().await {
+                        let EventActions { actions, last } =
+                            event_actions(event, &meta_id, &video_id, now_ms());
+                        for action in actions {
+                            let _ = tx.send(Msg::Action(action));
+                        }
+                        if last {
+                            break;
+                        }
+                    }
+                });
+            }
+            Err(err) => {
+                error!(%err, "playback could not start");
+                self.dispatch(Action::PlaybackFailed(err.to_string()));
             }
         }
     }
 
     fn publish(&mut self) {
-        let next = view(&self.state);
+        let playing = {
+            let mut screen = lock(&self.screen);
+            if self.state.playing.is_none() {
+                screen.playback = None;
+                screen.title = None;
+            }
+            screen.title.clone()
+        };
+        let next = view(&self.state, playing.as_deref());
         if self.shown.as_ref() != Some(&next) {
             self.listener.changed(next.clone());
             self.shown = Some(next);
         }
     }
+}
+
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }

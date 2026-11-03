@@ -178,6 +178,24 @@ fn load() -> Result<Lib, String> {
     Err(format!("libmpv was not found ({last})"))
 }
 
+#[cfg(target_os = "android")]
+pub(crate) fn set_java_vm(vm: std::ptr::NonNull<c_void>) -> Result<(), String> {
+    type SetJavaVm = unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int;
+    static AVCODEC: OnceLock<Result<libloading::Library, String>> = OnceLock::new();
+    let library = AVCODEC
+        .get_or_init(|| {
+            unsafe { libloading::Library::new("libavcodec.so") }.map_err(|err| describe(&err))
+        })
+        .as_ref()
+        .map_err(Clone::clone)?;
+    let set: libloading::Symbol<'_, SetJavaVm> =
+        unsafe { library.get(b"av_jni_set_java_vm\0") }.map_err(|err| describe(&err))?;
+    match unsafe { set(vm.as_ptr(), std::ptr::null_mut()) } {
+        0 => Ok(()),
+        code => Err(format!("av_jni_set_java_vm failed ({code})")),
+    }
+}
+
 fn describe(err: &libloading::Error) -> String {
     match std::error::Error::source(err) {
         Some(source) => format!("{err}: {source}"),
@@ -225,7 +243,15 @@ fn resolve(library: libloading::Library) -> Result<Lib, String> {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{0}")]
-pub(crate) struct MpvError(pub(crate) String);
+pub(crate) struct MpvError(pub(crate) String, pub(crate) Option<c_int>);
+
+const ERROR_OPTION_NOT_FOUND: c_int = -5;
+
+impl MpvError {
+    pub(crate) fn is_option_not_found(&self) -> bool {
+        self.1 == Some(ERROR_OPTION_NOT_FOUND)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Value {
@@ -278,7 +304,7 @@ impl Drop for Core {
 }
 
 fn cstring(text: &str) -> Result<CString, MpvError> {
-    CString::new(text).map_err(|_| MpvError("an argument contains a NUL byte".into()))
+    CString::new(text).map_err(|_| MpvError("an argument contains a NUL byte".into(), None))
 }
 
 unsafe fn text(ptr: *const c_char) -> String {
@@ -295,7 +321,7 @@ impl Core {
     pub(crate) fn create(lib: &'static Lib) -> Result<Self, MpvError> {
         let handle = unsafe { (lib.create)() };
         if handle.is_null() {
-            return Err(MpvError("mpv_create failed".into()));
+            return Err(MpvError("mpv_create failed".into(), None));
         }
         Ok(Self {
             lib,
@@ -316,7 +342,10 @@ impl Core {
         if code >= 0 {
             return Ok(());
         }
-        Err(MpvError(unsafe { text((self.lib.error_string)(code)) }))
+        Err(MpvError(
+            unsafe { text((self.lib.error_string)(code)) },
+            Some(code),
+        ))
     }
 
     pub(crate) fn set_option(&self, name: &str, value: &str) -> Result<(), MpvError> {

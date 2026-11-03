@@ -69,7 +69,8 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `rustls-platform-verifier`: its crate `rustls-platform-verifier-android`
   0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
   repository and its POM names no license (INFERRED: same license).
-- No libmpv ships in the Android app yet. `scripts/build-libmpv-android.sh`
+- `android_logger` 0.15.1 and `log` 0.4.34 (MIT or Apache-2.0) send Rust logs to logcat on Android.
+- The Android app packages the libmpv build below when it exists locally; no release ships it yet. `scripts/build-libmpv-android.sh`
   builds the one it will ship (2026-11-03, ADR-0028), from the sources
   pinned in `scripts/libmpv-android.env`: mpv 0.41.0 with `-Dgpl=false`
   and FFmpeg 8.1.3 without `--enable-gpl`, `--enable-version3` or

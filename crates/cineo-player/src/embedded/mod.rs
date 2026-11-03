@@ -132,10 +132,74 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 16] = [
     (CACHE_STATE, "demuxer-cache-state", ffi::FORMAT_STRING),
 ];
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "android")))]
 const HWDEC: &str = "vaapi,auto-safe";
 #[cfg(windows)]
 const HWDEC: &str = "auto-safe";
+#[cfg(target_os = "android")]
+const HWDEC: &str = "mediacodec";
+
+const SCRIPT_OPTIONS: &[&str] = &["load-scripts", "ytdl", "osc"];
+
+const SURFACE_OPTIONS: &[(&str, &str)] = &[
+    ("vo", "null"),
+    ("force-window", "no"),
+    ("gpu-context", "android"),
+    ("opengl-es", "yes"),
+    ("profile", "fast"),
+    ("vd-lavc-o", "ndk_codec=1"),
+];
+
+#[derive(Debug)]
+enum Output {
+    Render(Video),
+    Surface,
+    #[cfg(test)]
+    None,
+}
+
+impl Output {
+    fn options(&self) -> &'static [(&'static str, &'static str)] {
+        match self {
+            Self::Surface => SURFACE_OPTIONS,
+            _ => &[],
+        }
+    }
+
+    fn into_video(self) -> Option<Video> {
+        match self {
+            Self::Render(video) => Some(video),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Set {
+    Option,
+    Property,
+}
+
+fn attach_steps(wid: i64) -> [(Set, &'static str, String); 3] {
+    [
+        (Set::Option, "wid", wid.to_string()),
+        (Set::Option, "force-window", "yes".into()),
+        (Set::Property, "vo", "gpu".into()),
+    ]
+}
+
+fn detach_steps() -> [(Set, &'static str, String); 3] {
+    [
+        (Set::Property, "vo", "null".into()),
+        (Set::Option, "force-window", "no".into()),
+        (Set::Option, "wid", "0".into()),
+    ]
+}
+
+#[cfg(target_os = "android")]
+pub fn set_java_vm(vm: std::ptr::NonNull<std::ffi::c_void>) -> Result<(), PlayerError> {
+    ffi::set_java_vm(vm).map_err(PlayerError::LibmpvUnavailable)
+}
 
 pub fn use_bundled_libmpv(path: PathBuf) {
     ffi::set_bundled(path);
@@ -163,6 +227,7 @@ const OPTIONS: &[(&str, &str)] = &[
 
 pub struct Player {
     core: Arc<Core>,
+    pending: Mutex<Option<String>>,
     status: Arc<Mutex<Status>>,
     finished: Arc<AtomicBool>,
 }
@@ -189,15 +254,62 @@ impl Player {
         notify: Arc<dyn Fn() + Send + Sync>,
         video: Video,
     ) -> Result<(Self, Renderer, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
-        let (player, renderer, events) = Self::start_with(request, notify, Some(video), &[])?;
+        let (player, renderer, events) =
+            Self::start_with(request, notify, Output::Render(video), &[])?;
         let renderer = renderer.ok_or_else(|| PlayerError::Render("no renderer".into()))?;
         Ok((player, renderer, events))
+    }
+
+    pub fn start_on_surface(
+        request: &PlayRequest,
+        notify: Arc<dyn Fn() + Send + Sync>,
+    ) -> Result<(Self, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
+        let (player, _, events) = Self::start_with(request, notify, Output::Surface, &[])?;
+        Ok((player, events))
+    }
+
+    pub fn attach_surface(&self, wid: i64) -> Result<(), PlayerError> {
+        self.apply(&attach_steps(wid))?;
+        let pending = self
+            .pending
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        if let Some(url) = pending {
+            self.core
+                .command(&["loadfile", &url, "replace"])
+                .map_err(|err| PlayerError::Libmpv(err.0))?;
+        }
+        Ok(())
+    }
+
+    pub fn detach_surface(&self) -> Result<(), PlayerError> {
+        self.apply(&detach_steps())
+    }
+
+    pub fn resize_surface(&self, width: u32, height: u32) -> Result<(), PlayerError> {
+        self.apply(&[(
+            Set::Property,
+            "android-surface-size",
+            format!("{width}x{height}"),
+        )])
+    }
+
+    fn apply(&self, steps: &[(Set, &str, String)]) -> Result<(), PlayerError> {
+        for (set, name, value) in steps {
+            let result = match set {
+                Set::Option => self.core.set_option(name, value),
+                Set::Property => self.core.set_property(name, value),
+            };
+            result.map_err(|err| PlayerError::Libmpv(format!("{name}: {err}")))?;
+        }
+        Ok(())
     }
 
     fn start_with(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
-        video: Option<Video>,
+        output: Output,
         extra_options: &[(&str, &str)],
     ) -> Result<(Self, Option<Renderer>, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
         if !matches!(request.url.scheme(), "http" | "https") {
@@ -223,10 +335,17 @@ impl Player {
             .iter()
             .copied()
             .chain(preferences)
+            .chain(output.options().iter().copied())
             .chain(extra_options.iter().copied())
         {
-            core.set_option(name, value)
-                .map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
+            match core.set_option(name, value) {
+                Err(err) if SCRIPT_OPTIONS.contains(&name) && err.is_option_not_found() => {
+                    debug!(option = name, "libmpv was built without scripting");
+                }
+                result => {
+                    result.map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
+                }
+            }
         }
         for (name, value) in style_options(&request.settings) {
             if let Err(err) = core.set_option(name, &value) {
@@ -238,7 +357,9 @@ impl Player {
         for (id, name, format) in OBSERVED {
             core.observe(id, name, format).map_err(fail)?;
         }
-        let renderer = video
+        let waits_for_surface = matches!(output, Output::Surface);
+        let renderer = output
+            .into_video()
             .map(|video| {
                 Renderer::new(
                     Arc::clone(&core),
@@ -261,8 +382,10 @@ impl Player {
         }
         core.set_property("force-media-title", &request.title)
             .map_err(fail)?;
-        core.command(&["loadfile", request.url.as_str(), "replace"])
-            .map_err(fail)?;
+        if !waits_for_surface {
+            core.command(&["loadfile", request.url.as_str(), "replace"])
+                .map_err(fail)?;
+        }
         info!(origin = %request.url.origin().ascii_serialization(), "libmpv playback started");
 
         let status = Arc::new(Mutex::new(Status::default()));
@@ -283,6 +406,7 @@ impl Player {
         Ok((
             Self {
                 core,
+                pending: Mutex::new(waits_for_surface.then(|| request.url.to_string())),
                 status,
                 finished,
             },

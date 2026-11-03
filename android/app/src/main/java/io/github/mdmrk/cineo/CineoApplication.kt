@@ -17,7 +17,7 @@ class CineoApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        Tls.init(this)
+        Native.init(this)
         started = try {
             Started.Running(Cineo(filesDir.resolve("data").path, Views(views)))
         } catch (e: StartException) {

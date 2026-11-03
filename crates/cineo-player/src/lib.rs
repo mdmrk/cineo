@@ -1,5 +1,8 @@
+mod actions;
 pub mod embedded;
 mod tracker;
+
+pub use actions::{EventActions, event_actions};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerEvent {

@@ -33,6 +33,57 @@ fn request(url: &str) -> PlayRequest {
 }
 
 #[test]
+fn a_surface_is_attached_before_video_output_starts_and_detached_after_it_stops() {
+    let names = |steps: &[(Set, &str, String)]| {
+        steps
+            .iter()
+            .map(|(set, name, value)| format!("{set:?} {name}={value}"))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        names(&attach_steps(0x7f00)),
+        [
+            "Option wid=32512",
+            "Option force-window=yes",
+            "Property vo=gpu"
+        ]
+    );
+    assert_eq!(
+        names(&detach_steps()),
+        ["Property vo=null", "Option force-window=no", "Option wid=0"]
+    );
+}
+
+#[test]
+fn only_missing_script_options_are_tolerated() {
+    let missing = ffi::MpvError("option not found".into(), Some(-5));
+    let invalid = ffi::MpvError("option parameter could not be parsed".into(), Some(-7));
+    assert!(missing.is_option_not_found());
+    assert!(!invalid.is_option_not_found());
+    assert!(
+        SCRIPT_OPTIONS
+            .iter()
+            .all(|name| OPTIONS.iter().any(|(option, _)| option == name))
+    );
+    assert!(!SCRIPT_OPTIONS.contains(&"vo"));
+}
+
+#[test]
+fn surface_playback_starts_without_video_output_and_decodes_through_the_ndk() {
+    let option = |name| {
+        SURFACE_OPTIONS
+            .iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, v)| *v)
+    };
+    assert_eq!(option("vo"), Some("null"));
+    assert_eq!(option("gpu-context"), Some("android"));
+    assert_eq!(option("vd-lavc-o"), Some("ndk_codec=1"));
+    assert_eq!(option("profile"), Some("fast"));
+    assert_eq!(option("hwdec"), None);
+}
+
+#[test]
 fn commands_are_built_from_typed_values() {
     let args = |c| command_args(c).map(|v| v.join(" "));
     assert_eq!(
@@ -197,8 +248,13 @@ fn an_unchanged_track_list_keeps_its_snapshot() {
 
 #[test]
 fn non_http_urls_are_refused_before_loading_libmpv() {
-    let err =
-        Player::start_with(&request("file:///etc/passwd"), Arc::new(|| {}), None, &[]).unwrap_err();
+    let err = Player::start_with(
+        &request("file:///etc/passwd"),
+        Arc::new(|| {}),
+        Output::None,
+        &[],
+    )
+    .unwrap_err();
     assert!(err.to_string().contains("only http(s)"), "{err}");
 }
 
@@ -273,7 +329,7 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
 fn real_libmpv_plays_to_the_end_with_headers_and_tracks() {
     let (url, heads) = serve(wav(1));
     let (player, _, mut events) =
-        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+        Player::start_with(&request(&url), Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
 
     let head = heads.recv_timeout(Duration::from_secs(10)).unwrap();
     assert!(
@@ -343,7 +399,7 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
     let mut req = request(&url);
     req.start_ms = 2_000;
     let (player, _, mut events) =
-        Player::start_with(&req, Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+        Player::start_with(&req, Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
     let last = next_end(&mut events, &player);
     let Some(PlayerEvent::Closed {
         time_ms,
@@ -371,7 +427,7 @@ fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
 fn real_libmpv_stop_before_the_file_loads_closes_the_player() {
     let (url, heads) = serve_nothing();
     let (player, _, mut events) =
-        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+        Player::start_with(&request(&url), Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
     heads.recv_timeout(Duration::from_secs(10)).unwrap();
     assert!(!player.status().loaded);
 
@@ -421,7 +477,7 @@ fn real_libmpv_loads_a_subtitle_file_without_an_extension() {
     std::fs::write(&file, "1\n00:00:00,000 --> 00:00:05,000\nHello\n").unwrap();
     let (url, _heads) = serve(wav(3));
     let (player, _, _events) =
-        Player::start_with(&request(&url), Arc::new(|| {}), None, AUDIO_ONLY).unwrap();
+        Player::start_with(&request(&url), Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     while !player.status().loaded && std::time::Instant::now() < deadline {
         std::thread::sleep(Duration::from_millis(5));
@@ -500,7 +556,7 @@ fn real_libmpv_accepts_the_subtitle_language() {
         },
         ..request(&url)
     };
-    let started = Player::start_with(&request, Arc::new(|| {}), None, AUDIO_ONLY);
+    let started = Player::start_with(&request, Arc::new(|| {}), Output::None, AUDIO_ONLY);
     assert!(started.is_ok(), "mpv accepts the options from settings");
 }
 

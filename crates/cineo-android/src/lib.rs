@@ -1,12 +1,15 @@
-mod shell;
 #[cfg(target_os = "android")]
-mod tls;
+mod native;
+mod player;
+mod shell;
 mod view;
 
-pub use shell::{Cineo, ImageError, StartError, StateListener};
+pub use player::{Playback, Players, Started};
+pub use shell::{Cineo, ImageError, PlayerStatusView, StartError, StateListener};
 pub use view::{
-    AddonView, AppView, InstallView, NoticeView, PlaybackFailureView, PosterShapeView, PosterView,
-    ProblemView, RowItems, RowView, SourceKindView,
+    AddonView, AppView, DetailView, InstallView, MetaStatus, NoticeView, PlaybackFailureView,
+    PlaybackView, PosterShapeView, PosterView, ProblemView, RowItems, RowView, SourceKindView,
+    StreamGroupView, StreamItems, StreamView, VideoView,
 };
 
 uniffi::setup_scaffolding!();
