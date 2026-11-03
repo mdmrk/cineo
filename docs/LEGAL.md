@@ -69,7 +69,22 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `rustls-platform-verifier`: its crate `rustls-platform-verifier-android`
   0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
   repository and its POM names no license (INFERRED: same license).
-- No libmpv ships in the Android app yet.
+- No libmpv ships in the Android app yet. `scripts/build-libmpv-android.sh`
+  builds the one it will ship (2026-11-03, ADR-0028), from the sources
+  pinned in `scripts/libmpv-android.env`: mpv 0.41.0 with `-Dgpl=false`
+  and FFmpeg 8.1.3 without `--enable-gpl`, `--enable-version3` or
+  `--enable-nonfree`, so both are LGPL-2.1-or-later (VERIFIED:
+  `libavutil` reports "LGPL version 2.1 or later" and mpv's `HAVE_GPL` is
+  0). FFmpeg uses OpenSSL 3.5.9 (Apache-2.0) for HTTPS: FFmpeg's
+  `configure` puts mbedTLS, not OpenSSL, on its version3 list. It also
+  links dav1d 1.5.4 (BSD-2-Clause); mpv links libass 0.17.5 (ISC),
+  freetype 2.15.0 (FTL), fribidi 1.0.18 (LGPL-2.1-or-later), harfbuzz
+  15.0.0 (MIT), libplacebo 7.387.0 (LGPL-2.1-or-later) and the NDK's
+  static libc++ (Apache-2.0 with LLVM exception). The archive carries
+  each license text and the source list. The OpenSSL, dav1d, libass,
+  fribidi and harfbuzz hashes match the ones those projects publish;
+  FFmpeg, mpv and freetype publish none, so their hashes were taken from
+  the first download.
 - SQLite is compiled into the binary (`rusqlite` with `bundled`). SQLite
   is in the public domain; no notice is required.
 - libmpv (LGPL-2.1+ or GPL-2.0+, depending on the build) is **not linked**.

@@ -48,6 +48,18 @@ holds the details it links to.
    because `uniffi-bindgen` reads its metadata from them; AGP strips the
    copy in the APK. CI runs `cargo ndk … clippy -p cineo-android` and the
    Gradle build (job `check (android)`).
+6. To build the Android libmpv (ADR-0028):
+   `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh`, with the NDK
+   `scripts/libmpv-android.env` names, plus `python3` (with `venv`),
+   `perl`, `make`, `ninja`, `git` and `curl` on the host. It downloads the
+   pinned sources and checks their SHA-256, installs its own meson in a
+   venv, cross-compiles OpenSSL, dav1d, freetype, fribidi, harfbuzz,
+   libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26,
+   and writes `target/libmpv-android/libmpv-android-arm64-v8a.tar.xz`
+   (`lib/`, `licenses/`, `SOURCES`). It stops if FFmpeg was configured
+   with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`, if mpv
+   has GPL code, or if a library needs one that is neither shipped nor
+   part of Android. The build runs locally only; nothing publishes it yet.
 
 If you build with a distro-packaged Rust instead of rustup, make sure it is a
 current stable release. Some distro builds expect a cross linker name; if
