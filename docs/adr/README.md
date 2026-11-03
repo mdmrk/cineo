@@ -37,13 +37,13 @@ old one *Superseded by NNNN*.
 | [0019](0019-torrent-data-in-memory.md) | Torrent data in memory, bounded by a sliding window | Accepted (unbounded disk choice: superseded by 0020; lookahead: 0023) |
 | [0020](0020-torrent-data-on-disk-bounded-by-the-window.md) | Torrent data on disk, bounded by the same window | Accepted |
 | [0021](0021-localization-with-rust-i18n.md) | Localization: rust-i18n catalogs instead of Fluent | Accepted |
-| [0022](0022-linux-only.md) | Linux only | Accepted (Windows: superseded by 0027) |
+| [0022](0022-linux-only.md) | Linux only | Accepted (Windows: superseded by 0027; Android: superseded by 0028) |
 | [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |
 | [0024](0024-a-two-minute-buffer.md) | A two-minute buffer | Accepted |
 | [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Accepted |
 | [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted |
-| [0028](0028-android-port.md) | Android port | Proposed |
+| [0028](0028-android-port.md) | Android port | Accepted |
 
 ## What we took from the reference projects
 

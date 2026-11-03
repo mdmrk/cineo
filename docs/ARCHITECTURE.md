@@ -1,7 +1,8 @@
 # Architecture
 
 Decisions are recorded in [adr/](adr/README.md). Cineo runs on Linux
-x86_64 and Windows x86_64 (ADR-0022, ADR-0027).
+x86_64 and Windows x86_64 (ADR-0022, ADR-0027). An Android port, with a
+Kotlin UI over a Rust shell crate, is in progress (ADR-0028).
 
 ## System overview
 

@@ -1,7 +1,8 @@
 # 0028. Android port
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-03
+- Supersedes: the Android parts of 0022
 
 ## Context
 Cineo supports Linux x86_64 and Windows x86_64 (ADR-0022, ADR-0027).
@@ -138,48 +139,52 @@ matters for torrent downloads; deep links arrive as intents.
    `cineo-desktop`.
 
 ## Decision
-If we port, we take option 3: a native Kotlin/Jetpack Compose UI over the
-Rust crates (chosen by the owner on 2026-11-03). `cineo-desktop` stays the
-desktop shell and is not built for Android.
+We port Cineo to Android (accepted by the owner on 2026-11-03), as
+option 3:
+- The UI is native Kotlin with Jetpack Compose, in an `android/` Gradle
+  project. `cineo-desktop` stays the desktop shell and is not built for
+  Android. The application id is `app.cineo`.
+- A new `cineo-android` crate is the Android shell's Rust half. It holds
+  the core `State`, runs `update`, and executes the `Effect`s through
+  `cineo-net`, `cineo-store` and `cineo-stream`, as `cineo-desktop` does.
+  Kotlin sends `Action`s and renders the state snapshots it is given; it
+  holds no business logic (ADR-0011).
+- `cineo-android` talks to Kotlin through UniFFI. Its only hand-written
+  JNI is the TLS verifier's initialisation, in one module where
+  `unsafe_code` is allowed.
+- The minimum is API level 26 (Android 8.0): above the 24 that
+  `cineo-stream` needs, and the level the spike's libmpv AAR declares.
+- We build libmpv and FFmpeg for Android ourselves, as LGPL builds
+  (mpv `-Dgpl=false`, FFmpeg without `--enable-gpl`), from pinned
+  sources, rather than depend on a third-party build (chosen by the owner
+  on 2026-11-03).
 
-Whether we port at all (option 3 against option 1) is not decided yet. A
-spike first answers the UNKNOWNs above:
-1. Cross-compile `cineo-core`, `cineo-net`, `cineo-store` and
-   `cineo-stream` for `aarch64-linux-android` with `cargo-ndk`. Done: they
-   build at API level 24 (Context).
-2. In a throwaway Kotlin app, load an arm64 `libmpv.so`, render a URL
-   with `hwdec=mediacodec`, and survive a background/foreground cycle.
-   Done on one phone, into a `SurfaceView` rather than through the render
-   API (Context).
-3. Fetch an addon manifest over HTTPS through `cineo-net` with the
-   platform verifier initialised. Done (Context).
-4. Choose the Kotlin binding generator (UniFFI or another) after checking
-   its current version and docs, and call one `cineo-core` function from
-   Kotlin through it. Done: UniFFI (Context).
-
-The spike's results update this ADR, and it is accepted or rejected,
-before any Android code is merged.
+The spike that supports this (all on 2026-11-03):
+1. `cineo-core`, `cineo-net`, `cineo-store` and `cineo-stream` build for
+   `aarch64-linux-android` at API level 24 (Context).
+2. libmpv plays into a `SurfaceView` with `hwdec=mediacodec` and survives
+   a background/foreground cycle, on one phone (Context).
+3. `cineo-net` fetches manifests over HTTPS with the platform verifier
+   (Context).
+4. UniFFI calls `cineo-core` and `cineo-net` from Kotlin, sync and async
+   (Context).
 
 ## Consequences
-If accepted:
 - Cineo has two UIs, `cineo-desktop` in Rust and the Android app in
   Kotlin. A user-visible feature is not done on Android until the Kotlin
   UI has it, and `docs/COMPATIBILITY.md` tracks each platform separately.
-- The app's minimum is Android 7.0 (API level 24) or higher, because
-  `cineo-stream` needs symbols Bionic only has from API 24.
 - Kotlin and Gradle join the toolchain. The Android app's dependencies
   need their own license and version review (`docs/DEVELOPMENT.md`,
   `docs/LEGAL.md`).
 - Typed messages from `cineo-core` (ADR-0017) are worded in Kotlin on
   Android, so the wording exists twice.
-- ADR-0022/0027's platform scope changes, and `AGENTS.md`,
+- ADR-0022's platform scope changes, and `AGENTS.md`,
   `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md` and `docs/DEVELOPMENT.md`
-  follow.
-- A new `cineo-android` crate (a new platform IO boundary, ADR-0002)
-  exposes the Rust crates to Kotlin through UniFFI. Its only hand-written
-  JNI is the TLS verifier's initialisation, in one module where
-  `unsafe_code` is allowed, as the libmpv FFI is in `cineo-player`
-  (ADR-0014).
+  follow. Android stays unsupported in `docs/COMPATIBILITY.md` until a
+  feature works there with a named test.
+- The effect-running logic of `cineo-desktop` gets a second implementation
+  in `cineo-android`. Where the two would copy each other, the shared part
+  moves to the IO crate or to `cineo-core` instead.
 - `.config/deny.toml` gains an MPL-2.0 exception for the UniFFI crates,
   and `docs/LEGAL.md` covers UniFFI, JNA and kotlinx-coroutines.
 - The Android app initialises `rustls-platform-verifier` once, at
@@ -191,13 +196,11 @@ If accepted:
   instead of using the render API, sets `hwdec=mediacodec` with
   `ndk_codec=1`, and detaches and reattaches the surface as Android
   destroys and recreates it.
-- We ship an LGPL arm64 `libmpv.so` (and its FFmpeg), pinned by hash as
-  on Windows (ADR-0027), which `docs/LEGAL.md` must cover. It is either a
-  third-party build or our own, from mpv-android's buildscripts with mpv's
-  `-Dgpl=false` and FFmpeg without `--enable-gpl`; that choice needs its
-  own decision. The spike's AAR cannot ship: it is GPL. How the LGPL's
-  requirement that users can replace the library applies inside a signed
-  APK is UNKNOWN and must be settled before a release.
+- We maintain a build of LGPL arm64 `libmpv.so` and FFmpeg from pinned
+  sources, which `docs/LEGAL.md` must cover. The spike's AAR cannot ship:
+  it is GPL. How the LGPL's requirement that users can replace the library
+  applies inside a signed APK is UNKNOWN and must be settled before a
+  release.
 - CI gains an Android build; `cargo deny` gains the Android graph.
 
 ## Rejected alternatives

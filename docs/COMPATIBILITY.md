@@ -18,7 +18,7 @@ Out of scope:
 - The legacy (`/stremio/v1`) and IPFS addon transports (ADR-0007).
 - Cloud or account sync, analytics and telemetry.
 - Hosting, indexing or recommending content sources. Cineo is a client.
-- Platforms other than Linux x86_64.
+- Platforms other than Linux x86_64, Windows x86_64 and Android (ADR-0028).
 
 | Status | Meaning |
 |--------|---------|
@@ -98,7 +98,8 @@ _Last reviewed: 2026-10-13._
 | Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh` |
 | Windows x86_64 | Untested | Restored 2026-11-03 (ADR-0027); released as a single `cineo-x86_64-windows.exe` with libmpv embedded, and `install.ps1`. CI runs clippy and the tests on `windows-latest`. Under wine 2026-11-03 (`x86_64-pc-windows-gnu`): clippy clean; every test passes (the engine tests with a Windows temp path in place of the cross-compiled `CARGO_TARGET_TMPDIR`); the app starts, writes the bundled libmpv to the cache, opens the database and loads addons, catalogs and images; the named-pipe handover works (`a_link_reaches_the_running_instance_through_a_private_socket`, and by hand: a second launch with `stremio:///search?search=matrix` exits and the running window searches); scheme registration writes the `HKCU` keys for both schemes (checked by hand with `reg query`); data and cache go to `%APPDATA%\Cineo\data` and `%LOCALAPPDATA%\Cineo\cache`; the bundled libmpv plays over HTTP with headers, tracks, cache ranges and resume (`real_libmpv_plays_to_the_end_with_headers_and_tracks`, `real_libmpv_stop_reports_the_position_and_shuts_down`), the same as libmpv 0.41 on Linux; SMTC is not available in wine (`0x80040154`, logged). Not seen under wine: the window's contents and video in it. Nobody has run the app on real Windows yet, so playback, the named-pipe handover, scheme registration, SMTC media keys and keep-awake are UNKNOWN there (`system_buttons_map_to_the_same_remotes_as_mpris` covers only the button mapping) |
 | macOS | Unsupported | Removed 2026-10-13 (ADR-0022) |
-| Android / iOS / Web | Unsupported | |
+| Android | Unsupported | Port accepted 2026-11-03 (ADR-0028), in progress; nothing ships yet |
+| iOS / Web | Unsupported | |
 
 ## Verified addons
 
