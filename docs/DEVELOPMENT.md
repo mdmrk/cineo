@@ -550,20 +550,21 @@ it:
 
 | Trigger                  | Jobs                                 |
 | ------------------------ | ------------------------------------ |
-| pull request, manual run | linux, windows                                |
-| push to `main`           | linux, windows → build → publish `prerelease` |
-| tag `vX.Y.Z`             | linux, windows → build → publish `vX.Y.Z`     |
+| pull request, manual run | check (linux), check (windows)                |
+| push to `main`           | check (linux), check (windows) → build → publish `prerelease` |
+| tag `vX.Y.Z`             | check (linux), check (windows) → build → publish `vX.Y.Z`     |
 
-The checks show on GitHub as `ci / linux` and `ci / windows`. `linux` runs
-`scripts/check.sh` (fmt, clippy, nextest with the `ci` profile, docs,
-cargo-deny); `windows` runs clippy and nextest on
+The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
+`ci / build (linux)`, `ci / build (windows)` and `ci / publish`.
+`check (linux)` runs `scripts/check.sh` (fmt, clippy, nextest with the `ci`
+profile, docs, cargo-deny); `check (windows)` runs clippy and nextest on
 `windows-latest`. `build` builds `cineo-desktop` for Linux x86_64 and
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
 provenance; `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
-write to the repository. `linux`, `windows` and prerelease builds restore the compiled
+write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
 start without a cache. The `cineo` CLI is not shipped.
 
@@ -592,7 +593,7 @@ the libmpv archive) so that
 
 ### Prerelease builds
 
-Every push to `main` builds a prerelease once `linux` and `windows` pass, except a push
+Every push to `main` builds a prerelease once both checks pass, except a push
 whose head commit starts with `chore(release):`; that commit gets the real
 release from its tag instead. It deletes the previous `prerelease` GitHub
 release and its tag and recreates both at the pushed commit.

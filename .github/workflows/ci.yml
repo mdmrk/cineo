@@ -20,7 +20,7 @@ env:
 
 jobs:
   linux:
-    name: linux
+    name: check (linux)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -39,7 +39,7 @@ jobs:
           NEXTEST_PROFILE: ci
 
   windows:
-    name: windows
+    name: check (windows)
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
