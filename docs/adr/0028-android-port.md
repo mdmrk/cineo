@@ -33,6 +33,28 @@ What the workspace looks like today (VERIFIED: source, 2026-11-03):
   (`crates/cineo-player/src/embedded/mod.rs`). mpv's `opengl` render backend
   also accepts GLES contexts and mpv has a `mediacodec` hwdec (INFERRED, not
   tried here). No arm64 Android `libmpv.so` is built or pinned.
+- libmpv plays video on an Android phone with hardware decoding (VERIFIED:
+  spike step 2, 2026-11-03, a Redmi 9 on LineageOS, Android 13, MediaTek
+  MT6768, Mali GPU). The throwaway Kotlin app used the
+  `jarnedemeulemeester/libmpv-android` v1.0.0 AAR (mpv 0.41.0 and its JNI
+  wrapper) and gave mpv the `Surface` of a `SurfaceView` with `vo=gpu`,
+  `gpu-context=android`, `opengl-es=yes`, `hwdec=mediacodec`. It did not
+  use the render API: that API is for drawing into a toolkit's GL context,
+  and a Kotlin UI has none. A 1080p30 H.264 stream played in real time
+  through `OMX.MTK.VIDEO.DECODER.AVC` at about 50–60 % of one core, against
+  about 210–250 % with software decoding.
+- On that phone, hardware decoding only starts with FFmpeg's NDK MediaCodec
+  (`vd-lavc-o=ndk_codec=1`). Through FFmpeg's default JNI path the codec
+  never starts (`MediaCodec 0x0 failed to start`), with `mediacodec` and
+  `mediacodec-copy` alike, and mpv falls back to software. Why is UNKNOWN.
+- Going to the background and back, and rotating, worked with no crash
+  (VERIFIED: same spike). On `surfaceDestroyed` the app sets `vo=null` and
+  detaches the surface, and playback continues with software decoding; on
+  `surfaceCreated` it reattaches, sets `vo=gpu`, and mpv goes back to
+  `mediacodec`.
+- The AAR's FFmpeg is built with `--enable-gpl --enable-version3`, so it is
+  GPLv3, and the AAR needs API level 26 (VERIFIED: its `libavcodec.so` and
+  manifest).
 - `cineo-desktop` (about 9.6k lines) is an eframe/egui shell built for a
   mouse and a keyboard: hover menus (the subtitle style panel opens on
   hover, `docs/COMPATIBILITY.md`), keyboard shortcuts, a single-instance
@@ -77,8 +99,9 @@ spike first answers the UNKNOWNs above:
    `cineo-stream` for `aarch64-linux-android` with `cargo-ndk`. Done: they
    build at API level 24 (Context).
 2. In a throwaway Kotlin app, load an arm64 `libmpv.so`, render a URL
-   through the render API on a GLES context with `hwdec=mediacodec`, and
-   survive a background/foreground cycle.
+   with `hwdec=mediacodec`, and survive a background/foreground cycle.
+   Done on one phone, into a `SurfaceView` rather than through the render
+   API (Context).
 3. Fetch an addon manifest over HTTPS through `cineo-net` with the
    platform verifier initialised.
 4. Choose the Kotlin binding generator (UniFFI or another) after checking
@@ -108,10 +131,13 @@ If accepted:
   libmpv FFI is in `cineo-player` (ADR-0014).
 - `cineo-store` and `cineo-stream` take their directories from the shell
   instead of finding them themselves on Android.
-- `cineo-player` gets an Android `HWDEC` value and a way to recreate its
-  render context.
-- We build, pin and ship an LGPL arm64 `libmpv.so` (and its FFmpeg),
-  which `docs/LEGAL.md` must cover.
+- On Android, `cineo-player` hands mpv a `Surface` (`wid`, `vo=gpu`)
+  instead of using the render API, sets `hwdec=mediacodec` with
+  `ndk_codec=1`, and detaches and reattaches the surface as Android
+  destroys and recreates it.
+- We build, pin and ship our own LGPL arm64 `libmpv.so` (and its FFmpeg),
+  which `docs/LEGAL.md` must cover. The spike's AAR cannot ship: its FFmpeg
+  is GPLv3.
 - CI gains an Android build; `cargo deny` gains the Android graph.
 
 ## Rejected alternatives
