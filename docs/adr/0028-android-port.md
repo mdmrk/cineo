@@ -143,7 +143,7 @@ We port Cineo to Android (accepted by the owner on 2026-11-03), as
 option 3:
 - The UI is native Kotlin with Jetpack Compose, in an `android/` Gradle
   project. `cineo-desktop` stays the desktop shell and is not built for
-  Android. The application id is `app.cineo`.
+  Android. The application id is `io.github.mdmrk.cineo`.
 - A new `cineo-android` crate is the Android shell's Rust half. It holds
   the core `State`, runs `update`, and executes the `Effect`s through
   `cineo-net`, `cineo-store` and `cineo-stream`, as `cineo-desktop` does.
