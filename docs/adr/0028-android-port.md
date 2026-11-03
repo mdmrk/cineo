@@ -60,21 +60,36 @@ matters for torrent downloads; deep links arrive as intents.
    `cineo-desktop`.
 
 ## Decision
-Not decided. Before choosing between 2 and 3, a spike answers the
-UNKNOWNs above:
+If we port, we take option 3: a native Kotlin/Jetpack Compose UI over the
+Rust crates (chosen by the owner on 2026-11-03). `cineo-desktop` stays the
+desktop shell and is not built for Android.
+
+Whether we port at all (option 3 against option 1) is not decided yet. A
+spike first answers the UNKNOWNs above:
 1. Cross-compile `cineo-core`, `cineo-net`, `cineo-store` and
    `cineo-stream` for `aarch64-linux-android` with `cargo-ndk`.
-2. In a throwaway app, load an arm64 `libmpv.so`, render a URL through the
-   render API on a GLES context with `hwdec=mediacodec`, and survive a
-   background/foreground cycle.
+2. In a throwaway Kotlin app, load an arm64 `libmpv.so`, render a URL
+   through the render API on a GLES context with `hwdec=mediacodec`, and
+   survive a background/foreground cycle.
 3. Fetch an addon manifest over HTTPS through `cineo-net` with the
    platform verifier initialised.
+4. Choose the Kotlin binding generator (UniFFI or another) after checking
+   its current version and docs, and call one `cineo-core` function from
+   Kotlin through it.
 
-The spike's results, and the choice of UI, update this ADR before any
-Android code is merged.
+The spike's results update this ADR, and it is accepted or rejected,
+before any Android code is merged.
 
 ## Consequences
-If accepted, in either form:
+If accepted:
+- Cineo has two UIs, `cineo-desktop` in Rust and the Android app in
+  Kotlin. A user-visible feature is not done on Android until the Kotlin
+  UI has it, and `docs/COMPATIBILITY.md` tracks each platform separately.
+- Kotlin and Gradle join the toolchain. The Android app's dependencies
+  need their own license and version review (`docs/DEVELOPMENT.md`,
+  `docs/LEGAL.md`).
+- Typed messages from `cineo-core` (ADR-0017) are worded in Kotlin on
+  Android, so the wording exists twice.
 - ADR-0022/0027's platform scope changes, and `AGENTS.md`,
   `docs/ARCHITECTURE.md`, `docs/COMPATIBILITY.md` and `docs/DEVELOPMENT.md`
   follow.
@@ -90,6 +105,11 @@ If accepted, in either form:
 - CI gains an Android build; `cargo deny` gains the Android graph.
 
 ## Rejected alternatives
+- Option 2, an eframe shell for Android: rejected by the owner on
+  2026-11-03. A touch and D-pad UI needs a redesign anyway, so sharing
+  `cineo-desktop` code saves less than it seems, and eframe's Android
+  support is experimental while Compose is Android's own toolkit and
+  covers Android TV.
 - Using Stremio's streaming server or a Stremio Android client as the
   backend: ruled out by ADR-0010.
 - Replacing mpv with ExoPlayer/Media3 on Android: not rejected yet, but it
