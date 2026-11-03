@@ -705,6 +705,9 @@ fn ui_language_name(language: UiLanguage, system: Locale) -> Text {
         UiLanguage::LatinAmericanSpanish => Locale::LatinAmericanSpanish.endonym().into(),
         UiLanguage::Russian => Locale::Russian.endonym().into(),
         UiLanguage::Italian => Locale::Italian.endonym().into(),
+        UiLanguage::German => Locale::German.endonym().into(),
+        UiLanguage::French => Locale::French.endonym().into(),
+        UiLanguage::BrazilianPortuguese => Locale::BrazilianPortuguese.endonym().into(),
     }
 }
 

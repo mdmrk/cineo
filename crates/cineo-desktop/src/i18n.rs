@@ -10,15 +10,21 @@ pub enum Locale {
     LatinAmericanSpanish,
     Russian,
     Italian,
+    German,
+    French,
+    BrazilianPortuguese,
 }
 
 impl Locale {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 8] = [
         Self::English,
         Self::Spanish,
         Self::LatinAmericanSpanish,
         Self::Russian,
         Self::Italian,
+        Self::German,
+        Self::French,
+        Self::BrazilianPortuguese,
     ];
 
     pub fn from_tag(tag: &str) -> Self {
@@ -35,6 +41,12 @@ impl Locale {
             Self::Russian
         } else if language.eq_ignore_ascii_case("it") {
             Self::Italian
+        } else if language.eq_ignore_ascii_case("de") {
+            Self::German
+        } else if language.eq_ignore_ascii_case("fr") {
+            Self::French
+        } else if language.eq_ignore_ascii_case("pt") {
+            Self::BrazilianPortuguese
         } else {
             Self::English
         }
@@ -52,6 +64,9 @@ impl Locale {
             UiLanguage::LatinAmericanSpanish => Self::LatinAmericanSpanish,
             UiLanguage::Russian => Self::Russian,
             UiLanguage::Italian => Self::Italian,
+            UiLanguage::German => Self::German,
+            UiLanguage::French => Self::French,
+            UiLanguage::BrazilianPortuguese => Self::BrazilianPortuguese,
         }
     }
 
@@ -62,6 +77,9 @@ impl Locale {
             Self::LatinAmericanSpanish => "Español de Latinoamérica",
             Self::Russian => "Русский",
             Self::Italian => "Italiano",
+            Self::German => "Deutsch",
+            Self::French => "Français",
+            Self::BrazilianPortuguese => "Português do Brasil",
         }
     }
 
@@ -73,6 +91,9 @@ impl Locale {
             Self::LatinAmericanSpanish => include_str!("../assets/locales/es-419.toml"),
             Self::Russian => include_str!("../assets/locales/ru.toml"),
             Self::Italian => include_str!("../assets/locales/it.toml"),
+            Self::German => include_str!("../assets/locales/de.toml"),
+            Self::French => include_str!("../assets/locales/fr.toml"),
+            Self::BrazilianPortuguese => include_str!("../assets/locales/pt-BR.toml"),
         }
     }
 
@@ -83,6 +104,9 @@ impl Locale {
             Self::LatinAmericanSpanish => "es-419",
             Self::Russian => "ru",
             Self::Italian => "it",
+            Self::German => "de",
+            Self::French => "fr",
+            Self::BrazilianPortuguese => "pt-BR",
         }
     }
 }
@@ -206,6 +230,12 @@ mod tests {
         assert_eq!(t!(&format!("language-{}", "ara")), "Арабский");
         set(Locale::Italian);
         assert_eq!(t!("watched-percent", percent = 40), "40 % riprodotto");
+        set(Locale::German);
+        assert_eq!(t!("season", number = 2), "Staffel 2");
+        set(Locale::French);
+        assert_eq!(t!("count-streams", count = 4), "Flux : 4");
+        set(Locale::BrazilianPortuguese);
+        assert_eq!(t!("page-settings"), "Configurações");
         set(Locale::English);
         assert_eq!(
             t!("installed-addon", name = "Torrentio"),
@@ -229,8 +259,12 @@ mod tests {
         assert_eq!(Locale::from_tag("es.UTF-8"), Locale::Spanish);
         assert_eq!(Locale::from_tag("ru_RU.UTF-8"), Locale::Russian);
         assert_eq!(Locale::from_tag("it-IT"), Locale::Italian);
+        assert_eq!(Locale::from_tag("de_AT.UTF-8"), Locale::German);
+        assert_eq!(Locale::from_tag("fr-CA"), Locale::French);
+        assert_eq!(Locale::from_tag("pt-BR"), Locale::BrazilianPortuguese);
+        assert_eq!(Locale::from_tag("pt_PT.UTF-8"), Locale::BrazilianPortuguese);
         assert_eq!(Locale::from_tag("en-US"), Locale::English);
-        assert_eq!(Locale::from_tag("fr-FR"), Locale::English);
+        assert_eq!(Locale::from_tag("nl-NL"), Locale::English);
         assert_eq!(Locale::from_tag("C"), Locale::English);
         assert_eq!(
             Locale::resolve(UiLanguage::System, Locale::Spanish),
