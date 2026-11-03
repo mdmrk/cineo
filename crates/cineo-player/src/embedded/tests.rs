@@ -222,7 +222,7 @@ fn wav(seconds: u32) -> Vec<u8> {
 }
 
 fn listen(
-    mut respond: impl FnMut(std::net::TcpStream) + Send + 'static,
+    mut respond: impl FnMut(std::net::TcpStream, &str) + Send + 'static,
 ) -> (String, std_mpsc::Receiver<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}/film.wav", listener.local_addr().unwrap());
@@ -235,21 +235,36 @@ fn listen(
             while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
                 head.push(byte[0]);
             }
-            let _ = tx.send(String::from_utf8_lossy(&head).into_owned());
-            respond(stream);
+            let head = String::from_utf8_lossy(&head).into_owned();
+            let _ = tx.send(head.clone());
+            respond(stream, &head);
         }
     });
     (url, rx)
 }
 
 fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
-    listen(move |mut stream| {
+    listen(move |mut stream, head| {
+        let len = body.len();
+        let start = head
+            .lines()
+            .find_map(|line| line.strip_prefix("Range: bytes="))
+            .and_then(|range| range.split('-').next()?.parse::<usize>().ok())
+            .filter(|&start| start < len);
+        let status = match start {
+            Some(start) => format!(
+                "206 Partial Content\r\nContent-Range: bytes {start}-{}/{len}",
+                len - 1
+            ),
+            None => "200 OK".to_owned(),
+        };
+        let part = &body[start.unwrap_or(0)..];
         let _ = write!(
             stream,
-            "HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-            body.len()
+            "HTTP/1.1 {status}\r\nAccept-Ranges: bytes\r\nContent-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            part.len()
         );
-        let _ = stream.write_all(&body);
+        let _ = stream.write_all(part);
     })
 }
 
@@ -348,7 +363,7 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
 
 fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
     let mut open = Vec::new();
-    listen(move |stream| open.push(stream))
+    listen(move |stream, _| open.push(stream))
 }
 
 #[test]
@@ -366,8 +381,10 @@ fn real_libmpv_stop_before_the_file_loads_closes_the_player() {
         std::thread::sleep(Duration::from_millis(5));
     }
     assert!(player.is_finished(), "Back while loading closes the player");
+    let last = std::iter::from_fn(|| events.try_recv().ok())
+        .find(|event| !matches!(event, PlayerEvent::Buffered { .. }));
     assert_eq!(
-        events.try_recv().ok(),
+        last,
         Some(PlayerEvent::Closed {
             time_ms: 0,
             duration_ms: 0,
