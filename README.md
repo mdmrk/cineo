@@ -56,13 +56,9 @@ libmpv is built in.
 
 ### Android (arm64 phones)
 
-Download `cineo-arm64-android.apk` from the
-[latest release](https://github.com/mdmrk/cineo/releases/latest) on the
-phone and open it. Android asks once to allow installs from the browser or
-file manager you used (Settings → Apps → Special app access → Install
-unknown apps). To update, install the newer APK over the old one; your
-library and addons stay. The Android app is newer than the desktop one
-and does less; see [Compatibility](docs/COMPATIBILITY.md#platforms).
+Install `cineo-arm64-android.apk` from the
+[latest release](https://github.com/mdmrk/cineo/releases/latest). It does
+less than the desktop app (see [Compatibility](docs/COMPATIBILITY.md#platforms)).
 
 ## Uninstall
 
