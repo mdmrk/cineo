@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Notice, PlayRequest, Resolution, SeekStep, Setting,
-    State, StreamSort, SubtitleGroup, WatchedAt, update,
+    State, StreamSort, SubtitleGroup, WatchedAt, find_subtitle, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
@@ -895,20 +895,6 @@ impl Shell {
             self.shown = Some(next);
         }
     }
-}
-
-fn find_subtitle(groups: &[SubtitleGroup], url: &Url) -> Option<(String, String)> {
-    groups.iter().find_map(|group| {
-        group
-            .subtitles
-            .ready()?
-            .iter()
-            .find(|s| s.url == *url)
-            .map(|s| {
-                let source = s.label.as_deref().unwrap_or(&group.addon_name);
-                (source.to_owned(), s.lang.clone())
-            })
-    })
 }
 
 fn now_ms() -> u64 {

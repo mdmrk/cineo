@@ -113,6 +113,14 @@ pub struct SubtitleGroup {
     pub subtitles: Loadable<Vec<Subtitle>>,
 }
 
+pub fn find_subtitle(groups: &[SubtitleGroup], url: &Url) -> Option<(String, String)> {
+    groups.iter().find_map(|group| {
+        let subtitle = group.subtitles.ready()?.iter().find(|s| s.url == *url)?;
+        let source = subtitle.label.as_deref().unwrap_or(&group.addon_name);
+        Some((source.to_owned(), subtitle.lang.clone()))
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct State {
     pub installed: Vec<TransportUrl>,

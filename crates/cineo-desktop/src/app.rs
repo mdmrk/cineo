@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::Context as _;
 use cineo_core::app::{
     Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
-    TorrentRequest, parse_link, update,
+    TorrentRequest, find_subtitle, parse_link, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
@@ -359,7 +359,7 @@ impl CineoApp {
         let Some(embedded) = &self.playback else {
             return;
         };
-        let Some(subtitle) = self.find_subtitle(&url) else {
+        let Some(subtitle) = find_subtitle(&self.state.subtitles, &url) else {
             return;
         };
         if let Some(path) = embedded.subtitle_files.get(&url) {
@@ -377,7 +377,7 @@ impl CineoApp {
     }
 
     fn subtitle_fetched(&mut self, url: &url::Url, result: Result<Vec<u8>, String>) {
-        let Some((title, lang)) = self.find_subtitle(url) else {
+        let Some((title, lang)) = find_subtitle(&self.state.subtitles, url) else {
             return;
         };
         let Some(embedded) = &mut self.playback else {
@@ -397,19 +397,6 @@ impl CineoApp {
             warn!(%err, "addon subtitle failed");
             self.state.notice = Some(Notice::SubtitleFailed(err));
         }
-    }
-
-    fn find_subtitle(&self, url: &url::Url) -> Option<(String, String)> {
-        self.state.subtitles.iter().find_map(|g| {
-            g.subtitles
-                .ready()?
-                .iter()
-                .find(|s| s.url == *url)
-                .map(|s| {
-                    let source = s.label.as_deref().unwrap_or(&g.addon_name);
-                    (source.to_owned(), s.lang.clone())
-                })
-        })
     }
 
     fn post(&self) -> impl Fn(Msg) + Send + Sync + 'static {

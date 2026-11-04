@@ -11,8 +11,8 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Loadable, Lookahead, Notice, PlaybackFailure, Problem,
-    SavedStream, Setting, Settings, State, TorrentRequest, TorrentStatus, WatchedAt,
-    continue_watching, update,
+    SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest, TorrentStatus, WatchedAt,
+    continue_watching, find_subtitle, update,
 };
 
 fn player_failed(reason: &str, pick_another: bool) -> Notice {
@@ -1762,4 +1762,32 @@ fn with_update_checks_off_nothing_is_fetched_or_shown() {
 
 fn update_url() -> url::Url {
     url::Url::parse(cineo_core::app::LATEST_RELEASE_URL).unwrap()
+}
+
+#[test]
+fn an_addon_subtitle_is_named_by_its_label_or_else_its_addon() {
+    let subtitles = parse_subtitles_response(
+        br#"{"subtitles":[
+            {"id":"1","url":"https://subs.example/a.srt","lang":"eng","label":"Forced"},
+            {"id":"2","url":"https://subs.example/b.srt","lang":"spa"}
+        ]}"#,
+    )
+    .unwrap()
+    .value;
+    let groups = [SubtitleGroup {
+        addon: url("https://subs.example/manifest.json"),
+        addon_name: "Subs".into(),
+        path: None,
+        subtitles: Loadable::Ready(subtitles),
+    }];
+    let find = |u: &str| find_subtitle(&groups, &u.parse().unwrap());
+    assert_eq!(
+        find("https://subs.example/a.srt"),
+        Some(("Forced".into(), "eng".into()))
+    );
+    assert_eq!(
+        find("https://subs.example/b.srt"),
+        Some(("Subs".into(), "spa".into()))
+    );
+    assert_eq!(find("https://subs.example/c.srt"), None);
 }
