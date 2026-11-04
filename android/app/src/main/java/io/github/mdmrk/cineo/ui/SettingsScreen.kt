@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mdmrk.cineo.R
@@ -34,6 +35,7 @@ import io.github.mdmrk.cineo.rust.AddonView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
+import java.text.Collator
 
 @Composable
 fun SettingsScreen(settings: SettingsView, addons: List<AddonView>, cineo: Cineo, padding: PaddingValues) {
@@ -184,8 +186,10 @@ private fun LanguagePicker(
 ) {
     var open by remember { mutableStateOf(false) }
     val none = stringResource(R.string.language_none)
+    val locale = LocalConfiguration.current.locales[0]
+    val collator = remember(locale) { Collator.getInstance(locale) }
     val names = languages.map { it to (languageName(it)?.let { id -> stringResource(id) } ?: it) }
-        .sortedBy { it.second }
+        .sortedWith(compareBy(collator) { it.second })
     val currentName = names.firstOrNull { it.first == current }?.second ?: none
     Box {
         ListItem(
