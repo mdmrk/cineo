@@ -448,3 +448,17 @@ Format:
 - Instead: those settings keep their saved values, and reset still
   resets them.
 - Exit: add each one with its feature.
+
+### Android: an addon subtitle is saved while the player lock is held
+- Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`subtitle_fetched`)
+- Gap: the downloaded subtitle file is written to disk and handed to mpv
+  while the shell holds the lock that `player_status` also takes, and the
+  player screen calls `player_status` on the UI thread every 250 ms.
+- Why: subtitle files are a few kilobytes, so the write is short
+  (INFERRED); moving it out needs `SubtitleFiles` (shared with the
+  desktop) to reserve a path, write unlocked and record it afterwards,
+  and to cope with playback changing in between.
+- Instead: the UI thread can wait for that write once per picked addon
+  subtitle.
+- Exit: write the file outside the lock, or poll `player_status` off the
+  UI thread.
