@@ -325,9 +325,22 @@ fn video(video: &Video) -> VideoView {
         title: video.title.clone(),
         season: video.season,
         episode: video.episode,
-        released: video.released.clone(),
+        released: video.released.as_deref().map(day),
         thumbnail: video.thumbnail.as_ref().map(ToString::to_string),
     }
+}
+
+fn day(released: &str) -> String {
+    let date = released.split('T').next().unwrap_or(released);
+    let is_day = date.len() == 10
+        && date.bytes().enumerate().all(|(i, b)| {
+            if i == 4 || i == 7 {
+                b == b'-'
+            } else {
+                b.is_ascii_digit()
+            }
+        });
+    if is_day { date } else { released }.to_owned()
 }
 
 fn stream_group(group: &StreamGroup) -> StreamGroupView {
@@ -459,5 +472,18 @@ fn source_kind(kind: SourceKind) -> SourceKindView {
         SourceKind::External => SourceKindView::External,
         SourceKind::Archive => SourceKindView::Archive,
         SourceKind::Usenet => SourceKindView::Usenet,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::day;
+
+    #[test]
+    fn release_times_show_only_their_day() {
+        assert_eq!(day("2025-07-14T04:00:00.000Z"), "2025-07-14");
+        assert_eq!(day("2025-07-14"), "2025-07-14");
+        assert_eq!(day("July 2025"), "July 2025");
+        assert_eq!(day("2025T"), "2025T");
     }
 }
