@@ -1116,7 +1116,7 @@ async fn a_torrent_stream_asks_once_then_plays_through_the_engine() {
         assert_eq!(first_bytes(&request.url, 4096), seeder.film[..4096]);
         let streaming = wait_for(
             &views,
-            |v| matches!(v.torrent, Some(TorrentView::Streaming { peers, .. }) if peers > 0),
+            |v| matches!(v.torrent, Some(TorrentView::Streaming { downloaded, .. }) if downloaded > 0),
         );
         assert!(streaming.playback.is_some());
         players
