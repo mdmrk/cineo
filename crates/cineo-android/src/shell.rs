@@ -17,7 +17,7 @@ use tracing::{error, warn};
 use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
-use crate::view::{AppView, StreamFilterView, StreamSortView, view};
+use crate::view::{AppView, ArtView, StreamFilterView, StreamSortView, view};
 
 const ENGINE_SHUTDOWN: Duration = Duration::from_secs(2);
 
@@ -102,7 +102,7 @@ enum Msg {
 struct Screen {
     playback: Option<Box<dyn Playback>>,
     wid: Option<i64>,
-    title: Option<String>,
+    art: Option<ArtView>,
 }
 
 fn lock(screen: &Mutex<Screen>) -> MutexGuard<'_, Screen> {
@@ -561,7 +561,7 @@ impl Shell {
                     warn!(%err, "the video surface was not attached");
                 }
                 screen.playback = Some(playback);
-                screen.title = Some(request.title.clone());
+                screen.art = Some(ArtView::of(request));
                 drop(screen);
                 let tx = self.tx.clone();
                 let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
@@ -602,9 +602,9 @@ impl Shell {
             let mut screen = lock(&self.screen);
             if self.state.playing.is_none() {
                 screen.playback = None;
-                screen.title = None;
+                screen.art = None;
             }
-            screen.title.clone()
+            screen.art.clone()
         };
         let detail = self.state.detail.as_ref().map(|d| d.id.clone());
         if detail != self.filtered {
@@ -614,7 +614,7 @@ impl Shell {
             };
             self.filtered = detail;
         }
-        let next = view(&self.state, playing.as_deref(), &self.filter);
+        let next = view(&self.state, playing.as_ref(), &self.filter);
         if self.shown.as_ref() != Some(&next) {
             self.listener.changed(next.clone());
             self.shown = Some(next);

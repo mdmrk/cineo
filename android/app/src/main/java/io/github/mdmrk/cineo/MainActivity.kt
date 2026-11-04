@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
                         val connecting = current?.connecting
                         TorrentForeground(current?.torrent != null)
                         when {
-                            playback != null -> PlayerScreen(playback, current.torrent, cineo)
-                            connecting != null -> ConnectingScreen(connecting, current.torrent, cineo::stopPlayback)
+                            playback != null -> PlayerScreen(playback, current.torrent, images, cineo)
+                            connecting != null -> ConnectingScreen(connecting, current.torrent, images, cineo::stopPlayback)
                             detail != null -> {
                                 BackHandler { cineo.closeDetail() }
                                 DetailScreen(

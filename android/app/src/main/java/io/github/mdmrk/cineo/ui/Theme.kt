@@ -40,8 +40,6 @@ val Inter = FontFamily(
     Font(R.font.inter_semibold, FontWeight.SemiBold),
 )
 
-val Serif = FontFamily(Font(R.font.dm_serif_display))
-
 private val TablerRegular = FontFamily(Font(R.font.tabler_regular))
 private val TablerFilled = FontFamily(Font(R.font.tabler_filled))
 
@@ -80,10 +78,10 @@ private fun TextStyle.inter(weight: FontWeight = FontWeight.Normal) =
 private val base = Typography()
 
 private val typography = Typography(
-    displaySmall = base.displaySmall.copy(fontFamily = Serif),
-    headlineLarge = base.headlineLarge.copy(fontFamily = Serif),
-    headlineMedium = base.headlineMedium.copy(fontFamily = Serif),
-    headlineSmall = base.headlineSmall.copy(fontFamily = Serif),
+    displaySmall = base.displaySmall.inter(FontWeight.SemiBold),
+    headlineLarge = base.headlineLarge.inter(FontWeight.SemiBold),
+    headlineMedium = base.headlineMedium.inter(FontWeight.SemiBold),
+    headlineSmall = base.headlineSmall.inter(FontWeight.SemiBold),
     titleLarge = base.titleLarge.inter(FontWeight.SemiBold),
     titleMedium = base.titleMedium.inter(FontWeight.SemiBold),
     titleSmall = base.titleSmall.inter(FontWeight.SemiBold),

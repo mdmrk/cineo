@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -58,7 +57,7 @@ import io.github.mdmrk.cineo.rust.TorrentView
 import kotlinx.coroutines.delay
 
 @Composable
-fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, cineo: Cineo) {
+fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, cineo: Cineo) {
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
     var controls by remember { mutableStateOf(true) }
     var dragging by remember { mutableStateOf<Float?>(null) }
@@ -94,11 +93,11 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, cineo: Cineo) {
         )
         val current = status
         if (current == null || !current.loaded || current.waiting) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center).size(64.dp), color = Brand.Accent)
+            LoadingBackdrop(playback.art, images, firstLoad = current == null || !current.loaded)
         }
         if (controls && current != null) {
             Controls(
-                title = playback.title,
+                title = playback.art.title,
                 torrent = torrent,
                 status = current,
                 position = dragging ?: current.positionS.toFloat(),
@@ -147,8 +146,9 @@ private fun Controls(
             ),
         )
         Row(
-            Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(8.dp),
+            Modifier.align(Alignment.TopStart).fillMaxWidth().safeDrawingPadding().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Color.White) }
             Text(
@@ -157,7 +157,9 @@ private fun Controls(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            TorrentStats(torrent)
         }
         Row(
             Modifier.align(Alignment.Center),
@@ -185,7 +187,6 @@ private fun Controls(
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            TorrentStats(torrent)
             val duration = status.durationS.toFloat().coerceAtLeast(0f)
             SeekBar(
                 position = position,

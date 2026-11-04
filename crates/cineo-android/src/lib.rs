@@ -7,11 +7,11 @@ mod view;
 pub use player::{Playback, Players, Started};
 pub use shell::{Cineo, ImageError, PlayerStatusView, SettingChange, StartError, StateListener};
 pub use view::{
-    AddonListItems, AddonListView, AddonView, AppView, DetailView, InstallView, LibraryItemView,
-    ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView, PlaybackView, PosterShapeView,
-    PosterView, ProblemView, QualityTier, QualityView, RowItems, RowView, SettingsView,
-    SourceKindView, StreamFilterView, StreamGroupView, StreamItems, StreamSortView, StreamView,
-    TorrentView, VideoView,
+    AddonListItems, AddonListView, AddonView, AppView, ArtView, DetailView, InstallView,
+    LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView, PlaybackView,
+    PosterShapeView, PosterView, ProblemView, QualityTier, QualityView, RowItems, RowView,
+    SettingsView, SourceKindView, StreamFilterView, StreamGroupView, StreamItems, StreamSortView,
+    StreamView, TorrentView, VideoView,
 };
 
 uniffi::setup_scaffolding!();

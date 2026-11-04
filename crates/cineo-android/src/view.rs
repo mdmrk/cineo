@@ -2,9 +2,9 @@ use cineo_core::addon::{
     AddonDescriptor, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl, Video,
 };
 use cineo_core::app::{
-    AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure,
-    Problem, QUALITIES, Row, SeekStep, Setting, Settings, State, StreamFacts, StreamGroup,
-    StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
+    AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlayRequest,
+    PlaybackFailure, Problem, QUALITIES, Row, SeekStep, Setting, Settings, State, StreamFacts,
+    StreamGroup, StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -22,7 +22,7 @@ pub struct AppView {
     pub recent: Vec<LibraryItemView>,
     pub detail: Option<DetailView>,
     pub playback: Option<PlaybackView>,
-    pub connecting: Option<String>,
+    pub connecting: Option<ArtView>,
     pub torrent: Option<TorrentView>,
     pub p2p_prompt: bool,
     pub settings: SettingsView,
@@ -180,8 +180,25 @@ pub struct StreamView {
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct PlaybackView {
-    pub title: String,
+    pub art: ArtView,
     pub seek_step_s: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ArtView {
+    pub title: String,
+    pub logo: Option<String>,
+    pub background: Option<String>,
+}
+
+impl ArtView {
+    pub(crate) fn of(request: &PlayRequest) -> Self {
+        Self {
+            title: request.title.clone(),
+            logo: request.logo.as_ref().map(ToString::to_string),
+            background: request.background.as_ref().map(ToString::to_string),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -326,7 +343,7 @@ pub enum PlaybackFailureView {
     Torrent { reason: String },
 }
 
-pub(crate) fn view(state: &State, playing: Option<&str>, filter: &StreamFilterView) -> AppView {
+pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilterView) -> AppView {
     AppView {
         addons: state.addons.iter().map(addon).collect(),
         addons_loading: u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX),
@@ -367,15 +384,15 @@ pub(crate) fn view(state: &State, playing: Option<&str>, filter: &StreamFilterVi
             .detail
             .as_ref()
             .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled)),
-        playback: playing.map(|title| PlaybackView {
-            title: title.to_owned(),
+        playback: playing.map(|art| PlaybackView {
+            art: art.clone(),
             seek_step_s: number(Setting::SeekStep(state.settings.seek_step)),
         }),
         connecting: state
             .torrent
             .as_ref()
             .and_then(|t| t.connecting())
-            .map(|request| request.title.clone()),
+            .map(ArtView::of),
         torrent: state.torrent.as_ref().map(|t| match t.status {
             TorrentStatus::Starting => TorrentView::Starting,
             TorrentStatus::Streaming {

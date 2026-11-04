@@ -116,7 +116,9 @@ Cineo's logo, app icon and loading animation
 supplied by the owner on 2026-10-07 (logo updated and animation added
 2026-10-08) and covered by the repository license.
 The Android launcher icon (`android/app/src/main/res/mipmap-*/`) is the
-same logo, resized onto the icon's background color (2026-11-04).
+same logo, resized onto the icon's background color (2026-11-04). The
+Android app also carries the logo and the loading animation layers,
+unmodified, in `android/app/src/main/res/drawable-nodpi/` (2026-11-04).
 
 | Font | Files | Source | License |
 |------|-------|--------|---------|
@@ -125,11 +127,11 @@ same logo, resized onto the icon's background color (2026-11-04).
 | DM Serif Display (Colophon Foundry; Adobe Source heritage) | `DMSerifDisplay-Regular.ttf` | <https://github.com/google/fonts/tree/main/ofl/dmserifdisplay> | SIL OFL 1.1 (`DMSerifDisplay-OFL.txt`) |
 | egui's default fonts, via the `epaint_default_fonts` crate (fallbacks behind ours) | Ubuntu-Light, Hack, Noto Emoji, emoji-icon-font (inside the crate) | <https://github.com/emilk/egui/tree/master/crates/epaint_default_fonts> | Ubuntu Font Licence 1.0, SIL OFL 1.1, MIT (texts inside the crate); crate-scoped exception in `.config/deny.toml` (2026-10-07) |
 
-The Android app embeds the same Inter, DM Serif Display and Tabler font
-files, unmodified, in `android/app/src/main/res/font/`, and carries their
-license texts in `android/app/src/main/assets/licenses/` (`Inter-OFL.txt`,
-`DMSerifDisplay-OFL.txt`, and `Tabler-MIT.txt` copied from iconflow's
-`THIRD_PARTY_LICENSES_FONTS.md`). Added 2026-11-04.
+The Android app embeds the same Inter and Tabler font files, unmodified,
+in `android/app/src/main/res/font/`, and carries their license texts in
+`android/app/src/main/assets/licenses/` (`Inter-OFL.txt`, and
+`Tabler-MIT.txt` copied from iconflow's `THIRD_PARTY_LICENSES_FONTS.md`).
+Added 2026-11-04.
 
 ## Trademarks and branding
 - "Stremio" is a name of its respective owner. Cineo is **not affiliated

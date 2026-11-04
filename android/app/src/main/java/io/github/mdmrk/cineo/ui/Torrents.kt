@@ -6,6 +6,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -24,41 +30,54 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mdmrk.cineo.R
+import io.github.mdmrk.cineo.rust.ArtView
 import io.github.mdmrk.cineo.rust.TorrentView
 
 @Composable
-fun TorrentStats(torrent: TorrentView?) {
+fun TorrentStats(torrent: TorrentView?, modifier: Modifier = Modifier) {
     val streaming = torrent as? TorrentView.Streaming ?: return
     val context = LocalContext.current
     val size = { bytes: ULong -> Formatter.formatShortFileSize(context, bytes.toLong()) }
-    val rows = listOf(
-        stringResource(R.string.stats_download) to "${size(streaming.downloadBytesPerSec)}/s",
-        stringResource(R.string.stats_peers) to streaming.peers.toString(),
-        stringResource(R.string.stats_downloaded) to
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.55f))
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Stat(Icon.ARROW_DOWN, "${size(streaming.downloadBytesPerSec)}/s", stringResource(R.string.stats_download))
+        Stat(Icon.USERS, streaming.peers.toString(), stringResource(R.string.stats_peers))
+        Stat(
+            Icon.DOWNLOAD,
             stringResource(R.string.stats_of, size(streaming.downloaded), size(streaming.size)),
-    )
-    Text(
-        rows.joinToString("  ·  ") { (name, value) -> "$name $value" },
-        color = Color.White,
-        style = MaterialTheme.typography.bodySmall,
-    )
+            stringResource(R.string.stats_downloaded),
+        )
+    }
 }
 
 @Composable
-fun ConnectingScreen(title: String, torrent: TorrentView?, onBack: () -> Unit) {
+private fun Stat(icon: Icon, value: String, label: String) {
+    Row(
+        Modifier.semantics(mergeDescendants = true) { contentDescription = "$label $value" },
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CineoIcon(icon, tint = Color.White.copy(alpha = 0.7f), size = 13.sp)
+        Text(value, color = Color.White, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}
+
+@Composable
+fun ConnectingScreen(art: ArtView, torrent: TorrentView?, images: Images, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().padding(16.dp)) {
-        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
-            CineoIcon(Icon.ARROW_LEFT, tint = Color.White)
-        }
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator(Modifier.size(64.dp), color = Brand.Accent)
-            Text(title, color = Color.White, style = MaterialTheme.typography.headlineSmall)
-            TorrentStats(torrent)
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        LoadingBackdrop(art, images, firstLoad = true)
+        Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
+                CineoIcon(Icon.ARROW_LEFT, tint = Color.White)
+            }
+            TorrentStats(torrent, Modifier.align(Alignment.TopEnd).padding(top = 10.dp))
         }
     }
 }

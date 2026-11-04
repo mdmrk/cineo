@@ -370,7 +370,12 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
 
         cineo.play(0, 0);
         let playing = wait_for(&views, |v| v.playback.is_some());
-        assert_eq!(playing.playback.unwrap().title, "First Example Film");
+        let art = playing.playback.unwrap().art;
+        assert_eq!(art.title, "First Example Film");
+        assert_eq!(
+            art.background.as_deref(),
+            Some("https://img.example/background/tt0000001.jpg")
+        );
         let request = players.requests.lock().unwrap()[0].clone();
         assert_eq!(request.url.as_str(), "https://media.example/v/1.mp4");
         assert!(
@@ -465,7 +470,7 @@ async fn a_played_stream_resumes_where_it_stopped_after_a_restart() {
         wait_for(&views, |v| v.continue_watching.len() == 1);
         cineo.resume("tt0000001".into());
         let playing = wait_for(&views, |v| v.playback.is_some());
-        assert_eq!(playing.playback.unwrap().title, "First Example Film");
+        assert_eq!(playing.playback.unwrap().art.title, "First Example Film");
         let request = players.requests.lock().unwrap()[0].clone();
         assert_eq!(request.url.as_str(), "https://media.example/v/1.mp4");
         assert_eq!(request.start_ms, 61_000);
@@ -1109,7 +1114,16 @@ async fn going_back_while_a_torrent_connects_stops_it() {
         wait_for(&views, streams_ready);
         cineo.play(0, 0);
         let connecting = wait_for(&views, |v| v.connecting.is_some());
-        assert_eq!(connecting.connecting.as_deref(), Some("First Example Film"));
+        let art = connecting.connecting.clone().unwrap();
+        assert_eq!(art.title, "First Example Film");
+        assert_eq!(
+            art.logo.as_deref(),
+            Some("https://img.example/logo/tt0000001.png")
+        );
+        assert_eq!(
+            art.background.as_deref(),
+            Some("https://img.example/background/tt0000001.jpg")
+        );
         assert_eq!(connecting.torrent, Some(TorrentView::Starting));
         cineo.stop_playback();
         let stopped = wait_for(&views, |v| v.connecting.is_none());

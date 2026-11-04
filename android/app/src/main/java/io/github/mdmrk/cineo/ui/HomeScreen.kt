@@ -261,7 +261,7 @@ fun Artwork(name: String, url: String?, images: Images, width: Dp, modifier: Mod
             CineoIcon(Icon.MOVIE, tint = Brand.TextFaint, size = MaterialTheme.typography.headlineSmall.fontSize)
             Text(
                 name,
-                style = MaterialTheme.typography.titleSmall.copy(fontFamily = Serif),
+                style = MaterialTheme.typography.titleSmall,
                 color = Brand.Text,
                 textAlign = TextAlign.Center,
                 maxLines = 3,

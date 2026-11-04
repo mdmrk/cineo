@@ -49,6 +49,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.DetailView
 import io.github.mdmrk.cineo.rust.LibraryItemView
@@ -192,77 +200,95 @@ private fun RoundButton(icon: Icon, filled: Boolean, tint: Color, onClick: () ->
     }
 }
 
+private val BackdropHeight = 300.dp
+private val BackdropDim = Color.Black.copy(alpha = 1f - 150f / 255f)
+private val PosterWidth = 120.dp
+
 @Composable
 private fun Header(detail: DetailView, images: Images) {
     val width = LocalConfiguration.current.screenWidthDp.dp
     var expanded by rememberSaveable(detail.id) { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        val art = detail.background ?: detail.poster
-        Box(Modifier.fillMaxWidth().aspectRatio(if (art == null && detail.meta !is MetaStatus.Loading) 1.6f else 0.95f)) {
-            if (art == null) {
-                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Brand.SurfaceHover, Brand.Background))))
-            } else {
-                Placeholder(Modifier.fillMaxSize())
-            }
-            NetImage(
-                images,
-                art,
-                width * 2,
-                Modifier.fillMaxSize(),
-                alignment = Alignment.TopCenter,
-            )
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        0f to Brand.Background.copy(alpha = 0.5f),
-                        0.2f to Color.Transparent,
-                        0.5f to Color.Transparent,
-                        1f to Brand.Background,
+    val background = detail.background
+    Box(Modifier.fillMaxWidth()) {
+        if (background != null) {
+            Box(Modifier.fillMaxWidth().height(BackdropHeight)) {
+                NetImage(images, background, width * 2, Modifier.fillMaxSize(), alignment = BiasAlignment(0f, -0.5f))
+                Box(Modifier.fillMaxSize().background(BackdropDim))
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(0f to Color.Transparent, 0.25f to Color.Transparent, 1f to Brand.Background),
                     ),
-                ),
-            )
-            Column(
-                Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (detail.logo != null) {
-                    NetImage(
-                        images,
-                        detail.logo,
-                        width,
-                        Modifier.heightIn(max = 96.dp).widthIn(max = 280.dp),
-                        contentDescription = detail.name,
-                        contentScale = ContentScale.Fit,
-                        alignment = Alignment.BottomStart,
-                    )
-                } else {
-                    Text(
-                        detail.name ?: detail.id,
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = Brand.TextBright,
-                    )
-                }
-                val facts = listOfNotNull(
-                    detail.releaseInfo,
-                    detail.runtime,
-                    detail.imdbRating?.let { "★ $it" },
-                ) + detail.genres.take(3)
-                if (facts.isNotEmpty()) {
-                    Text(facts.joinToString("  ·  "), style = MaterialTheme.typography.bodySmall, color = Brand.Text)
-                }
+                )
+                Box(
+                    Modifier.fillMaxHeight().fillMaxWidth(0.6f).background(
+                        Brush.horizontalGradient(listOf(Brand.Background.copy(alpha = 0.85f), Color.Transparent)),
+                    ),
+                )
             }
         }
-        detail.description?.let {
+        Column(
+            Modifier
+                .statusBarsPadding()
+                .padding(top = if (background != null) BackdropHeight * 0.4f else 56.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            if (detail.name == null && detail.meta is MetaStatus.Loading) {
+                Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { CineoLoading() }
+                return@Column
+            }
+            val name = detail.name ?: detail.id
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Artwork(name, detail.poster, images, PosterWidth * 2, Modifier.width(PosterWidth).aspectRatio(2f / 3f))
+                Column(
+                    Modifier.weight(1f).padding(top = if (background != null) 16.dp else 0.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        buildAnnotatedString {
+                            append(name)
+                            detail.releaseInfo?.let {
+                                withStyle(SpanStyle(color = Brand.TextDim, fontWeight = FontWeight.Normal, fontSize = 18.sp)) {
+                                    append("  $it")
+                                }
+                            }
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Brand.TextBright,
+                    )
+                    val facts = listOfNotNull(detail.runtime, detail.imdbRating?.let { "★ $it" })
+                    if (facts.isNotEmpty()) {
+                        Text(facts.joinToString("  ·  "), style = MaterialTheme.typography.bodyMedium, color = Brand.TextDim)
+                    }
+                    if (detail.genres.isNotEmpty()) Tags(detail.genres)
+                }
+            }
+            detail.description?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
+                    color = Brand.Text,
+                    maxLines = if (expanded) Int.MAX_VALUE else 4,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .animateContentSize()
+                        .clickable { expanded = !expanded },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Tags(items: List<String>) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        items.forEach {
             Text(
                 it,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = Brand.Text,
-                maxLines = if (expanded) Int.MAX_VALUE else 3,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .animateContentSize()
-                    .clickable { expanded = !expanded },
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Brand.Surface).padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
     }
