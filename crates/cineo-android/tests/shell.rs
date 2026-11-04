@@ -955,6 +955,8 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
         wait_for(&views, |v| order(v).0.is_empty());
         cineo.set_stream_addon(None);
         cineo.set_stream_query(String::new());
+        cineo.set_stream_quality(Some("8K".into()));
+        wait_for(&views, |v| order(v).0.is_empty());
         cineo.set_stream_quality(None);
         cineo.change_setting(SettingChange::P2pEnabled { on: false });
         let off = wait_for(&views, |v| order(v) == (vec![2, 0, 1], 1));

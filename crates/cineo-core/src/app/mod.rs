@@ -30,7 +30,7 @@ pub use state::{
     Playing, Row, State, StreamGroup, SubtitleGroup, update,
 };
 pub use streams::{
-    Facts as StreamFacts, QUALITIES, Quality, StreamSort, Tier, matcher as stream_matcher,
+    Facts as StreamFacts, Quality, Resolution, StreamSort, Tier, matcher as stream_matcher,
 };
 pub use torrent::{
     Lookahead, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file,

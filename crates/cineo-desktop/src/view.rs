@@ -6,7 +6,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, CatalogTarget, Detail, InterfaceScale, LibraryItem, Loadable, Notice, PlaybackFailure,
-    Problem, QUALITIES, Quality, Route, Row, StartPage, State, StreamFacts as Facts, StreamGroup,
+    Problem, Quality, Resolution, Route, Row, StartPage, State, StreamFacts as Facts, StreamGroup,
     StreamSort, Tier, board_targets, continue_watching, stream_matcher,
 };
 use eframe::egui::{
@@ -108,7 +108,7 @@ impl ViewState {
 #[derive(Debug, Clone, Default)]
 pub struct StreamFilter {
     pub query: String,
-    pub quality: Option<&'static str>,
+    pub quality: Option<Resolution>,
     pub addon: Option<usize>,
     pub sort: StreamSort,
 }
@@ -1550,7 +1550,7 @@ fn stream_filters(
         theme::TEXT_DIM,
     );
     ui.add_space(theme::GAP);
-    let mut found = [false; QUALITIES.len()];
+    let mut found = [false; Resolution::ALL.len()];
     for (index, group) in groups.iter().enumerate() {
         let Some(streams) = group.streams.ready() else {
             continue;
@@ -1560,18 +1560,15 @@ fn stream_filters(
             if !p2p_enabled && stream.source.is_p2p() {
                 continue;
             }
-            if let Some(rank) = stream_facts
-                .quality
-                .and_then(|q| QUALITIES.iter().position(|l| *l == q.label))
-            {
-                found[rank] = true;
+            if let Some(quality) = stream_facts.quality {
+                found[quality.resolution as usize] = true;
             }
         }
     }
-    let present = QUALITIES
+    let present = Resolution::ALL
         .into_iter()
         .zip(found)
-        .filter_map(|(label, found)| found.then_some(label));
+        .filter_map(|(resolution, found)| found.then_some(resolution));
     let addons: Vec<usize> = (0..groups.len())
         .filter(|&i| shown(&groups[i]).next().is_some())
         .collect();
@@ -1587,10 +1584,10 @@ fn stream_filters(
             filter.quality = None;
             filter.addon = None;
         }
-        for label in present {
-            let selected = filter.quality == Some(label);
-            if chip(ui, label, selected).clicked() {
-                filter.quality = (!selected).then_some(label);
+        for resolution in present {
+            let selected = filter.quality == Some(resolution);
+            if chip(ui, resolution.label(), selected).clicked() {
+                filter.quality = (!selected).then_some(resolution);
             }
         }
         if addons.len() > 1 {
@@ -1847,7 +1844,7 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
 }
 
 fn quality_tags(ui: &mut Ui, quality: &Quality) {
-    let (fill, ink, stroke) = match quality.tier {
+    let (fill, ink, stroke) = match quality.tier() {
         Tier::Ultra => (theme::ACCENT, theme::ON_ACCENT, Stroke::NONE),
         Tier::High => (
             Color32::TRANSPARENT,
@@ -1862,7 +1859,7 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
             Stroke::new(1.0, theme::WARNING),
         ),
     };
-    tag(ui, quality.label, fill, ink, stroke);
+    tag(ui, quality.label(), fill, ink, stroke);
     for flag in quality.flags {
         badge(ui, flag, theme::TEXT_DIM);
     }
@@ -3052,7 +3049,7 @@ mod tests {
             [0, 1]
         );
         let group = facts.group(1, &first);
-        assert_eq!(group.streams[0].quality.map(|q| q.label), Some("720p"));
+        assert_eq!(group.streams[0].quality.map(|q| q.label()), Some("720p"));
         group.streams[0].seeders = Some(100);
         assert_eq!(
             facts.group(1, &first).sorted(StreamSort::Seeders).0,
@@ -3062,6 +3059,6 @@ mod tests {
         let second = [stream(Some("4k"), None)];
         let (order, fresh) = facts.group(1, &second).sorted(StreamSort::Seeders);
         assert_eq!(order, [0]);
-        assert_eq!(fresh[0].quality.map(|q| q.label), Some("4K"));
+        assert_eq!(fresh[0].quality.map(|q| q.label()), Some("4K"));
     }
 }

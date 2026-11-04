@@ -1,6 +1,61 @@
 use crate::addon::Stream;
 
-pub const QUALITIES: [&str; 6] = ["4K", "1440p", "1080p", "720p", "SD", "CAM"];
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Resolution {
+    Uhd,
+    Qhd,
+    FullHd,
+    Hd,
+    Sd,
+    Cam,
+}
+
+impl Resolution {
+    pub const ALL: [Self; 6] = [
+        Self::Uhd,
+        Self::Qhd,
+        Self::FullHd,
+        Self::Hd,
+        Self::Sd,
+        Self::Cam,
+    ];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Uhd => "4K",
+            Self::Qhd => "1440p",
+            Self::FullHd => "1080p",
+            Self::Hd => "720p",
+            Self::Sd => "SD",
+            Self::Cam => "CAM",
+        }
+    }
+
+    pub fn from_label(label: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|r| r.label() == label)
+    }
+
+    pub const fn tier(self) -> Tier {
+        match self {
+            Self::Uhd => Tier::Ultra,
+            Self::Qhd | Self::FullHd => Tier::High,
+            Self::Hd => Tier::Standard,
+            Self::Sd => Tier::Low,
+            Self::Cam => Tier::Cam,
+        }
+    }
+
+    const fn names(self) -> &'static [&'static str] {
+        match self {
+            Self::Uhd => &["2160p", "4k", "uhd"],
+            Self::Qhd => &["1440p", "2k"],
+            Self::FullHd => &["1080p", "fhd"],
+            Self::Hd => &["720p"],
+            Self::Sd => &["576p", "480p", "360p", "sd"],
+            Self::Cam => &["cam", "hdcam", "camrip", "telesync", "hdts"],
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum StreamSort {
@@ -49,9 +104,8 @@ impl Facts {
     }
 
     pub fn quality_rank(&self) -> Option<u64> {
-        let label = self.quality?.label;
-        let rank = QUALITIES.iter().position(|l| *l == label)?;
-        u64::try_from(QUALITIES.len() - rank).ok()
+        let worse = Resolution::ALL.len() - self.quality?.resolution as usize;
+        u64::try_from(worse).ok()
     }
 }
 
@@ -102,16 +156,11 @@ fn size_in_text(text: &str) -> Option<u64> {
         })
 }
 
-pub fn matcher(query: &str, quality: Option<&str>) -> impl Fn(&Facts) -> bool {
+pub fn matcher(query: &str, quality: Option<Resolution>) -> impl Fn(&Facts) -> bool {
     let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-    let quality = quality.map(str::to_owned);
     move |facts| {
-        if let Some(quality) = &quality
-            && facts.quality.map(|q| q.label) != Some(quality.as_str())
-        {
-            return false;
-        }
-        words.iter().all(|word| facts.text.contains(word.as_str()))
+        quality.is_none_or(|quality| facts.quality.map(|q| q.resolution) == Some(quality))
+            && words.iter().all(|word| facts.text.contains(word.as_str()))
     }
 }
 
@@ -126,8 +175,7 @@ pub enum Tier {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Quality {
-    pub label: &'static str,
-    pub tier: Tier,
+    pub resolution: Resolution,
     pub flags: &'static [&'static str],
 }
 
@@ -135,7 +183,7 @@ impl Quality {
     pub fn of(stream: &Stream) -> Option<Self> {
         let name = stream.name.as_deref().unwrap_or_default();
         let description = stream.description.as_deref().unwrap_or_default();
-        let (label, tier) = resolution(name).or_else(|| resolution(description))?;
+        let resolution = resolution(name).or_else(|| resolution(description))?;
         let (mut hdr, mut dv) = (false, false);
         for word in words(name).chain(words(description)) {
             hdr |= word.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("hdr"));
@@ -147,7 +195,15 @@ impl Quality {
             (false, true) => &["DV"],
             (false, false) => &[],
         };
-        Some(Self { label, tier, flags })
+        Some(Self { resolution, flags })
+    }
+
+    pub const fn label(self) -> &'static str {
+        self.resolution.label()
+    }
+
+    pub const fn tier(self) -> Tier {
+        self.resolution.tier()
     }
 }
 
@@ -156,25 +212,11 @@ fn words(text: &str) -> impl Iterator<Item = &str> + Clone {
         .filter(|w| !w.is_empty())
 }
 
-const RESOLUTIONS: &[(&[&str], &str, Tier)] = &[
-    (&["2160p", "4k", "uhd"], "4K", Tier::Ultra),
-    (&["1440p", "2k"], "1440p", Tier::High),
-    (&["1080p", "fhd"], "1080p", Tier::High),
-    (&["720p"], "720p", Tier::Standard),
-    (&["576p", "480p", "360p", "sd"], "SD", Tier::Low),
-    (
-        &["cam", "hdcam", "camrip", "telesync", "hdts"],
-        "CAM",
-        Tier::Cam,
-    ),
-];
-
-fn resolution(text: &str) -> Option<(&'static str, Tier)> {
+fn resolution(text: &str) -> Option<Resolution> {
     words(text).find_map(|word| {
-        RESOLUTIONS
-            .iter()
-            .find(|(names, ..)| names.iter().any(|n| word.eq_ignore_ascii_case(n)))
-            .map(|&(_, label, tier)| (label, tier))
+        Resolution::ALL
+            .into_iter()
+            .find(|r| r.names().iter().any(|n| word.eq_ignore_ascii_case(n)))
     })
 }
 
@@ -205,8 +247,7 @@ mod tests {
         assert_eq!(
             q,
             Quality {
-                label: "4K",
-                tier: Tier::Ultra,
+                resolution: Resolution::Uhd,
                 flags: &["HDR", "DV"]
             }
         );
@@ -215,10 +256,10 @@ mod tests {
             Some("Film.2023.1080p.WEB-DL.x264\n👤 12 💾 1.2 GB"),
         ))
         .unwrap();
-        assert_eq!((q.label, q.tier), ("1080p", Tier::High));
+        assert_eq!((q.label(), q.tier()), ("1080p", Tier::High));
         assert!(q.flags.is_empty());
         let q = Quality::of(&stream(Some("HDCAM"), None)).unwrap();
-        assert_eq!(q.tier, Tier::Cam);
+        assert_eq!(q.tier(), Tier::Cam);
     }
 
     #[test]
@@ -264,8 +305,16 @@ mod tests {
         assert!(matches("", None));
         assert!(matches("web-dl  TORRENTIO", None));
         assert!(!matches("web-dl hevc", None));
-        assert!(matches("film", Some("1080p")));
-        assert!(!matches("", Some("4K")));
+        assert!(matches("film", Some(Resolution::FullHd)));
+        assert!(!matches("", Some(Resolution::Uhd)));
+    }
+
+    #[test]
+    fn resolutions_are_read_back_from_their_labels() {
+        for resolution in Resolution::ALL {
+            assert_eq!(Resolution::from_label(resolution.label()), Some(resolution));
+        }
+        assert_eq!(Resolution::from_label("8K"), None);
     }
 
     #[test]

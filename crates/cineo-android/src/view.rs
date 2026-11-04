@@ -3,7 +3,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlayRequest,
-    PlaybackFailure, Problem, QUALITIES, Row, SeekStep, Settings, State, StreamFacts, StreamGroup,
+    PlaybackFailure, Problem, Resolution, Row, SeekStep, Settings, State, StreamFacts, StreamGroup,
     StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
 };
 
@@ -516,19 +516,17 @@ fn qualities(
     facts: &[Option<Vec<StreamFacts>>],
     p2p_enabled: bool,
 ) -> Vec<String> {
-    let shown: Vec<&str> = groups
+    let mut shown: Vec<Resolution> = groups
         .iter()
         .zip(facts)
         .filter_map(|(group, facts)| group.streams.ready().zip(facts.as_ref()))
         .flat_map(|(streams, facts)| streams.iter().zip(facts))
         .filter(|(stream, _)| p2p_enabled || !stream.source.is_p2p())
-        .filter_map(|(_, facts)| facts.quality.map(|q| q.label))
+        .filter_map(|(_, facts)| facts.quality.map(|q| q.resolution))
         .collect();
-    QUALITIES
-        .iter()
-        .filter(|label| shown.contains(label))
-        .map(|label| (*label).to_owned())
-        .collect()
+    shown.sort_unstable();
+    shown.dedup();
+    shown.into_iter().map(|r| r.label().to_owned()).collect()
 }
 
 fn video(video: &Video) -> VideoView {
@@ -567,7 +565,9 @@ fn stream_group(
         items: match (&group.streams, facts) {
             (Loadable::Loading, _) | (Loadable::Ready(_), None) => StreamItems::Loading,
             (Loadable::Ready(streams), Some(facts)) => {
-                let matches = stream_matcher(&filter.query, filter.quality.as_deref());
+                let quality = filter.quality.as_deref().map(Resolution::from_label);
+                let unknown_quality = quality.is_some_and(|q| q.is_none());
+                let matches = stream_matcher(&filter.query, quality.flatten());
                 let other_addon = filter.addon.is_some_and(|a| a as usize != index);
                 let mut hidden = 0;
                 let order = filter
@@ -580,7 +580,7 @@ fn stream_group(
                             hidden += 1;
                             return false;
                         }
-                        !other_addon && matches(&facts[i])
+                        !other_addon && !unknown_quality && matches(&facts[i])
                     })
                     .filter_map(|i| u32::try_from(i).ok())
                     .collect();
@@ -603,8 +603,8 @@ fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
         description: stream.description.clone(),
         kind: source_kind(stream.source.kind()),
         quality: facts.quality.map(|q| QualityView {
-            label: q.label.to_owned(),
-            tier: match q.tier {
+            label: q.label().to_owned(),
+            tier: match q.tier() {
                 Tier::Ultra => QualityTier::Ultra,
                 Tier::High => QualityTier::High,
                 Tier::Standard => QualityTier::Standard,
