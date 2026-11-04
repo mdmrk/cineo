@@ -17,7 +17,7 @@ use tracing::{error, warn};
 use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
-use crate::view::{AppView, view};
+use crate::view::{AppView, StreamFilterView, StreamSortView, view};
 
 const ENGINE_SHUTDOWN: Duration = Duration::from_secs(2);
 
@@ -82,8 +82,17 @@ pub struct PlayerStatusView {
 }
 
 #[derive(Debug)]
+enum FilterChange {
+    Query(String),
+    Quality(Option<String>),
+    Addon(Option<u32>),
+    Sort(StreamSortView),
+}
+
+#[derive(Debug)]
 enum Msg {
     Action(Action),
+    Filter(FilterChange),
     OpenDetail { content_type: String, id: String },
     Notice(Notice),
     Shutdown,
@@ -135,6 +144,22 @@ impl Cineo {
 
     pub fn dismiss_notice(&self) {
         self.send(Action::DismissNotice);
+    }
+
+    pub fn set_stream_query(&self, query: String) {
+        self.filter(FilterChange::Query(query));
+    }
+
+    pub fn set_stream_quality(&self, quality: Option<String>) {
+        self.filter(FilterChange::Quality(quality));
+    }
+
+    pub fn set_stream_addon(&self, addon: Option<u32>) {
+        self.filter(FilterChange::Addon(addon));
+    }
+
+    pub fn set_stream_sort(&self, sort: StreamSortView) {
+        self.filter(FilterChange::Sort(sort));
     }
 
     pub fn load_addon_lists(&self) {
@@ -345,6 +370,8 @@ impl Cineo {
             players,
             screen: Arc::clone(&screen),
             torrents,
+            filter: StreamFilterView::default(),
+            filtered: None,
             shown: None,
         };
         let restore = [restore, Action::RestoreSettings(settings)];
@@ -368,6 +395,12 @@ impl Cineo {
 
     fn send(&self, action: Action) {
         if self.tx.send(Msg::Action(action)).is_err() {
+            warn!("the shell thread has stopped");
+        }
+    }
+
+    fn filter(&self, change: FilterChange) {
+        if self.tx.send(Msg::Filter(change)).is_err() {
             warn!("the shell thread has stopped");
         }
     }
@@ -405,6 +438,8 @@ struct Shell {
     players: Arc<dyn Players>,
     screen: Arc<Mutex<Screen>>,
     torrents: Torrents,
+    filter: StreamFilterView,
+    filtered: Option<String>,
     shown: Option<AppView>,
 }
 
@@ -432,6 +467,12 @@ impl Shell {
             Msg::Action(action) => self.dispatch(action),
             Msg::OpenDetail { content_type, id } => self.open_detail(content_type, id),
             Msg::Notice(notice) => self.state.notice = Some(notice),
+            Msg::Filter(change) => match change {
+                FilterChange::Query(query) => self.filter.query = query,
+                FilterChange::Quality(quality) => self.filter.quality = quality,
+                FilterChange::Addon(addon) => self.filter.addon = addon,
+                FilterChange::Sort(sort) => self.filter.sort = sort,
+            },
             Msg::Shutdown => return false,
         }
         true
@@ -565,7 +606,15 @@ impl Shell {
             }
             screen.title.clone()
         };
-        let next = view(&self.state, playing.as_deref());
+        let detail = self.state.detail.as_ref().map(|d| d.id.clone());
+        if detail != self.filtered {
+            self.filter = StreamFilterView {
+                sort: self.filter.sort,
+                ..StreamFilterView::default()
+            };
+            self.filtered = detail;
+        }
+        let next = view(&self.state, playing.as_deref(), &self.filter);
         if self.shown.as_ref() != Some(&next) {
             self.listener.changed(next.clone());
             self.shown = Some(next);
@@ -629,6 +678,8 @@ mod tests {
                 runtime.handle().clone(),
                 EngineOptions::new(std::env::temp_dir()),
             ),
+            filter: StreamFilterView::default(),
+            filtered: None,
             shown: None,
         };
         shell.dispatch(Action::RestoreSettings(Settings {

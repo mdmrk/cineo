@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.SearchScreen
+import io.github.mdmrk.cineo.ui.StreamFilterActions
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -92,6 +93,14 @@ class MainActivity : ComponentActivity() {
                                     onSelectVideo = cineo::selectVideo,
                                     onPlay = cineo::play,
                                     onFavorite = { cineo.setFavorite(detail.id, it) },
+                                    filters = remember(cineo) {
+                                        StreamFilterActions(
+                                            query = cineo::setStreamQuery,
+                                            quality = cineo::setStreamQuality,
+                                            addon = cineo::setStreamAddon,
+                                            sort = cineo::setStreamSort,
+                                        )
+                                    },
                                 )
                             }
                             else -> {

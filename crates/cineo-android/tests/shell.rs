@@ -12,7 +12,8 @@ use std::time::{Duration, Instant};
 
 use cineo_android::{
     AddonListItems, AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players,
-    ProblemView, RowItems, SettingChange, Started, StateListener, StreamItems, TorrentView,
+    ProblemView, QualityTier, RowItems, SettingChange, Started, StateListener, StreamItems,
+    StreamSortView, TorrentView,
 };
 use cineo_core::app::PlayRequest;
 use cineo_core::app::Settings;
@@ -362,7 +363,7 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
         let detail = detail.detail.unwrap();
         assert_eq!(detail.name.as_deref(), Some("First Example Film"));
         assert_eq!(detail.runtime.as_deref(), Some("120"));
-        let StreamItems::Ready { streams } = &detail.streams[0].items else {
+        let StreamItems::Ready { streams, .. } = &detail.streams[0].items else {
             panic!("streams did not load: {:?}", detail.streams);
         };
         assert_eq!(streams[0].name.as_deref(), Some("1080p"));
@@ -815,6 +816,92 @@ async fn addon_lists_offer_installs_and_configuration_links() {
             installed.addons[1].configure_url.as_deref(),
             Some(format!("{base}/cfg/configure").as_str())
         );
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    serve(
+        &server,
+        "/cfg/meta/movie/tt0000001.json",
+        fixture("addons/basic/meta-movie.json"),
+    )
+    .await;
+    let streams = r#"{"streams":[
+        {"name":"Fixture\n720p","description":"Film.720p.WEB 👤 5 💾 700 MB","url":"https://media.example/720.mp4"},
+        {"name":"Fixture\n4k HDR","description":"Film.2160p.REMUX 👤 2 💾 15 GB","url":"https://media.example/4k.mkv"},
+        {"name":"Fixture\n1080p","description":"Film.1080p.WEB 👤 40 💾 2 GB","url":"https://media.example/1080.mp4"},
+        {"name":"Fixture\n1080p","description":"Film.1080p.BluRay 👤 90","infoHash":"0123456789abcdef0123456789abcdef01234567"}
+    ]}"#;
+    serve(
+        &server,
+        "/cfg/stream/movie/tt0000001.json",
+        streams.as_bytes().to_vec(),
+    )
+    .await;
+    let manifest = format!("{}/cfg/manifest.json", server.uri());
+    let dir = local_data_dir();
+    let order = |v: &AppView| -> (Vec<u32>, u32) {
+        let detail = v.detail.as_ref().unwrap();
+        match &detail.streams[0].items {
+            StreamItems::Ready { order, hidden, .. } => (order.clone(), *hidden),
+            other => panic!("streams are not ready: {other:?}"),
+        }
+    };
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        let ready = wait_for(&views, streams_ready);
+        assert_eq!(order(&ready), (vec![0, 1, 2, 3], 0));
+        let detail = ready.detail.as_ref().unwrap();
+        assert_eq!(detail.qualities, ["4K", "1080p", "720p"]);
+        let StreamItems::Ready { streams, .. } = &detail.streams[0].items else {
+            unreachable!()
+        };
+        let four_k = streams[1].quality.as_ref().unwrap();
+        assert_eq!(
+            (four_k.label.as_str(), four_k.tier, four_k.flags.clone()),
+            ("4K", QualityTier::Ultra, vec!["HDR".to_owned()])
+        );
+        assert_eq!(streams[2].seeders, Some(40));
+        assert_eq!(streams[0].size, Some(734_003_200));
+
+        cineo.set_stream_sort(StreamSortView::Seeders);
+        wait_for(&views, |v| order(v).0 == [3, 2, 0, 1]);
+        cineo.set_stream_quality(Some("1080p".into()));
+        wait_for(&views, |v| order(v).0 == [3, 2]);
+        cineo.set_stream_query("web".into());
+        wait_for(&views, |v| order(v).0 == [2]);
+        cineo.set_stream_addon(Some(1));
+        wait_for(&views, |v| order(v).0.is_empty());
+        cineo.set_stream_addon(None);
+        cineo.set_stream_query(String::new());
+        cineo.set_stream_quality(None);
+        cineo.change_setting(SettingChange::P2pEnabled { on: false });
+        let off = wait_for(&views, |v| order(v) == (vec![2, 0, 1], 1));
+        assert_eq!(off.detail.unwrap().qualities, ["4K", "1080p", "720p"]);
+        cineo.change_setting(SettingChange::P2pEnabled { on: true });
+        cineo.set_stream_query("bluray".into());
+        wait_for(&views, |v| order(v).0 == [3]);
+
+        cineo.close_detail();
+        wait_for(&views, |v| v.detail.is_none());
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        let reopened = wait_for(&views, streams_ready);
+        let filter = &reopened.detail.as_ref().unwrap().filter;
+        assert_eq!(filter.query, "");
+        assert_eq!(filter.sort, StreamSortView::Seeders);
+        assert_eq!(order(&reopened).0, [3, 2, 0, 1]);
     });
 }
 

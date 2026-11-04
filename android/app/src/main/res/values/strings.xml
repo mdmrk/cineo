@@ -162,4 +162,13 @@
     <string name="badge_configure">Needs configuration</string>
     <string name="retry">Retry</string>
     <string name="p2p_help">While a torrent plays, your IP address is visible to its peers and Cineo uploads to them.</string>
+    <string name="streams_search">Search streams</string>
+    <string name="streams_all">All</string>
+    <string name="sort_by">Sort by</string>
+    <string name="sort_addon_order">Addon order</string>
+    <string name="sort_quality">Quality</string>
+    <string name="sort_seeders">Seeders</string>
+    <string name="sort_size">Size</string>
+    <string name="streams_no_match">No matching streams</string>
+    <string name="streams_hidden">Torrent streams hidden: %1$d (peer-to-peer is off in Settings)</string>
 </resources>

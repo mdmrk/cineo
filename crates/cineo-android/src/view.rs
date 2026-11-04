@@ -3,8 +3,8 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure,
-    Problem, Row, SeekStep, Setting, Settings, State, StreamGroup, TorrentStatus, WatchedAt,
-    continue_watching,
+    Problem, QUALITIES, Row, SeekStep, Setting, Settings, State, StreamFacts, StreamGroup,
+    StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -72,6 +72,8 @@ pub struct DetailView {
     pub videos: Vec<VideoView>,
     pub selected_video: Option<String>,
     pub streams: Vec<StreamGroupView>,
+    pub qualities: Vec<String>,
+    pub filter: StreamFilterView,
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -109,11 +111,61 @@ pub struct StreamGroupView {
     pub items: StreamItems,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, uniffi::Enum)]
+pub enum StreamSortView {
+    #[default]
+    AddonOrder,
+    Quality,
+    Seeders,
+    Size,
+}
+
+impl StreamSortView {
+    fn core(self) -> StreamSort {
+        match self {
+            Self::AddonOrder => StreamSort::AddonOrder,
+            Self::Quality => StreamSort::Quality,
+            Self::Seeders => StreamSort::Seeders,
+            Self::Size => StreamSort::Size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
+pub struct StreamFilterView {
+    pub query: String,
+    pub quality: Option<String>,
+    pub addon: Option<u32>,
+    pub sort: StreamSortView,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum QualityTier {
+    Ultra,
+    High,
+    Standard,
+    Low,
+    Cam,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct QualityView {
+    pub label: String,
+    pub tier: QualityTier,
+    pub flags: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum StreamItems {
     Loading,
-    Ready { streams: Vec<StreamView> },
-    Failed { problem: ProblemView },
+    Ready {
+        streams: Vec<StreamView>,
+        order: Vec<u32>,
+        hidden: u32,
+    },
+    Failed {
+        problem: ProblemView,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -121,6 +173,9 @@ pub struct StreamView {
     pub name: Option<String>,
     pub description: Option<String>,
     pub kind: SourceKindView,
+    pub quality: Option<QualityView>,
+    pub seeders: Option<u64>,
+    pub size: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -271,7 +326,7 @@ pub enum PlaybackFailureView {
     Torrent { reason: String },
 }
 
-pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
+pub(crate) fn view(state: &State, playing: Option<&str>, filter: &StreamFilterView) -> AppView {
     AppView {
         addons: state.addons.iter().map(addon).collect(),
         addons_loading: u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX),
@@ -308,7 +363,10 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
             i.favorited.unwrap_or(0)
         }),
         recent: shelf(state, LibraryItem::was_played, |i| i.updated_ms),
-        detail: state.detail.as_ref().map(|d| detail(d, &state.library)),
+        detail: state
+            .detail
+            .as_ref()
+            .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled)),
         playback: playing.map(|title| PlaybackView {
             title: title.to_owned(),
             seek_step_s: number(Setting::SeekStep(state.settings.seek_step)),
@@ -387,7 +445,12 @@ fn library_item(item: &LibraryItem) -> LibraryItemView {
     }
 }
 
-fn detail(detail: &Detail, library: &[LibraryItem]) -> DetailView {
+fn detail(
+    detail: &Detail,
+    library: &[LibraryItem],
+    filter: &StreamFilterView,
+    p2p_enabled: bool,
+) -> DetailView {
     let meta = detail.meta.ready();
     let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
     let text = |pick: fn(&MetaPreview) -> Option<&String>| preview.and_then(pick).cloned();
@@ -418,7 +481,30 @@ fn detail(detail: &Detail, library: &[LibraryItem]) -> DetailView {
             .map(|m| m.videos.iter().map(video).collect())
             .unwrap_or_default(),
         selected_video: detail.selected_video.clone(),
-        streams: detail.streams.iter().map(stream_group).collect(),
+        streams: detail
+            .streams
+            .iter()
+            .enumerate()
+            .map(|(index, group)| stream_group(index, group, filter, p2p_enabled))
+            .collect(),
+        qualities: QUALITIES
+            .iter()
+            .filter(|label| {
+                detail
+                    .streams
+                    .iter()
+                    .filter_map(|g| g.streams.ready())
+                    .flatten()
+                    .filter(|s| p2p_enabled || !s.source.is_p2p())
+                    .any(|s| {
+                        StreamFacts::of(s)
+                            .quality
+                            .is_some_and(|q| q.label == **label)
+                    })
+            })
+            .map(|label| (*label).to_owned())
+            .collect(),
+        filter: filter.clone(),
     }
 }
 
@@ -446,14 +532,41 @@ fn day(released: &str) -> String {
     if is_day { date } else { released }.to_owned()
 }
 
-fn stream_group(group: &StreamGroup) -> StreamGroupView {
+fn stream_group(
+    index: usize,
+    group: &StreamGroup,
+    filter: &StreamFilterView,
+    p2p_enabled: bool,
+) -> StreamGroupView {
     StreamGroupView {
         addon_name: group.addon_name.clone(),
         items: match &group.streams {
             Loadable::Loading => StreamItems::Loading,
-            Loadable::Ready(streams) => StreamItems::Ready {
-                streams: streams.iter().map(stream).collect(),
-            },
+            Loadable::Ready(streams) => {
+                let facts: Vec<StreamFacts> = streams.iter().map(StreamFacts::of).collect();
+                let matches = stream_matcher(&filter.query, filter.quality.as_deref());
+                let other_addon = filter.addon.is_some_and(|a| a as usize != index);
+                let mut hidden = 0;
+                let order = filter
+                    .sort
+                    .core()
+                    .order(&facts)
+                    .into_iter()
+                    .filter(|&i| {
+                        if !p2p_enabled && streams[i].source.is_p2p() {
+                            hidden += 1;
+                            return false;
+                        }
+                        !other_addon && matches(&facts[i])
+                    })
+                    .filter_map(|i| u32::try_from(i).ok())
+                    .collect();
+                StreamItems::Ready {
+                    streams: streams.iter().zip(&facts).map(stream).collect(),
+                    order,
+                    hidden,
+                }
+            }
             Loadable::Failed(problem) => StreamItems::Failed {
                 problem: problem_view(problem),
             },
@@ -461,11 +574,24 @@ fn stream_group(group: &StreamGroup) -> StreamGroupView {
     }
 }
 
-fn stream(stream: &Stream) -> StreamView {
+fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
     StreamView {
         name: stream.name.clone(),
         description: stream.description.clone(),
         kind: source_kind(stream.source.kind()),
+        quality: facts.quality.map(|q| QualityView {
+            label: q.label.to_owned(),
+            tier: match q.tier {
+                Tier::Ultra => QualityTier::Ultra,
+                Tier::High => QualityTier::High,
+                Tier::Standard => QualityTier::Standard,
+                Tier::Low => QualityTier::Low,
+                Tier::Cam => QualityTier::Cam,
+            },
+            flags: q.flags.iter().map(|f| (*f).to_owned()).collect(),
+        }),
+        seeders: facts.seeders,
+        size: facts.size,
     }
 }
 

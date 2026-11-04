@@ -57,6 +57,9 @@ import io.github.mdmrk.cineo.rust.NoticeView
 import io.github.mdmrk.cineo.rust.SourceKindView
 import io.github.mdmrk.cineo.rust.StreamItems
 import io.github.mdmrk.cineo.rust.StreamView
+import io.github.mdmrk.cineo.rust.QualityTier
+import io.github.mdmrk.cineo.rust.QualityView
+import io.github.mdmrk.cineo.rust.StreamSortView
 import io.github.mdmrk.cineo.rust.VideoView
 
 private val Rounded = RoundedCornerShape(8.dp)
@@ -71,7 +74,9 @@ fun DetailScreen(
     onSelectVideo: (String) -> Unit,
     onPlay: (UInt, UInt) -> Unit,
     onFavorite: (Boolean) -> Unit,
+    filters: StreamFilterActions,
 ) {
+    val readyCount = detail.streams.sumOf { (it.items as? StreamItems.Ready)?.streams?.size ?: 0 }
     Box(Modifier.fillMaxSize().background(Brand.Background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -94,6 +99,9 @@ fun DetailScreen(
             }
             item(key = "streams-title") {
                 RowHeader(stringResource(R.string.where_to_watch), null)
+            }
+            if (readyCount > 1) {
+                item(key = "stream-filters") { StreamFilters(detail, filters) }
             }
             if (detail.streams.isEmpty()) {
                 item(key = "no-streams") {
@@ -134,8 +142,29 @@ fun DetailScreen(
                                 )
                             }
                         }
-                        itemsIndexed(items.streams, key = { index, _ -> "stream-$groupIndex-$index" }) { index, stream ->
-                            StreamCard(stream, group.addonName) { onPlay(groupIndex.toUInt(), index.toUInt()) }
+                        if (items.streams.isNotEmpty() && items.order.isEmpty() && items.hidden.toInt() < items.streams.size) {
+                            item(key = "no-match-$groupIndex") {
+                                Text(
+                                    stringResource(R.string.streams_no_match),
+                                    color = Brand.TextDim,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
+                        }
+                        items(items.order, key = { "stream-$groupIndex-$it" }) { index ->
+                            StreamCard(items.streams[index.toInt()], group.addonName) {
+                                onPlay(groupIndex.toUInt(), index)
+                            }
+                        }
+                        if (items.hidden > 0u) {
+                            item(key = "hidden-$groupIndex") {
+                                Text(
+                                    stringResource(R.string.streams_hidden, items.hidden.toInt()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Brand.TextFaint,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -353,6 +382,13 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            val quality = stream.quality
+            if (quality != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QualityBadge(quality)
+                    quality.flags.forEach { Badge(it, Brand.TextDim, Brand.Surface) }
+                }
+            }
             val text = if (playable) stream.description else noticeText(NoticeView.UnsupportedSource(stream.kind))
             text?.let {
                 Text(
@@ -373,4 +409,112 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
             )
         }
     }
+}
+
+class StreamFilterActions(
+    val query: (String) -> Unit,
+    val quality: (String?) -> Unit,
+    val addon: (UInt?) -> Unit,
+    val sort: (StreamSortView) -> Unit,
+)
+
+@Composable
+private fun StreamFilters(detail: DetailView, actions: StreamFilterActions) {
+    val filter = detail.filter
+    var query by rememberSaveable(detail.id) { mutableStateOf(filter.query) }
+    val groups = detail.streams.withIndex().filter { (_, g) -> (g.items as? StreamItems.Ready)?.streams?.isNotEmpty() == true }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        CineoField(
+            value = query,
+            onValueChange = {
+                query = it
+                actions.query(it)
+            },
+            placeholder = stringResource(R.string.streams_search),
+            leading = Icon.SEARCH,
+            trailing = if (query.isEmpty()) null else {
+                {
+                    IconButton(onClick = {
+                        query = ""
+                        actions.query("")
+                    }) { CineoIcon(Icon.X, tint = Brand.TextDim) }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Chip(stringResource(R.string.streams_all), filter.quality == null && filter.addon == null) {
+                    actions.quality(null)
+                    actions.addon(null)
+                }
+            }
+            items(detail.qualities) { label ->
+                Chip(label, filter.quality == label) { actions.quality(if (filter.quality == label) null else label) }
+            }
+            if (groups.size > 1) {
+                items(groups) { (index, group) ->
+                    val selected = filter.addon?.toInt() == index
+                    Chip(group.addonName, selected) { actions.addon(if (selected) null else index.toUInt()) }
+                }
+            }
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            item {
+                Text(stringResource(R.string.sort_by), style = MaterialTheme.typography.labelMedium, color = Brand.TextDim)
+            }
+            items(StreamSortView.entries) { sort ->
+                Chip(stringResource(sortLabel(sort)), filter.sort == sort) { actions.sort(sort) }
+            }
+        }
+    }
+}
+
+private fun sortLabel(sort: StreamSortView): Int = when (sort) {
+    StreamSortView.ADDON_ORDER -> R.string.sort_addon_order
+    StreamSortView.QUALITY -> R.string.sort_quality
+    StreamSortView.SEEDERS -> R.string.sort_seeders
+    StreamSortView.SIZE -> R.string.sort_size
+}
+
+@Composable
+private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = Brand.Accent,
+            selectedLabelColor = Brand.OnAccent,
+        ),
+    )
+}
+
+@Composable
+private fun QualityBadge(quality: QualityView) {
+    val (ink, fill) = when (quality.tier) {
+        QualityTier.ULTRA -> Brand.OnAccent to Brand.Accent
+        QualityTier.HIGH -> Brand.Accent to Brand.Accent.copy(alpha = 0.15f)
+        QualityTier.STANDARD -> Brand.TextBright to Brand.Surface
+        QualityTier.LOW -> Brand.TextDim to Brand.Surface
+        QualityTier.CAM -> Brand.Warning to Brand.Warning.copy(alpha = 0.15f)
+    }
+    Badge(quality.label, ink, fill)
+}
+
+@Composable
+private fun Badge(text: String, ink: Color, fill: Color) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = ink,
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(fill)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }
