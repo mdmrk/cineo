@@ -54,7 +54,7 @@ private fun sourceName(kind: SourceKindView): String = stringResource(
 )
 
 @Composable
-fun targetLabel(row: RowView): String {
+fun catalogTitle(row: RowView): String {
     val kind = when (row.contentType) {
         "movie" -> stringResource(R.string.type_movie)
         "series" -> stringResource(R.string.type_series)
@@ -62,5 +62,5 @@ fun targetLabel(row: RowView): String {
         "tv" -> stringResource(R.string.type_tv)
         else -> row.contentType
     }
-    return stringResource(R.string.target_label, stringResource(R.string.catalog_title, row.name, kind), row.addonName)
+    return stringResource(R.string.catalog_title, row.name, kind)
 }

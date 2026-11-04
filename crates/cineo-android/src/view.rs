@@ -63,6 +63,7 @@ pub struct DetailView {
     pub release_info: Option<String>,
     pub runtime: Option<String>,
     pub genres: Vec<String>,
+    pub imdb_rating: Option<String>,
     pub meta: MetaStatus,
     pub videos: Vec<VideoView>,
     pub selected_video: Option<String>,
@@ -172,6 +173,12 @@ pub struct PosterView {
     pub name: String,
     pub poster: Option<String>,
     pub shape: PosterShapeView,
+    pub background: Option<String>,
+    pub logo: Option<String>,
+    pub description: Option<String>,
+    pub release_info: Option<String>,
+    pub imdb_rating: Option<String>,
+    pub genres: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -354,6 +361,7 @@ fn detail(detail: &Detail, library: &[LibraryItem]) -> DetailView {
         release_info: text(|p| p.release_info.as_ref()),
         runtime: meta.and_then(|m: &Meta| m.runtime.clone()),
         genres: preview.map(|p| p.genres.clone()).unwrap_or_default(),
+        imdb_rating: text(|p| p.imdb_rating.as_ref()),
         meta: match &detail.meta {
             Loadable::Loading => MetaStatus::Loading,
             Loadable::Ready(_) => MetaStatus::Ready,
@@ -455,6 +463,12 @@ fn poster(meta: &MetaPreview) -> PosterView {
             PosterShape::Square => PosterShapeView::Square,
             PosterShape::Landscape => PosterShapeView::Landscape,
         },
+        background: meta.background.as_ref().map(ToString::to_string),
+        logo: meta.logo.as_ref().map(ToString::to_string),
+        description: meta.description.clone(),
+        release_info: meta.release_info.clone(),
+        imdb_rating: meta.imdb_rating.clone(),
+        genres: meta.genres.clone(),
     }
 }
 

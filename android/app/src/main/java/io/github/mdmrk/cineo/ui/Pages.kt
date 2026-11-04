@@ -1,6 +1,18 @@
 package io.github.mdmrk.cineo.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -43,5 +55,20 @@ fun Pages(page: Page, onPage: (Page) -> Unit, content: @Composable (PaddingValue
                 }
             }
         },
-    ) { padding -> content(padding) }
+    ) { padding ->
+        Box(Modifier.fillMaxSize()) {
+            content(padding)
+            Box(
+                Modifier.fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars.add(WindowInsets(top = 20.dp)))
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Brand.Background,
+                            0.6f to Brand.Background.copy(alpha = 0.85f),
+                            1f to Color.Transparent,
+                        ),
+                    ),
+            )
+        }
+    }
 }

@@ -8,7 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -49,8 +54,6 @@ class LibraryActions(
     val setFavorite: (LibraryItemView, Boolean) -> Unit,
     val remove: (LibraryItemView) -> Unit,
 )
-
-private val CardWidth = 112.dp
 
 @Composable
 fun LibraryScreen(view: AppView?, images: Images, actions: LibraryActions, padding: PaddingValues) {
@@ -103,14 +106,10 @@ private fun ShelfTitle(title: String, count: Int) {
 @Composable
 fun ContinueWatching(items: List<LibraryItemView>, images: Images, actions: LibraryActions) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(R.string.continue_watching),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+        RowHeader(stringResource(R.string.continue_watching), null)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(items, key = { it.id }) {
                 LibraryCard(it, Shelf.CONTINUE_WATCHING, images, actions, Modifier.width(CardWidth))
@@ -127,43 +126,42 @@ private fun LibraryCard(
     actions: LibraryActions,
     modifier: Modifier,
 ) {
-    val widthPx = with(LocalDensity.current) { CardWidth.roundToPx() }
-    var image by remember(item.poster) { mutableStateOf<ImageBitmap?>(null) }
     var menu by remember { mutableStateOf(false) }
-    LaunchedEffect(item.poster) {
-        image = item.poster?.let { images.load(it, widthPx) }
-    }
     Box(modifier) {
-        Card(
+        Column(
             Modifier.combinedClickable(
                 onClick = { if (shelf == Shelf.FAVORITES) actions.open(item) else actions.resume(item) },
                 onLongClick = { menu = true },
             ),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(Modifier.aspectRatio(2f / 3f)) {
-                val loaded = image
-                if (loaded != null) {
-                    Image(
-                        bitmap = loaded,
-                        contentDescription = item.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Text(
-                        item.name,
-                        modifier = Modifier.align(Alignment.Center).padding(8.dp),
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            Box {
+                Artwork(item.name, item.poster, images, CardWidth, Modifier.aspectRatio(2f / 3f))
                 if (shelf != Shelf.FAVORITES && item.progress > 0f) {
-                    LinearProgressIndicator(
-                        progress = { item.progress },
-                        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                    Box(
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp)
+                            .background(Color.Black.copy(alpha = 0.6f)),
+                    ) {
+                        Box(Modifier.fillMaxWidth(item.progress).fillMaxHeight().background(Brand.Accent))
+                    }
+                }
+                if (item.favorite && shelf != Shelf.FAVORITES) {
+                    CineoIcon(
+                        Icon.HEART,
+                        filled = true,
+                        tint = Brand.Accent,
+                        size = 16.sp,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
                     )
                 }
             }
+            Text(
+                item.name,
+                style = MaterialTheme.typography.bodySmall,
+                color = Brand.Text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(

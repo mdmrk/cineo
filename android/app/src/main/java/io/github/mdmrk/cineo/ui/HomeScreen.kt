@@ -1,25 +1,31 @@
 package io.github.mdmrk.cineo.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -37,13 +43,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.AppView
@@ -53,7 +62,8 @@ import io.github.mdmrk.cineo.rust.PosterView
 import io.github.mdmrk.cineo.rust.RowItems
 import io.github.mdmrk.cineo.rust.RowView
 
-private val PosterWidth = 112.dp
+val CardWidth = 108.dp
+private val CardShape = RoundedCornerShape(6.dp)
 
 @Composable
 fun HomeScreen(
@@ -64,33 +74,182 @@ fun HomeScreen(
     library: LibraryActions,
     padding: PaddingValues,
 ) {
+    val featured = view?.board.orEmpty().asSequence()
+        .mapNotNull { (it.items as? RowItems.Ready)?.items }
+        .flatten()
+        .firstOrNull { it.background != null }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = padding.calculateTopPadding() + 16.dp,
-            bottom = padding.calculateBottomPadding() + 16.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + 24.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
+        item(key = "featured") {
+            if (featured != null) {
+                Featured(featured, images, onOpen)
+            } else {
+                Spacer(Modifier.height(padding.calculateTopPadding() + 16.dp))
+            }
+        }
         val resume = view?.continueWatching.orEmpty()
         if (resume.isNotEmpty()) {
             item(key = "continue") { ContinueWatching(resume, images, library) }
         }
         when {
-            view == null || (view.addons.isEmpty() && view.addonsLoading > 0u) -> item(key = "loading") {
-                Text(
-                    stringResource(R.string.loading_addons),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+            view == null || (view.addons.isEmpty() && view.addonsLoading > 0u) -> items(3) { LoadingRow() }
             view.addons.isEmpty() -> item(key = "empty") {
-                Text(
-                    stringResource(R.string.home_empty),
+                Column(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                )
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    PageTitle(stringResource(R.string.page_home))
+                    Text(stringResource(R.string.home_empty), color = Brand.TextDim)
+                    Button(onClick = onOpenAddons) { Text(stringResource(R.string.open_addons)) }
+                }
             }
             else -> items(view.board, key = { it.key }) { row -> CatalogRow(row, images, onOpen) }
         }
+    }
+}
+
+@Composable
+private fun Featured(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
+    val width = LocalConfiguration.current.screenWidthDp.dp
+    Box(Modifier.fillMaxWidth().aspectRatio(0.78f).clickable { onOpen(item) }) {
+        Placeholder(Modifier.fillMaxSize())
+        NetImage(images, item.background, width * 2, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Brand.Background.copy(alpha = 0.6f),
+                    0.25f to Color.Transparent,
+                    0.55f to Color.Transparent,
+                    1f to Brand.Background,
+                ),
+            ),
+        )
+        Column(
+            Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (item.logo != null) {
+                NetImage(
+                    images,
+                    item.logo,
+                    width,
+                    Modifier.heightIn(max = 88.dp).widthIn(max = 260.dp),
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.BottomStart,
+                )
+            } else {
+                Text(item.name, style = MaterialTheme.typography.headlineLarge, color = Brand.TextBright)
+            }
+            Facts(item)
+            Button(
+                onClick = { onOpen(item) },
+                colors = ButtonDefaults.buttonColors(containerColor = Brand.TextBright, contentColor = Brand.Background),
+            ) {
+                CineoIcon(Icon.INFO_CIRCLE, size = MaterialTheme.typography.titleMedium.fontSize)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.details))
+            }
+        }
+    }
+}
+
+@Composable
+private fun Facts(item: PosterView) {
+    val facts = listOfNotNull(item.releaseInfo, item.imdbRating?.let { "★ $it" }) + item.genres.take(2)
+    if (facts.isNotEmpty()) {
+        Text(facts.joinToString("  ·  "), style = MaterialTheme.typography.bodySmall, color = Brand.Text)
+    }
+}
+
+@Composable
+fun RowHeader(title: String, subtitle: String?) {
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = Brand.TextBright)
+        if (subtitle != null) {
+            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = Brand.TextDim)
+        }
+    }
+}
+
+@Composable
+fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        RowHeader(catalogTitle(row), row.addonName)
+        when (val items = row.items) {
+            is RowItems.Loading -> PlaceholderStrip()
+            is RowItems.Failed -> Row(
+                Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CineoIcon(Icon.ALERT_CIRCLE, tint = Brand.Warning, size = MaterialTheme.typography.bodyMedium.fontSize)
+                Text(problemText(items.problem), color = Brand.TextDim, style = MaterialTheme.typography.bodySmall)
+            }
+            is RowItems.Ready -> LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(items.items, key = { "${it.contentType}/${it.id}" }) { PosterCard(it, images, onOpen) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingRow() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Placeholder(Modifier.padding(horizontal = 16.dp).size(160.dp, 18.dp).clip(CardShape))
+        PlaceholderStrip()
+    }
+}
+
+@Composable
+private fun PlaceholderStrip() {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        userScrollEnabled = false,
+    ) {
+        items(6) { Placeholder(Modifier.width(CardWidth).aspectRatio(2f / 3f).clip(CardShape)) }
+    }
+}
+
+@Composable
+fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
+    val ratio = when (item.shape) {
+        PosterShapeView.POSTER -> 2f / 3f
+        PosterShapeView.SQUARE -> 1f
+        PosterShapeView.LANDSCAPE -> 16f / 9f
+    }
+    val width = if (ratio > 1f) CardWidth * 1.8f else CardWidth
+    Column(Modifier.width(width).clickable { onOpen(item) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Artwork(item.name, item.poster, images, width, Modifier.aspectRatio(ratio))
+        Text(
+            item.name,
+            style = MaterialTheme.typography.bodySmall,
+            color = Brand.Text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun Artwork(name: String, url: String?, images: Images, width: Dp, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().clip(CardShape).background(Brand.Surface)) {
+        Text(
+            name,
+            modifier = Modifier.align(Alignment.Center).padding(8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = Brand.TextDim,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+        )
+        NetImage(images, url, width, Modifier.fillMaxSize(), contentDescription = name)
     }
 }
 
@@ -124,70 +283,6 @@ fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
             )
             is InstallView.Failed -> Text(problemText(install.problem), color = MaterialTheme.colorScheme.error)
             null -> Unit
-        }
-    }
-}
-
-@Composable
-fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            targetLabel(row),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        when (val items = row.items) {
-            is RowItems.Loading -> Box(Modifier.fillMaxWidth().padding(16.dp)) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
-            }
-            is RowItems.Failed -> Text(
-                problemText(items.problem),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            is RowItems.Ready -> LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(items.items, key = { "${it.contentType}/${it.id}" }) { Poster(it, images, onOpen) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Poster(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
-    val widthPx = with(LocalDensity.current) { PosterWidth.roundToPx() }
-    var image by remember(item.poster) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(item.poster) {
-        image = item.poster?.let { images.load(it, widthPx) }
-    }
-    val ratio = when (item.shape) {
-        PosterShapeView.POSTER -> 2f / 3f
-        PosterShapeView.SQUARE -> 1f
-        PosterShapeView.LANDSCAPE -> 16f / 9f
-    }
-    Card(
-        onClick = { onOpen(item) },
-        modifier = Modifier.width(if (ratio > 1f) PosterWidth * 1.8f else PosterWidth),
-    ) {
-        Box(Modifier.aspectRatio(ratio)) {
-            val loaded = image
-            if (loaded != null) {
-                Image(
-                    bitmap = loaded,
-                    contentDescription = item.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Text(
-                    item.name,
-                    modifier = Modifier.align(Alignment.Center).padding(8.dp),
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }
