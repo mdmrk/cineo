@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use cineo_android::{
     AddonListItems, AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players,
     ProblemView, QualityTier, RowItems, SettingChange, Started, StateListener, StreamItems,
-    StreamSortView, TorrentView,
+    StreamSortView, TorrentView, version,
 };
 use cineo_core::app::PlayRequest;
 use cineo_core::app::Settings;
@@ -1164,4 +1164,18 @@ mod tempdir {
             let _ = std::fs::remove_dir_all(&self.0);
         }
     }
+}
+
+#[test]
+fn the_app_reports_the_workspace_version() {
+    let manifest =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml"))
+            .unwrap();
+    let workspace = manifest
+        .split("[workspace.package]")
+        .nth(1)
+        .and_then(|section| section.lines().find_map(|l| l.strip_prefix("version = ")))
+        .map(|v| v.trim_matches('"'))
+        .unwrap();
+    assert_eq!(version(), workspace);
 }

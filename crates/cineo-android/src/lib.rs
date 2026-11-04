@@ -14,4 +14,9 @@ pub use view::{
     StreamView, TorrentView, VideoView,
 };
 
+#[uniffi::export]
+pub fn version() -> String {
+    env!("CARGO_PKG_VERSION").to_owned()
+}
+
 uniffi::setup_scaffolding!();

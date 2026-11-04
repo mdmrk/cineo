@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.Dialog
@@ -37,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +48,7 @@ import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
+import io.github.mdmrk.cineo.rust.version
 import java.text.Collator
 
 private val GroupShape = RoundedCornerShape(10.dp)
@@ -145,6 +150,72 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                     stringResource(R.string.reset),
                     cineo::resetSettings,
                 )
+            }
+        }
+        item(key = "about") {
+            Group(stringResource(R.string.section_about)) {
+                ListItem(
+                    colors = rowColors,
+                    headlineContent = { Text(stringResource(R.string.app_version, version())) },
+                )
+                Divider()
+                Licenses()
+            }
+        }
+    }
+}
+
+private const val LICENSES = "licenses"
+
+@Composable
+private fun Licenses() {
+    val assets = LocalContext.current.assets
+    var listing by remember { mutableStateOf(false) }
+    var shown by remember { mutableStateOf<String?>(null) }
+    ListItem(
+        colors = rowColors,
+        headlineContent = { Text(stringResource(R.string.licenses)) },
+        supportingContent = { Text(stringResource(R.string.licenses_help), style = MaterialTheme.typography.bodySmall) },
+        trailingContent = { CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.TextDim, size = 20.sp) },
+        modifier = Modifier.clickable { listing = true },
+    )
+    if (listing) {
+        val files = remember { assets.list(LICENSES).orEmpty().sorted() }
+        PickerDialog(stringResource(R.string.licenses), files.map { it to it }, null, onDismiss = { listing = false }) {
+            shown = it
+        }
+    }
+    shown?.let { name ->
+        val text = remember(name) { assets.open("$LICENSES/$name").bufferedReader().use { it.readText() } }
+        Dialog(onDismissRequest = { shown = null }) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 640.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brand.Panel)
+                    .padding(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Brand.TextBright,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                Text(
+                    text,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = Brand.TextDim,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp),
+                )
+                TextButton(onClick = { shown = null }, modifier = Modifier.align(Alignment.End).padding(end = 8.dp)) {
+                    Text(stringResource(R.string.close))
+                }
             }
         }
     }
