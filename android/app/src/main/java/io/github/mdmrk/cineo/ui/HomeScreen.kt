@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -233,7 +234,7 @@ fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
         PosterShapeView.LANDSCAPE -> 16f / 9f
     }
     val width = if (ratio > 1f) CardWidth * 1.8f else CardWidth
-    Column(Modifier.width(width).clickable { onOpen(item) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.width(width).pressable { onOpen(item) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Artwork(item.name, item.poster, images, width, Modifier.aspectRatio(ratio))
         Text(
             item.name,
@@ -247,15 +248,26 @@ fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
 
 @Composable
 fun Artwork(name: String, url: String?, images: Images, width: Dp, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().clip(CardShape).background(Brand.Surface)) {
-        Text(
-            name,
-            modifier = Modifier.align(Alignment.Center).padding(8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = Brand.TextDim,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-        )
+    Box(
+        modifier.fillMaxWidth().clip(CardShape).background(
+            Brush.linearGradient(listOf(Brand.SurfaceHover, Brand.Panel)),
+        ),
+    ) {
+        Column(
+            Modifier.align(Alignment.Center).padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CineoIcon(Icon.MOVIE, tint = Brand.TextFaint, size = MaterialTheme.typography.headlineSmall.fontSize)
+            Text(
+                name,
+                style = MaterialTheme.typography.titleSmall.copy(fontFamily = Serif),
+                color = Brand.Text,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         NetImage(images, url, width, Modifier.fillMaxSize(), contentDescription = name)
     }
 }
@@ -269,19 +281,23 @@ fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(stringResource(R.string.addons_install), style = MaterialTheme.typography.titleMedium)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = url,
-                onValueChange = { url = it },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                placeholder = { Text("https://…/manifest.json") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { submit() }),
-            )
-            Button(onClick = submit, enabled = !busy) { Text(stringResource(R.string.install)) }
-        }
+        Text(stringResource(R.string.addons_install), style = MaterialTheme.typography.titleMedium, color = Brand.TextBright)
+        CineoField(
+            value = url,
+            onValueChange = { url = it },
+            placeholder = "https://…/manifest.json",
+            modifier = Modifier.fillMaxWidth(),
+            leading = Icon.WORLD,
+            trailing = {
+                Button(
+                    onClick = submit,
+                    enabled = !busy && url.isNotBlank(),
+                    modifier = Modifier.padding(end = 6.dp),
+                ) { Text(stringResource(R.string.install)) }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+        )
         when (install) {
             is InstallView.Installing -> Text(stringResource(R.string.installing))
             is InstallView.Installed -> Text(

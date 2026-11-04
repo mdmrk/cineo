@@ -161,4 +161,5 @@
     <string name="configure">Configure</string>
     <string name="badge_configure">Needs configuration</string>
     <string name="retry">Retry</string>
+    <string name="p2p_help">While a torrent plays, your IP address is visible to its peers and Cineo uploads to them.</string>
 </resources>

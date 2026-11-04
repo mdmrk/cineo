@@ -16,15 +16,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -182,17 +187,11 @@ private fun Controls(
         ) {
             TorrentStats(torrent)
             val duration = status.durationS.toFloat().coerceAtLeast(0f)
-            Slider(
-                value = position.coerceIn(0f, duration.coerceAtLeast(position)),
-                onValueChange = onSeekDrag,
-                onValueChangeFinished = onSeekDone,
-                valueRange = 0f..duration.coerceAtLeast(1f),
-                enabled = duration > 0f,
-                colors = SliderDefaults.colors(
-                    thumbColor = Brand.Accent,
-                    activeTrackColor = Brand.Accent,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                ),
+            SeekBar(
+                position = position,
+                duration = duration,
+                onDrag = onSeekDrag,
+                onDone = onSeekDone,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(clock(position.toDouble()), color = Color.White, style = MaterialTheme.typography.labelMedium)
@@ -233,4 +232,45 @@ private fun clock(seconds: Double): String {
     val total = seconds.toLong().coerceAtLeast(0)
     val (h, m, s) = Triple(total / 3600, total / 60 % 60, total % 60)
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
+@Composable
+private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, onDone: () -> Unit) {
+    var width by remember { mutableStateOf(1) }
+    val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
+    val at = { x: Float -> (x / width).coerceIn(0f, 1f) * duration }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .onSizeChanged { width = it.width.coerceAtLeast(1) }
+            .pointerInput(duration) {
+                if (duration <= 0f) return@pointerInput
+                detectTapGestures { offset ->
+                    onDrag(at(offset.x))
+                    onDone()
+                }
+            }
+            .pointerInput(duration) {
+                if (duration <= 0f) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { onDrag(at(it.x)) },
+                    onDragEnd = onDone,
+                    onDragCancel = onDone,
+                ) { change, _ -> onDrag(at(change.position.x)) }
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)))
+        Box(Modifier.fillMaxWidth(fraction).height(4.dp).clip(CircleShape).background(Brand.Accent))
+        Box(
+            Modifier
+                .fillMaxWidth(fraction)
+                .wrapContentWidth(Alignment.End)
+                .offset(x = 7.dp)
+                .size(14.dp)
+                .clip(CircleShape)
+                .background(Brand.Accent),
+        )
+    }
 }

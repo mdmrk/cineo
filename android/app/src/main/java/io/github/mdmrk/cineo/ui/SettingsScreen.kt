@@ -1,5 +1,6 @@
 package io.github.mdmrk.cineo.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -115,7 +116,7 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
             Group(stringResource(R.string.section_data)) {
                 Toggle(
                     stringResource(R.string.p2p_enabled),
-                    stringResource(R.string.p2p_notice),
+                    stringResource(R.string.p2p_help),
                     settings.p2pEnabled,
                 ) { change(SettingChange.P2pEnabled(it)) }
                 Divider()
@@ -238,7 +239,12 @@ private fun Confirmed(
         colors = rowColors,
         headlineContent = { Text(title) },
         supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-        trailingContent = { OutlinedButton(onClick = { asking = true }) { Text(confirmLabel) } },
+        trailingContent = {
+            OutlinedButton(
+                onClick = { asking = true },
+                border = BorderStroke(1.dp, Brand.Danger.copy(alpha = 0.6f)),
+            ) { Text(confirmLabel, color = Brand.Danger) }
+        },
     )
     if (asking) {
         AlertDialog(
@@ -246,7 +252,7 @@ private fun Confirmed(
             title = { Text(confirmTitle) },
             text = { Text(confirmText) },
             confirmButton = {
-                TextButton(onClick = { asking = false; onConfirm() }) { Text(confirmLabel) }
+                TextButton(onClick = { asking = false; onConfirm() }) { Text(confirmLabel, color = Brand.Danger) }
             },
             dismissButton = {
                 TextButton(onClick = { asking = false }) { Text(stringResource(R.string.cancel)) }

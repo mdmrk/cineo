@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +17,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -55,17 +59,14 @@ fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         item(key = "field") {
-            OutlinedTextField(
+            CineoField(
                 value = query,
                 onValueChange = { query = it },
+                placeholder = stringResource(R.string.search_hint),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                singleLine = true,
-                placeholder = { Text(stringResource(R.string.search_hint)) },
-                leadingIcon = { CineoIcon(Icon.SEARCH, tint = Brand.TextDim) },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) { CineoIcon(Icon.X, tint = Brand.TextDim) }
-                    }
+                leading = Icon.SEARCH,
+                trailing = if (query.isEmpty()) null else {
+                    { IconButton(onClick = { query = "" }) { CineoIcon(Icon.X, tint = Brand.TextDim) } }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
@@ -77,12 +78,24 @@ fun SearchScreen(
         val rows = view?.search.orEmpty()
         when {
             view?.searchQuery.isNullOrEmpty() -> item(key = "help") {
-                Text(stringResource(R.string.search_help), color = Brand.TextDim, modifier = Modifier.padding(horizontal = 16.dp))
+                EmptyState(Icon.SEARCH, stringResource(R.string.search_help))
             }
             rows.isEmpty() -> item(key = "unsupported") {
-                Text(stringResource(R.string.search_unsupported), color = Brand.TextDim, modifier = Modifier.padding(horizontal = 16.dp))
+                EmptyState(Icon.ALERT_CIRCLE, stringResource(R.string.search_unsupported))
             }
             else -> items(rows, key = { it.key }) { row -> CatalogRow(row, images, onOpen) }
         }
+    }
+}
+
+@Composable
+fun EmptyState(icon: Icon, text: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        CineoIcon(icon, tint = Brand.TextFaint, size = 48.sp)
+        Text(text, color = Brand.TextDim, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
     }
 }

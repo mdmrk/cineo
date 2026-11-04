@@ -168,11 +168,16 @@ private fun Header(detail: DetailView, images: Images) {
     val width = LocalConfiguration.current.screenWidthDp.dp
     var expanded by rememberSaveable(detail.id) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(0.95f)) {
-            Placeholder(Modifier.fillMaxSize())
+        val art = detail.background ?: detail.poster
+        Box(Modifier.fillMaxWidth().aspectRatio(if (art == null && detail.meta !is MetaStatus.Loading) 1.6f else 0.95f)) {
+            if (art == null) {
+                Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Brand.SurfaceHover, Brand.Background))))
+            } else {
+                Placeholder(Modifier.fillMaxSize())
+            }
             NetImage(
                 images,
-                detail.background ?: detail.poster,
+                art,
                 width * 2,
                 Modifier.fillMaxSize(),
                 alignment = Alignment.TopCenter,
