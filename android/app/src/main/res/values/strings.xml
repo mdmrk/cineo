@@ -141,6 +141,14 @@
     <string name="stats_peers">Peers</string>
     <string name="stats_downloaded">Downloaded</string>
     <string name="stats_of">%1$s of %2$s</string>
+    <string name="stats_network">Network</string>
+    <string name="stats_buffered">Buffered</string>
+    <string name="stats_resolution">Resolution</string>
+    <string name="stats_video">Video</string>
+    <string name="stats_decoder">Decoder</string>
+    <string name="stats_software">Software</string>
+    <string name="stats_dropped">Dropped frames</string>
+    <string name="player_stats">Streaming stats</string>
     <string name="torrent_channel">Torrent streaming</string>
     <string name="torrent_notification">Streaming a torrent</string>
     <string name="page_search">Search</string>

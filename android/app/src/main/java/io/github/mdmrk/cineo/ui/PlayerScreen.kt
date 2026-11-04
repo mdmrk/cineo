@@ -43,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
@@ -62,6 +64,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
     var controls by remember { mutableStateOf(true) }
     var dragging by remember { mutableStateOf<Float?>(null) }
+    var stats by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) {
             status = cineo.playerStatus()
@@ -99,7 +102,6 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
         if (controls && current != null) {
             Controls(
                 title = playback.art.title,
-                torrent = torrent,
                 status = current,
                 position = dragging ?: current.positionS.toFloat(),
                 onSeekDrag = { dragging = it },
@@ -111,6 +113,14 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                 onTogglePause = { cineo.togglePause() },
                 seekStep = playback.seekStepS.toInt(),
                 onSeekBy = { cineo.seekBy(it.toDouble()) },
+                onToggleStats = { stats = !stats },
+            )
+        }
+        if (stats && current != null) {
+            StatsPanel(
+                torrent,
+                current.stats,
+                Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(start = 16.dp, top = 72.dp),
             )
         }
     }
@@ -119,7 +129,6 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
 @Composable
 private fun Controls(
     title: String,
-    torrent: TorrentView?,
     status: PlayerStatusView,
     position: Float,
     onSeekDrag: (Float) -> Unit,
@@ -128,6 +137,7 @@ private fun Controls(
     onTogglePause: () -> Unit,
     seekStep: Int,
     onSeekBy: (Int) -> Unit,
+    onToggleStats: () -> Unit,
 ) {
     val (back, forward) = when (seekStep) {
         5 -> Icon.REWIND_BACKWARD_5 to Icon.REWIND_FORWARD_5
@@ -160,7 +170,10 @@ private fun Controls(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            TorrentStats(torrent)
+            val statsLabel = stringResource(R.string.player_stats)
+            IconButton(onClick = onToggleStats, modifier = Modifier.semantics { contentDescription = statsLabel }) {
+                CineoIcon(Icon.ACTIVITY, tint = Color.White)
+            }
         }
         Row(
             Modifier.align(Alignment.Center),

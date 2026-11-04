@@ -36,5 +36,8 @@ enum class Icon(val regular: Char?, val filled: Char?) {
     WORLD('\uf334', null),
     MAGNET('\uebe7', '\ue29a'),
     REFRESH('\uef68', null),
-    INFO_CIRCLE('\ueabd', '\ue24e');
+    INFO_CIRCLE('\ueabd', '\ue24e'),
+    ACTIVITY('\ue00b', null),
+    BADGE_CC('\ue172', '\ue05b'),
+    LANGUAGE('\ueb03', null);
 }

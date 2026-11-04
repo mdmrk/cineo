@@ -11,7 +11,7 @@ use cineo_core::app::{
     StreamSort, WatchedAt, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
-use cineo_player::embedded::PlayerCommand;
+use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::{EventActions, PlayerEvent, event_actions};
 use cineo_store::Store;
 use cineo_stream::{EngineOptions, Torrents};
@@ -85,6 +85,70 @@ pub struct PlayerStatusView {
     pub duration_s: f64,
     pub paused: bool,
     pub waiting: bool,
+    pub stats: PlayerStatsView,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct PlayerStatsView {
+    pub network_bytes_per_sec: Option<f64>,
+    pub buffered_s: Option<f64>,
+    pub resolution: Option<VideoSizeView>,
+    pub video_codec: Option<String>,
+    pub video_bits_per_sec: Option<f64>,
+    pub decoder: Option<DecoderView>,
+    pub dropped_frames: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct VideoSizeView {
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum DecoderView {
+    Software,
+    Hardware { name: String },
+}
+
+impl PlayerStatsView {
+    fn of(status: &Status) -> Self {
+        let stats = &status.stats;
+        let whole = |value: f64| {
+            #[expect(
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss,
+                reason = "a finite, non-negative count that mpv reports as a double"
+            )]
+            (value.is_finite() && value >= 0.0).then_some(value.round() as u64)
+        };
+        let size = |value: Option<f64>| value.and_then(whole).and_then(|v| u32::try_from(v).ok());
+        Self {
+            network_bytes_per_sec: stats.cache_speed,
+            buffered_s: stats.cache_s,
+            resolution: size(stats.width)
+                .zip(size(stats.height))
+                .map(|(width, height)| VideoSizeView { width, height }),
+            video_codec: status
+                .tracks
+                .iter()
+                .find(|t| t.kind == TrackKind::Video && t.selected)
+                .and_then(|t| t.codec.as_deref())
+                .map(plain_text),
+            video_bits_per_sec: stats.video_bitrate.filter(|b| *b > 0.0),
+            decoder: stats.hwdec.as_deref().map(|hwdec| match hwdec {
+                "no" => DecoderView::Software,
+                name => DecoderView::Hardware {
+                    name: plain_text(name),
+                },
+            }),
+            dropped_frames: stats.dropped_frames.and_then(whole),
+        }
+    }
+}
+
+fn plain_text(text: &str) -> String {
+    text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }
 
 #[derive(Debug)]
@@ -267,6 +331,7 @@ impl Cineo {
             duration_s: status.duration_s,
             paused: status.paused,
             waiting: status.is_waiting(),
+            stats: PlayerStatsView::of(&status),
         })
     }
 

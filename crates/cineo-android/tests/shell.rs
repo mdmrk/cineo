@@ -11,13 +11,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cineo_android::{
-    AddonListItems, AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players,
-    ProblemView, RowItems, SettingChange, Started, StateListener, StreamItems, TorrentView,
-    version,
+    AddonListItems, AppView, Cineo, DecoderView, ImageError, InstallView, MetaStatus, Playback,
+    PlayerStatsView, Players, ProblemView, RowItems, SettingChange, Started, StateListener,
+    StreamItems, TorrentView, VideoSizeView, version,
 };
 use cineo_core::app::Settings;
 use cineo_core::app::{PlayRequest, StreamSort, Tier};
-use cineo_player::embedded::{PlayerCommand, Status};
+use cineo_player::embedded::{PlayerCommand, Stats, Status, Track, TrackKind};
 use cineo_player::{PlayerError, PlayerEvent};
 use cineo_store::Store;
 use cineo_stream::EngineOptions;
@@ -114,6 +114,24 @@ impl Playback for FakePlayback {
             loaded: true,
             position_s: 12.0,
             duration_s: 120.0,
+            tracks: Arc::from([Track {
+                id: 1,
+                kind: TrackKind::Video,
+                title: None,
+                lang: None,
+                selected: true,
+                external_file: None,
+                codec: Some("h264\nHigh".into()),
+            }]),
+            stats: Stats {
+                cache_speed: Some(2_048.0),
+                cache_s: Some(31.4),
+                width: Some(1920.0),
+                height: Some(1080.0),
+                video_bitrate: Some(4_500_000.0),
+                hwdec: Some("mediacodec".into()),
+                dropped_frames: Some(3.0),
+            },
             ..Status::default()
         }
     }
@@ -408,6 +426,23 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
         let status = cineo.player_status().unwrap();
         assert!(status.loaded);
         assert_eq!(status.position_s, 12.0);
+        assert_eq!(
+            status.stats,
+            PlayerStatsView {
+                network_bytes_per_sec: Some(2_048.0),
+                buffered_s: Some(31.4),
+                resolution: Some(VideoSizeView {
+                    width: 1920,
+                    height: 1080
+                }),
+                video_codec: Some("h264 High".into()),
+                video_bits_per_sec: Some(4_500_000.0),
+                decoder: Some(DecoderView::Hardware {
+                    name: "mediacodec".into()
+                }),
+                dropped_frames: Some(3),
+            }
+        );
 
         cineo.resize_surface(1080, 2340);
         cineo.detach_surface();
