@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use cineo_core::addon::ContentType;
-use cineo_core::app::{Action, Effect, Notice, PlayRequest, State, update};
+use cineo_core::addon::{ContentType, MetaPreview, PosterShape};
+use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, State, update};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::PlayerCommand;
 use cineo_player::{EventActions, event_actions};
@@ -108,6 +108,18 @@ impl Cineo {
 
     pub fn select_video(&self, id: String) {
         self.send(Action::SelectVideo(id));
+    }
+
+    pub fn resume(&self, id: String) {
+        self.send(Action::Resume(id));
+    }
+
+    pub fn set_favorite(&self, id: String, favorite: bool) {
+        self.send(Action::SetFavorite { id, favorite });
+    }
+
+    pub fn remove_from_library(&self, id: String) {
+        self.send(Action::RemoveFromLibrary(id));
     }
 
     pub fn play(&self, group: u32, stream: u32) {
@@ -344,6 +356,13 @@ impl Shell {
             .flatten()
             .find(|item| item.id == id && item.content_type == content_type)
             .cloned()
+            .or_else(|| {
+                self.state
+                    .library
+                    .iter()
+                    .find(|item| item.id == id && item.content_type == content_type)
+                    .map(library_preview)
+            })
             .map(Box::new);
         self.dispatch(Action::OpenDetail {
             content_type,
@@ -442,6 +461,22 @@ impl Shell {
             self.listener.changed(next.clone());
             self.shown = Some(next);
         }
+    }
+}
+
+fn library_preview(item: &LibraryItem) -> MetaPreview {
+    MetaPreview {
+        id: item.id.clone(),
+        content_type: item.content_type.clone(),
+        name: item.name.clone(),
+        poster: item.poster.clone(),
+        poster_shape: PosterShape::Poster,
+        background: None,
+        logo: None,
+        description: None,
+        release_info: None,
+        imdb_rating: None,
+        genres: Vec::new(),
     }
 }
 

@@ -1,14 +1,18 @@
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, SourceKind, Stream, Video};
 use cineo_core::app::{
-    Detail, InstalledAddon, Loadable, Notice, PlaybackFailure, Problem, Row, State, StreamGroup,
+    Detail, InstalledAddon, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, Row, State,
+    StreamGroup, continue_watching,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct AppView {
     pub addons: Vec<AddonView>,
     pub addons_loading: u32,
     pub install: Option<InstallView>,
     pub board: Vec<RowView>,
+    pub continue_watching: Vec<LibraryItemView>,
+    pub favorites: Vec<LibraryItemView>,
+    pub recent: Vec<LibraryItemView>,
     pub detail: Option<DetailView>,
     pub playback: Option<PlaybackView>,
     pub notice: Option<NoticeView>,
@@ -19,6 +23,7 @@ pub struct DetailView {
     pub content_type: String,
     pub id: String,
     pub name: Option<String>,
+    pub favorite: bool,
     pub poster: Option<String>,
     pub background: Option<String>,
     pub logo: Option<String>,
@@ -30,6 +35,18 @@ pub struct DetailView {
     pub videos: Vec<VideoView>,
     pub selected_video: Option<String>,
     pub streams: Vec<StreamGroupView>,
+}
+
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct LibraryItemView {
+    pub id: String,
+    pub content_type: String,
+    pub name: String,
+    pub poster: Option<String>,
+    pub progress: f32,
+    pub favorite: bool,
+    pub played: bool,
+    pub resumable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -187,7 +204,15 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
             },
         }),
         board: state.board.iter().map(row).collect(),
-        detail: state.detail.as_ref().map(detail),
+        continue_watching: continue_watching(&state.library, state.settings.watched_at)
+            .into_iter()
+            .map(library_item)
+            .collect(),
+        favorites: shelf(state, LibraryItem::is_favorite, |i| {
+            i.favorited.unwrap_or(0)
+        }),
+        recent: shelf(state, LibraryItem::was_played, |i| i.updated_ms),
+        detail: state.detail.as_ref().map(|d| detail(d, &state.library)),
         playback: playing.map(|title| PlaybackView {
             title: title.to_owned(),
         }),
@@ -195,7 +220,30 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
     }
 }
 
-fn detail(detail: &Detail) -> DetailView {
+fn shelf(
+    state: &State,
+    keep: fn(&LibraryItem) -> bool,
+    newest: fn(&LibraryItem) -> u64,
+) -> Vec<LibraryItemView> {
+    let mut items: Vec<&LibraryItem> = state.library.iter().filter(|i| keep(i)).collect();
+    items.sort_by_key(|i| std::cmp::Reverse(newest(i)));
+    items.into_iter().map(library_item).collect()
+}
+
+fn library_item(item: &LibraryItem) -> LibraryItemView {
+    LibraryItemView {
+        id: item.id.clone(),
+        content_type: item.content_type.to_string(),
+        name: item.name.clone(),
+        poster: item.poster.as_ref().map(ToString::to_string),
+        progress: item.progress(),
+        favorite: item.is_favorite(),
+        played: item.was_played(),
+        resumable: item.stream.is_some(),
+    }
+}
+
+fn detail(detail: &Detail, library: &[LibraryItem]) -> DetailView {
     let meta = detail.meta.ready();
     let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
     let text = |pick: fn(&MetaPreview) -> Option<&String>| preview.and_then(pick).cloned();
@@ -206,6 +254,7 @@ fn detail(detail: &Detail) -> DetailView {
         content_type: detail.content_type.to_string(),
         id: detail.id.clone(),
         name: preview.map(|p| p.name.clone()),
+        favorite: library.iter().any(|i| i.id == detail.id && i.is_favorite()),
         poster: url(|p| p.poster.as_ref()),
         background: url(|p| p.background.as_ref()),
         logo: url(|p| p.logo.as_ref()),

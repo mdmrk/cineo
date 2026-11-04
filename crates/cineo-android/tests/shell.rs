@@ -89,6 +89,49 @@ impl Players for FakePlayers {
     }
 }
 
+fn start_with(dir: &Path, players: &Arc<FakePlayers>) -> (Arc<Cineo>, Receiver<AppView>) {
+    let (tx, views) = channel();
+    let cineo = Cineo::start(
+        dir.to_str().unwrap(),
+        Arc::new(Views(Mutex::new(tx))),
+        Arc::clone(players) as Arc<dyn Players>,
+    )
+    .unwrap();
+    (cineo, views)
+}
+
+async fn movie_addon(server: &MockServer) -> String {
+    serve(
+        server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    serve(
+        server,
+        "/cfg/meta/movie/tt0000001.json",
+        fixture("addons/basic/meta-movie.json"),
+    )
+    .await;
+    serve(
+        server,
+        "/cfg/stream/movie/tt0000001.json",
+        fixture("addons/basic/streams-movie.json"),
+    )
+    .await;
+    format!("{}/cfg/manifest.json", server.uri())
+}
+
+fn streams_ready(view: &AppView) -> bool {
+    view.detail.as_ref().is_some_and(|d| {
+        d.meta == MetaStatus::Ready
+            && !d.streams.is_empty()
+            && d.streams
+                .iter()
+                .all(|g| !matches!(g.items, StreamItems::Loading))
+    })
+}
+
 fn wait_for(views: &Receiver<AppView>, done: impl Fn(&AppView) -> bool) -> AppView {
     let deadline = Instant::now() + Duration::from_secs(10);
     let mut last = None;
@@ -351,6 +394,130 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
     let item = library.iter().find(|i| i.id == "tt0000001").unwrap();
     assert_eq!(item.time_offset_ms, 61_000);
     assert_eq!(item.duration_ms, 120_000);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_played_stream_resumes_where_it_stopped_after_a_restart() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let players = Arc::new(FakePlayers::default());
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+        let events = players.events.lock().unwrap().take().unwrap();
+        events
+            .send(PlayerEvent::Progress {
+                time_ms: 60_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        events
+            .send(PlayerEvent::Closed {
+                time_ms: 61_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        let stopped = wait_for(&views, |v| {
+            v.playback.is_none() && !v.continue_watching.is_empty()
+        });
+        let item = &stopped.continue_watching[0];
+        assert_eq!(item.id, "tt0000001");
+        assert!(item.resumable && item.played && !item.favorite);
+        assert!((item.progress - 61.0 / 120.0).abs() < 1e-6);
+        assert_eq!(stopped.recent, stopped.continue_watching);
+        drop(cineo);
+
+        let players = Arc::new(FakePlayers::default());
+        let (cineo, views) = start_with(dir.path(), &players);
+        wait_for(&views, |v| v.continue_watching.len() == 1);
+        cineo.resume("tt0000001".into());
+        let playing = wait_for(&views, |v| v.playback.is_some());
+        assert_eq!(playing.playback.unwrap().title, "First Example Film");
+        let request = players.requests.lock().unwrap()[0].clone();
+        assert_eq!(request.url.as_str(), "https://media.example/v/1.mp4");
+        assert_eq!(request.start_ms, 61_000);
+        assert!(
+            request
+                .headers
+                .iter()
+                .any(|(k, v)| k == "User-Agent" && v == "Cineo-Test")
+        );
+        players
+            .events
+            .lock()
+            .unwrap()
+            .take()
+            .unwrap()
+            .send(PlayerEvent::Closed {
+                time_ms: 61_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        wait_for(&views, |v| v.playback.is_none());
+        cineo.remove_from_library("tt0000001".into());
+        wait_for(&views, |v| {
+            v.continue_watching.is_empty() && v.recent.is_empty()
+        });
+        drop(cineo);
+    });
+
+    assert!(
+        Store::open_in(dir.path())
+            .unwrap()
+            .library()
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_favourite_stays_after_a_restart_until_it_is_unmarked() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+        cineo.set_favorite("tt0000001".into(), true);
+        let marked = wait_for(&views, |v| !v.favorites.is_empty());
+        assert!(marked.detail.unwrap().favorite);
+        assert_eq!(marked.favorites[0].name, "First Example Film");
+        assert!(!marked.favorites[0].played);
+        assert!(marked.recent.is_empty() && marked.continue_watching.is_empty());
+        drop(cineo);
+
+        let (cineo, views) = start(dir.path());
+        wait_for(&views, |v| v.favorites.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        let opened = wait_for(&views, |v| v.detail.is_some());
+        let detail = opened.detail.unwrap();
+        assert_eq!(detail.name.as_deref(), Some("First Example Film"));
+        assert!(detail.favorite);
+        cineo.set_favorite("tt0000001".into(), false);
+        wait_for(&views, |v| {
+            v.favorites.is_empty() && v.detail.as_ref().is_some_and(|d| !d.favorite)
+        });
+        drop(cineo);
+    });
+
+    assert!(
+        Store::open_in(dir.path())
+            .unwrap()
+            .library()
+            .unwrap()
+            .is_empty()
+    );
 }
 
 mod tempdir {

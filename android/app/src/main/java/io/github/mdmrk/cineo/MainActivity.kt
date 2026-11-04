@@ -12,6 +12,10 @@ import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.DetailScreen
 import io.github.mdmrk.cineo.ui.HomeScreen
 import io.github.mdmrk.cineo.ui.Images
+import io.github.mdmrk.cineo.ui.LibraryActions
+import io.github.mdmrk.cineo.ui.LibraryScreen
+import io.github.mdmrk.cineo.ui.Page
+import io.github.mdmrk.cineo.ui.Pages
 import io.github.mdmrk.cineo.ui.Notices
 import io.github.mdmrk.cineo.ui.PlayerScreen
 import io.github.mdmrk.cineo.ui.StartFailed
@@ -40,14 +44,32 @@ class MainActivity : ComponentActivity() {
                                     images = images,
                                     onSelectVideo = cineo::selectVideo,
                                     onPlay = cineo::play,
+                                    onFavorite = { cineo.setFavorite(detail.id, it) },
                                 )
                             }
-                            else -> HomeScreen(
-                                view = current,
-                                images = images,
-                                onInstall = cineo::installAddon,
-                                onOpen = { cineo.openDetail(it.contentType, it.id) },
-                            )
+                            else -> {
+                                val library = remember(cineo) {
+                                    LibraryActions(
+                                        open = { cineo.openDetail(it.contentType, it.id) },
+                                        resume = { cineo.resume(it.id) },
+                                        setFavorite = { item, favorite -> cineo.setFavorite(item.id, favorite) },
+                                        remove = { cineo.removeFromLibrary(it.id) },
+                                    )
+                                }
+                                Pages { page, padding ->
+                                    when (page) {
+                                        Page.HOME -> HomeScreen(
+                                            view = current,
+                                            images = images,
+                                            onInstall = cineo::installAddon,
+                                            onOpen = { cineo.openDetail(it.contentType, it.id) },
+                                            library = library,
+                                            padding = padding,
+                                        )
+                                        Page.LIBRARY -> LibraryScreen(current, images, library, padding)
+                                    }
+                                }
+                            }
                         }
                         Notices(current, cineo::dismissNotice)
                     }

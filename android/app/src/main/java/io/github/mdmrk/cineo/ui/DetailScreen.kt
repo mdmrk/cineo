@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +49,7 @@ fun DetailScreen(
     images: Images,
     onSelectVideo: (String) -> Unit,
     onPlay: (UInt, UInt) -> Unit,
+    onFavorite: (Boolean) -> Unit,
 ) {
     Scaffold { padding ->
         LazyColumn(
@@ -55,7 +57,7 @@ fun DetailScreen(
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item(key = "header") { Header(detail, images) }
+            item(key = "header") { Header(detail, images, onFavorite) }
             if (detail.meta is MetaStatus.Failed) {
                 item(key = "meta-failed") {
                     Text(
@@ -132,7 +134,7 @@ private fun unsupportedText(kind: SourceKindView): String =
     noticeText(io.github.mdmrk.cineo.rust.NoticeView.UnsupportedSource(kind))
 
 @Composable
-private fun Header(detail: DetailView, images: Images) {
+private fun Header(detail: DetailView, images: Images, onFavorite: (Boolean) -> Unit) {
     val width = LocalConfiguration.current.screenWidthDp
     var background by remember(detail.background) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(detail.background) {
@@ -154,6 +156,9 @@ private fun Header(detail: DetailView, images: Images) {
                 Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
             }
             detail.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            FilledTonalButton(onClick = { onFavorite(!detail.favorite) }) {
+                Text(stringResource(if (detail.favorite) R.string.favourite_remove else R.string.favourite_add))
+            }
         }
     }
 }

@@ -61,32 +61,36 @@ fun HomeScreen(
     images: Images,
     onInstall: (String) -> Unit,
     onOpen: (PosterView) -> Unit,
+    library: LibraryActions,
+    padding: PaddingValues,
 ) {
-    Scaffold { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = padding.calculateTopPadding() + 16.dp,
-                bottom = padding.calculateBottomPadding() + 16.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            item(key = "install") { InstallAddon(view?.install, onInstall) }
-            when {
-                view == null || (view.addons.isEmpty() && view.addonsLoading > 0u) -> item(key = "loading") {
-                    Text(
-                        stringResource(R.string.loading_addons),
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-                view.addons.isEmpty() -> item(key = "empty") {
-                    Text(
-                        stringResource(R.string.home_empty),
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-                else -> items(view.board, key = { it.key }) { row -> CatalogRow(row, images, onOpen) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = padding.calculateTopPadding() + 16.dp,
+            bottom = padding.calculateBottomPadding() + 16.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        val resume = view?.continueWatching.orEmpty()
+        if (resume.isNotEmpty()) {
+            item(key = "continue") { ContinueWatching(resume, images, library) }
+        }
+        item(key = "install") { InstallAddon(view?.install, onInstall) }
+        when {
+            view == null || (view.addons.isEmpty() && view.addonsLoading > 0u) -> item(key = "loading") {
+                Text(
+                    stringResource(R.string.loading_addons),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
+            view.addons.isEmpty() -> item(key = "empty") {
+                Text(
+                    stringResource(R.string.home_empty),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+            else -> items(view.board, key = { it.key }) { row -> CatalogRow(row, images, onOpen) }
         }
     }
 }

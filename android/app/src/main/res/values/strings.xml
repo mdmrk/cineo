@@ -49,4 +49,15 @@
     <string name="source_external">External</string>
     <string name="source_archive">Archive</string>
     <string name="source_usenet">Usenet</string>
+    <string name="page_home">Home</string>
+    <string name="page_library">Library</string>
+    <string name="continue_watching">Continue watching</string>
+    <string name="favourites">Favourites</string>
+    <string name="recently_played">Recently played</string>
+    <string name="library_empty">Anything you play shows up here.</string>
+    <string name="count_titles">Titles: %1$d</string>
+    <string name="favourite_add">Add to favourites</string>
+    <string name="favourite_remove">Remove from favourites</string>
+    <string name="remove_continue">Remove from continue watching</string>
+    <string name="remove_library">Remove from library</string>
 </resources>
