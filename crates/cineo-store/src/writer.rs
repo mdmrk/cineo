@@ -63,9 +63,7 @@ mod tests {
         let item = |id: &str, time_offset_ms| {
             Effect::SaveLibraryItem(LibraryItem {
                 id: id.into(),
-                content_type: ContentType::new("movie").unwrap_or_else(|| {
-                    panic!("valid type");
-                }),
+                content_type: ContentType::new("movie").unwrap(),
                 name: id.into(),
                 poster: None,
                 video_id: id.into(),
