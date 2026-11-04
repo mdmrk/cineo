@@ -6,6 +6,7 @@ mod plan;
 mod release;
 mod settings;
 mod state;
+mod streams;
 mod torrent;
 
 pub use language::Language;
@@ -27,6 +28,9 @@ pub use settings::{
 pub use state::{
     Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest,
     Playing, Row, State, StreamGroup, SubtitleGroup, update,
+};
+pub use streams::{
+    Facts as StreamFacts, QUALITIES, Quality, StreamSort, Tier, matcher as stream_matcher,
 };
 pub use torrent::{
     Lookahead, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file,
