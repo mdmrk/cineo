@@ -6,8 +6,8 @@ mod view;
 
 pub use player::{Playback, Players, Started};
 pub use shell::{
-    Cineo, DecoderView, ImageError, PlayerStatsView, PlayerStatusView, SettingChange, StartError,
-    StateListener, VideoSizeView,
+    AddonSubtitleView, Cineo, DecoderView, ImageError, PlayerStatsView, PlayerStatusView,
+    SettingChange, StartError, StateListener, TrackView, VideoSizeView,
 };
 pub use view::{
     AddonListItems, AddonListView, AddonView, AppView, ArtView, DetailView, InstallView,

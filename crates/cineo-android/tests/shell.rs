@@ -11,9 +11,9 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cineo_android::{
-    AddonListItems, AppView, Cineo, DecoderView, ImageError, InstallView, MetaStatus, Playback,
-    PlayerStatsView, Players, ProblemView, RowItems, SettingChange, Started, StateListener,
-    StreamItems, TorrentView, VideoSizeView, version,
+    AddonListItems, AddonSubtitleView, AppView, Cineo, DecoderView, ImageError, InstallView,
+    MetaStatus, Playback, PlayerStatsView, Players, ProblemView, RowItems, SettingChange, Started,
+    StateListener, StreamItems, TorrentView, TrackView, VideoSizeView, version,
 };
 use cineo_core::app::Settings;
 use cineo_core::app::{PlayRequest, StreamSort, Tier};
@@ -27,7 +27,7 @@ use librqbit::{
     create_torrent,
 };
 use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
-use wiremock::matchers::{method, path};
+use wiremock::matchers::{method, path, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[derive(Debug)]
@@ -109,20 +109,34 @@ impl Playback for FakePlayback {
         self.0.lock().unwrap().push(format!("{command:?}"));
     }
 
+    fn add_subtitle(&self, path: &Path, title: &str, lang: &str) -> Result<(), PlayerError> {
+        let content = std::fs::read_to_string(path).unwrap();
+        self.0
+            .lock()
+            .unwrap()
+            .push(format!("subtitle {title} {lang} {content}"));
+        Ok(())
+    }
+
     fn status(&self) -> Status {
         Status {
             loaded: true,
             position_s: 12.0,
             duration_s: 120.0,
-            tracks: Arc::from([Track {
-                id: 1,
-                kind: TrackKind::Video,
-                title: None,
-                lang: None,
-                selected: true,
-                external_file: None,
-                codec: Some("h264\nHigh".into()),
-            }]),
+            tracks: Arc::from([
+                Track {
+                    id: 1,
+                    kind: TrackKind::Video,
+                    title: None,
+                    lang: None,
+                    selected: true,
+                    external_file: None,
+                    codec: Some("h264\nHigh".into()),
+                },
+                track(1, TrackKind::Audio, Some("eng"), Some("Stereo"), true),
+                track(2, TrackKind::Audio, None, None, false),
+                track(1, TrackKind::Subtitle, Some("eng"), None, false),
+            ]),
             stats: Stats {
                 cache_speed: Some(2_048.0),
                 cache_s: Some(31.4),
@@ -134,6 +148,24 @@ impl Playback for FakePlayback {
             },
             ..Status::default()
         }
+    }
+}
+
+fn track(
+    id: i64,
+    kind: TrackKind,
+    lang: Option<&str>,
+    title: Option<&str>,
+    selected: bool,
+) -> Track {
+    Track {
+        id,
+        kind,
+        title: title.map(str::to_owned),
+        lang: lang.map(str::to_owned),
+        selected,
+        external_file: None,
+        codec: None,
     }
 }
 
@@ -162,6 +194,7 @@ fn start_seeded(
     let (tx, views) = channel();
     let cineo = Cineo::start(
         dir.to_str().unwrap(),
+        dir.join("subtitles"),
         local_engine(dir, peers),
         Arc::new(Views(Mutex::new(tx))),
         Arc::clone(players) as Arc<dyn Players>,
@@ -444,6 +477,36 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
             }
         );
 
+        assert_eq!(
+            status.audio,
+            [
+                TrackView {
+                    id: 1,
+                    number: 1,
+                    label: Some("eng · Stereo".into()),
+                    selected: true
+                },
+                TrackView {
+                    id: 2,
+                    number: 2,
+                    label: None,
+                    selected: false
+                },
+            ]
+        );
+        assert_eq!(
+            status.subtitles,
+            [TrackView {
+                id: 1,
+                number: 1,
+                label: Some("eng".into()),
+                selected: false
+            }]
+        );
+        assert!(status.subtitles_off);
+        cineo.select_audio(Some(2));
+        cineo.select_subtitle(None);
+
         cineo.resize_surface(1080, 2340);
         cineo.detach_surface();
         cineo.toggle_pause();
@@ -452,6 +515,8 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
             players.calls.lock().unwrap().as_slice(),
             [
                 "attach 7",
+                "SetAudio(Some(2))",
+                "SetSubtitle(None)",
                 "resize 1080x2340",
                 "detach",
                 "TogglePause",
@@ -524,6 +589,99 @@ async fn the_screen_answers_while_a_finished_player_is_released() {
         wait_for(&views, |v| v.playback.is_none());
         drop(cineo);
     });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn addon_subtitles_load_by_the_preferred_language_and_when_picked() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    serve(
+        &server,
+        "/subs/manifest.json",
+        fixture("addons/basic/manifest-subtitles.json"),
+    )
+    .await;
+    let subtitles = format!(
+        r#"{{"subtitles":[{{"id":"1","url":"{0}/files/spa","lang":"spa"}},{{"id":"2","url":"{0}/files/fre","lang":"fre","label":"French"}}]}}"#,
+        server.uri()
+    );
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/subs/subtitles/movie/tt0000001/.*\.json$"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(subtitles, "application/json"))
+        .mount(&server)
+        .await;
+    for (at, body) in [("/files/spa", "hola"), ("/files/fre", "salut")] {
+        Mock::given(method("GET"))
+            .and(path(at))
+            .respond_with(ResponseTemplate::new(200).set_body_string(body))
+            .mount(&server)
+            .await;
+    }
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.change_setting(SettingChange::SubtitleLanguage {
+            code: Some("spa".into()),
+        });
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.install_addon(format!("{}/subs/manifest.json", server.uri()));
+        wait_for(&views, |v| v.addons.len() == 2);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+
+        let calls = || players.calls.lock().unwrap().clone();
+        let until = |done: &dyn Fn(&[String]) -> bool| {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            loop {
+                let status = cineo.player_status().unwrap();
+                if done(&calls()) {
+                    return status;
+                }
+                assert!(Instant::now() < deadline, "calls: {:?}", calls());
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        };
+        let status = until(&|c| c.iter().any(|c| c.starts_with("subtitle ")));
+        assert_eq!(
+            calls()
+                .iter()
+                .filter(|c| c.starts_with("subtitle "))
+                .collect::<Vec<_>>(),
+            ["subtitle Subtitles Fixture spa hola"],
+            "the preferred language loads once"
+        );
+        let fre = format!("{}/files/fre", server.uri());
+        assert!(status.addon_subtitles.contains(&AddonSubtitleView {
+            url: fre.clone(),
+            label: "fre · French".into(),
+            selected: false,
+        }));
+
+        cineo.select_addon_subtitle(&fre);
+        until(&|c| c.iter().any(|c| c == "subtitle French fre salut"));
+        cineo.select_addon_subtitle(&format!("{}/files/spa", server.uri()));
+        until(&|c| {
+            c.iter()
+                .filter(|c| c.starts_with("subtitle Subtitles Fixture spa"))
+                .count()
+                == 2
+        });
+        drop(cineo);
+    });
+
+    let requests = server.received_requests().await.unwrap();
+    let fetched = |at: &str| requests.iter().filter(|r| r.url.path() == at).count();
+    assert_eq!(
+        fetched("/files/spa"),
+        1,
+        "a loaded subtitle is not fetched again"
+    );
+    assert_eq!(fetched("/files/fre"), 1);
 }
 
 #[tokio::test(flavor = "multi_thread")]

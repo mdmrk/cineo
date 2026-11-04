@@ -390,6 +390,17 @@ Format:
 - Exit: measure on a phone, then add a Wi-Fi-only option and the torrent
   settings.
 
+### Android: no subtitle style or delay in the player
+- Where: [PlayerTracks.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerTracks.kt)
+- Gap: the desktop's Subtitles menu also changes the subtitle style and a
+  delay for the playing video; Android's menu only picks a subtitle, and
+  Android's Settings have no subtitle style.
+- Why: the first Android subtitle slice brought over the menu and the
+  preferred-language pick only.
+- Instead: subtitles show with libmpv's defaults and no delay.
+- Exit: the style controls and the delay buttons on Android, sending the
+  same `PlayerCommand`s as the desktop.
+
 ### Android: no update check
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
 - Gap: releases carry the APK (ADR-0029), but the app never says that a

@@ -149,6 +149,11 @@
     <string name="stats_software">Software</string>
     <string name="stats_dropped">Dropped frames</string>
     <string name="player_stats">Streaming stats</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_audio">Audio</string>
+    <string name="subtitles_off">Off</string>
+    <string name="no_audio_tracks">No audio tracks</string>
+    <string name="track">Track %1$d</string>
     <string name="torrent_channel">Torrent streaming</string>
     <string name="torrent_notification">Streaming a torrent</string>
     <string name="page_search">Search</string>

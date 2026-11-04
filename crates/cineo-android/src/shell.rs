@@ -8,10 +8,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Notice, PlayRequest, SeekStep, Setting, State,
-    StreamSort, WatchedAt, update,
+    StreamSort, SubtitleGroup, WatchedAt, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
+use cineo_player::subtitles::{AddonSubtitle, AutoPick, SubtitleFiles, auto_pick};
 use cineo_player::{EventActions, PlayerEvent, event_actions};
 use cineo_store::Store;
 use cineo_stream::{EngineOptions, Torrents};
@@ -86,6 +87,55 @@ pub struct PlayerStatusView {
     pub paused: bool,
     pub waiting: bool,
     pub stats: PlayerStatsView,
+    pub audio: Vec<TrackView>,
+    pub subtitles: Vec<TrackView>,
+    pub subtitles_off: bool,
+    pub addon_subtitles: Vec<AddonSubtitleView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct TrackView {
+    pub id: i64,
+    pub number: u32,
+    pub label: Option<String>,
+    pub selected: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AddonSubtitleView {
+    pub url: String,
+    pub label: String,
+    pub selected: bool,
+}
+
+fn track_views(status: &Status, kind: TrackKind) -> Vec<TrackView> {
+    status
+        .tracks
+        .iter()
+        .filter(|t| t.kind == kind && t.external_file.is_none())
+        .zip(1..)
+        .map(|(track, number)| {
+            let parts: Vec<&str> = [track.lang.as_deref(), track.title.as_deref()]
+                .into_iter()
+                .flatten()
+                .collect();
+            TrackView {
+                id: track.id,
+                number,
+                label: (!parts.is_empty()).then(|| plain_text(&parts.join(" · "))),
+                selected: track.selected,
+            }
+        })
+        .collect()
+}
+
+fn addon_subtitle_view(entry: &AddonSubtitle) -> AddonSubtitleView {
+    let source = entry.label.as_deref().unwrap_or(&entry.addon_name);
+    AddonSubtitleView {
+        url: entry.url.to_string(),
+        label: plain_text(&format!("{} · {source}", entry.lang)),
+        selected: entry.selected,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -163,16 +213,32 @@ enum FilterChange {
 enum Msg {
     Action(Action),
     Filter(FilterChange),
-    OpenDetail { content_type: String, id: String },
+    OpenDetail {
+        content_type: String,
+        id: String,
+    },
     Notice(Notice),
+    LoadSubtitle(Url),
+    SubtitleFetched {
+        url: Url,
+        result: Result<Vec<u8>, String>,
+    },
     Shutdown,
 }
 
 #[derive(Debug, Default)]
 struct Screen {
     playback: Option<Box<dyn Playback>>,
+    subtitles: Option<Subtitles>,
     wid: Option<i64>,
     art: Option<ArtView>,
+}
+
+#[derive(Debug)]
+struct Subtitles {
+    files: SubtitleFiles,
+    groups: Vec<SubtitleGroup>,
+    auto: Vec<Language>,
 }
 
 fn lock(screen: &Mutex<Screen>) -> MutexGuard<'_, Screen> {
@@ -196,8 +262,15 @@ impl Cineo {
         cache_dir: &str,
         listener: Arc<dyn StateListener>,
     ) -> Result<Arc<Self>, StartError> {
-        let engine = EngineOptions::new(PathBuf::from(cache_dir).join("torrents"));
-        Self::start(data_dir, engine, listener, Arc::new(Mpv))
+        let cache_dir = PathBuf::from(cache_dir);
+        let engine = EngineOptions::new(cache_dir.join("torrents"));
+        Self::start(
+            data_dir,
+            cache_dir.join("subtitles"),
+            engine,
+            listener,
+            Arc::new(Mpv),
+        )
     }
 
     pub fn accept_p2p(&self) {
@@ -323,8 +396,26 @@ impl Cineo {
     }
 
     pub fn player_status(&self) -> Option<PlayerStatusView> {
-        let screen = lock(&self.screen);
+        let mut screen = lock(&self.screen);
+        let screen = &mut *screen;
         let status = screen.playback.as_ref()?.status();
+        let addon_subtitles = match &mut screen.subtitles {
+            Some(subtitles) => {
+                let entries = subtitles.files.entries(&subtitles.groups, &status.tracks);
+                if !subtitles.auto.is_empty() && status.loaded && !status.tracks.is_empty() {
+                    match auto_pick(&subtitles.auto, &status.tracks, entries) {
+                        AutoPick::Done => subtitles.auto.clear(),
+                        AutoPick::Load(url) => {
+                            subtitles.auto.clear();
+                            let _ = self.tx.send(Msg::LoadSubtitle(url));
+                        }
+                        AutoPick::Wait => {}
+                    }
+                }
+                entries.iter().map(addon_subtitle_view).collect()
+            }
+            None => Vec::new(),
+        };
         Some(PlayerStatusView {
             loaded: status.loaded,
             position_s: status.position_s,
@@ -332,7 +423,34 @@ impl Cineo {
             paused: status.paused,
             waiting: status.is_waiting(),
             stats: PlayerStatsView::of(&status),
+            audio: track_views(&status, TrackKind::Audio),
+            subtitles: track_views(&status, TrackKind::Subtitle),
+            subtitles_off: !status
+                .tracks
+                .iter()
+                .any(|t| t.kind == TrackKind::Subtitle && t.selected),
+            addon_subtitles,
         })
+    }
+
+    pub fn select_audio(&self, id: Option<i64>) {
+        self.command(PlayerCommand::SetAudio(id));
+    }
+
+    pub fn select_subtitle(&self, id: Option<i64>) {
+        self.stop_auto_subtitle();
+        self.command(PlayerCommand::SetSubtitle(id));
+    }
+
+    pub fn select_addon_subtitle(&self, url: &str) {
+        let Ok(url) = Url::parse(url) else {
+            warn!("not a subtitle URL");
+            return;
+        };
+        self.stop_auto_subtitle();
+        if self.tx.send(Msg::LoadSubtitle(url)).is_err() {
+            warn!("the shell thread has stopped");
+        }
     }
 
     pub fn attach_surface(&self, wid: i64) {
@@ -388,6 +506,7 @@ impl Cineo {
 impl Cineo {
     pub fn start(
         data_dir: &str,
+        subtitle_dir: PathBuf,
         engine: EngineOptions,
         listener: Arc<dyn StateListener>,
         players: Arc<dyn Players>,
@@ -440,6 +559,7 @@ impl Cineo {
             listener,
             players,
             screen: Arc::clone(&screen),
+            subtitle_dir,
             torrents,
             filter: StreamFilterView::default(),
             filtered: None,
@@ -481,6 +601,12 @@ impl Cineo {
             playback.send(command);
         }
     }
+
+    fn stop_auto_subtitle(&self) {
+        if let Some(subtitles) = &mut lock(&self.screen).subtitles {
+            subtitles.auto.clear();
+        }
+    }
 }
 
 impl Drop for Cineo {
@@ -491,8 +617,11 @@ impl Drop for Cineo {
         {
             error!("the shell thread panicked");
         }
-        let playback = lock(&self.screen).playback.take();
-        drop(playback);
+        let finished = {
+            let mut screen = lock(&self.screen);
+            (screen.playback.take(), screen.subtitles.take())
+        };
+        drop(finished);
         if let Some(runtime) = self.runtime.take() {
             runtime.shutdown_background();
         }
@@ -509,6 +638,7 @@ struct Shell {
     listener: Arc<dyn StateListener>,
     players: Arc<dyn Players>,
     screen: Arc<Mutex<Screen>>,
+    subtitle_dir: PathBuf,
     torrents: Torrents,
     filter: StreamFilterView,
     filtered: Option<String>,
@@ -539,6 +669,8 @@ impl Shell {
             Msg::Action(action) => self.dispatch(action),
             Msg::OpenDetail { content_type, id } => self.open_detail(content_type, id),
             Msg::Notice(notice) => self.state.notice = Some(notice),
+            Msg::LoadSubtitle(url) => self.load_subtitle(url),
+            Msg::SubtitleFetched { url, result } => self.subtitle_fetched(&url, result),
             Msg::Filter(change) => match change {
                 FilterChange::Query(query) => self.filter.query = query,
                 FilterChange::Quality(quality) => self.filter.quality = quality,
@@ -622,11 +754,20 @@ impl Shell {
     }
 
     fn play(&mut self, request: &PlayRequest) {
-        let old = lock(&self.screen).playback.take();
+        let old = {
+            let mut screen = lock(&self.screen);
+            (screen.playback.take(), screen.subtitles.take())
+        };
         drop(old);
         match self.players.start(request) {
             Ok((playback, events)) => {
+                let subtitles = Subtitles {
+                    files: SubtitleFiles::new(self.subtitle_dir.clone()),
+                    groups: self.state.subtitles.clone(),
+                    auto: request.settings.subtitle_languages().collect(),
+                };
                 let mut screen = lock(&self.screen);
+                screen.subtitles = Some(subtitles);
                 if let Some(wid) = screen.wid
                     && let Err(err) = playback.attach_surface(wid)
                 {
@@ -669,14 +810,73 @@ impl Shell {
         }
     }
 
+    fn load_subtitle(&mut self, url: Url) {
+        let Some((title, lang)) = find_subtitle(&self.state.subtitles, &url) else {
+            return;
+        };
+        {
+            let screen = lock(&self.screen);
+            let (Some(playback), Some(subtitles)) = (&screen.playback, &screen.subtitles) else {
+                return;
+            };
+            if let Some(path) = subtitles.files.get(&url) {
+                if let Err(err) = playback.add_subtitle(path, &title, &lang) {
+                    warn!(%err, "could not select the subtitle");
+                }
+                return;
+            }
+        }
+        let client = self.client.clone();
+        let tx = self.tx.clone();
+        self.runtime.spawn(async move {
+            let result = client
+                .fetch_subtitle(&url)
+                .await
+                .map_err(|err| err.to_string());
+            let _ = tx.send(Msg::SubtitleFetched { url, result });
+        });
+    }
+
+    fn subtitle_fetched(&mut self, url: &Url, result: Result<Vec<u8>, String>) {
+        let Some((title, lang)) = find_subtitle(&self.state.subtitles, url) else {
+            return;
+        };
+        let loaded = {
+            let mut screen = lock(&self.screen);
+            let screen = &mut *screen;
+            let (Some(playback), Some(subtitles)) = (&screen.playback, &mut screen.subtitles)
+            else {
+                return;
+            };
+            result.and_then(|bytes| {
+                let path = subtitles
+                    .files
+                    .write(url, &bytes)
+                    .map_err(|err| format!("cannot save it: {err}"))?;
+                playback
+                    .add_subtitle(&path, &title, &lang)
+                    .map_err(|err| err.to_string())
+            })
+        };
+        if let Err(err) = loaded {
+            warn!(%err, "addon subtitle failed");
+            self.state.notice = Some(Notice::SubtitleFailed(err));
+        }
+    }
+
     fn publish(&mut self) {
         let (playing, finished) = {
             let mut screen = lock(&self.screen);
             let finished = if self.state.playing.is_none() {
                 screen.art = None;
-                screen.playback.take()
+                (screen.playback.take(), screen.subtitles.take())
             } else {
-                None
+                if let Some(subtitles) = &mut screen.subtitles
+                    && subtitles.groups != self.state.subtitles
+                {
+                    subtitles.groups.clone_from(&self.state.subtitles);
+                }
+                (None, None)
             };
             (screen.art.clone(), finished)
         };
@@ -695,6 +895,20 @@ impl Shell {
             self.shown = Some(next);
         }
     }
+}
+
+fn find_subtitle(groups: &[SubtitleGroup], url: &Url) -> Option<(String, String)> {
+    groups.iter().find_map(|group| {
+        group
+            .subtitles
+            .ready()?
+            .iter()
+            .find(|s| s.url == *url)
+            .map(|s| {
+                let source = s.label.as_deref().unwrap_or(&group.addon_name);
+                (source.to_owned(), s.lang.clone())
+            })
+    })
 }
 
 fn library_preview(item: &LibraryItem) -> MetaPreview {
@@ -749,6 +963,7 @@ mod tests {
             listener: Arc::new(Ignore),
             players: Arc::new(Mpv),
             screen: Arc::default(),
+            subtitle_dir: std::env::temp_dir(),
             torrents: Torrents::new(
                 runtime.handle().clone(),
                 EngineOptions::new(std::env::temp_dir()),

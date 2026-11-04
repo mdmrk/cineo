@@ -65,14 +65,15 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
     var controls by remember { mutableStateOf(true) }
     var dragging by remember { mutableStateOf<Float?>(null) }
     var stats by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) {
             status = cineo.playerStatus()
             delay(250)
         }
     }
-    LaunchedEffect(controls, status?.paused) {
-        if (controls && status?.paused == false) {
+    LaunchedEffect(controls, status?.paused, menu) {
+        if (controls && !menu && status?.paused == false) {
             delay(3000)
             controls = false
         }
@@ -114,6 +115,10 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                 seekStep = playback.seekStepS.toInt(),
                 onSeekBy = { cineo.seekBy(it.toDouble()) },
                 onToggleStats = { stats = !stats },
+                onAudio = { cineo.selectAudio(it) },
+                onSubtitle = { cineo.selectSubtitle(it) },
+                onAddonSubtitle = { cineo.selectAddonSubtitle(it) },
+                onMenu = { menu = it },
             )
         }
         if (stats && current != null) {
@@ -138,6 +143,10 @@ private fun Controls(
     seekStep: Int,
     onSeekBy: (Int) -> Unit,
     onToggleStats: () -> Unit,
+    onAudio: (Long) -> Unit,
+    onSubtitle: (Long?) -> Unit,
+    onAddonSubtitle: (String) -> Unit,
+    onMenu: (Boolean) -> Unit,
 ) {
     val (back, forward) = when (seekStep) {
         5 -> Icon.REWIND_BACKWARD_5 to Icon.REWIND_FORWARD_5
@@ -170,6 +179,8 @@ private fun Controls(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            SubtitlesMenu(status, onTrack = onSubtitle, onAddon = onAddonSubtitle, onOpen = onMenu)
+            AudioMenu(status, onTrack = onAudio, onOpen = onMenu)
             val statsLabel = stringResource(R.string.player_stats)
             IconButton(onClick = onToggleStats, modifier = Modifier.semantics { contentDescription = statsLabel }) {
                 CineoIcon(Icon.ACTIVITY, tint = Color.White)

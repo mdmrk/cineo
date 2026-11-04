@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use cineo_core::app::PlayRequest;
@@ -12,6 +13,7 @@ pub trait Playback: Send + Sync + std::fmt::Debug {
     fn resize_surface(&self, width: u32, height: u32) -> Result<(), PlayerError>;
     fn send(&self, command: PlayerCommand);
     fn status(&self) -> Status;
+    fn add_subtitle(&self, path: &Path, title: &str, lang: &str) -> Result<(), PlayerError>;
 }
 
 pub type Started = (Box<dyn Playback>, UnboundedReceiver<PlayerEvent>);
@@ -75,6 +77,10 @@ impl Playback for OwnThreadDrop<Player> {
 
     fn status(&self) -> Status {
         self.get().status()
+    }
+
+    fn add_subtitle(&self, path: &Path, title: &str, lang: &str) -> Result<(), PlayerError> {
+        self.get().add_subtitle(path, title, lang)
     }
 }
 
