@@ -3,14 +3,22 @@ use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::embedded::{Track, TrackKind};
 use cineo_core::app::{Language, SubtitleGroup};
-use cineo_player::embedded::{Track, TrackKind};
 use tracing::warn;
 use url::Url;
 
-use crate::player::AddonSubtitle;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AddonSubtitle {
+    pub url: Url,
+    pub lang: String,
+    pub label: Option<String>,
+    pub addon_name: String,
+    pub selected: bool,
+}
 
-pub(crate) struct SubtitleFiles {
+#[derive(Debug)]
+pub struct SubtitleFiles {
     dir: PathBuf,
     files: HashMap<Url, PathBuf>,
     written: u64,
@@ -19,7 +27,7 @@ pub(crate) struct SubtitleFiles {
 }
 
 impl SubtitleFiles {
-    pub(crate) fn new(dir: PathBuf) -> Self {
+    pub fn new(dir: PathBuf) -> Self {
         remove_dir(&dir);
         Self {
             dir,
@@ -30,11 +38,11 @@ impl SubtitleFiles {
         }
     }
 
-    pub(crate) fn get(&self, url: &Url) -> Option<&Path> {
+    pub fn get(&self, url: &Url) -> Option<&Path> {
         self.files.get(url).map(PathBuf::as_path)
     }
 
-    pub(crate) fn write(&mut self, url: &Url, bytes: &[u8]) -> io::Result<PathBuf> {
+    pub fn write(&mut self, url: &Url, bytes: &[u8]) -> io::Result<PathBuf> {
         let mut builder = std::fs::DirBuilder::new();
         builder.recursive(true);
         #[cfg(unix)]
@@ -51,11 +59,7 @@ impl SubtitleFiles {
         Ok(path)
     }
 
-    pub(crate) fn entries(
-        &mut self,
-        groups: &[SubtitleGroup],
-        tracks: &Arc<[Track]>,
-    ) -> &[AddonSubtitle] {
+    pub fn entries(&mut self, groups: &[SubtitleGroup], tracks: &Arc<[Track]>) -> &[AddonSubtitle] {
         let settled = groups.iter().filter(|g| !g.subtitles.is_loading()).count();
         let fresh = self
             .entries_for
@@ -92,17 +96,13 @@ impl SubtitleFiles {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum AutoPick {
+pub enum AutoPick {
     Done,
     Load(Url),
     Wait,
 }
 
-pub(crate) fn auto_pick(
-    languages: &[Language],
-    tracks: &[Track],
-    entries: &[AddonSubtitle],
-) -> AutoPick {
+pub fn auto_pick(languages: &[Language], tracks: &[Track], entries: &[AddonSubtitle]) -> AutoPick {
     for language in languages {
         let file_track_on = tracks.iter().any(|t| {
             t.kind == TrackKind::Subtitle

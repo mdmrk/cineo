@@ -26,10 +26,10 @@ use crate::images::{self, NetImageLoader};
 use crate::keep_awake::KeepAwake;
 use crate::media_keys::{MediaKeys, Remote};
 use crate::player::{self, Controls, NextUp, Playback};
-use crate::subtitles::{self, AutoPick, SubtitleFiles};
 use crate::theme;
 use crate::view::{self, Page, ViewState};
 use crate::{instance, register};
+use cineo_player::subtitles::{self, AutoPick, SubtitleFiles};
 
 #[derive(Debug, Clone)]
 pub struct Options {

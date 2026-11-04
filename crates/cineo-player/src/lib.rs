@@ -1,5 +1,6 @@
 mod actions;
 pub mod embedded;
+pub mod subtitles;
 mod tracker;
 
 pub use actions::{EventActions, event_actions};

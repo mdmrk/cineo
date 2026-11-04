@@ -1,5 +1,6 @@
 use cineo_core::app::{Action, SeekStep, Settings, TorrentStatus};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
     Response, RichText, Role, Sense, Ui, UiBuilder, ViewportCommand, WidgetInfo, pos2, vec2,
@@ -104,15 +105,6 @@ impl Controls {
     pub fn take_next(&mut self) -> bool {
         std::mem::take(&mut self.next_requested)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AddonSubtitle {
-    pub url: Url,
-    pub lang: String,
-    pub label: Option<String>,
-    pub addon_name: String,
-    pub selected: bool,
 }
 
 enum Entry {

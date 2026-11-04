@@ -5,8 +5,9 @@
 )]
 
 use cineo_core::app::{Action, HideControls, SeekStep, Setting, Settings, ShortSeekStep};
-use cineo_desktop::player::{AddonSubtitle, Controls, NextUp, Playback, show};
+use cineo_desktop::player::{Controls, NextUp, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{Key, Modifiers, ViewportId};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};

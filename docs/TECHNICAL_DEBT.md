@@ -327,7 +327,7 @@ Format:
 
 ### Windows: private files rely on the profile's ACL
 - Where: `create_private_dir` in `cineo-store` and `cineo-stream`,
-  `subtitles.rs`
+  `subtitles.rs` in `cineo-player`
 - Gap: on Unix these directories and files get mode 0700/0600; on Windows
   they inherit the ACL of `%APPDATA%` or `%LOCALAPPDATA%`, which is private
   to the user by default but not checked.

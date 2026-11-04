@@ -13,7 +13,6 @@ mod register;
 pub mod settings;
 #[cfg(windows)]
 mod smtc;
-mod subtitles;
 mod theme;
 pub mod view;
 
