@@ -115,6 +115,8 @@ Cineo's logo, app icon and loading animation
 (`crates/cineo-desktop/assets/brand/`) are the project's own artwork,
 supplied by the owner on 2026-10-07 (logo updated and animation added
 2026-10-08) and covered by the repository license.
+The Android launcher icon (`android/app/src/main/res/mipmap-*/`) is the
+same logo, resized onto the icon's background color (2026-11-04).
 
 | Font | Files | Source | License |
 |------|-------|--------|---------|
