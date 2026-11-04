@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -200,7 +201,7 @@ private fun Controls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { onSeekBy(-seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(back, tint = Color.White, size = 36.sp, label = stringResource(R.string.seek_back, seekStep))
+                CineoIcon(back, tint = Color.White, size = 36.sp, label = pluralStringResource(R.plurals.seek_back, seekStep, seekStep))
             }
             IconButton(
                 onClick = onTogglePause,
@@ -215,7 +216,7 @@ private fun Controls(
                 )
             }
             IconButton(onClick = { onSeekBy(seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(forward, tint = Color.White, size = 36.sp, label = stringResource(R.string.seek_forward, seekStep))
+                CineoIcon(forward, tint = Color.White, size = 36.sp, label = pluralStringResource(R.plurals.seek_forward, seekStep, seekStep))
             }
         }
         Column(

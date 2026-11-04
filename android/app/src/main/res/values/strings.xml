@@ -11,8 +11,14 @@
     <string name="back">Back</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
-    <string name="seek_back">Seek back %1$d seconds</string>
-    <string name="seek_forward">Seek forward %1$d seconds</string>
+    <plurals name="seek_back">
+        <item quantity="one">Seek back %1$d second</item>
+        <item quantity="other">Seek back %1$d seconds</item>
+    </plurals>
+    <plurals name="seek_forward">
+        <item quantity="one">Seek forward %1$d second</item>
+        <item quantity="other">Seek forward %1$d seconds</item>
+    </plurals>
     <string name="episodes">Episodes</string>
     <string name="season">Season %1$d</string>
     <string name="specials">Specials</string>
