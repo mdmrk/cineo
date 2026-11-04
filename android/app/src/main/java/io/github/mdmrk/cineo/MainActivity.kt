@@ -85,7 +85,10 @@ class MainActivity : ComponentActivity() {
                                 BackHandler { cineo.closeDetail() }
                                 DetailScreen(
                                     detail = detail,
+                                    resume = current.continueWatching.firstOrNull { it.id == detail.id },
                                     images = images,
+                                    onBack = cineo::closeDetail,
+                                    onResume = { cineo.resume(detail.id) },
                                     onSelectVideo = cineo::selectVideo,
                                     onPlay = cineo::play,
                                     onFavorite = { cineo.setFavorite(detail.id, it) },
@@ -100,6 +103,7 @@ class MainActivity : ComponentActivity() {
                                         remove = { cineo.removeFromLibrary(it.id) },
                                     )
                                 }
+                                BackHandler(enabled = page != Page.HOME) { page = Page.HOME }
                                 Pages(page, { page = it }) { padding ->
                                     val open = { poster: io.github.mdmrk.cineo.rust.PosterView ->
                                         cineo.openDetail(poster.contentType, poster.id)
