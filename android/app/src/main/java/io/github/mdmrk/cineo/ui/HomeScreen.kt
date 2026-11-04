@@ -1,6 +1,14 @@
 package io.github.mdmrk.cineo.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.material3.IconButton
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +37,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -287,21 +291,53 @@ fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
     }
 }
 
+private const val NOTICE_MS = 8000L
+
 @Composable
-fun Notices(view: AppView?, onDismissNotice: () -> Unit) {
-    val snackbar = remember { SnackbarHostState() }
-    val notice = view?.notice?.let { noticeText(it) }
-    val dismiss = stringResource(R.string.dismiss)
-    LaunchedEffect(notice) {
-        if (notice != null) {
-            val result = snackbar.showSnackbar(notice, dismiss, duration = SnackbarDuration.Long)
-            if (result == SnackbarResult.ActionPerformed || result == SnackbarResult.Dismissed) {
-                onDismissNotice()
-            }
+fun Notices(view: AppView?, aboveTabs: Boolean, onDismissNotice: () -> Unit) {
+    val notice = view?.notice
+    var expanded by remember(notice) { mutableStateOf(false) }
+    LaunchedEffect(notice, expanded) {
+        if (notice != null && !expanded) {
+            delay(NOTICE_MS)
+            onDismissNotice()
         }
     }
-    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    Box(Modifier.fillMaxSize().safeDrawingPadding().padding(bottom = if (aboveTabs) 80.dp else 0.dp)) {
+        AnimatedVisibility(
+            visible = notice != null,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            val (title, detail) = notice?.let { noticeParts(it) } ?: ("" to null)
+            Row(
+                Modifier
+                    .padding(12.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Brand.SurfaceHover)
+                    .clickable(enabled = detail != null) { expanded = !expanded }
+                    .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CineoIcon(Icon.ALERT_CIRCLE, tint = Brand.Warning, size = MaterialTheme.typography.titleMedium.fontSize)
+                Column(Modifier.weight(1f).animateContentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(title, style = MaterialTheme.typography.bodyMedium, color = Brand.TextBright)
+                    if (detail != null) {
+                        Text(
+                            if (expanded) detail else stringResource(R.string.show_details),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (expanded) Brand.TextDim else Brand.Accent,
+                        )
+                    }
+                }
+                IconButton(onClick = onDismissNotice) {
+                    CineoIcon(Icon.X, tint = Brand.TextDim, size = MaterialTheme.typography.titleMedium.fontSize)
+                }
+            }
+        }
     }
 }
 

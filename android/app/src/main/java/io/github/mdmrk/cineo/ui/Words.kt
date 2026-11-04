@@ -64,3 +64,23 @@ fun catalogTitle(row: RowView): String {
     }
     return stringResource(R.string.catalog_title, row.name, kind)
 }
+
+@Composable
+fun noticeParts(notice: NoticeView): Pair<String, String?> = when (notice) {
+    is NoticeView.AddonUnavailable -> stringResource(R.string.notice_addon_unavailable_short) to notice.reason
+    is NoticeView.PlaybackFailed -> {
+        val title = when {
+            notice.pickAnother -> R.string.notice_pick_another_short
+            notice.failure is PlaybackFailureView.Torrent -> R.string.notice_torrent_failed_short
+            else -> R.string.notice_playback_failed_short
+        }
+        val reason = when (val failure = notice.failure) {
+            is PlaybackFailureView.Player -> failure.reason
+            is PlaybackFailureView.Torrent -> failure.reason
+        }
+        stringResource(title) to reason
+    }
+    is NoticeView.SubtitleFailed -> stringResource(R.string.notice_subtitle_failed_short) to notice.reason
+    is NoticeView.SaveFailed -> stringResource(R.string.notice_save_failed_short) to notice.reason
+    else -> noticeText(notice) to null
+}

@@ -128,7 +128,7 @@ class MainActivity : ComponentActivity() {
                         if (current?.p2pPrompt == true) {
                             P2pPrompt(onAccept = cineo::acceptP2p, onDecline = cineo::declineP2p)
                         }
-                        Notices(current, cineo::dismissNotice)
+                        Notices(current, aboveTabs = playback == null && connecting == null && detail == null, onDismissNotice = cineo::dismissNotice)
                     }
                     is Started.Failed -> StartFailed(started.reason)
                 }
