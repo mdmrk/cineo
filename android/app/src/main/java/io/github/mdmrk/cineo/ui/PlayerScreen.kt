@@ -58,6 +58,11 @@ import io.github.mdmrk.cineo.rust.PlayerStatusView
 import io.github.mdmrk.cineo.rust.TorrentView
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 
 @Composable
 fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, cineo: Cineo) {
@@ -66,10 +71,13 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
     var dragging by remember { mutableStateOf<Float?>(null) }
     var stats by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            status = cineo.playerStatus()
-            delay(250)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                status = withContext(Dispatchers.Default) { cineo.playerStatus() }
+                delay(250)
+            }
         }
     }
     LaunchedEffect(controls, status?.paused, menu) {
