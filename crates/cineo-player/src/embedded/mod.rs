@@ -13,6 +13,7 @@ use cineo_core::app::{
 use serde_json::Value as Json;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
+use url::Url;
 
 pub use render::{Display, OnFrame, ProcAddress, Renderer};
 
@@ -201,6 +202,12 @@ pub fn set_java_vm(vm: std::ptr::NonNull<std::ffi::c_void>) -> Result<(), Player
     ffi::set_java_vm(vm).map_err(PlayerError::LibmpvUnavailable)
 }
 
+fn load(core: &Core, url: &Url) -> Result<(), ffi::MpvError> {
+    core.command(&["loadfile", url.as_str(), "replace"])?;
+    info!(origin = %url.origin().ascii_serialization(), "libmpv playback started");
+    Ok(())
+}
+
 pub fn use_bundled_libmpv(path: PathBuf) {
     ffi::set_bundled(path);
 }
@@ -227,7 +234,7 @@ const OPTIONS: &[(&str, &str)] = &[
 
 pub struct Player {
     core: Arc<Core>,
-    pending: Mutex<Option<String>>,
+    pending: Mutex<Option<Url>>,
     status: Arc<Mutex<Status>>,
     finished: Arc<AtomicBool>,
 }
@@ -276,9 +283,7 @@ impl Player {
             .unwrap_or_else(PoisonError::into_inner)
             .take();
         if let Some(url) = pending {
-            self.core
-                .command(&["loadfile", &url, "replace"])
-                .map_err(|err| PlayerError::Libmpv(err.message))?;
+            load(&self.core, &url).map_err(|err| PlayerError::Libmpv(err.message))?;
         }
         Ok(())
     }
@@ -382,11 +387,11 @@ impl Player {
         }
         core.set_property("force-media-title", &request.title)
             .map_err(fail)?;
-        if !waits_for_surface {
-            core.command(&["loadfile", request.url.as_str(), "replace"])
-                .map_err(fail)?;
+        if waits_for_surface {
+            info!("libmpv waits for a surface");
+        } else {
+            load(&core, &request.url).map_err(fail)?;
         }
-        info!(origin = %request.url.origin().ascii_serialization(), "libmpv playback started");
 
         let status = Arc::new(Mutex::new(Status::default()));
         let finished = Arc::new(AtomicBool::new(false));
@@ -406,7 +411,7 @@ impl Player {
         Ok((
             Self {
                 core,
-                pending: Mutex::new(waits_for_surface.then(|| request.url.to_string())),
+                pending: Mutex::new(waits_for_surface.then(|| request.url.clone())),
                 status,
                 finished,
             },
