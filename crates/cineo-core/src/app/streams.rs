@@ -186,7 +186,9 @@ impl Quality {
         let resolution = resolution(name).or_else(|| resolution(description))?;
         let (mut hdr, mut dv) = (false, false);
         for word in words(name).chain(words(description)) {
-            hdr |= word.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("hdr"));
+            hdr |= ["hdr", "hdr10", "hdr10plus"]
+                .iter()
+                .any(|n| word.eq_ignore_ascii_case(n));
             dv |= word.eq_ignore_ascii_case("dv") || word.eq_ignore_ascii_case("dovi");
         }
         let flags: &[&str] = match (hdr, dv) {
@@ -315,6 +317,15 @@ mod tests {
             assert_eq!(Resolution::from_label(resolution.label()), Some(resolution));
         }
         assert_eq!(Resolution::from_label("8K"), None);
+    }
+
+    #[test]
+    fn hdr_rips_are_not_hdr() {
+        let flags = |name| Quality::of(&stream(Some(name), None)).unwrap().flags;
+        assert!(flags("Film.1080p.HDRip.x264").is_empty());
+        assert_eq!(flags("4K HDR10+"), ["HDR"]);
+        assert_eq!(flags("2160p HDR10Plus"), ["HDR"]);
+        assert_eq!(flags("4k DV HDR"), ["HDR", "DV"]);
     }
 
     #[test]
