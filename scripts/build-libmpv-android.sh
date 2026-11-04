@@ -37,9 +37,11 @@ fi
 meson=$work/venv/bin/meson
 
 step "sources"
+archives=()
 while read -r name url sha; do
   [[ -z $name ]] && continue
   archive=$src/$(basename "$url")
+  archives+=("$(basename "$url")")
   if [[ ! -f $archive ]] || ! echo "$sha  $archive" | sha256sum -c --status -; then
     curl -fsSL --retry 3 -o "$archive" "$url"
     echo "$sha  $archive" | sha256sum -c -
@@ -50,13 +52,15 @@ while read -r name url sha; do
   printf '%s %s %s\n' "$name" "$url" "$sha" >>"$out/SOURCES"
 done <<<"$SOURCES"
 
-if [[ ! -d $src/libplacebo/.git ]]; then
+if [[ ! -e $src/libplacebo ]]; then
   git clone --quiet "$LIBPLACEBO_GIT" "$src/libplacebo"
 fi
-git -C "$src/libplacebo" fetch --quiet origin "$LIBPLACEBO_COMMIT"
-git -C "$src/libplacebo" checkout --quiet --force "$LIBPLACEBO_COMMIT"
-git -C "$src/libplacebo" submodule update --quiet --init --depth 1 \
-  3rdparty/glad 3rdparty/jinja 3rdparty/markupsafe 3rdparty/fast_float
+if [[ -d $src/libplacebo/.git ]]; then
+  git -C "$src/libplacebo" fetch --quiet origin "$LIBPLACEBO_COMMIT"
+  git -C "$src/libplacebo" checkout --quiet --force "$LIBPLACEBO_COMMIT"
+  git -C "$src/libplacebo" submodule update --quiet --init --depth 1 \
+    3rdparty/glad 3rdparty/jinja 3rdparty/markupsafe 3rdparty/fast_float
+fi
 printf 'libplacebo %s %s\n' "$LIBPLACEBO_GIT" "$LIBPLACEBO_COMMIT" >>"$out/SOURCES"
 
 cat >"$work/cross.ini" <<EOF
@@ -173,8 +177,91 @@ cp "$src/fribidi/COPYING" "$out/licenses/fribidi-LGPL-2.1.txt"
 cp "$src/harfbuzz/COPYING" "$out/licenses/harfbuzz-MIT.txt"
 cp "$src/libplacebo/LICENSE" "$out/licenses/libplacebo-LGPL-2.1.txt"
 
+{
+  cat <<EOF
+# libmpv (Android)
+
+Cineo for Android contains libmpv and FFmpeg, built from unmodified
+sources without GPL, version3 or nonfree code, so both are
+LGPL-2.1-or-later (mpv-LGPL-2.1.txt and ffmpeg-LGPL-2.1.txt). Copyright
+the mpv developers and the FFmpeg developers. The other license files
+belong to the libraries they link.
+
+## Files
+
+The APK carries these, unmodified, in lib/arm64-v8a/:
+
+EOF
+  for lib in "${libs[@]}"; do
+    printf -- '- %s: SHA-256 %s\n' "$lib" "$(sha256sum "$out/lib/$lib" | cut -d' ' -f1)"
+  done
+  cat <<EOF
+
+## Source
+
+The APK itself carries the complete source of these files and the script
+that built them, as assets/sources/libmpv-android-sources.tar.xz. To get
+it:
+
+    unzip cineo-arm64-android.apk assets/sources/libmpv-android-sources.tar.xz
+
+They were built from:
+
+EOF
+  sed 's/^/- /' "$out/SOURCES"
+  cat <<EOF
+
+## Using your own build
+
+Cineo loads libmpv.so at runtime. A replacement must be built for
+arm64-v8a, Android API level $ANDROID_API, with the same mpv client API.
+With zip and the Android SDK build tools:
+
+    mkdir -p lib/arm64-v8a
+    cp /path/to/your/libmpv.so lib/arm64-v8a/
+    cp cineo-arm64-android.apk cineo-own.apk
+    zip -0 cineo-own.apk lib/arm64-v8a/libmpv.so
+    zipalign -f -P 16 4 cineo-own.apk cineo-own-aligned.apk
+    apksigner sign --ks your-key.jks cineo-own-aligned.apk
+    adb uninstall io.github.mdmrk.cineo
+    adb install cineo-own-aligned.apk
+
+Add the FFmpeg libraries the same way to replace them too. Android only
+installs an APK over one signed with the same key, so Cineo must be
+uninstalled first, which removes its library and settings.
+EOF
+} >"$out/libmpv.md"
+
 archive=$work/libmpv-android-arm64-v8a.tar.xz
-tar -C "$out" -cJf "$archive" lib licenses SOURCES
+tar -C "$out" -cJf "$archive" lib licenses SOURCES libmpv.md
+
+step "source archive"
+stage=$work/sources/libmpv-android-sources
+rm -rf "$work/sources"
+mkdir -p "$stage/scripts" "$stage/work/src"
+cp "$root/scripts/build-libmpv-android.sh" "$root/scripts/libmpv-android.env" "$stage/scripts/"
+cp "$out/SOURCES" "$out/libmpv.md" "$stage/"
+for name in "${archives[@]}"; do
+  cp "$src/$name" "$stage/work/src/"
+done
+tar -C "$src" --exclude-vcs -cf - libplacebo | tar -C "$stage/work/src" -xf -
+cat >"$stage/README.md" <<EOF
+# libmpv for Cineo on Android: complete source
+
+work/src/ holds the pinned source archives, which match the hashes in
+scripts/libmpv-android.env, and libplacebo at its pinned commit. To
+rebuild the libraries, install NDK $NDK_VERSION, python3 with venv, perl,
+make, ninja and pkg-config, then run:
+
+    ANDROID_NDK_HOME=/path/to/ndk/$NDK_VERSION scripts/build-libmpv-android.sh work
+
+It writes them to work/out/lib/. libmpv.md says how to put them into the
+APK.
+EOF
+sources=$work/libmpv-android-sources.tar.xz
+tar -C "$work/sources" -cJf "$sources" libmpv-android-sources
+rm -rf "$work/sources"
+
 step "done"
-sha256sum "$archive"
+sha256sum "$archive" "$sources"
 ls -l "$out/lib"
