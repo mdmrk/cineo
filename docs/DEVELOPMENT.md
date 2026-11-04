@@ -47,8 +47,10 @@ holds the details it links to.
    Android build keeps symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`)
    because `uniffi-bindgen` reads its metadata from them; AGP strips the
    copy in the APK. `./gradlew testDebugUnitTest` runs the Kotlin unit
-   tests in `app/src/test/` on the JVM. CI runs `cargo ndk … clippy -p
-   cineo-android`, the Gradle build and those tests (job `check (android)`).
+   tests in `app/src/test/` on the JVM, and `./gradlew lintDebug` runs
+   Android Lint, which fails on errors and reports warnings in
+   `app/build/reports/`. CI runs `cargo ndk … clippy -p cineo-android`,
+   the Gradle build, those tests and Lint (job `check (android)`).
 6. To build the Android libmpv (ADR-0028):
    `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh`, with the NDK
    `scripts/libmpv-android.env` names, plus `python3` (with `venv`),
