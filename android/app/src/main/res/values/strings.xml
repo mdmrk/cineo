@@ -154,4 +154,11 @@
     <string name="notice_subtitle_failed_short">Could not load the subtitle</string>
     <string name="notice_save_failed_short">Could not save changes</string>
     <string name="show_details">Details</string>
+    <string name="addons_discover">Discover addons</string>
+    <string name="addons_discover_note">Addons in these lists are made by third parties. Install only those you trust.</string>
+    <string name="addons_list_empty">This list is empty.</string>
+    <string name="addon_installed">Installed</string>
+    <string name="configure">Configure</string>
+    <string name="badge_configure">Needs configuration</string>
+    <string name="retry">Retry</string>
 </resources>

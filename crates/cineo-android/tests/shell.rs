@@ -11,8 +11,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cineo_android::{
-    AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players, ProblemView, RowItems,
-    SettingChange, Started, StateListener, StreamItems, TorrentView,
+    AddonListItems, AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players,
+    ProblemView, RowItems, SettingChange, Started, StateListener, StreamItems, TorrentView,
 };
 use cineo_core::app::PlayRequest;
 use cineo_core::app::Settings;
@@ -739,6 +739,82 @@ async fn a_search_fills_rows_from_search_catalogs_and_opens_its_results() {
         );
         cineo.search(String::new());
         wait_for(&views, |v| v.search.is_empty() && v.search_query.is_empty());
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn addon_lists_offer_installs_and_configuration_links() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/lists/manifest.json",
+        fixture("addons/basic/manifest-addon-lists.json"),
+    )
+    .await;
+    serve(
+        &server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    let base = server.uri();
+    let basic: serde_json::Value =
+        serde_json::from_slice(&fixture("addons/basic/manifest.json")).unwrap();
+    let mut setup = basic.clone();
+    setup["id"] = "org.cineo.fixture.setup".into();
+    setup["name"] = "Setup Fixture".into();
+    setup["behaviorHints"] =
+        serde_json::json!({ "configurable": true, "configurationRequired": true });
+    let official = serde_json::json!({ "addons": [
+        { "transportUrl": format!("{base}/cfg/manifest.json"), "manifest": basic },
+        { "transportUrl": format!("{base}/setup/manifest.json"), "manifest": setup },
+    ]});
+    serve(
+        &server,
+        "/lists/addon_catalog/all/official.json",
+        official.to_string().into_bytes(),
+    )
+    .await;
+    serve(
+        &server,
+        "/lists/addon_catalog/all/community.json",
+        br#"{"addons":[]}"#.to_vec(),
+    )
+    .await;
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(format!("{base}/lists/manifest.json"));
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.load_addon_lists();
+        let loaded = wait_for(&views, |v| {
+            v.addon_lists.len() == 2
+                && v.addon_lists
+                    .iter()
+                    .all(|l| l.items != AddonListItems::Loading)
+        });
+        let names: Vec<_> = loaded.addon_lists.iter().map(|l| l.name.as_str()).collect();
+        assert_eq!(names, ["Official", "Community"]);
+        let AddonListItems::Ready { addons } = &loaded.addon_lists[0].items else {
+            panic!("the list did not load: {:?}", loaded.addon_lists[0].items);
+        };
+        let listed: Vec<_> = addons.iter().map(|a| a.name.as_str()).collect();
+        assert_eq!(listed, ["Basic Fixture", "Setup Fixture"]);
+        assert!(!addons[0].installed && !addons[0].needs_setup);
+        assert!(addons[1].needs_setup);
+        assert_eq!(addons[1].configure_url, format!("{base}/setup/configure"));
+
+        cineo.install_addon(addons[0].transport.clone());
+        let installed = wait_for(&views, |v| v.addons.len() == 2);
+        let AddonListItems::Ready { addons } = &installed.addon_lists[0].items else {
+            panic!("the list is gone: {:?}", installed.addon_lists[0].items);
+        };
+        assert!(addons[0].installed);
+        assert_eq!(
+            installed.addons[1].configure_url.as_deref(),
+            Some(format!("{base}/cfg/configure").as_str())
+        );
     });
 }
 

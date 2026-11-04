@@ -1,7 +1,10 @@
-use cineo_core::addon::{Meta, MetaPreview, PosterShape, SourceKind, Stream, Video};
+use cineo_core::addon::{
+    AddonDescriptor, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl, Video,
+};
 use cineo_core::app::{
-    Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, Row,
-    SeekStep, Setting, Settings, State, StreamGroup, TorrentStatus, WatchedAt, continue_watching,
+    AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure,
+    Problem, Row, SeekStep, Setting, Settings, State, StreamGroup, TorrentStatus, WatchedAt,
+    continue_watching,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -9,6 +12,7 @@ pub struct AppView {
     pub addons: Vec<AddonView>,
     pub addons_loading: u32,
     pub unavailable_addons: Vec<String>,
+    pub addon_lists: Vec<AddonListView>,
     pub install: Option<InstallView>,
     pub board: Vec<RowView>,
     pub search_query: String,
@@ -131,6 +135,34 @@ pub struct AddonView {
     pub name: String,
     pub version: String,
     pub logo: Option<String>,
+    pub configure_url: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AddonListView {
+    pub key: String,
+    pub name: String,
+    pub addon_name: String,
+    pub items: AddonListItems,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum AddonListItems {
+    Loading,
+    Ready { addons: Vec<ListedAddonView> },
+    Failed { problem: ProblemView },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ListedAddonView {
+    pub transport: String,
+    pub name: String,
+    pub version: String,
+    pub description: Option<String>,
+    pub logo: Option<String>,
+    pub installed: bool,
+    pub needs_setup: bool,
+    pub configure_url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -143,11 +175,18 @@ pub enum InstallView {
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum ProblemView {
     AlreadyInstalled,
-    ConfigurationRequired { transport: String },
-    InvalidAddonUrl { reason: String },
+    ConfigurationRequired {
+        transport: String,
+        configure_url: String,
+    },
+    InvalidAddonUrl {
+        reason: String,
+    },
     NoMetaAddon,
     UnsupportedFilter,
-    Request { reason: String },
+    Request {
+        reason: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -244,6 +283,12 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
                     && !state.addons.iter().any(|a| &a.transport == *t)
             })
             .map(ToString::to_string)
+            .collect(),
+        addon_lists: state
+            .addon_lists
+            .iter()
+            .flatten()
+            .map(|l| addon_list(l, &state.installed))
             .collect(),
         install: state.install.as_ref().map(|install| match install {
             Loadable::Loading => InstallView::Installing,
@@ -430,6 +475,43 @@ fn addon(addon: &InstalledAddon) -> AddonView {
         name: addon.manifest.name.clone(),
         version: addon.manifest.version.to_string(),
         logo: addon.manifest.logo.as_ref().map(ToString::to_string),
+        configure_url: addon
+            .manifest
+            .behavior_hints
+            .configurable
+            .then(|| addon.transport.configure_url().to_string()),
+    }
+}
+
+fn addon_list(list: &AddonList, installed: &[TransportUrl]) -> AddonListView {
+    let target = &list.target;
+    AddonListView {
+        key: format!("{} {}", target.addon, target.path.to_url_path()),
+        name: target.name.clone(),
+        addon_name: target.addon_name.clone(),
+        items: match &list.addons {
+            Loadable::Loading => AddonListItems::Loading,
+            Loadable::Ready(addons) => AddonListItems::Ready {
+                addons: addons.iter().map(|a| listed_addon(a, installed)).collect(),
+            },
+            Loadable::Failed(problem) => AddonListItems::Failed {
+                problem: problem_view(problem),
+            },
+        },
+    }
+}
+
+fn listed_addon(addon: &AddonDescriptor, installed: &[TransportUrl]) -> ListedAddonView {
+    let manifest = &addon.manifest;
+    ListedAddonView {
+        transport: addon.transport.to_string(),
+        name: manifest.name.clone(),
+        version: manifest.version.to_string(),
+        description: manifest.description.clone(),
+        logo: manifest.logo.as_ref().map(ToString::to_string),
+        installed: installed.contains(&addon.transport),
+        needs_setup: manifest.behavior_hints.configuration_required,
+        configure_url: addon.transport.configure_url().to_string(),
     }
 }
 
@@ -477,6 +559,7 @@ fn problem_view(problem: &Problem) -> ProblemView {
         Problem::AlreadyInstalled => ProblemView::AlreadyInstalled,
         Problem::ConfigurationRequired(transport) => ProblemView::ConfigurationRequired {
             transport: transport.to_string(),
+            configure_url: transport.configure_url().to_string(),
         },
         Problem::InvalidAddonUrl(reason) => ProblemView::InvalidAddonUrl {
             reason: reason.clone(),

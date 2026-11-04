@@ -137,6 +137,10 @@ impl Cineo {
         self.send(Action::DismissNotice);
     }
 
+    pub fn load_addon_lists(&self) {
+        self.send(Action::LoadAddonLists);
+    }
+
     pub fn search(&self, query: String) {
         self.send(Action::Search(query));
     }

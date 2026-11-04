@@ -61,6 +61,9 @@ import androidx.compose.ui.unit.dp
 import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.AppView
 import io.github.mdmrk.cineo.rust.InstallView
+import io.github.mdmrk.cineo.rust.ProblemView
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalUriHandler
 import io.github.mdmrk.cineo.rust.PosterShapeView
 import io.github.mdmrk.cineo.rust.PosterView
 import io.github.mdmrk.cineo.rust.RowItems
@@ -285,7 +288,16 @@ fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
                 stringResource(R.string.installed_addon, install.name),
                 color = MaterialTheme.colorScheme.primary,
             )
-            is InstallView.Failed -> Text(problemText(install.problem), color = MaterialTheme.colorScheme.error)
+            is InstallView.Failed -> {
+                Text(problemText(install.problem), color = MaterialTheme.colorScheme.error)
+                val problem = install.problem
+                if (problem is ProblemView.ConfigurationRequired) {
+                    val uri = LocalUriHandler.current
+                    OutlinedButton(onClick = { uri.openUri(problem.configureUrl) }) {
+                        Text(stringResource(R.string.configure))
+                    }
+                }
+            }
             null -> Unit
         }
     }

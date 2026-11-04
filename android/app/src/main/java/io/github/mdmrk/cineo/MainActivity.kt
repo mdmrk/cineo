@@ -119,7 +119,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                         Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
                                         Page.LIBRARY -> LibraryScreen(current, images, library, padding)
-                                        Page.ADDONS -> AddonsScreen(current, cineo, padding)
+                                        Page.ADDONS -> AddonsScreen(current, images, cineo, padding)
                                         Page.SETTINGS -> current?.let { SettingsScreen(it.settings, cineo, padding) }
                                     }
                                 }
