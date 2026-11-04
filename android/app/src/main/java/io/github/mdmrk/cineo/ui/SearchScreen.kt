@@ -66,7 +66,11 @@ fun SearchScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 leading = Icon.SEARCH,
                 trailing = if (query.isEmpty()) null else {
-                    { IconButton(onClick = { query = "" }) { CineoIcon(Icon.X, tint = Brand.TextDim) } }
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            CineoIcon(Icon.X, tint = Brand.TextDim, label = stringResource(R.string.clear))
+                        }
+                    }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {

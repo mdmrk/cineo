@@ -95,7 +95,7 @@ fun AddonsScreen(view: AppView?, images: Images, cineo: Cineo, padding: PaddingV
                 supportingContent = { Text(stringResource(R.string.badge_unavailable), color = Brand.Warning) },
                 trailingContent = {
                     IconButton(onClick = { cineo.removeAddon(transport) }) {
-                        CineoIcon(Icon.TRASH, tint = Brand.Danger)
+                        CineoIcon(Icon.TRASH, tint = Brand.Danger, label = stringResource(R.string.remove))
                     }
                 },
             )
@@ -215,16 +215,26 @@ private fun AddonRow(
         trailingContent = {
             Row {
                 if (onConfigure != null) {
-                    IconButton(onClick = onConfigure) { CineoIcon(Icon.SETTINGS, tint = Brand.Text) }
+                    IconButton(onClick = onConfigure) {
+                        CineoIcon(Icon.SETTINGS, tint = Brand.Text, label = stringResource(R.string.configure))
+                    }
                 }
                 IconButton(onClick = { onMove(-1) }, enabled = canMoveUp) {
-                    CineoIcon(Icon.ARROW_UP, tint = if (canMoveUp) Brand.Text else Brand.TextFaint)
+                    CineoIcon(
+                        Icon.ARROW_UP,
+                        tint = if (canMoveUp) Brand.Text else Brand.TextFaint,
+                        label = stringResource(R.string.move_up),
+                    )
                 }
                 IconButton(onClick = { onMove(1) }, enabled = canMoveDown) {
-                    CineoIcon(Icon.ARROW_DOWN, tint = if (canMoveDown) Brand.Text else Brand.TextFaint)
+                    CineoIcon(
+                        Icon.ARROW_DOWN,
+                        tint = if (canMoveDown) Brand.Text else Brand.TextFaint,
+                        label = stringResource(R.string.move_down),
+                    )
                 }
                 IconButton(onClick = onRemove) {
-                    CineoIcon(Icon.TRASH, tint = Brand.Danger)
+                    CineoIcon(Icon.TRASH, tint = Brand.Danger, label = stringResource(R.string.remove))
                 }
             }
         },

@@ -184,8 +184,13 @@ fun DetailScreen(
             Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            RoundButton(Icon.ARROW_LEFT, false, Brand.TextBright, onBack)
-            RoundButton(Icon.HEART, detail.favorite, if (detail.favorite) Brand.Accent else Brand.TextBright) {
+            RoundButton(Icon.ARROW_LEFT, false, Brand.TextBright, stringResource(R.string.back), onBack)
+            RoundButton(
+                Icon.HEART,
+                detail.favorite,
+                if (detail.favorite) Brand.Accent else Brand.TextBright,
+                stringResource(if (detail.favorite) R.string.favourite_remove else R.string.favourite_add),
+            ) {
                 onFavorite(!detail.favorite)
             }
         }
@@ -193,12 +198,12 @@ fun DetailScreen(
 }
 
 @Composable
-private fun RoundButton(icon: Icon, filled: Boolean, tint: Color, onClick: () -> Unit) {
+private fun RoundButton(icon: Icon, filled: Boolean, tint: Color, label: String, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
         modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
     ) {
-        CineoIcon(icon, filled = filled, tint = tint)
+        CineoIcon(icon, filled = filled, tint = tint, label = label)
     }
 }
 
@@ -465,7 +470,7 @@ private fun StreamFilters(detail: DetailView, actions: StreamFilterActions) {
                     IconButton(onClick = {
                         query = ""
                         actions.query("")
-                    }) { CineoIcon(Icon.X, tint = Brand.TextDim) }
+                    }) { CineoIcon(Icon.X, tint = Brand.TextDim, label = stringResource(R.string.clear)) }
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

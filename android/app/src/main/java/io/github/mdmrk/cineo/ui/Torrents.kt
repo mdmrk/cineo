@@ -75,7 +75,7 @@ fun ConnectingScreen(art: ArtView, torrent: TorrentView?, images: Images, onBack
         LoadingBackdrop(art, images, firstLoad = true)
         Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
             IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
-                CineoIcon(Icon.ARROW_LEFT, tint = Color.White)
+                CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back))
             }
             TorrentStats(torrent, Modifier.align(Alignment.TopEnd).padding(top = 10.dp))
         }

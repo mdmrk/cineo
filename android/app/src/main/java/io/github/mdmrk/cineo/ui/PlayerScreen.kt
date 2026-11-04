@@ -178,7 +178,7 @@ private fun Controls(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Color.White) }
+            IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back)) }
             Text(
                 title,
                 color = Color.White,
@@ -200,7 +200,7 @@ private fun Controls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { onSeekBy(-seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(back, tint = Color.White, size = 36.sp)
+                CineoIcon(back, tint = Color.White, size = 36.sp, label = stringResource(R.string.seek_back, seekStep))
             }
             IconButton(
                 onClick = onTogglePause,
@@ -211,10 +211,11 @@ private fun Controls(
                     filled = true,
                     tint = Color.White,
                     size = 40.sp,
+                    label = stringResource(if (status.paused) R.string.play else R.string.pause),
                 )
             }
             IconButton(onClick = { onSeekBy(seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(forward, tint = Color.White, size = 36.sp)
+                CineoIcon(forward, tint = Color.White, size = 36.sp, label = stringResource(R.string.seek_forward, seekStep))
             }
         }
         Column(

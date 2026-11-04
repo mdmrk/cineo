@@ -362,7 +362,12 @@ fun Notices(view: AppView?, aboveTabs: Boolean, onDismissNotice: () -> Unit) {
                     }
                 }
                 IconButton(onClick = onDismissNotice) {
-                    CineoIcon(Icon.X, tint = Brand.TextDim, size = MaterialTheme.typography.titleMedium.fontSize)
+                    CineoIcon(
+                        Icon.X,
+                        tint = Brand.TextDim,
+                        size = MaterialTheme.typography.titleMedium.fontSize,
+                        label = stringResource(R.string.dismiss),
+                    )
                 }
             }
         }

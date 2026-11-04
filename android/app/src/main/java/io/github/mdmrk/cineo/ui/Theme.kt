@@ -1,5 +1,7 @@
 package io.github.mdmrk.cineo.ui
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -113,13 +115,14 @@ fun CineoIcon(
     filled: Boolean = false,
     size: TextUnit = 24.sp,
     tint: Color = Color.Unspecified,
+    label: String? = null,
 ) {
     val useFilled = (filled && icon.filled != null) || icon.regular == null
     val glyph = (if (useFilled) icon.filled else icon.regular) ?: return
     val family = if (useFilled) TablerFilled else TablerRegular
     Text(
         glyph.toString(),
-        modifier = modifier,
+        modifier = modifier.clearAndSetSemantics { label?.let { contentDescription = it } },
         color = tint,
         fontFamily = family,
         fontSize = size,
