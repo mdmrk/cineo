@@ -76,11 +76,11 @@ holds the details it links to.
    scripts/package.sh android` then copies the APK into `dist/` and
    checks it. `scripts/release-android.sh` does all of it in one command,
    the same steps CI's `build (android)` runs: it needs the four
-   `CINEO_KEY*` variables and refuses to build without them, finds the
+   `CINEO_KEY*` variables and a `CINEO_VERSION_CODE` above the last
+   released one, and refuses to build without them, finds the
    SDK through `ANDROID_HOME` or `android/local.properties`, rebuilds
    libmpv only when the script or `.env` changed since the last build
-   (`target/libmpv-android/pins`), uses the commit count as
-   `versionCode` unless `CINEO_VERSION_CODE` is set, and leaves
+   (`target/libmpv-android/pins`), and leaves
    `dist/cineo-arm64-android.apk`. R8 stays off,
    because JNA and the UniFFI bindings use reflection. AGP keeps the
    libmpv and FFmpeg `.so` files unstripped, so they match the hashes in
