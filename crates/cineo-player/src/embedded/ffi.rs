@@ -242,14 +242,24 @@ fn resolve(library: libloading::Library) -> Result<Lib, String> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("{0}")]
-pub(crate) struct MpvError(pub(crate) String, pub(crate) Option<c_int>);
+#[error("{message}")]
+pub(crate) struct MpvError {
+    pub(crate) message: String,
+    pub(crate) code: Option<c_int>,
+}
 
 const ERROR_OPTION_NOT_FOUND: c_int = -5;
 
 impl MpvError {
+    fn uncoded(message: &str) -> Self {
+        Self {
+            message: message.to_owned(),
+            code: None,
+        }
+    }
+
     pub(crate) fn is_option_not_found(&self) -> bool {
-        self.1 == Some(ERROR_OPTION_NOT_FOUND)
+        self.code == Some(ERROR_OPTION_NOT_FOUND)
     }
 }
 
@@ -304,7 +314,7 @@ impl Drop for Core {
 }
 
 fn cstring(text: &str) -> Result<CString, MpvError> {
-    CString::new(text).map_err(|_| MpvError("an argument contains a NUL byte".into(), None))
+    CString::new(text).map_err(|_| MpvError::uncoded("an argument contains a NUL byte"))
 }
 
 unsafe fn text(ptr: *const c_char) -> String {
@@ -321,7 +331,7 @@ impl Core {
     pub(crate) fn create(lib: &'static Lib) -> Result<Self, MpvError> {
         let handle = unsafe { (lib.create)() };
         if handle.is_null() {
-            return Err(MpvError("mpv_create failed".into(), None));
+            return Err(MpvError::uncoded("mpv_create failed"));
         }
         Ok(Self {
             lib,
@@ -342,10 +352,10 @@ impl Core {
         if code >= 0 {
             return Ok(());
         }
-        Err(MpvError(
-            unsafe { text((self.lib.error_string)(code)) },
-            Some(code),
-        ))
+        Err(MpvError {
+            message: unsafe { text((self.lib.error_string)(code)) },
+            code: Some(code),
+        })
     }
 
     pub(crate) fn set_option(&self, name: &str, value: &str) -> Result<(), MpvError> {

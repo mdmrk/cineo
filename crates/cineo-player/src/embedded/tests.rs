@@ -56,8 +56,14 @@ fn a_surface_is_attached_before_video_output_starts_and_detached_after_it_stops(
 
 #[test]
 fn only_missing_script_options_are_tolerated() {
-    let missing = ffi::MpvError("option not found".into(), Some(-5));
-    let invalid = ffi::MpvError("option parameter could not be parsed".into(), Some(-7));
+    let missing = ffi::MpvError {
+        message: "option not found".into(),
+        code: Some(-5),
+    };
+    let invalid = ffi::MpvError {
+        message: "option parameter could not be parsed".into(),
+        code: Some(-7),
+    };
     assert!(missing.is_option_not_found());
     assert!(!invalid.is_option_not_found());
     assert!(

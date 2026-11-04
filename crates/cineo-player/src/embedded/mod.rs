@@ -278,7 +278,7 @@ impl Player {
         if let Some(url) = pending {
             self.core
                 .command(&["loadfile", &url, "replace"])
-                .map_err(|err| PlayerError::Libmpv(err.0))?;
+                .map_err(|err| PlayerError::Libmpv(err.message))?;
         }
         Ok(())
     }
@@ -318,7 +318,7 @@ impl Player {
             ));
         }
         let lib = ffi::lib().map_err(PlayerError::LibmpvUnavailable)?;
-        let fail = |err: ffi::MpvError| PlayerError::Libmpv(err.0);
+        let fail = |err: ffi::MpvError| PlayerError::Libmpv(err.message);
         let core = Arc::new(Core::create(lib).map_err(fail)?);
         let mut preferences = settings_options(&request.settings);
         if request.start_ms > 0 {
@@ -433,7 +433,7 @@ impl Player {
         debug!("mpv sub-add");
         self.core
             .command_async(&args)
-            .map_err(|err| PlayerError::Libmpv(err.0))
+            .map_err(|err| PlayerError::Libmpv(err.message))
     }
 
     pub fn set_subtitle_style(&self, settings: &Settings) {
