@@ -133,27 +133,38 @@ fn size_bytes(stream: &Stream) -> Option<u64> {
 }
 
 fn size_in_text(text: &str) -> Option<u64> {
-    let tokens = text.split_whitespace();
-    tokens
-        .clone()
-        .zip(tokens.skip(1))
-        .find_map(|(value, unit)| {
-            let value: f64 = value.parse().ok()?;
-            let unit: f64 = match unit.trim_end_matches(|c: char| !c.is_ascii_alphabetic()) {
-                "KB" | "KiB" => 1024.0,
-                "MB" | "MiB" => 1024.0 * 1024.0,
-                "GB" | "GiB" => 1024.0 * 1024.0 * 1024.0,
-                "TB" | "TiB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
-                _ => return None,
-            };
-            let bytes = value * unit;
-            #[expect(
-                clippy::cast_possible_truncation,
-                clippy::cast_sign_loss,
-                reason = "a finite, non-negative size"
-            )]
-            (bytes.is_finite() && bytes >= 0.0).then_some(bytes as u64)
-        })
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    tokens.iter().enumerate().find_map(|(i, token)| {
+        let split = token
+            .find(|c: char| !c.is_ascii_digit() && c != '.' && c != ',')
+            .unwrap_or(token.len());
+        let (value, unit) = match token.split_at(split) {
+            (value, "") => (value, *tokens.get(i + 1)?),
+            pair => pair,
+        };
+        size(value, unit)
+    })
+}
+
+fn size(value: &str, unit: &str) -> Option<u64> {
+    if value.matches(['.', ',']).count() > 1 {
+        return None;
+    }
+    let value: f64 = value.replace(',', ".").parse().ok()?;
+    let unit: f64 = match unit.trim_end_matches(|c: char| !c.is_ascii_alphabetic()) {
+        "KB" | "KiB" => 1024.0,
+        "MB" | "MiB" => 1024.0 * 1024.0,
+        "GB" | "GiB" => 1024.0 * 1024.0 * 1024.0,
+        "TB" | "TiB" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
+        _ => return None,
+    };
+    let bytes = value * unit;
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a finite, non-negative size"
+    )]
+    (bytes.is_finite() && bytes >= 0.0).then_some(bytes as u64)
 }
 
 pub fn matcher(query: &str, quality: Option<Resolution>) -> impl Fn(&Facts) -> bool {
@@ -282,6 +293,16 @@ mod tests {
             ..s
         };
         assert_eq!(size_bytes(&hinted), Some(42), "the addon's hint wins");
+    }
+
+    #[test]
+    fn sizes_may_touch_their_unit_or_use_a_decimal_comma() {
+        assert_eq!(size_in_text("💾 1.5GB ⚙️ x"), Some(1_610_612_736));
+        assert_eq!(size_in_text("💾 1,5 GB"), Some(1_610_612_736));
+        assert_eq!(size_in_text("700MB,"), Some(734_003_200));
+        assert_eq!(size_in_text("x264 MB"), None);
+        assert_eq!(size_in_text("H.265GB"), None);
+        assert_eq!(size_in_text("1,000,000 GB"), None);
     }
 
     #[test]
