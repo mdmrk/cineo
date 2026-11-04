@@ -54,6 +54,15 @@ irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 
 libmpv is built in.
 
+### Android (arm64 phones)
+
+Download `cineo-arm64-android.apk` from the
+[latest release](https://github.com/mdmrk/cineo/releases/latest) on the
+phone and open it. Android asks once to allow installs from the browser or
+file manager you used (Settings → Apps → Special app access → Install
+unknown apps). To update, install the newer APK over the old one; your
+library and addons stay.
+
 ## Uninstall
 
 Linux:

@@ -55,11 +55,36 @@ holds the details it links to.
    pinned sources and checks their SHA-256, installs its own meson in a
    venv, cross-compiles OpenSSL, dav1d, freetype, fribidi, harfbuzz,
    libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26,
-   and writes `target/libmpv-android/libmpv-android-arm64-v8a.tar.xz`
-   (`lib/`, `licenses/`, `SOURCES`). It stops if FFmpeg was configured
+   and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
+   `SOURCES` and `libmpv.md` with each `.so`'s SHA-256), the same as
+   `libmpv-android-arm64-v8a.tar.xz`, and
+   `libmpv-android-sources.tar.xz` (ADR-0029): the source tarballs,
+   libplacebo without `.git`, the script and its `.env`. Unpacked, that
+   archive rebuilds with `scripts/build-libmpv-android.sh work` without
+   downloading any source. It stops if FFmpeg was configured
    with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`, if mpv
    has GPL code, or if a library needs one that is neither shipped nor
-   part of Android. The build runs locally only; nothing publishes it yet.
+   part of Android. Gradle copies `out/lib/` into the APK,
+   `out/licenses/` and `libmpv.md` into `assets/licenses/`, and the
+   sources archive, uncompressed, into `assets/sources/`. A debug build
+   without them only warns; a release build fails.
+7. To build a signed release APK: set `CINEO_KEYSTORE` (the `.jks` file),
+   `CINEO_KEYSTORE_PASSWORD`, `CINEO_KEY_ALIAS` and `CINEO_KEY_PASSWORD`,
+   and optionally `CINEO_VERSION_CODE` (default 1), then
+   `cd android && ./gradlew assembleRelease`. Without `CINEO_KEYSTORE` it
+   writes an unsigned `app-release-unsigned.apk`. `ANDROID_HOME=…
+   scripts/package.sh android` then copies the APK into `dist/` and
+   checks it. `scripts/release-android.sh` does all of it in one command,
+   the same steps CI's `build (android)` runs: it needs the four
+   `CINEO_KEY*` variables and refuses to build without them, finds the
+   SDK through `ANDROID_HOME` or `android/local.properties`, rebuilds
+   libmpv only when the script or `.env` changed since the last build
+   (`target/libmpv-android/pins`), uses the commit count as
+   `versionCode` unless `CINEO_VERSION_CODE` is set, and leaves
+   `dist/cineo-arm64-android.apk`. R8 stays off,
+   because JNA and the UniFFI bindings use reflection. AGP keeps the
+   libmpv and FFmpeg `.so` files unstripped, so they match the hashes in
+   `libmpv.md`.
 
 If you build with a distro-packaged Rust instead of rustup, make sure it is a
 current stable release. Some distro builds expect a cross linker name; if
@@ -580,19 +605,28 @@ it:
 
 | Trigger                  | Jobs                                 |
 | ------------------------ | ------------------------------------ |
-| pull request, manual run | check (linux), check (windows)                |
-| push to `main`           | check (linux), check (windows) → build → publish `prerelease` |
-| tag `vX.Y.Z`             | check (linux), check (windows) → build → publish `vX.Y.Z`     |
+| pull request, manual run | check (linux), check (windows), check (android) |
+| push to `main`           | the checks → build → publish `prerelease` |
+| tag `vX.Y.Z`             | the checks → build → publish `vX.Y.Z`     |
 
 The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
-`ci / build (linux)`, `ci / build (windows)` and `ci / publish`.
+`ci / check (android)`, `ci / build (linux)`, `ci / build (windows)`,
+`ci / build (android)` and `ci / publish`.
 `check (linux)` runs `scripts/check.sh` (fmt, clippy, nextest with the `ci`
 profile, docs, cargo-deny); `check (windows)` runs clippy and nextest on
 `windows-latest`. `build` builds `cineo-desktop` for Linux x86_64 and
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
-provenance; `publish` writes `SHA256SUMS` (check a file with
+provenance. `build (android)` restores libmpv from the cache (keyed by
+the hash of the script and its `.env`, never on tags) and runs
+`scripts/release-android.sh` with the `versionCode` set to the workflow's
+run number: it builds libmpv if needed, a signed `assembleRelease`, and
+runs `scripts/package.sh android`, which checks that the APK holds libmpv,
+FFmpeg, `libmpv.md`, the license texts and the sources archive, that each `.so` matches its
+hash, and that `apksigner verify` passes. It fails if a signing secret is
+missing rather than publish an unsigned APK; `check (android)` builds an
+unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
 write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
@@ -605,6 +639,7 @@ Every release has these files, with the same names in every release so that
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded (ADR-0027)                      |
+| `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv, its licenses and its complete source (`assets/sources/`, ADR-0029) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
@@ -626,8 +661,20 @@ whose head commit starts with `chore(release):`; that commit gets the real
 release from its tag instead. It deletes the previous `prerelease` GitHub
 release and its tag and recreates both at the pushed commit.
 
-Release artifacts are not code-signed; build provenance attestations and
-`SHA256SUMS` are the integrity checks.
+The desktop artifacts are not code-signed; build provenance attestations
+and `SHA256SUMS` are the integrity checks. The APK is signed, because
+Android requires it, with the key in these repository secrets:
+
+| Secret | What |
+| ------ | ---- |
+| `ANDROID_KEYSTORE_BASE64` | The release keystore (`base64 -w0 cineo-release.jks`) |
+| `ANDROID_KEYSTORE_PASSWORD` | Its password |
+| `ANDROID_KEY_ALIAS` | The key's alias |
+| `ANDROID_KEY_PASSWORD` | The key's password |
+
+The owner keeps the key and a backup outside the repository. Android only
+installs an update signed with the same key: if it is lost, users must
+uninstall, and lose their library, to install a new one.
 
 ## Pull requests
 

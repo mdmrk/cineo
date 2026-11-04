@@ -392,11 +392,38 @@ Format:
 
 ### Android: no update check
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
-- Gap: the core's update check asks GitHub for the latest desktop
-  release; Android has no release channel to compare against.
+- Gap: releases carry the APK (ADR-0029), but the app never says that a
+  newer one exists.
+- Why: the check was left out while Android had no release; the
+  `prerelease` builds share a version with the release before them.
 - Instead: the Android shell drops `Effect::CheckForUpdate`
-  (`the_desktop_update_check_does_not_run`), so no update is ever shown.
-- Exit: an Android release channel (step 5 of ADR-0028).
+  (`the_desktop_update_check_does_not_run`); users look at the Releases
+  page and install the new APK over the old one.
+- Exit: run the check on Android and open the release page, with a test.
+
+### Android: the libmpv build is not reproducible
+- Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
+- Gap: rebuilding from the APK's `libmpv-android-sources.tar.xz` gives working
+  libraries whose hashes differ from the release's (seen 2026-11-04). The
+  build directory is embedded in them, for example in FFmpeg's configure
+  line and its source paths; whether anything else differs is UNKNOWN.
+- Why: the LGPL asks for the source, not for identical binaries.
+- Instead: `libmpv.md` names the hashes of the shipped files, and a
+  rebuilt copy cannot be checked against them.
+- Exit: `-ffile-prefix-map`, FFmpeg without its configure string, and a
+  test that two builds in different directories match.
+
+### Android: arm64 phones only
+- Where: [build.gradle.kts](../android/app/build.gradle.kts)
+  (`abiFilters`), [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
+- Gap: the APK holds only `arm64-v8a` libraries, so 32-bit ARM and
+  x86_64 devices (most emulators) cannot install it. The UI is built for
+  touch: there is no Android TV launcher entry and no D-pad navigation.
+- Why: ADR-0029. Each ABI doubles the libmpv build, and there is no other
+  device to test on.
+- Instead: Android TV boxes and older phones are unsupported.
+- Exit: an Android TV slice (leanback launcher, focus handling), and
+  more ABIs if someone can test them.
 
 ### Android: only some settings
 - Where: [SettingsScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/SettingsScreen.kt),

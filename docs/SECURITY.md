@@ -206,6 +206,15 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   The prerelease build reuses `main`'s cache, but a tag build never
   restores one, so a release binary is always built from a clean target
   directory.
+- The Android libmpv build is cached with `actions/cache`, keyed by the
+  hash of `scripts/build-libmpv-android.sh` and its `.env`, and only by
+  `build (android)`, which runs on pushes to `main`; tag builds rebuild it
+  from the pinned, hash-checked sources.
+- The Android release key is only in repository secrets, decoded into
+  the runner's temporary directory by `build (android)`, which runs on
+  pushes only, never for pull requests. Pull requests build an unsigned
+  debug APK. A missing secret fails the build; an unsigned APK is never
+  published (ADR-0029).
 - Any change to a security default updates this document and adds a test
   that pins the new behavior.
 
