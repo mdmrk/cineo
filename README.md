@@ -3,11 +3,11 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/mdmrk/cineo/ci.yml?branch=main&label=ci)](https://github.com/mdmrk/cineo/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/mdmrk/cineo)](https://github.com/mdmrk/cineo/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/mdmrk/cineo/total)](https://github.com/mdmrk/cineo/releases)
-[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows-blue)](docs/COMPATIBILITY.md#platforms)
+[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20android-blue)](docs/COMPATIBILITY.md#platforms)
 [![License](https://img.shields.io/github/license/mdmrk/cineo)](LICENSE)
 
-A fast, native desktop media center written in Rust. It works with
-Stremio-protocol addons.
+A fast, native media center written in Rust, for the desktop and Android
+phones. It works with Stremio-protocol addons.
 
 <table>
   <tr>
@@ -61,7 +61,8 @@ Download `cineo-arm64-android.apk` from the
 phone and open it. Android asks once to allow installs from the browser or
 file manager you used (Settings → Apps → Special app access → Install
 unknown apps). To update, install the newer APK over the old one; your
-library and addons stay.
+library and addons stay. The Android app is newer than the desktop one
+and does less; see [Compatibility](docs/COMPATIBILITY.md#platforms).
 
 ## Uninstall
 
@@ -80,6 +81,9 @@ $env:CINEO_UNINSTALL=1; irm https://github.com/mdmrk/cineo/releases/latest/downl
 Your addons and library are kept. To delete them too, remove
 `~/.local/share/cineo` on Linux or `%APPDATA%\Cineo` on Windows.
 
+Android: uninstall Cineo like any other app. This also deletes its addons
+and library.
+
 ## Build from source
 
 You need [Rust](https://rustup.rs) and libmpv.
@@ -92,7 +96,8 @@ cargo run -p cineo-desktop --release
 On Windows, put a `libmpv-2.dll` next to the executable
 ([details](docs/DEVELOPMENT.md)). A
 [command-line tool](docs/DEVELOPMENT.md#command-line-tool) is also
-included, mainly for debugging addons.
+included, mainly for debugging addons. The Android app builds with the
+NDK and Gradle; see [Development](docs/DEVELOPMENT.md).
 
 ## Documentation
 
