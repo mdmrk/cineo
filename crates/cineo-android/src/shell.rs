@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{
@@ -13,7 +13,7 @@ use cineo_core::app::{
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::subtitles::{AddonSubtitle, AutoPick, SubtitleFiles, auto_pick};
-use cineo_player::{EventActions, PlayerEvent, event_actions, plain_text};
+use cineo_player::{PlayerEvent, forward_events, plain_text};
 use cineo_store::Store;
 use cineo_stream::{EngineOptions, Torrents};
 use tokio::runtime::{Handle, Runtime};
@@ -776,28 +776,21 @@ impl Shell {
                 let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
                 let feed = self.torrents.feed();
                 feed.playing(&request.url);
-                self.runtime.spawn(async move {
-                    let mut events = events;
-                    while let Some(event) = events.recv().await {
-                        match &event {
-                            PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
-                            PlayerEvent::Progress { duration_ms, .. }
-                            | PlayerEvent::Ended { duration_ms, .. }
-                            | PlayerEvent::Closed { duration_ms, .. } => {
-                                feed.duration(*duration_ms);
-                            }
-                            _ => {}
-                        }
-                        let EventActions { actions, last } =
-                            event_actions(event, &meta_id, &video_id, now_ms());
-                        for action in actions {
-                            let _ = tx.send(Msg::Action(action));
-                        }
-                        if last {
-                            break;
-                        }
-                    }
-                });
+                self.runtime.spawn(forward_events(
+                    events,
+                    meta_id,
+                    video_id,
+                    move |event| match event {
+                        PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
+                        PlayerEvent::Progress { duration_ms, .. }
+                        | PlayerEvent::Ended { duration_ms, .. }
+                        | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),
+                        PlayerEvent::Failed(_) => {}
+                    },
+                    move |action| {
+                        let _ = tx.send(Msg::Action(action));
+                    },
+                ));
             }
             Err(err) => {
                 error!(%err, "playback could not start");
@@ -891,12 +884,6 @@ impl Shell {
             self.shown = Some(next);
         }
     }
-}
-
-fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
 #[cfg(test)]

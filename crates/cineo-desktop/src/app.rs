@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, PoisonError};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use anyhow::Context as _;
 use cineo_core::app::{
@@ -13,7 +13,7 @@ use cineo_player::PlayerError;
 use cineo_player::embedded::{
     Display, Player, PlayerCommand, ProcAddress, Renderer, Status, Video,
 };
-use cineo_player::{EventActions, PlayerEvent, event_actions};
+use cineo_player::{PlayerEvent, forward_events};
 use cineo_store::Store;
 use cineo_stream::{EngineOptions, PlayerFeed, Torrents};
 use eframe::egui;
@@ -332,10 +332,13 @@ impl CineoApp {
         let send = self.sender();
         let feed = self.torrents.feed();
         feed.playing(&request.url);
-        let forward = self.io.runtime.spawn(async move {
-            let mut events = events;
-            forward_events(&mut events, meta_id, video_id, &feed, send).await;
-        });
+        let forward = self.io.runtime.spawn(forward_events(
+            events,
+            meta_id,
+            video_id,
+            move |event| feed_player(&feed, event),
+            send,
+        ));
         Ok(Embedded {
             player,
             renderer: Arc::new(Mutex::new(Some(renderer))),
@@ -594,31 +597,6 @@ impl CineoApp {
     }
 }
 
-async fn forward_events(
-    events: &mut tokio::sync::mpsc::UnboundedReceiver<PlayerEvent>,
-    meta_id: String,
-    video_id: String,
-    feed: &PlayerFeed,
-    send: impl Fn(Action),
-) {
-    while let Some(event) = events.recv().await {
-        match &event {
-            PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
-            PlayerEvent::Progress { duration_ms, .. }
-            | PlayerEvent::Ended { duration_ms, .. }
-            | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),
-            _ => {}
-        }
-        let EventActions { actions, last } = event_actions(event, &meta_id, &video_id, now_ms());
-        for action in actions {
-            send(action);
-        }
-        if last {
-            break;
-        }
-    }
-}
-
 impl eframe::App for CineoApp {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.pause_on_minimize(ctx);
@@ -709,14 +687,18 @@ fn keeps_screen_awake(status: &Status) -> bool {
     status.loaded && !status.paused
 }
 
-fn should_pause_on_minimize(settings: &Settings, status: &Status) -> bool {
-    settings.pause_on_minimize && status.loaded && !status.paused
+fn feed_player(feed: &PlayerFeed, event: &PlayerEvent) {
+    match event {
+        PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
+        PlayerEvent::Progress { duration_ms, .. }
+        | PlayerEvent::Ended { duration_ms, .. }
+        | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),
+        PlayerEvent::Failed(_) => {}
+    }
 }
 
-fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+fn should_pause_on_minimize(settings: &Settings, status: &Status) -> bool {
+    settings.pause_on_minimize && status.loaded && !status.paused
 }
 
 pub(crate) fn spawn_store_writer(
