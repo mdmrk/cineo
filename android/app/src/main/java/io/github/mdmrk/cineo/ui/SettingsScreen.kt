@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -184,6 +186,8 @@ private fun Toggle(title: String, help: String, on: Boolean, onChange: (Boolean)
     )
 }
 
+private const val SEARCHABLE_FROM = 12
+
 @Composable
 private fun <T> Picker(
     title: String,
@@ -194,32 +198,92 @@ private fun <T> Picker(
     onPick: (T) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    Box {
-        ListItem(
-            colors = rowColors,
-            headlineContent = { Text(title) },
-            supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-            trailingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(label(current), color = Brand.Accent, style = MaterialTheme.typography.labelLarge)
-                    CineoIcon(Icon.CHEVRON_DOWN, tint = Brand.TextDim, size = 18.sp)
-                }
-            },
-            modifier = Modifier.clickable { open = true },
-        )
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            modifier = Modifier.background(Brand.Surface),
+    ListItem(
+        colors = rowColors,
+        headlineContent = { Text(title) },
+        supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
+        trailingContent = {
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(Brand.Surface).padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(label(current), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                CineoIcon(Icon.CHEVRON_DOWN, tint = Brand.TextDim, size = 16.sp)
+            }
+        },
+        modifier = Modifier.clickable { open = true },
+    )
+    if (open) {
+        val labelled = options.map { it to label(it) }
+        PickerDialog(title, labelled, current, onDismiss = { open = false }) {
+            open = false
+            onPick(it)
+        }
+    }
+}
+
+@Composable
+private fun <T> PickerDialog(
+    title: String,
+    options: List<Pair<T, String>>,
+    current: T,
+    onDismiss: () -> Unit,
+    onPick: (T) -> Unit,
+) {
+    var filter by remember { mutableStateOf("") }
+    val shown = if (filter.isBlank()) options else options.filter { it.second.contains(filter.trim(), ignoreCase = true) }
+    val selectedIndex = shown.indexOfFirst { it.first == current }.coerceAtLeast(0)
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = (selectedIndex - 2).coerceAtLeast(0))
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brand.Panel)
+                .padding(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(label(option), color = if (option == current) Brand.Accent else Brand.TextBright) },
-                    onClick = {
-                        open = false
-                        onPick(option)
-                    },
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                color = Brand.TextBright,
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+            if (options.size >= SEARCHABLE_FROM) {
+                CineoField(
+                    value = filter,
+                    onValueChange = { filter = it },
+                    placeholder = stringResource(R.string.page_search),
+                    leading = Icon.SEARCH,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 )
+            }
+            LazyColumn(state = list, modifier = Modifier.weight(1f, fill = false)) {
+                items(shown.size) { index ->
+                    val (option, text) = shown[index]
+                    val selected = option == current
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(option) }
+                            .background(if (selected) Brand.Surface else Color.Transparent)
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (selected) Brand.Accent else Brand.TextBright,
+                        )
+                        if (selected) CineoIcon(Icon.CHECK, tint = Brand.Accent, size = 20.sp)
+                    }
+                }
+            }
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(end = 8.dp)) {
+                Text(stringResource(R.string.cancel))
             }
         }
     }
