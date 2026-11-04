@@ -1,9 +1,11 @@
 mod actions;
 pub mod embedded;
 pub mod subtitles;
+mod text;
 mod tracker;
 
 pub use actions::{EventActions, event_actions};
+pub use text::plain_text;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerEvent {

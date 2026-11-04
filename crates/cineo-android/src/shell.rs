@@ -13,7 +13,7 @@ use cineo_core::app::{
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::subtitles::{AddonSubtitle, AutoPick, SubtitleFiles, auto_pick};
-use cineo_player::{EventActions, PlayerEvent, event_actions};
+use cineo_player::{EventActions, PlayerEvent, event_actions, plain_text};
 use cineo_store::Store;
 use cineo_stream::{EngineOptions, Torrents};
 use tokio::runtime::{Handle, Runtime};
@@ -195,10 +195,6 @@ impl PlayerStatsView {
             dropped_frames: stats.dropped_frames.and_then(whole),
         }
     }
-}
-
-fn plain_text(text: &str) -> String {
-    text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }
 
 #[derive(Debug)]

@@ -1,5 +1,6 @@
 use cineo_core::app::{Action, SeekStep, Settings, TorrentStatus};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::plain_text;
 use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
@@ -1288,10 +1289,6 @@ fn track_label(track: &Track, number: usize) -> Text {
     } else {
         plain_text(&parts.join(" · ")).into()
     }
-}
-
-fn plain_text(text: &str) -> String {
-    text.replace(['\n', '\r'], " ").chars().take(60).collect()
 }
 
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
