@@ -31,10 +31,6 @@ impl Resolution {
         }
     }
 
-    pub fn from_label(label: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|r| r.label() == label)
-    }
-
     pub const fn tier(self) -> Tier {
         match self {
             Self::Uhd => Tier::Ultra,
@@ -330,14 +326,6 @@ mod tests {
         assert!(!matches("web-dl hevc", None));
         assert!(matches("film", Some(Resolution::FullHd)));
         assert!(!matches("", Some(Resolution::Uhd)));
-    }
-
-    #[test]
-    fn resolutions_are_read_back_from_their_labels() {
-        for resolution in Resolution::ALL {
-            assert_eq!(Resolution::from_label(resolution.label()), Some(resolution));
-        }
-        assert_eq!(Resolution::from_label("8K"), None);
     }
 
     #[test]

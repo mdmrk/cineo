@@ -21,4 +21,9 @@ pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
+#[uniffi::export]
+pub fn resolution_label(resolution: cineo_core::app::Resolution) -> String {
+    resolution.label().to_owned()
+}
+
 uniffi::setup_scaffolding!();

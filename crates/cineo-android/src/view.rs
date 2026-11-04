@@ -72,7 +72,7 @@ pub struct DetailView {
     pub videos: Vec<VideoView>,
     pub selected_video: Option<String>,
     pub streams: Vec<StreamGroupView>,
-    pub qualities: Vec<String>,
+    pub qualities: Vec<Resolution>,
     pub filter: StreamFilterView,
 }
 
@@ -122,9 +122,19 @@ pub enum StreamSort {
 #[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
 pub struct StreamFilterView {
     pub query: String,
-    pub quality: Option<String>,
+    pub quality: Option<Resolution>,
     pub addon: Option<u32>,
     pub sort: StreamSort,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Resolution {
+    Uhd,
+    Qhd,
+    FullHd,
+    Hd,
+    Sd,
+    Cam,
 }
 
 #[uniffi::remote(Enum)]
@@ -138,7 +148,7 @@ pub enum Tier {
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct QualityView {
-    pub label: String,
+    pub resolution: Resolution,
     pub tier: Tier,
     pub flags: Vec<String>,
 }
@@ -503,7 +513,7 @@ fn qualities(
     groups: &[StreamGroup],
     facts: &[Option<Vec<StreamFacts>>],
     p2p_enabled: bool,
-) -> Vec<String> {
+) -> Vec<Resolution> {
     let mut shown: Vec<Resolution> = groups
         .iter()
         .zip(facts)
@@ -514,7 +524,7 @@ fn qualities(
         .collect();
     shown.sort_unstable();
     shown.dedup();
-    shown.into_iter().map(|r| r.label().to_owned()).collect()
+    shown
 }
 
 fn video(video: &Video) -> VideoView {
@@ -553,9 +563,7 @@ fn stream_group(
         items: match (&group.streams, facts) {
             (Loadable::Loading, _) | (Loadable::Ready(_), None) => StreamItems::Loading,
             (Loadable::Ready(streams), Some(facts)) => {
-                let quality = filter.quality.as_deref().map(Resolution::from_label);
-                let unknown_quality = quality.is_some_and(|q| q.is_none());
-                let matches = stream_matcher(&filter.query, quality.flatten());
+                let matches = stream_matcher(&filter.query, filter.quality);
                 let other_addon = filter.addon.is_some_and(|a| a as usize != index);
                 let mut hidden = 0;
                 let order = filter
@@ -567,7 +575,7 @@ fn stream_group(
                             hidden += 1;
                             return false;
                         }
-                        !other_addon && !unknown_quality && matches(&facts[i])
+                        !other_addon && matches(&facts[i])
                     })
                     .filter_map(|i| u32::try_from(i).ok())
                     .collect();
@@ -590,7 +598,7 @@ fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
         description: stream.description.clone(),
         kind: stream.source.kind(),
         quality: facts.quality.map(|q| QualityView {
-            label: q.label().to_owned(),
+            resolution: q.resolution,
             tier: q.tier(),
             flags: q.flags.iter().map(|f| (*f).to_owned()).collect(),
         }),

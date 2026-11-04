@@ -7,8 +7,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Notice, PlayRequest, SeekStep, Setting, State,
-    StreamSort, SubtitleGroup, WatchedAt, update,
+    Action, Effect, Language, LibraryItem, Notice, PlayRequest, Resolution, SeekStep, Setting,
+    State, StreamSort, SubtitleGroup, WatchedAt, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
@@ -204,7 +204,7 @@ fn plain_text(text: &str) -> String {
 #[derive(Debug)]
 enum FilterChange {
     Query(String),
-    Quality(Option<String>),
+    Quality(Option<Resolution>),
     Addon(Option<u32>),
     Sort(StreamSort),
 }
@@ -293,7 +293,7 @@ impl Cineo {
         self.filter(FilterChange::Query(query));
     }
 
-    pub fn set_stream_quality(&self, quality: Option<String>) {
+    pub fn set_stream_quality(&self, quality: Option<Resolution>) {
         self.filter(FilterChange::Quality(quality));
     }
 

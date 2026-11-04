@@ -16,7 +16,7 @@ use cineo_android::{
     StateListener, StreamItems, TorrentView, TrackView, VideoSizeView, version,
 };
 use cineo_core::app::Settings;
-use cineo_core::app::{PlayRequest, StreamSort, Tier};
+use cineo_core::app::{PlayRequest, Resolution, StreamSort, Tier};
 use cineo_player::embedded::{PlayerCommand, Stats, Status, Track, TrackKind};
 use cineo_player::{PlayerError, PlayerEvent};
 use cineo_store::Store;
@@ -1126,21 +1126,22 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
         let ready = wait_for(&views, streams_ready);
         assert_eq!(order(&ready), (vec![0, 1, 2, 3], 0));
         let detail = ready.detail.as_ref().unwrap();
-        assert_eq!(detail.qualities, ["4K", "1080p", "720p"]);
+        let shown = [Resolution::Uhd, Resolution::FullHd, Resolution::Hd];
+        assert_eq!(detail.qualities, shown);
         let StreamItems::Ready { streams, .. } = &detail.streams[0].items else {
             unreachable!()
         };
         let four_k = streams[1].quality.as_ref().unwrap();
         assert_eq!(
-            (four_k.label.as_str(), four_k.tier, four_k.flags.clone()),
-            ("4K", Tier::Ultra, vec!["HDR".to_owned()])
+            (four_k.resolution, four_k.tier, four_k.flags.clone()),
+            (Resolution::Uhd, Tier::Ultra, vec!["HDR".to_owned()])
         );
         assert_eq!(streams[2].seeders, Some(40));
         assert_eq!(streams[0].size, Some(734_003_200));
 
         cineo.set_stream_sort(StreamSort::Seeders);
         wait_for(&views, |v| order(v).0 == [3, 2, 0, 1]);
-        cineo.set_stream_quality(Some("1080p".into()));
+        cineo.set_stream_quality(Some(Resolution::FullHd));
         wait_for(&views, |v| order(v).0 == [3, 2]);
         cineo.set_stream_query("web".into());
         wait_for(&views, |v| order(v).0 == [2]);
@@ -1148,12 +1149,12 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
         wait_for(&views, |v| order(v).0.is_empty());
         cineo.set_stream_addon(None);
         cineo.set_stream_query(String::new());
-        cineo.set_stream_quality(Some("8K".into()));
+        cineo.set_stream_quality(Some(Resolution::Sd));
         wait_for(&views, |v| order(v).0.is_empty());
         cineo.set_stream_quality(None);
         cineo.change_setting(SettingChange::P2pEnabled { on: false });
         let off = wait_for(&views, |v| order(v) == (vec![2, 0, 1], 1));
-        assert_eq!(off.detail.unwrap().qualities, ["4K", "1080p", "720p"]);
+        assert_eq!(off.detail.unwrap().qualities, shown);
         cineo.change_setting(SettingChange::P2pEnabled { on: true });
         cineo.set_stream_query("bluray".into());
         wait_for(&views, |v| order(v).0 == [3]);

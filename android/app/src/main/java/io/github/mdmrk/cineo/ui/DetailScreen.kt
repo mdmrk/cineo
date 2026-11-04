@@ -67,6 +67,8 @@ import io.github.mdmrk.cineo.rust.StreamItems
 import io.github.mdmrk.cineo.rust.StreamView
 import io.github.mdmrk.cineo.rust.Tier
 import io.github.mdmrk.cineo.rust.QualityView
+import io.github.mdmrk.cineo.rust.Resolution
+import io.github.mdmrk.cineo.rust.resolutionLabel
 import io.github.mdmrk.cineo.rust.StreamSort
 import io.github.mdmrk.cineo.rust.VideoView
 
@@ -439,7 +441,7 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
 
 class StreamFilterActions(
     val query: (String) -> Unit,
-    val quality: (String?) -> Unit,
+    val quality: (Resolution?) -> Unit,
     val addon: (UInt?) -> Unit,
     val sort: (StreamSort) -> Unit,
 )
@@ -475,8 +477,9 @@ private fun StreamFilters(detail: DetailView, actions: StreamFilterActions) {
                     actions.addon(null)
                 }
             }
-            items(detail.qualities) { label ->
-                Chip(label, filter.quality == label) { actions.quality(if (filter.quality == label) null else label) }
+            items(detail.qualities) { resolution ->
+                val selected = filter.quality == resolution
+                Chip(resolutionLabel(resolution), selected) { actions.quality(if (selected) null else resolution) }
             }
             if (groups.size > 1) {
                 items(groups) { (index, group) ->
@@ -529,7 +532,7 @@ private fun QualityBadge(quality: QualityView) {
         Tier.LOW -> Brand.TextDim to Brand.Surface
         Tier.CAM -> Brand.Warning to Brand.Warning.copy(alpha = 0.15f)
     }
-    Badge(quality.label, ink, fill)
+    Badge(resolutionLabel(quality.resolution), ink, fill)
 }
 
 @Composable
