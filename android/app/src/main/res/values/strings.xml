@@ -129,4 +129,14 @@
     <string name="language_tur">Turkish</string>
     <string name="language_ukr">Ukrainian</string>
     <string name="language_vie">Vietnamese</string>
+    <string name="p2p_title">Peer-to-peer streaming</string>
+    <string name="p2p_accept">Accept and play</string>
+    <string name="p2p_notice">Torrent streams come from other people\'s computers. While one plays, your IP address is visible to the peers and trackers it connects to, and Cineo uploads the parts it has already downloaded to those peers. Downloaded data is kept in a local cache. You can turn peer-to-peer streaming off in Settings.</string>
+    <string name="p2p_enabled">Show and play torrent streams</string>
+    <string name="stats_download">Download</string>
+    <string name="stats_peers">Peers</string>
+    <string name="stats_downloaded">Downloaded</string>
+    <string name="stats_of">%1$s of %2$s</string>
+    <string name="torrent_channel">Torrent streaming</string>
+    <string name="torrent_notification">Streaming a torrent</string>
 </resources>

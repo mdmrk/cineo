@@ -19,7 +19,7 @@ class CineoApplication : Application() {
         super.onCreate()
         Native.init(this)
         started = try {
-            Started.Running(Cineo(filesDir.resolve("data").path, Views(views)))
+            Started.Running(Cineo(filesDir.resolve("data").path, cacheDir.path, Views(views)))
         } catch (e: StartException) {
             Started.Failed(e.message.orEmpty())
         }

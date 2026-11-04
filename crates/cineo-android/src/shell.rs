@@ -1,15 +1,17 @@
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
 use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, Setting, State, update};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::PlayerCommand;
-use cineo_player::{EventActions, event_actions};
+use cineo_player::{EventActions, PlayerEvent, event_actions};
 use cineo_store::Store;
+use cineo_stream::{EngineOptions, Torrents};
 use tokio::runtime::{Handle, Runtime};
 use tracing::{error, warn};
 use url::Url;
@@ -17,7 +19,7 @@ use url::Url;
 use crate::player::{Mpv, Playback, Players};
 use crate::view::{AppView, view};
 
-const NO_TORRENTS: &str = "torrents cannot be played on Android yet";
+const ENGINE_SHUTDOWN: Duration = Duration::from_secs(2);
 
 #[uniffi::export(foreign)]
 pub trait StateListener: Send + Sync + std::fmt::Debug {
@@ -52,6 +54,7 @@ pub enum SettingChange {
     SubtitleLanguage { code: Option<String> },
     WatchedAt { percent: u32 },
     AllowPrivateNetwork { on: bool },
+    P2pEnabled { on: bool },
 }
 
 impl SettingChange {
@@ -63,6 +66,7 @@ impl SettingChange {
             Self::SubtitleLanguage { code } => ("subtitle_language", code.unwrap_or_default()),
             Self::WatchedAt { percent } => ("watched_at", percent.to_string()),
             Self::AllowPrivateNetwork { on } => ("allow_private_network", on.to_string()),
+            Self::P2pEnabled { on } => ("p2p_enabled", on.to_string()),
         };
         Setting::parse(key, &value).ok()
     }
@@ -108,8 +112,21 @@ pub struct Cineo {
 #[uniffi::export]
 impl Cineo {
     #[uniffi::constructor]
-    pub fn new(data_dir: &str, listener: Arc<dyn StateListener>) -> Result<Arc<Self>, StartError> {
-        Self::start(data_dir, listener, Arc::new(Mpv))
+    pub fn new(
+        data_dir: &str,
+        cache_dir: &str,
+        listener: Arc<dyn StateListener>,
+    ) -> Result<Arc<Self>, StartError> {
+        let engine = EngineOptions::new(PathBuf::from(cache_dir).join("torrents"));
+        Self::start(data_dir, engine, listener, Arc::new(Mpv))
+    }
+
+    pub fn accept_p2p(&self) {
+        self.send(Action::AcceptP2p);
+    }
+
+    pub fn decline_p2p(&self) {
+        self.send(Action::DeclineP2p);
     }
 
     pub fn install_addon(&self, url: String) {
@@ -183,7 +200,11 @@ impl Cineo {
     }
 
     pub fn stop_playback(&self) {
-        self.command(PlayerCommand::Stop);
+        if lock(&self.screen).playback.is_some() {
+            self.command(PlayerCommand::Stop);
+        } else {
+            self.send(Action::PlaybackStopped);
+        }
     }
 
     pub fn toggle_pause(&self) {
@@ -263,6 +284,7 @@ impl Cineo {
 impl Cineo {
     pub fn start(
         data_dir: &str,
+        engine: EngineOptions,
         listener: Arc<dyn StateListener>,
         players: Arc<dyn Players>,
     ) -> Result<Arc<Self>, StartError> {
@@ -298,6 +320,13 @@ impl Cineo {
         })
         .map_err(thread_error)?;
         let screen = Arc::new(Mutex::new(Screen::default()));
+        let torrents = Torrents::new(
+            runtime.handle().clone(),
+            EngineOptions {
+                allow_private_network: settings.allow_private_network,
+                ..engine
+            },
+        );
         let shell = Shell {
             state: State::default(),
             client: client.clone(),
@@ -307,6 +336,7 @@ impl Cineo {
             listener,
             players,
             screen: Arc::clone(&screen),
+            torrents,
             shown: None,
         };
         let restore = [restore, Action::RestoreSettings(settings)];
@@ -366,6 +396,7 @@ struct Shell {
     listener: Arc<dyn StateListener>,
     players: Arc<dyn Players>,
     screen: Arc<Mutex<Screen>>,
+    torrents: Torrents,
     shown: Option<AppView>,
 }
 
@@ -381,6 +412,7 @@ impl Shell {
                 running = self.handle(msg);
             }
             if !running {
+                self.torrents.shutdown(ENGINE_SHUTDOWN);
                 return;
             }
             self.publish();
@@ -455,11 +487,15 @@ impl Shell {
                 }
             }
             Effect::Play(request) => self.play(&request),
-            Effect::StartTorrent(request) => self.dispatch(Action::TorrentFailed {
-                info_hash: request.info_hash,
-                reason: NO_TORRENTS.into(),
-            }),
-            Effect::StopTorrent | Effect::CheckForUpdate(_) => {}
+            Effect::StartTorrent(request) => {
+                let tx = self.tx.clone();
+                self.torrents
+                    .start(request, &self.state.settings, move |action| {
+                        let _ = tx.send(Msg::Action(action));
+                    });
+            }
+            Effect::StopTorrent => self.torrents.stop(),
+            Effect::CheckForUpdate(_) => {}
         }
     }
 
@@ -479,9 +515,20 @@ impl Shell {
                 drop(screen);
                 let tx = self.tx.clone();
                 let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
+                let feed = self.torrents.feed();
+                feed.playing(&request.url);
                 self.runtime.spawn(async move {
                     let mut events = events;
                     while let Some(event) = events.recv().await {
+                        match &event {
+                            PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
+                            PlayerEvent::Progress { duration_ms, .. }
+                            | PlayerEvent::Ended { duration_ms, .. }
+                            | PlayerEvent::Closed { duration_ms, .. } => {
+                                feed.duration(*duration_ms);
+                            }
+                            _ => {}
+                        }
                         let EventActions { actions, last } =
                             event_actions(event, &meta_id, &video_id, now_ms());
                         for action in actions {
@@ -569,6 +616,10 @@ mod tests {
             listener: Arc::new(Ignore),
             players: Arc::new(Mpv),
             screen: Arc::default(),
+            torrents: Torrents::new(
+                runtime.handle().clone(),
+                EngineOptions::new(std::env::temp_dir()),
+            ),
             shown: None,
         };
         shell.dispatch(Action::RestoreSettings(Settings {

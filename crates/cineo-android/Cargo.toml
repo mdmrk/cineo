@@ -23,6 +23,7 @@ cineo-core.workspace = true
 cineo-net.workspace = true
 cineo-player.workspace = true
 cineo-store.workspace = true
+cineo-stream.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -38,6 +39,7 @@ rustls-platform-verifier.workspace = true
 
 [dev-dependencies]
 cineo-player.workspace = true
+librqbit.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 wiremock.workspace = true
 

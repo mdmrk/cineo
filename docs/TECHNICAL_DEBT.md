@@ -378,12 +378,17 @@ Format:
 - Instead: surface playback uses `profile=fast` (bilinear, no dithering).
 - Exit: find the failing stage on Mali, or test `vo=gpu-next`.
 
-### Android: torrents cannot be played
-- Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`NO_TORRENTS`)
-- Gap: `cineo-stream` does not run on Android yet.
-- Instead: torrent streams are listed as unsupported; starting one fails
-  with a notice.
-- Exit: step 4 of ADR-0028 (engine in a foreground service).
+### Android: torrents use mobile data and battery without limits
+- Where: [shell.rs](../crates/cineo-android/src/shell.rs),
+  [TorrentService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/TorrentService.kt)
+- Gap: a torrent streams over any network, mobile data included, and
+  keeps DHT and uploads on with the desktop's defaults; how much battery
+  and data this uses on a phone is UNKNOWN.
+- Why: step 4 of ADR-0028 only brought torrents over.
+- Instead: the P2P notice and the "Show and play torrent streams" setting
+  are the only controls on Android.
+- Exit: measure on a phone, then add a Wi-Fi-only option and the torrent
+  settings.
 
 ### Android: no update check
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)

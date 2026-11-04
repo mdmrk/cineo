@@ -40,10 +40,11 @@ import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
+import io.github.mdmrk.cineo.rust.TorrentView
 import kotlinx.coroutines.delay
 
 @Composable
-fun PlayerScreen(playback: PlaybackView, cineo: Cineo) {
+fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, cineo: Cineo) {
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
     var controls by remember { mutableStateOf(true) }
     var dragging by remember { mutableStateOf<Float?>(null) }
@@ -84,6 +85,7 @@ fun PlayerScreen(playback: PlaybackView, cineo: Cineo) {
         if (controls && current != null) {
             Controls(
                 title = playback.title,
+                torrent = torrent,
                 status = current,
                 position = dragging ?: current.positionS.toFloat(),
                 onSeekDrag = { dragging = it },
@@ -103,6 +105,7 @@ fun PlayerScreen(playback: PlaybackView, cineo: Cineo) {
 @Composable
 private fun Controls(
     title: String,
+    torrent: TorrentView?,
     status: PlayerStatusView,
     position: Float,
     onSeekDrag: (Float) -> Unit,
@@ -137,6 +140,7 @@ private fun Controls(
             }
         }
         Column {
+            TorrentStats(torrent)
             val duration = status.durationS.toFloat().coerceAtLeast(0f)
             Slider(
                 value = position.coerceIn(0f, duration.coerceAtLeast(position)),

@@ -1,7 +1,7 @@
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, SourceKind, Stream, Video};
 use cineo_core::app::{
     Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, Row,
-    SeekStep, Setting, Settings, State, StreamGroup, WatchedAt, continue_watching,
+    SeekStep, Setting, Settings, State, StreamGroup, TorrentStatus, WatchedAt, continue_watching,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -15,6 +15,9 @@ pub struct AppView {
     pub recent: Vec<LibraryItemView>,
     pub detail: Option<DetailView>,
     pub playback: Option<PlaybackView>,
+    pub connecting: Option<String>,
+    pub torrent: Option<TorrentView>,
+    pub p2p_prompt: bool,
     pub settings: SettingsView,
     pub notice: Option<NoticeView>,
 }
@@ -30,6 +33,18 @@ pub struct SettingsView {
     pub watched_at_percent: u32,
     pub watched_at_choices: Vec<u32>,
     pub allow_private_network: bool,
+    pub p2p_enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum TorrentView {
+    Starting,
+    Streaming {
+        peers: u32,
+        download_bytes_per_sec: u64,
+        downloaded: u64,
+        size: u64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -232,6 +247,26 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
             title: title.to_owned(),
             seek_step_s: number(Setting::SeekStep(state.settings.seek_step)),
         }),
+        connecting: state
+            .torrent
+            .as_ref()
+            .and_then(|t| t.connecting())
+            .map(|request| request.title.clone()),
+        torrent: state.torrent.as_ref().map(|t| match t.status {
+            TorrentStatus::Starting => TorrentView::Starting,
+            TorrentStatus::Streaming {
+                peers,
+                download_bytes_per_sec,
+                downloaded,
+                size,
+            } => TorrentView::Streaming {
+                peers,
+                download_bytes_per_sec,
+                downloaded,
+                size,
+            },
+        }),
+        p2p_prompt: state.p2p_prompt.is_some(),
         settings: settings(&state.settings),
         notice: state.notice.as_ref().map(notice_view),
     }
@@ -255,6 +290,7 @@ fn settings(settings: &Settings) -> SettingsView {
             .map(|w| number(Setting::WatchedAt(*w)))
             .collect(),
         allow_private_network: settings.allow_private_network,
+        p2p_enabled: settings.p2p_enabled,
     }
 }
 

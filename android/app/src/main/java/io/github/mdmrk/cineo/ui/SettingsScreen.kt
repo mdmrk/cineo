@@ -108,6 +108,11 @@ fun SettingsScreen(settings: SettingsView, addons: List<AddonView>, cineo: Cineo
                 stringResource(R.string.private_network_help),
                 settings.allowPrivateNetwork,
             ) { change(SettingChange.AllowPrivateNetwork(it)) }
+            Toggle(
+                stringResource(R.string.p2p_enabled),
+                stringResource(R.string.p2p_notice),
+                settings.p2pEnabled,
+            ) { change(SettingChange.P2pEnabled(it)) }
             Confirmed(
                 stringResource(R.string.clear_history),
                 stringResource(R.string.clear_history_help),

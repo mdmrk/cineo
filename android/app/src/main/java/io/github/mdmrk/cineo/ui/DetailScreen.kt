@@ -110,7 +110,7 @@ fun DetailScreen(
                             }
                         }
                         itemsIndexed(items.streams, key = { index, _ -> "stream-$groupIndex-$index" }) { index, stream ->
-                            val playable = stream.kind == SourceKindView.HTTP
+                            val playable = stream.kind == SourceKindView.HTTP || stream.kind == SourceKindView.TORRENT
                             ListItem(
                                 headlineContent = { Text(stream.name ?: group.addonName) },
                                 supportingContent = {

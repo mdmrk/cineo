@@ -9,7 +9,7 @@ pub use shell::{Cineo, ImageError, PlayerStatusView, SettingChange, StartError, 
 pub use view::{
     AddonView, AppView, DetailView, InstallView, LibraryItemView, MetaStatus, NoticeView,
     PlaybackFailureView, PlaybackView, PosterShapeView, PosterView, ProblemView, RowItems, RowView,
-    SourceKindView, StreamGroupView, StreamItems, StreamView, VideoView,
+    SettingsView, SourceKindView, StreamGroupView, StreamItems, StreamView, TorrentView, VideoView,
 };
 
 uniffi::setup_scaffolding!();

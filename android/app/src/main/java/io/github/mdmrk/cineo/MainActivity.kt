@@ -1,6 +1,17 @@
 package io.github.mdmrk.cineo
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import io.github.mdmrk.cineo.ui.ConnectingScreen
+import io.github.mdmrk.cineo.ui.P2pPrompt
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -21,6 +32,25 @@ import io.github.mdmrk.cineo.ui.PlayerScreen
 import io.github.mdmrk.cineo.ui.SettingsScreen
 import io.github.mdmrk.cineo.ui.StartFailed
 
+@Composable
+private fun TorrentForeground(active: Boolean) {
+    val context = LocalContext.current
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(active) {
+        if (active) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            TorrentService.start(context)
+        } else {
+            TorrentService.stop(context)
+        }
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -36,8 +66,11 @@ class MainActivity : ComponentActivity() {
                         val current = view
                         val playback = current?.playback
                         val detail = current?.detail
+                        val connecting = current?.connecting
+                        TorrentForeground(current?.torrent != null)
                         when {
-                            playback != null -> PlayerScreen(playback, cineo)
+                            playback != null -> PlayerScreen(playback, current.torrent, cineo)
+                            connecting != null -> ConnectingScreen(connecting, current.torrent, cineo::stopPlayback)
                             detail != null -> {
                                 BackHandler { cineo.closeDetail() }
                                 DetailScreen(
@@ -74,6 +107,9 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                        }
+                        if (current?.p2pPrompt == true) {
+                            P2pPrompt(onAccept = cineo::acceptP2p, onDecline = cineo::declineP2p)
                         }
                         Notices(current, cineo::dismissNotice)
                     }
