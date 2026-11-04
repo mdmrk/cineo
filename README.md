@@ -16,7 +16,7 @@ phones. It works with Stremio-protocol addons.
   </tr>
   <tr>
     <td><img src="docs/images/addons.png" alt="Installed addons"></td>
-    <td><img src="docs/images/settings.png" alt="Torrent settings"></td>
+    <td><img src="docs/images/player.png" alt="A movie playing"></td>
   </tr>
 </table>
 
