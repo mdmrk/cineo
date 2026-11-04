@@ -22,7 +22,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
@@ -59,6 +63,8 @@ class LibraryActions(
 fun LibraryScreen(view: AppView?, images: Images, actions: LibraryActions, padding: PaddingValues) {
     val favorites = view?.favorites.orEmpty()
     val recent = view?.recent.orEmpty()
+    var tab by rememberSaveable { mutableIntStateOf(if (recent.isEmpty() && favorites.isNotEmpty()) 1 else 0) }
+    val shown = if (tab == 0) recent else favorites
     LazyVerticalGrid(
         columns = GridCells.Adaptive(CardWidth),
         modifier = Modifier.fillMaxSize(),
@@ -68,37 +74,44 @@ fun LibraryScreen(view: AppView?, images: Images, actions: LibraryActions, paddi
             top = padding.calculateTopPadding() + 16.dp,
             bottom = padding.calculateBottomPadding() + 16.dp,
         ),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (favorites.isNotEmpty()) {
-            item(key = "favorites", span = { GridItemSpan(maxLineSpan) }) {
-                ShelfTitle(stringResource(R.string.favourites), favorites.size)
-            }
-            items(favorites, key = { "favorite/${it.id}" }) {
-                LibraryCard(it, Shelf.FAVORITES, images, actions, Modifier.fillMaxWidth())
+        item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.page_library), style = MaterialTheme.typography.headlineMedium, color = Brand.TextBright)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        stringResource(R.string.recently_played) to recent.size,
+                        stringResource(R.string.favourites) to favorites.size,
+                    ).forEachIndexed { index, (label, count) ->
+                        FilterChip(
+                            selected = tab == index,
+                            onClick = { tab = index },
+                            label = { Text(if (count > 0) "$label · $count" else label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Brand.Accent,
+                                selectedLabelColor = Brand.OnAccent,
+                            ),
+                        )
+                    }
+                }
             }
         }
-        item(key = "recent", span = { GridItemSpan(maxLineSpan) }) {
-            ShelfTitle(stringResource(R.string.recently_played), recent.size)
-        }
-        if (recent.isEmpty()) {
+        if (shown.isEmpty()) {
             item(key = "empty", span = { GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.library_empty))
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 64.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CineoIcon(if (tab == 0) Icon.MOVIE else Icon.HEART, tint = Brand.TextFaint, size = 48.sp)
+                    Text(stringResource(R.string.library_empty), color = Brand.TextDim)
+                }
             }
         }
-        items(recent, key = { "recent/${it.id}" }) {
-            LibraryCard(it, Shelf.LIBRARY, images, actions, Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-private fun ShelfTitle(title: String, count: Int) {
-    Column(Modifier.padding(top = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        if (count > 0) {
-            Text(stringResource(R.string.count_titles, count), style = MaterialTheme.typography.bodySmall)
+        items(shown, key = { "$tab/${it.id}" }) {
+            LibraryCard(it, if (tab == 0) Shelf.LIBRARY else Shelf.FAVORITES, images, actions, Modifier.fillMaxWidth())
         }
     }
 }
