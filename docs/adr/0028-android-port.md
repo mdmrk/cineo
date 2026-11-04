@@ -199,8 +199,7 @@ The spike that supports this (all on 2026-11-03):
 - We maintain a build of LGPL arm64 `libmpv.so` and FFmpeg from pinned
   sources, which `docs/LEGAL.md` must cover. The spike's AAR cannot ship:
   it is GPL. How the LGPL's requirement that users can replace the library
-  applies inside a signed APK is UNKNOWN and must be settled before a
-  release.
+  applies inside a signed APK is settled by ADR-0029.
 - CI gains an Android build; `cargo deny` gains the Android graph.
 
 ## Rejected alternatives

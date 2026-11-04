@@ -43,7 +43,8 @@ old one *Superseded by NNNN*.
 | [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Accepted |
 | [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted |
-| [0028](0028-android-port.md) | Android port | Accepted |
+| [0028](0028-android-port.md) | Android port | Accepted (LGPL in a signed APK: settled by 0029) |
+| [0029](0029-android-releases.md) | Android releases | Accepted |
 
 ## What we took from the reference projects
 
