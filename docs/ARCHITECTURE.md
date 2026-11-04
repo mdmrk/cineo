@@ -70,7 +70,7 @@ flowchart TB
 | `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events (ADR-0014) |
 | `cineo-store` | Persistence (installed addons, library, progress, settings) with migrations |
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
-| `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010) |
+| `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010); `Torrents` runs the start, stop, status and lookahead steps for both shells |
 | `cineo-android` | Rust half of the Android shell (ADR-0028): holds the core `State`, runs effects through the IO crates, and hands Kotlin `AppView` snapshots through UniFFI; the TLS verifier's JNI entry point |
 
 **When to add a crate:** only when the new code has a different dependency

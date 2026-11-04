@@ -1,14 +1,12 @@
-use std::num::{NonZeroU32, NonZeroU64};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::Context as _;
 use cineo_core::app::{
-    Action, Effect, Language, Lookahead, Notice, Percent, PlayRequest, Setting, Settings, State,
-    TorrentRequest, TorrentStatus, parse_link, update,
+    Action, Effect, Language, Notice, Percent, PlayRequest, Setting, Settings, State,
+    TorrentRequest, parse_link, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::PlayerError;
@@ -17,7 +15,7 @@ use cineo_player::embedded::{
 };
 use cineo_player::{EventActions, PlayerEvent, event_actions};
 use cineo_store::Store;
-use cineo_stream::{Engine, EngineOptions};
+use cineo_stream::{EngineOptions, PlayerFeed, Torrents};
 use eframe::egui;
 use raw_window_handle::{HasDisplayHandle as _, RawDisplayHandle};
 use tracing::{debug, error, warn};
@@ -165,15 +163,6 @@ fn native_window(cc: &eframe::CreationContext<'_>) -> Option<isize> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-struct Feed {
-    url: url::Url,
-    buffered_s: Option<u64>,
-    duration_ms: u64,
-}
-
-const TORRENT_STATUS_INTERVAL: Duration = Duration::from_secs(1);
-
 struct Embedded {
     player: Player,
     renderer: Arc<Mutex<Option<Renderer>>>,
@@ -210,10 +199,7 @@ pub(crate) struct CineoApp {
     store_tx: Option<Sender<Effect>>,
     playback: Option<Box<Embedded>>,
     connecting_controls: Controls,
-    engine: Arc<tokio::sync::Mutex<Option<Engine>>>,
-    torrent_generation: Arc<AtomicU64>,
-    torrent_task: Option<tokio::task::AbortHandle>,
-    player_feed: tokio::sync::watch::Sender<Option<Feed>>,
+    torrents: Torrents,
     seq: u64,
     pending_link: Option<String>,
     keep_awake: KeepAwake,
@@ -232,6 +218,7 @@ impl CineoApp {
         let media_keys = MediaKeys::new(ctx.clone());
         #[cfg(windows)]
         let media_keys = MediaKeys::new(ctx.clone(), io.window);
+        let torrents = Torrents::new(io.runtime.clone(), io.engine.clone());
         let mut app = Self {
             state: State::default(),
             view: ViewState {
@@ -245,10 +232,7 @@ impl CineoApp {
             store_tx: Some(store_tx),
             playback: None,
             connecting_controls: Controls::default(),
-            engine: Arc::default(),
-            torrent_generation: Arc::default(),
-            torrent_task: None,
-            player_feed: tokio::sync::watch::Sender::new(None),
+            torrents,
             seq: 0,
             pending_link: None,
             keep_awake: KeepAwake::new(),
@@ -306,98 +290,12 @@ impl CineoApp {
     }
 
     fn start_torrent(&mut self, request: TorrentRequest) {
-        let generation = self.next_torrent_generation();
-        let current = Arc::clone(&self.torrent_generation);
-        let engine = Arc::clone(&self.engine);
-        let options = engine_options(&self.io.engine, &self.state.settings);
-        let mut feed = self.player_feed.subscribe();
         let send = self.sender();
-        let task = self.io.runtime.spawn(async move {
-            let info_hash = request.info_hash.clone();
-            let opened = {
-                let mut engine = engine.lock().await;
-                if current.load(Ordering::SeqCst) != generation {
-                    return;
-                }
-                open_torrent(&mut engine, options, &request).await
-            };
-            let url = match opened {
-                Ok(url) => url,
-                Err(reason) => {
-                    send(Action::TorrentFailed { info_hash, reason });
-                    return;
-                }
-            };
-            send(Action::TorrentReady {
-                info_hash: info_hash.clone(),
-                url: url.clone(),
-            });
-            let mut ticks = tokio::time::interval(TORRENT_STATUS_INTERVAL);
-            let mut last = None;
-            let mut lookahead = Lookahead::default();
-            let mut size = None;
-            loop {
-                let ticked = tokio::select! {
-                    _ = ticks.tick() => true,
-                    Ok(()) = feed.changed() => false,
-                };
-                if current.load(Ordering::SeqCst) != generation {
-                    return;
-                }
-                let running = engine.lock().await;
-                let Some(running) = running.as_ref() else {
-                    return;
-                };
-                if ticked {
-                    let status = match running.status() {
-                        Some((hash, status)) if hash == info_hash => status,
-                        _ => return,
-                    };
-                    if let TorrentStatus::Streaming { size: bytes, .. } = status {
-                        size = Some(bytes);
-                    }
-                    if last.as_ref() != Some(&status) {
-                        last = Some(status.clone());
-                        send(Action::TorrentStatus {
-                            info_hash: info_hash.clone(),
-                            status,
-                        });
-                    }
-                }
-                let player = feed
-                    .borrow_and_update()
-                    .as_ref()
-                    .filter(|feed| feed.url == url)
-                    .and_then(|feed| Some((feed.buffered_s?, feed.duration_ms)));
-                if let (Some((buffered_s, duration_ms)), Some(size)) = (player, size)
-                    && let Some(bytes) = lookahead.update(buffered_s, size, duration_ms)
-                {
-                    running.set_lookahead(&info_hash, bytes);
-                }
-            }
-        });
-        self.torrent_task = Some(task.abort_handle());
+        self.torrents.start(request, &self.state.settings, send);
     }
 
     fn stop_torrent(&mut self) {
-        let generation = self.next_torrent_generation();
-        let current = Arc::clone(&self.torrent_generation);
-        let engine = Arc::clone(&self.engine);
-        self.io.runtime.spawn(async move {
-            let engine = engine.lock().await;
-            if current.load(Ordering::SeqCst) == generation
-                && let Some(engine) = engine.as_ref()
-            {
-                engine.stop().await;
-            }
-        });
-    }
-
-    fn next_torrent_generation(&mut self) -> u64 {
-        if let Some(task) = self.torrent_task.take() {
-            task.abort();
-        }
-        self.torrent_generation.fetch_add(1, Ordering::SeqCst) + 1
+        self.torrents.stop();
     }
 
     fn spawn(&self, task: impl Future<Output = Action> + Send + 'static) {
@@ -432,12 +330,8 @@ impl CineoApp {
             Player::start(request, Arc::new(move || repaint.request_repaint()), video)?;
         let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
         let send = self.sender();
-        self.player_feed.send_replace(Some(Feed {
-            url: request.url.clone(),
-            buffered_s: None,
-            duration_ms: 0,
-        }));
-        let feed = self.player_feed.clone();
+        let feed = self.torrents.feed();
+        feed.playing(&request.url);
         let forward = self.io.runtime.spawn(async move {
             let mut events = events;
             forward_events(&mut events, meta_id, video_id, &feed, send).await;
@@ -717,30 +611,15 @@ async fn forward_events(
     events: &mut tokio::sync::mpsc::UnboundedReceiver<PlayerEvent>,
     meta_id: String,
     video_id: String,
-    feed: &tokio::sync::watch::Sender<Option<Feed>>,
+    feed: &PlayerFeed,
     send: impl Fn(Action),
 ) {
     while let Some(event) = events.recv().await {
         match &event {
-            PlayerEvent::Buffered { seconds } => {
-                let seconds = *seconds;
-                feed.send_if_modified(|feed| {
-                    feed.as_mut()
-                        .is_some_and(|feed| feed.buffered_s.replace(seconds) != Some(seconds))
-                });
-            }
+            PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
             PlayerEvent::Progress { duration_ms, .. }
             | PlayerEvent::Ended { duration_ms, .. }
-            | PlayerEvent::Closed { duration_ms, .. }
-                if *duration_ms > 0 =>
-            {
-                let duration_ms = *duration_ms;
-                feed.send_if_modified(|feed| {
-                    feed.as_mut().is_some_and(|feed| {
-                        std::mem::replace(&mut feed.duration_ms, duration_ms) != duration_ms
-                    })
-                });
-            }
+            | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),
             _ => {}
         }
         let EventActions { actions, last } = event_actions(event, &meta_id, &video_id, now_ms());
@@ -811,60 +690,12 @@ impl eframe::App for CineoApp {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         self.end_playback();
         self.store_tx = None;
-        self.next_torrent_generation();
-        let engine = Arc::clone(&self.engine);
-        let shutdown = async move {
-            if let Some(engine) = engine.lock().await.take() {
-                engine.shutdown().await;
-            }
-        };
-        let _ = self
-            .io
-            .runtime
-            .block_on(async { tokio::time::timeout(Duration::from_secs(2), shutdown).await });
+        self.torrents.shutdown(Duration::from_secs(2));
     }
-}
-
-async fn open_torrent(
-    slot: &mut Option<Engine>,
-    options: EngineOptions,
-    request: &TorrentRequest,
-) -> Result<url::Url, String> {
-    if let Some(stale) = slot.take_if(|engine| *engine.options() != options) {
-        stale.shutdown().await;
-    }
-    let engine = match slot {
-        Some(engine) => engine,
-        None => slot.insert(Engine::start(options).await.map_err(|e| e.to_string())?),
-    };
-    engine.open(request).await.map_err(|err| {
-        error!(error = %err, "opening the torrent failed");
-        err.to_string()
-    })
 }
 
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {
     command_line || settings.allow_private_network
-}
-
-fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
-    EngineOptions {
-        dht: base.dht && settings.torrent_dht,
-        upload: settings.torrent_upload,
-        download_limit_bps: settings
-            .download_limit
-            .bytes_per_second()
-            .and_then(NonZeroU32::new),
-        upload_limit_bps: settings
-            .upload_limit
-            .bytes_per_second()
-            .and_then(NonZeroU32::new),
-        peer_limit: Some(settings.peer_limit.peers()),
-        window: NonZeroU64::new(settings.torrent_storage.window_bytes()),
-        in_memory: settings.torrent_storage.in_memory(),
-        listen_port: u16::try_from(settings.torrent_port.get()).unwrap_or(u16::MAX),
-        ..base.clone()
-    }
 }
 
 fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
@@ -913,7 +744,6 @@ pub(crate) fn spawn_store_writer(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cineo_core::app::{DownloadLimit, PeerLimit, TorrentPort, TorrentStorage, UploadLimit};
 
     #[test]
     fn private_networks_stay_blocked_unless_asked_for() {
@@ -924,41 +754,6 @@ mod tests {
             ..Settings::default()
         };
         assert!(private_networks_allowed(false, &on));
-    }
-
-    #[test]
-    fn torrent_settings_shape_the_next_engine() {
-        let base = EngineOptions::new(PathBuf::from("/c"));
-        let defaults = engine_options(&base, &Settings::default());
-        assert_eq!(
-            defaults,
-            EngineOptions {
-                peer_limit: Some(128),
-                window: NonZeroU64::new(1024 * 1024 * 1024),
-                in_memory: true,
-                listen_port: 42713,
-                ..base.clone()
-            },
-            "the defaults match librqbit's"
-        );
-        let settings = Settings {
-            torrent_upload: false,
-            torrent_dht: false,
-            download_limit: DownloadLimit::M5,
-            upload_limit: UploadLimit::K100,
-            peer_limit: PeerLimit::P50,
-            torrent_storage: TorrentStorage::Disk8192,
-            torrent_port: TorrentPort::new(51000),
-            ..Settings::default()
-        };
-        let options = engine_options(&base, &settings);
-        assert_eq!(options.listen_port, 51000);
-        assert!(!options.upload && !options.dht);
-        assert_eq!(options.window, NonZeroU64::new(8 << 30));
-        assert!(!options.in_memory);
-        assert_eq!(options.download_limit_bps, NonZeroU32::new(5_000_000));
-        assert_eq!(options.upload_limit_bps, NonZeroU32::new(100_000));
-        assert_eq!(options.peer_limit, Some(50));
     }
 
     #[test]
