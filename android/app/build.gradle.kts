@@ -75,28 +75,36 @@ val cargoNdk = tasks.register<CargoNdk>("cargoNdk") {
     outputs.upToDateWhen { false }
 }
 
-abstract class LibmpvLibs : DefaultTask() {
+abstract class Libmpv : DefaultTask() {
     @get:Internal abstract val built: DirectoryProperty
+    @get:Input abstract val required: Property<Boolean>
     @get:OutputDirectory abstract val jniLibs: DirectoryProperty
+    @get:OutputDirectory abstract val assets: DirectoryProperty
 
     @TaskAction
     fun copy() {
+        val root = built.get().asFile
+        val out = root.resolve("out")
         val abi = jniLibs.get().dir("arm64-v8a").asFile
-        abi.deleteRecursively()
-        abi.mkdirs()
-        val libs = built.get().asFile.listFiles { file -> file.name.endsWith(".so") }.orEmpty()
-        if (libs.isEmpty()) {
-            logger.warn("No libmpv at ${built.get().asFile}: the app will build, but cannot play. Run scripts/build-libmpv-android.sh.")
-        }
+        val licenses = assets.get().dir("licenses").asFile
+        val sources = assets.get().dir("sources").asFile
+        listOf(abi, licenses, sources).forEach { it.deleteRecursively(); it.mkdirs() }
+        val libs = out.resolve("lib").listFiles { file -> file.name.endsWith(".so") }.orEmpty()
+        val notice = out.resolve("libmpv.md")
+        val archive = root.resolve("libmpv-android-sources.tar.xz")
         libs.forEach { it.copyTo(abi.resolve(it.name)) }
+        out.resolve("licenses").listFiles().orEmpty().forEach { it.copyTo(licenses.resolve(it.name)) }
+        listOf(notice to licenses, archive to sources).filter { it.first.isFile }
+            .forEach { (file, dir) -> file.copyTo(dir.resolve(file.name)) }
+        if (libs.none { it.name == "libmpv.so" } || !notice.isFile || !archive.isFile) {
+            val message = "No libmpv build at $root. Run scripts/build-libmpv-android.sh."
+            if (required.get()) throw GradleException(message)
+            logger.warn("$message The app will build, but cannot play.")
+        }
     }
 }
 
-val libmpvLibs = tasks.register<LibmpvLibs>("libmpvLibs") {
-    built.set(cargoWorkspace.dir("target/libmpv-android/out/lib"))
-    jniLibs.set(layout.buildDirectory.dir("generated/libmpv/jniLibs"))
-    outputs.upToDateWhen { false }
-}
+fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
 
 val uniffiBindgen = tasks.register<UniffiBindgen>("uniffiBindgen") {
     workspace.set(cargoWorkspace)
@@ -115,9 +123,35 @@ android {
         applicationId = "io.github.mdmrk.cineo"
         minSdk = minApi
         targetSdk = 36
-        versionCode = 1
+        versionCode = env("CINEO_VERSION_CODE")?.toInt() ?: 1
         versionName = workspaceVersion()
         ndk { abiFilters += "arm64-v8a" }
+    }
+
+    signingConfigs {
+        create("release") {
+            env("CINEO_KEYSTORE")?.let { storeFile = file(it) }
+            storePassword = env("CINEO_KEYSTORE_PASSWORD")
+            keyAlias = env("CINEO_KEY_ALIAS")
+            keyPassword = env("CINEO_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (env("CINEO_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    androidResources {
+        noCompress += "xz"
+    }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols += listOf("**/libmpv.so", "**/libav*.so", "**/libsw*.so")
+        }
     }
 
     buildFeatures {
@@ -127,8 +161,16 @@ android {
 
 androidComponents {
     onVariants { variant ->
+        val libmpv = tasks.register<Libmpv>("libmpv${variant.name.replaceFirstChar { it.uppercase() }}") {
+            built.set(cargoWorkspace.dir("target/libmpv-android"))
+            required.set(variant.buildType == "release")
+            jniLibs.set(layout.buildDirectory.dir("generated/libmpv/${variant.name}/jniLibs"))
+            assets.set(layout.buildDirectory.dir("generated/libmpv/${variant.name}/assets"))
+            outputs.upToDateWhen { false }
+        }
         variant.sources.jniLibs?.addGeneratedSourceDirectory(cargoNdk, CargoNdk::jniLibs)
-        variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpvLibs, LibmpvLibs::jniLibs)
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpv, Libmpv::jniLibs)
+        variant.sources.assets?.addGeneratedSourceDirectory(libmpv, Libmpv::assets)
         variant.sources.kotlin?.addGeneratedSourceDirectory(uniffiBindgen, UniffiBindgen::kotlin)
     }
 }

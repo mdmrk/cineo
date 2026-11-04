@@ -70,8 +70,9 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
   repository and its POM names no license (INFERRED: same license).
 - `android_logger` 0.15.1 and `log` 0.4.34 (MIT or Apache-2.0) send Rust logs to logcat on Android.
-- The Android app packages the libmpv build below when it exists locally; no release ships it yet. `scripts/build-libmpv-android.sh`
-  builds the one it will ship (2026-11-03, ADR-0028), from the sources
+- The Android app packages the libmpv build below, and every release
+  ships it in `cineo-arm64-android.apk` (ADR-0029).
+  `scripts/build-libmpv-android.sh` builds it (2026-11-03, ADR-0028), from the sources
   pinned in `scripts/libmpv-android.env`: mpv 0.41.0 with `-Dgpl=false`
   and FFmpeg 8.1.3 without `--enable-gpl`, `--enable-version3` or
   `--enable-nonfree`, so both are LGPL-2.1-or-later (VERIFIED:
@@ -102,6 +103,21 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
   binary's hash, the mpv commit and the build sources. Releases do not
   carry the archive itself; `libmpv.md` links to it upstream.
+- The Android release (ADR-0029) carries `libmpv.so` and FFmpeg's
+  libraries, unmodified, as separate shared libraries in
+  `lib/arm64-v8a/` of the APK, loaded at runtime (LGPL-2.1 §6(b)). The
+  APK also carries their source as
+  `assets/sources/libmpv-android-sources.tar.xz`, written by
+  `scripts/build-libmpv-android.sh`: the pinned source tarballs, libplacebo
+  at its pinned commit, the build script and its `.env`, so the object
+  code is accompanied by its source (§4). The APK carries their
+  license texts and `libmpv.md` in `assets/licenses/` (the versions, each
+  `.so`'s SHA-256 and how to replace them), and the app shows them under
+  Settings, About. To use another build, a user replaces the `.so` files
+  in the APK, aligns it with `zipalign` and signs it with their own key
+  with `apksigner`; Android then needs our copy uninstalled first.
+  LGPL-2.1, unlike version 3, does not require that a modified copy keeps
+  our signature (INFERRED from the license text, not legal advice).
 
 ## Bundled assets
 Fonts embedded in `cineo-desktop` (`crates/cineo-desktop/assets/fonts/`),

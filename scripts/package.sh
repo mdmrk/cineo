@@ -42,6 +42,28 @@ EOT
   windows)
     cp target/release/cineo-desktop.exe dist/cineo-x86_64-windows.exe
     ;;
+  android)
+    apk=dist/cineo-arm64-android.apk
+    libmpv=target/libmpv-android
+    cp android/app/build/outputs/apk/release/app-release.apk "$apk"
+    entries=$(unzip -Z1 "$apk")
+    for required in assets/licenses/libmpv.md assets/licenses/mpv-LGPL-2.1.txt lib/arm64-v8a/libcineo_android.so; do
+      grep -qxF "$required" <<<"$entries" || { echo "$apk has no $required" >&2; exit 1; }
+    done
+    sources=assets/sources/libmpv-android-sources.tar.xz
+    if [[ $(unzip -p "$apk" "$sources" | sha256sum) != $(sha256sum <"$libmpv/libmpv-android-sources.tar.xz") ]]; then
+      echo "$apk: $sources is missing or not the one the libmpv build wrote" >&2
+      exit 1
+    fi
+    for lib in libmpv.so libavcodec.so libavfilter.so libavformat.so libavutil.so libswresample.so libswscale.so; do
+      shipped=$(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1)
+      grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" \
+        || { echo "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names" >&2; exit 1; }
+    done
+    sdk=${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}
+    build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+    "$build_tools/apksigner" verify "$apk"
+    ;;
   *)
     echo "unknown platform: $1" >&2
     exit 1
