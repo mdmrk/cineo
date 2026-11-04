@@ -18,6 +18,7 @@ import io.github.mdmrk.cineo.ui.Page
 import io.github.mdmrk.cineo.ui.Pages
 import io.github.mdmrk.cineo.ui.Notices
 import io.github.mdmrk.cineo.ui.PlayerScreen
+import io.github.mdmrk.cineo.ui.SettingsScreen
 import io.github.mdmrk.cineo.ui.StartFailed
 
 class MainActivity : ComponentActivity() {
@@ -67,6 +68,9 @@ class MainActivity : ComponentActivity() {
                                             padding = padding,
                                         )
                                         Page.LIBRARY -> LibraryScreen(current, images, library, padding)
+                                        Page.SETTINGS -> current?.let {
+                                            SettingsScreen(it.settings, it.addons, cineo, padding)
+                                        }
                                     }
                                 }
                             }

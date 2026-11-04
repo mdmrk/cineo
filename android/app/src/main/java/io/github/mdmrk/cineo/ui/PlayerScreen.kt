@@ -42,8 +42,6 @@ import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
 import kotlinx.coroutines.delay
 
-private const val SEEK_STEP = 10
-
 @Composable
 fun PlayerScreen(playback: PlaybackView, cineo: Cineo) {
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
@@ -95,6 +93,7 @@ fun PlayerScreen(playback: PlaybackView, cineo: Cineo) {
                 },
                 onBack = { cineo.stopPlayback() },
                 onTogglePause = { cineo.togglePause() },
+                seekStep = playback.seekStepS.toInt(),
                 onSeekBy = { cineo.seekBy(it.toDouble()) },
             )
         }
@@ -110,6 +109,7 @@ private fun Controls(
     onSeekDone: () -> Unit,
     onBack: () -> Unit,
     onTogglePause: () -> Unit,
+    seekStep: Int,
     onSeekBy: (Int) -> Unit,
 ) {
     val white = Color.White
@@ -126,14 +126,14 @@ private fun Controls(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = { onSeekBy(-SEEK_STEP) }) {
-                Text("−$SEEK_STEP", color = white, )
+            TextButton(onClick = { onSeekBy(-seekStep) }) {
+                Text("−$seekStep", color = white)
             }
             TextButton(onClick = onTogglePause) {
                 Text(stringResource(if (status.paused) R.string.play else R.string.pause), color = white)
             }
-            TextButton(onClick = { onSeekBy(SEEK_STEP) }) {
-                Text("+$SEEK_STEP", color = white)
+            TextButton(onClick = { onSeekBy(seekStep) }) {
+                Text("+$seekStep", color = white)
             }
         }
         Column {

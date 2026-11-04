@@ -1,7 +1,7 @@
 use cineo_core::addon::{Meta, MetaPreview, PosterShape, SourceKind, Stream, Video};
 use cineo_core::app::{
-    Detail, InstalledAddon, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, Row, State,
-    StreamGroup, continue_watching,
+    Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlaybackFailure, Problem, Row,
+    SeekStep, Setting, Settings, State, StreamGroup, WatchedAt, continue_watching,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -15,7 +15,21 @@ pub struct AppView {
     pub recent: Vec<LibraryItemView>,
     pub detail: Option<DetailView>,
     pub playback: Option<PlaybackView>,
+    pub settings: SettingsView,
     pub notice: Option<NoticeView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SettingsView {
+    pub hardware_decoding: bool,
+    pub seek_step_s: u32,
+    pub seek_steps_s: Vec<u32>,
+    pub audio_language: Option<String>,
+    pub subtitle_language: Option<String>,
+    pub languages: Vec<String>,
+    pub watched_at_percent: u32,
+    pub watched_at_choices: Vec<u32>,
+    pub allow_private_network: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -89,6 +103,7 @@ pub struct StreamView {
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct PlaybackView {
     pub title: String,
+    pub seek_step_s: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -215,9 +230,36 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
         detail: state.detail.as_ref().map(|d| detail(d, &state.library)),
         playback: playing.map(|title| PlaybackView {
             title: title.to_owned(),
+            seek_step_s: number(Setting::SeekStep(state.settings.seek_step)),
         }),
+        settings: settings(&state.settings),
         notice: state.notice.as_ref().map(notice_view),
     }
+}
+
+fn settings(settings: &Settings) -> SettingsView {
+    let code = |language: Option<Language>| language.map(|l| l.code().to_owned());
+    SettingsView {
+        hardware_decoding: settings.hardware_decoding,
+        seek_step_s: number(Setting::SeekStep(settings.seek_step)),
+        seek_steps_s: SeekStep::ALL
+            .iter()
+            .map(|s| number(Setting::SeekStep(*s)))
+            .collect(),
+        audio_language: code(settings.audio_language),
+        subtitle_language: code(settings.subtitle_language),
+        languages: Language::all().map(|l| l.code().to_owned()).collect(),
+        watched_at_percent: number(Setting::WatchedAt(settings.watched_at)),
+        watched_at_choices: WatchedAt::ALL
+            .iter()
+            .map(|w| number(Setting::WatchedAt(*w)))
+            .collect(),
+        allow_private_network: settings.allow_private_network,
+    }
+}
+
+fn number(setting: Setting) -> u32 {
+    setting.value().parse().unwrap_or_default()
 }
 
 fn shelf(

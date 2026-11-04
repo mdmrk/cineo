@@ -4,8 +4,8 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use cineo_core::addon::{ContentType, MetaPreview, PosterShape};
-use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, State, update};
+use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
+use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, Setting, State, update};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::PlayerCommand;
 use cineo_player::{EventActions, event_actions};
@@ -42,6 +42,30 @@ pub enum ImageError {
     InvalidUrl { reason: String },
     #[error("image request failed: {reason}")]
     Fetch { reason: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum SettingChange {
+    HardwareDecoding { on: bool },
+    SeekStep { seconds: u32 },
+    AudioLanguage { code: Option<String> },
+    SubtitleLanguage { code: Option<String> },
+    WatchedAt { percent: u32 },
+    AllowPrivateNetwork { on: bool },
+}
+
+impl SettingChange {
+    fn setting(self) -> Option<Setting> {
+        let (key, value) = match self {
+            Self::HardwareDecoding { on } => ("hardware_decoding", on.to_string()),
+            Self::SeekStep { seconds } => ("seek_step", seconds.to_string()),
+            Self::AudioLanguage { code } => ("audio_language", code.unwrap_or_default()),
+            Self::SubtitleLanguage { code } => ("subtitle_language", code.unwrap_or_default()),
+            Self::WatchedAt { percent } => ("watched_at", percent.to_string()),
+            Self::AllowPrivateNetwork { on } => ("allow_private_network", on.to_string()),
+        };
+        Setting::parse(key, &value).ok()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -120,6 +144,35 @@ impl Cineo {
 
     pub fn remove_from_library(&self, id: String) {
         self.send(Action::RemoveFromLibrary(id));
+    }
+
+    pub fn change_setting(&self, change: SettingChange) {
+        match change.setting() {
+            Some(setting) => self.send(Action::ChangeSetting(setting)),
+            None => warn!("not a valid setting"),
+        }
+    }
+
+    pub fn reset_settings(&self) {
+        self.send(Action::ResetSettings);
+    }
+
+    pub fn clear_library(&self) {
+        self.send(Action::ClearLibrary);
+    }
+
+    pub fn remove_addon(&self, transport: &str) {
+        match TransportUrl::parse(transport) {
+            Ok(transport) => self.send(Action::RemoveAddon(transport)),
+            Err(err) => warn!(%err, "not an addon URL"),
+        }
+    }
+
+    pub fn move_addon(&self, from: u32, to: u32) {
+        self.send(Action::MoveAddon {
+            from: from as usize,
+            to: to as usize,
+        });
     }
 
     pub fn play(&self, group: u32, stream: u32) {

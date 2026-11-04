@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 use cineo_android::{
     AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players, ProblemView, RowItems,
-    Started, StateListener, StreamItems,
+    SettingChange, Started, StateListener, StreamItems,
 };
 use cineo_core::app::PlayRequest;
 use cineo_core::app::Settings;
@@ -478,7 +478,7 @@ async fn a_played_stream_resumes_where_it_stopped_after_a_restart() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_favourite_stays_after_a_restart_until_it_is_unmarked() {
+async fn a_favourite_stays_after_a_restart_until_it_is_unmarked_or_cleared() {
     let server = MockServer::start().await;
     let manifest = movie_addon(&server).await;
     let dir = local_data_dir();
@@ -508,6 +508,10 @@ async fn a_favourite_stays_after_a_restart_until_it_is_unmarked() {
         wait_for(&views, |v| {
             v.favorites.is_empty() && v.detail.as_ref().is_some_and(|d| !d.favorite)
         });
+        cineo.set_favorite("tt0000001".into(), true);
+        wait_for(&views, |v| v.favorites.len() == 1);
+        cineo.clear_library();
+        wait_for(&views, |v| v.favorites.is_empty());
         drop(cineo);
     });
 
@@ -518,6 +522,129 @@ async fn a_favourite_stays_after_a_restart_until_it_is_unmarked() {
             .unwrap()
             .is_empty()
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn changed_settings_reach_the_player_and_survive_a_restart_until_reset() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let players = Arc::new(FakePlayers::default());
+        let (cineo, views) = start_with(dir.path(), &players);
+        let first = wait_for(&views, |_| true);
+        assert!(first.settings.hardware_decoding);
+        assert_eq!(first.settings.seek_steps_s, [5, 10, 15, 30]);
+        assert_eq!(first.settings.watched_at_choices, [80, 85, 90, 92, 95]);
+        assert!(first.settings.languages.iter().any(|c| c == "spa"));
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        for change in [
+            SettingChange::HardwareDecoding { on: false },
+            SettingChange::SeekStep { seconds: 30 },
+            SettingChange::AudioLanguage {
+                code: Some("spa".into()),
+            },
+            SettingChange::SubtitleLanguage {
+                code: Some("eng".into()),
+            },
+            SettingChange::WatchedAt { percent: 80 },
+            SettingChange::SeekStep { seconds: 7 },
+            SettingChange::AudioLanguage {
+                code: Some("klingon".into()),
+            },
+        ] {
+            cineo.change_setting(change);
+        }
+        wait_for(&views, |v| v.settings.watched_at_percent == 80);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+        cineo.play(0, 0);
+        let playing = wait_for(&views, |v| v.playback.is_some());
+        assert_eq!(playing.playback.unwrap().seek_step_s, 30);
+        let request = players.requests.lock().unwrap()[0].clone();
+        assert!(!request.settings.hardware_decoding);
+        assert_eq!(
+            request.settings.audio_language.map(|l| l.code()),
+            Some("spa")
+        );
+        assert_eq!(
+            request.settings.subtitle_language.map(|l| l.code()),
+            Some("eng")
+        );
+        drop(cineo);
+
+        let (cineo, views) = start(dir.path());
+        let restored = wait_for(&views, |_| true).settings;
+        assert!(!restored.hardware_decoding);
+        assert_eq!(restored.seek_step_s, 30);
+        assert_eq!(restored.audio_language.as_deref(), Some("spa"));
+        assert_eq!(restored.subtitle_language.as_deref(), Some("eng"));
+        assert_eq!(restored.watched_at_percent, 80);
+        assert!(restored.allow_private_network);
+        cineo.change_setting(SettingChange::AudioLanguage { code: None });
+        wait_for(&views, |v| v.settings.audio_language.is_none());
+        cineo.reset_settings();
+        let reset = wait_for(&views, |v| v.settings.hardware_decoding).settings;
+        assert_eq!(reset.seek_step_s, 10);
+        assert_eq!(reset.watched_at_percent, 92);
+        assert_eq!(reset.subtitle_language, None);
+        assert!(!reset.allow_private_network);
+        drop(cineo);
+    });
+
+    let saved = Store::open_in(dir.path()).unwrap().settings().unwrap();
+    assert_eq!(saved, Settings::default());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn addons_can_be_reordered_and_removed_with_their_rows() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/a/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    serve(
+        &server,
+        "/b/manifest.json",
+        fixture("addons/quirks/manifest.json"),
+    )
+    .await;
+    let basic = format!("{}/a/manifest.json", server.uri());
+    let quirks = format!("{}/b/manifest.json", server.uri());
+    let dir = local_data_dir();
+    let names = |v: &AppView| v.addons.iter().map(|a| a.name.clone()).collect::<Vec<_>>();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(basic.clone());
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.install_addon(quirks.clone());
+        let both = wait_for(&views, |v| v.addons.len() == 2);
+        assert_eq!(names(&both), ["Basic Fixture", "Quirks Fixture"]);
+        assert!(both.board.iter().any(|r| r.addon_name == "Basic Fixture"));
+        cineo.move_addon(1, 0);
+        wait_for(&views, |v| names(v) == ["Quirks Fixture", "Basic Fixture"]);
+        cineo.move_addon(5, 0);
+        cineo.remove_addon("not a url");
+        cineo.remove_addon(&basic);
+        let removed = wait_for(&views, |v| v.addons.len() == 1);
+        assert_eq!(names(&removed), ["Quirks Fixture"]);
+        assert!(
+            removed
+                .board
+                .iter()
+                .all(|r| r.addon_name != "Basic Fixture")
+        );
+        drop(cineo);
+
+        let (_cineo, views) = start(dir.path());
+        let restored = wait_for(&views, |v| v.addons.len() == 1 && v.addons_loading == 0);
+        assert_eq!(restored.addons[0].transport, quirks);
+    });
 }
 
 mod tempdir {

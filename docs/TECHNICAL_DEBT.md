@@ -392,3 +392,16 @@ Format:
 - Instead: the Android shell drops `Effect::CheckForUpdate`
   (`the_desktop_update_check_does_not_run`), so no update is ever shown.
 - Exit: an Android release channel (step 5 of ADR-0028).
+
+### Android: only some settings
+- Where: [SettingsScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/SettingsScreen.kt),
+  [shell.rs](../crates/cineo-android/src/shell.rs) (`SettingChange`)
+- Gap: Android shows hardware decoding, seek step, watched-at, audio and
+  subtitle language, local network addresses, clear history and reset.
+  Subtitle style, audio output, volume, binge watching and the torrent
+  settings are not shown.
+- Why: the matching features (subtitle picking, next episode, torrents)
+  are not on Android yet.
+- Instead: those settings keep their saved values, and reset still
+  resets them.
+- Exit: add each one with its feature.

@@ -16,6 +16,7 @@ import io.github.mdmrk.cineo.R
 enum class Page(val label: Int) {
     HOME(R.string.page_home),
     LIBRARY(R.string.page_library),
+    SETTINGS(R.string.page_settings),
 }
 
 @Composable
