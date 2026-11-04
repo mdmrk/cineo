@@ -69,6 +69,9 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `rustls-platform-verifier`: its crate `rustls-platform-verifier-android`
   0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
   repository and its POM names no license (INFERRED: same license).
+- JUnit 4.13.2 (EPL-1.0) and its dependency Hamcrest Core 1.3
+  (BSD-3-Clause), for the Kotlin unit tests only (`testImplementation`,
+  2026-11-04: their POMs on Maven Central). They are not in the APK.
 - `android_logger` 0.15.1 and `log` 0.4.34 (MIT or Apache-2.0) send Rust logs to logcat on Android.
 - The Android app packages the libmpv build below, and every release
   ships it in `cineo-arm64-android.apk` (ADR-0029).

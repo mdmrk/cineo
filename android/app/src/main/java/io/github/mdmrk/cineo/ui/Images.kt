@@ -33,25 +33,30 @@ import kotlinx.coroutines.withContext
 private const val MAX_SIDE = 4096
 private const val CACHE_BYTES = 32 * 1024 * 1024
 
+internal class Decoded<T>(val image: T, val width: Int, val full: Boolean) {
+    fun serves(wanted: Int) = full || width >= wanted
+}
+
 class Images(private val cineo: Cineo) {
-    private val cache = object : LruCache<String, ImageBitmap>(CACHE_BYTES) {
-        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    private val cache = object : LruCache<String, Decoded<ImageBitmap>>(CACHE_BYTES) {
+        override fun sizeOf(key: String, value: Decoded<ImageBitmap>) =
+            value.image.width * value.image.height * 4
     }
 
     suspend fun load(url: String, width: Int): ImageBitmap? {
-        cache.get(url)?.let { return it }
+        cache.get(url)?.takeIf { it.serves(width) }?.let { return it.image }
         val bytes = try {
             cineo.fetchImage(url)
         } catch (e: ImageException) {
             return null
         }
-        val image = withContext(Dispatchers.Default) { decode(bytes, width) } ?: return null
-        cache.put(url, image)
-        return image
+        val decoded = withContext(Dispatchers.Default) { decode(bytes, width) } ?: return null
+        if (cache.get(url)?.serves(decoded.width) != true) cache.put(url, decoded)
+        return decoded.image
     }
 }
 
-private fun decode(bytes: ByteArray, width: Int): ImageBitmap? {
+private fun decode(bytes: ByteArray, width: Int): Decoded<ImageBitmap>? {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -59,7 +64,8 @@ private fun decode(bytes: ByteArray, width: Int): ImageBitmap? {
     var sample = 1
     while (bounds.outWidth / (sample * 2) >= width) sample *= 2
     val options = BitmapFactory.Options().apply { inSampleSize = sample }
-    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+    val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap() ?: return null
+    return Decoded(image, image.width, full = sample == 1)
 }
 
 @Composable
