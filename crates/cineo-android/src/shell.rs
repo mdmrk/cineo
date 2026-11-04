@@ -680,6 +680,7 @@ impl Shell {
 
     fn open_detail(&mut self, content_type: String, id: String) {
         let Some(content_type) = ContentType::new(content_type) else {
+            warn!("not a content type");
             return;
         };
         let preview = self
