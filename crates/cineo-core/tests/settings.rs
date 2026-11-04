@@ -130,6 +130,27 @@ fn saved_keys_never_change() {
 }
 
 #[test]
+fn numeric_choices_match_what_is_saved() {
+    for &step in SeekStep::ALL {
+        let saved = Setting::SeekStep(step).value();
+        assert_eq!(step.whole_seconds().to_string(), saved);
+        assert_eq!(SeekStep::from_seconds(step.whole_seconds()), Some(step));
+    }
+    for &watched_at in WatchedAt::ALL {
+        let saved = Setting::WatchedAt(watched_at).value();
+        assert_eq!(watched_at.percent().to_string(), saved);
+        assert_eq!(
+            WatchedAt::from_percent(watched_at.percent()),
+            Some(watched_at)
+        );
+    }
+    assert_eq!(SeekStep::from_seconds(7), None);
+    assert_eq!(WatchedAt::from_percent(100), None);
+    assert_eq!(WatchedAt::P92.fraction(), 0.92);
+    assert_eq!(SeekStep::S15.seconds(), 15.0);
+}
+
+#[test]
 fn the_torrent_port_stays_between_1024_and_65535() {
     assert_eq!(Settings::default().torrent_port.get(), 42713);
     assert_eq!(

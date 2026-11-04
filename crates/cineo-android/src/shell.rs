@@ -6,7 +6,10 @@ use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
-use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, Setting, State, update};
+use cineo_core::app::{
+    Action, Effect, Language, LibraryItem, Notice, PlayRequest, SeekStep, Setting, State,
+    WatchedAt, update,
+};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::PlayerCommand;
 use cineo_player::{EventActions, PlayerEvent, event_actions};
@@ -59,16 +62,19 @@ pub enum SettingChange {
 
 impl SettingChange {
     fn setting(self) -> Option<Setting> {
-        let (key, value) = match self {
-            Self::HardwareDecoding { on } => ("hardware_decoding", on.to_string()),
-            Self::SeekStep { seconds } => ("seek_step", seconds.to_string()),
-            Self::AudioLanguage { code } => ("audio_language", code.unwrap_or_default()),
-            Self::SubtitleLanguage { code } => ("subtitle_language", code.unwrap_or_default()),
-            Self::WatchedAt { percent } => ("watched_at", percent.to_string()),
-            Self::AllowPrivateNetwork { on } => ("allow_private_network", on.to_string()),
-            Self::P2pEnabled { on } => ("p2p_enabled", on.to_string()),
+        let language = |code: Option<String>| match code {
+            Some(code) => Language::from_code(&code).map(Some),
+            None => Some(None),
         };
-        Setting::parse(key, &value).ok()
+        Some(match self {
+            Self::HardwareDecoding { on } => Setting::HardwareDecoding(on),
+            Self::SeekStep { seconds } => Setting::SeekStep(SeekStep::from_seconds(seconds)?),
+            Self::AudioLanguage { code } => Setting::AudioLanguage(language(code)?),
+            Self::SubtitleLanguage { code } => Setting::SubtitleLanguage(language(code)?),
+            Self::WatchedAt { percent } => Setting::WatchedAt(WatchedAt::from_percent(percent)?),
+            Self::AllowPrivateNetwork { on } => Setting::AllowPrivateNetwork(on),
+            Self::P2pEnabled { on } => Setting::P2pEnabled(on),
+        })
     }
 }
 

@@ -107,13 +107,24 @@ choice! {
 }
 
 impl SeekStep {
-    pub const fn seconds(self) -> f64 {
+    pub const fn whole_seconds(self) -> u32 {
         match self {
-            Self::S5 => 5.0,
-            Self::S10 => 10.0,
-            Self::S15 => 15.0,
-            Self::S30 => 30.0,
+            Self::S5 => 5,
+            Self::S10 => 10,
+            Self::S15 => 15,
+            Self::S30 => 30,
         }
+    }
+
+    pub fn seconds(self) -> f64 {
+        f64::from(self.whole_seconds())
+    }
+
+    pub fn from_seconds(seconds: u32) -> Option<Self> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|step| step.whole_seconds() == seconds)
     }
 }
 
@@ -322,14 +333,25 @@ choice! {
 }
 
 impl WatchedAt {
-    pub const fn fraction(self) -> f64 {
+    pub const fn percent(self) -> u32 {
         match self {
-            Self::P80 => 0.80,
-            Self::P85 => 0.85,
-            Self::P90 => 0.90,
-            Self::P92 => 0.92,
-            Self::P95 => 0.95,
+            Self::P80 => 80,
+            Self::P85 => 85,
+            Self::P90 => 90,
+            Self::P92 => 92,
+            Self::P95 => 95,
         }
+    }
+
+    pub fn fraction(self) -> f64 {
+        f64::from(self.percent()) / 100.0
+    }
+
+    pub fn from_percent(percent: u32) -> Option<Self> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|watched_at| watched_at.percent() == percent)
     }
 }
 

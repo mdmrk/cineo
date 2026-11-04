@@ -3,8 +3,8 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlayRequest,
-    PlaybackFailure, Problem, QUALITIES, Row, SeekStep, Setting, Settings, State, StreamFacts,
-    StreamGroup, StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
+    PlaybackFailure, Problem, QUALITIES, Row, SeekStep, Settings, State, StreamFacts, StreamGroup,
+    StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -386,7 +386,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
             .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled)),
         playback: playing.map(|art| PlaybackView {
             art: art.clone(),
-            seek_step_s: number(Setting::SeekStep(state.settings.seek_step)),
+            seek_step_s: state.settings.seek_step.whole_seconds(),
         }),
         connecting: state
             .torrent
@@ -417,26 +417,16 @@ fn settings(settings: &Settings) -> SettingsView {
     let code = |language: Option<Language>| language.map(|l| l.code().to_owned());
     SettingsView {
         hardware_decoding: settings.hardware_decoding,
-        seek_step_s: number(Setting::SeekStep(settings.seek_step)),
-        seek_steps_s: SeekStep::ALL
-            .iter()
-            .map(|s| number(Setting::SeekStep(*s)))
-            .collect(),
+        seek_step_s: settings.seek_step.whole_seconds(),
+        seek_steps_s: SeekStep::ALL.iter().map(|s| s.whole_seconds()).collect(),
         audio_language: code(settings.audio_language),
         subtitle_language: code(settings.subtitle_language),
         languages: Language::all().map(|l| l.code().to_owned()).collect(),
-        watched_at_percent: number(Setting::WatchedAt(settings.watched_at)),
-        watched_at_choices: WatchedAt::ALL
-            .iter()
-            .map(|w| number(Setting::WatchedAt(*w)))
-            .collect(),
+        watched_at_percent: settings.watched_at.percent(),
+        watched_at_choices: WatchedAt::ALL.iter().map(|w| w.percent()).collect(),
         allow_private_network: settings.allow_private_network,
         p2p_enabled: settings.p2p_enabled,
     }
-}
-
-fn number(setting: Setting) -> u32 {
-    setting.value().parse().unwrap_or_default()
 }
 
 fn shelf(
@@ -469,6 +459,15 @@ fn detail(
     p2p_enabled: bool,
 ) -> DetailView {
     let meta = detail.meta.ready();
+    let facts: Vec<Option<Vec<StreamFacts>>> = detail
+        .streams
+        .iter()
+        .map(|g| {
+            g.streams
+                .ready()
+                .map(|s| s.iter().map(StreamFacts::of).collect())
+        })
+        .collect();
     let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
     let text = |pick: fn(&MetaPreview) -> Option<&String>| preview.and_then(pick).cloned();
     let url = |pick: fn(&MetaPreview) -> Option<&url::Url>| {
@@ -501,28 +500,35 @@ fn detail(
         streams: detail
             .streams
             .iter()
+            .zip(&facts)
             .enumerate()
-            .map(|(index, group)| stream_group(index, group, filter, p2p_enabled))
-            .collect(),
-        qualities: QUALITIES
-            .iter()
-            .filter(|label| {
-                detail
-                    .streams
-                    .iter()
-                    .filter_map(|g| g.streams.ready())
-                    .flatten()
-                    .filter(|s| p2p_enabled || !s.source.is_p2p())
-                    .any(|s| {
-                        StreamFacts::of(s)
-                            .quality
-                            .is_some_and(|q| q.label == **label)
-                    })
+            .map(|(index, (group, facts))| {
+                stream_group(index, group, facts.as_deref(), filter, p2p_enabled)
             })
-            .map(|label| (*label).to_owned())
             .collect(),
+        qualities: qualities(&detail.streams, &facts, p2p_enabled),
         filter: filter.clone(),
     }
+}
+
+fn qualities(
+    groups: &[StreamGroup],
+    facts: &[Option<Vec<StreamFacts>>],
+    p2p_enabled: bool,
+) -> Vec<String> {
+    let shown: Vec<&str> = groups
+        .iter()
+        .zip(facts)
+        .filter_map(|(group, facts)| group.streams.ready().zip(facts.as_ref()))
+        .flat_map(|(streams, facts)| streams.iter().zip(facts))
+        .filter(|(stream, _)| p2p_enabled || !stream.source.is_p2p())
+        .filter_map(|(_, facts)| facts.quality.map(|q| q.label))
+        .collect();
+    QUALITIES
+        .iter()
+        .filter(|label| shown.contains(label))
+        .map(|label| (*label).to_owned())
+        .collect()
 }
 
 fn video(video: &Video) -> VideoView {
@@ -552,22 +558,22 @@ fn day(released: &str) -> String {
 fn stream_group(
     index: usize,
     group: &StreamGroup,
+    facts: Option<&[StreamFacts]>,
     filter: &StreamFilterView,
     p2p_enabled: bool,
 ) -> StreamGroupView {
     StreamGroupView {
         addon_name: group.addon_name.clone(),
-        items: match &group.streams {
-            Loadable::Loading => StreamItems::Loading,
-            Loadable::Ready(streams) => {
-                let facts: Vec<StreamFacts> = streams.iter().map(StreamFacts::of).collect();
+        items: match (&group.streams, facts) {
+            (Loadable::Loading, _) | (Loadable::Ready(_), None) => StreamItems::Loading,
+            (Loadable::Ready(streams), Some(facts)) => {
                 let matches = stream_matcher(&filter.query, filter.quality.as_deref());
                 let other_addon = filter.addon.is_some_and(|a| a as usize != index);
                 let mut hidden = 0;
                 let order = filter
                     .sort
                     .core()
-                    .order(&facts)
+                    .order(facts)
                     .into_iter()
                     .filter(|&i| {
                         if !p2p_enabled && streams[i].source.is_p2p() {
@@ -579,12 +585,12 @@ fn stream_group(
                     .filter_map(|i| u32::try_from(i).ok())
                     .collect();
                 StreamItems::Ready {
-                    streams: streams.iter().zip(&facts).map(stream).collect(),
+                    streams: streams.iter().zip(facts).map(stream).collect(),
                     order,
                     hidden,
                 }
             }
-            Loadable::Failed(problem) => StreamItems::Failed {
+            (Loadable::Failed(problem), _) => StreamItems::Failed {
                 problem: problem_view(problem),
             },
         },
