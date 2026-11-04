@@ -175,7 +175,7 @@ fn body(
                 &t!("ui-language"),
                 &t!("ui-language-help"),
                 s.ui_language,
-                UiLanguage::ALL,
+                &ui_languages(),
                 |language| ui_language_name(language, system),
                 Setting::UiLanguage,
             );
@@ -697,6 +697,17 @@ fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     );
 }
 
+fn ui_languages() -> Vec<UiLanguage> {
+    let mut languages = UiLanguage::ALL.to_vec();
+    languages.sort_by_cached_key(|&l| {
+        (
+            l != UiLanguage::System,
+            sort_key(&ui_language_name(l, Locale::English)),
+        )
+    });
+    languages
+}
+
 fn ui_language_name(language: UiLanguage, system: Locale) -> Text {
     match language {
         UiLanguage::System => t!("ui-language-system", language = system.endonym()),
@@ -1185,6 +1196,32 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
 #[cfg(test)]
 mod tests {
     use crate::i18n::{self, Locale, Text};
+
+    #[test]
+    fn interface_languages_list_the_system_first_then_by_name() {
+        let names: Vec<Text> = super::ui_languages()
+            .into_iter()
+            .map(|l| super::ui_language_name(l, Locale::English))
+            .collect();
+        let names: Vec<&str> = names.iter().map(|n| n.as_ref()).collect();
+        assert_eq!(
+            names[1..],
+            [
+                "Deutsch",
+                "English",
+                "Español de España",
+                "Español de Latinoamérica",
+                "Français",
+                "Italiano",
+                "Português do Brasil",
+                "Русский",
+            ]
+        );
+        assert_eq!(
+            super::ui_languages()[0],
+            cineo_core::app::UiLanguage::System
+        );
+    }
 
     #[test]
     fn every_section_icon_exists_in_the_tabler_set() {
