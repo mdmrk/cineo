@@ -36,14 +36,14 @@ pub(crate) const SIDEBAR_WIDTH: f32 = 176.0;
 pub(crate) const SIDEBAR_COMPACT_WIDTH: f32 = 56.0;
 pub(crate) const COMPACT_BELOW: f32 = 1000.0;
 
-pub(crate) const LOGO_WIDTH: f32 = 280.0;
+pub(crate) const LOGO_WIDTH: f32 = 420.0;
 pub(crate) const LOGO_ASPECT: f32 = 309.0 / 328.0;
 pub(crate) const LOGO_MOUSTACHE_X: f32 = 135.0 / 328.0;
-pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-52.0, -50.0);
-pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT + 8.0;
-pub(crate) const GRAIN_FADE: f32 = 40.0;
+pub(crate) const LOGO_BLEED: egui::Vec2 = egui::vec2(-52.0, -110.0);
+pub(crate) const NAV_TOP: f32 = LOGO_WIDTH * LOGO_ASPECT - 120.0;
+pub(crate) const GRAIN_FADE: f32 = 5.0;
 pub(crate) const LOADING_WIDTH: f32 = 128.0;
-pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(158, 158, 158, 179);
+pub(crate) const LOGO_TINT: Color32 = Color32::from_rgba_premultiplied(185, 185, 185, 179);
 
 pub(crate) const CARD_WIDTH: f32 = 116.0;
 pub(crate) const GRID_CARD_MIN: f32 = 104.0;
