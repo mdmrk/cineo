@@ -365,8 +365,7 @@ impl Shell {
             | Effect::FetchAddonList { .. }
             | Effect::FetchMeta { .. }
             | Effect::FetchStreams { .. }
-            | Effect::FetchSubtitles { .. }
-            | Effect::CheckForUpdate(_)) => {
+            | Effect::FetchSubtitles { .. }) => {
                 if let Some(task) = fetch_task(&self.client, effect) {
                     let tx = self.tx.clone();
                     self.runtime.spawn(async move {
@@ -388,7 +387,7 @@ impl Shell {
                 info_hash: request.info_hash,
                 reason: NO_TORRENTS.into(),
             }),
-            Effect::StopTorrent => {}
+            Effect::StopTorrent | Effect::CheckForUpdate(_) => {}
         }
     }
 
@@ -450,4 +449,46 @@ fn now_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+}
+
+#[cfg(test)]
+mod tests {
+    use cineo_core::app::Settings;
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct Ignore;
+
+    impl StateListener for Ignore {
+        fn changed(&self, _view: AppView) {}
+    }
+
+    #[test]
+    fn the_desktop_update_check_does_not_run() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let (tx, rx) = channel();
+        let (store_tx, _store_rx) = channel();
+        let mut shell = Shell {
+            state: State::default(),
+            client: AddonClient::new(NetPolicy::default()).unwrap(),
+            runtime: runtime.handle().clone(),
+            tx,
+            store_tx,
+            listener: Arc::new(Ignore),
+            players: Arc::new(Mpv),
+            screen: Arc::default(),
+            shown: None,
+        };
+        shell.dispatch(Action::RestoreSettings(Settings {
+            check_for_updates: true,
+            ..Settings::default()
+        }));
+        assert!(shell.state.update_checked);
+        assert_eq!(runtime.metrics().num_alive_tasks(), 0);
+        assert!(rx.try_recv().is_err());
+    }
 }

@@ -384,3 +384,11 @@ Format:
 - Instead: torrent streams are listed as unsupported; starting one fails
   with a notice.
 - Exit: step 4 of ADR-0028 (engine in a foreground service).
+
+### Android: no update check
+- Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
+- Gap: the core's update check asks GitHub for the latest desktop
+  release; Android has no release channel to compare against.
+- Instead: the Android shell drops `Effect::CheckForUpdate`
+  (`the_desktop_update_check_does_not_run`), so no update is ever shown.
+- Exit: an Android release channel (step 5 of ADR-0028).
