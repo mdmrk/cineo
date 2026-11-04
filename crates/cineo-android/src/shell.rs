@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Notice, PlayRequest, SeekStep, Setting, State,
-    WatchedAt, update,
+    StreamSort, WatchedAt, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::PlayerCommand;
@@ -20,7 +20,7 @@ use tracing::{error, warn};
 use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
-use crate::view::{AppView, ArtView, StreamFilterView, StreamSortView, view};
+use crate::view::{AppView, ArtView, StreamFilterView, view};
 
 const ENGINE_SHUTDOWN: Duration = Duration::from_secs(2);
 
@@ -92,7 +92,7 @@ enum FilterChange {
     Query(String),
     Quality(Option<String>),
     Addon(Option<u32>),
-    Sort(StreamSortView),
+    Sort(StreamSort),
 }
 
 #[derive(Debug)]
@@ -164,7 +164,7 @@ impl Cineo {
         self.filter(FilterChange::Addon(addon));
     }
 
-    pub fn set_stream_sort(&self, sort: StreamSortView) {
+    pub fn set_stream_sort(&self, sort: StreamSort) {
         self.filter(FilterChange::Sort(sort));
     }
 

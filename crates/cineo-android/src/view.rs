@@ -111,24 +111,12 @@ pub struct StreamGroupView {
     pub items: StreamItems,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, uniffi::Enum)]
-pub enum StreamSortView {
-    #[default]
+#[uniffi::remote(Enum)]
+pub enum StreamSort {
     AddonOrder,
     Quality,
     Seeders,
     Size,
-}
-
-impl StreamSortView {
-    fn core(self) -> StreamSort {
-        match self {
-            Self::AddonOrder => StreamSort::AddonOrder,
-            Self::Quality => StreamSort::Quality,
-            Self::Seeders => StreamSort::Seeders,
-            Self::Size => StreamSort::Size,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
@@ -136,11 +124,11 @@ pub struct StreamFilterView {
     pub query: String,
     pub quality: Option<String>,
     pub addon: Option<u32>,
-    pub sort: StreamSortView,
+    pub sort: StreamSort,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum QualityTier {
+#[uniffi::remote(Enum)]
+pub enum Tier {
     Ultra,
     High,
     Standard,
@@ -151,7 +139,7 @@ pub enum QualityTier {
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct QualityView {
     pub label: String,
-    pub tier: QualityTier,
+    pub tier: Tier,
     pub flags: Vec<String>,
 }
 
@@ -172,7 +160,7 @@ pub enum StreamItems {
 pub struct StreamView {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub kind: SourceKindView,
+    pub kind: SourceKind,
     pub quality: Option<QualityView>,
     pub seeders: Option<u64>,
     pub size: Option<u64>,
@@ -283,7 +271,7 @@ pub struct PosterView {
     pub content_type: String,
     pub name: String,
     pub poster: Option<String>,
-    pub shape: PosterShapeView,
+    pub shape: PosterShape,
     pub background: Option<String>,
     pub logo: Option<String>,
     pub description: Option<String>,
@@ -292,8 +280,8 @@ pub struct PosterView {
     pub genres: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum PosterShapeView {
+#[uniffi::remote(Enum)]
+pub enum PosterShape {
     Poster,
     Square,
     Landscape,
@@ -309,7 +297,7 @@ pub enum NoticeView {
     },
     TorrentsOff,
     UnsupportedSource {
-        kind: SourceKindView,
+        kind: SourceKind,
     },
     PlaybackFailed {
         failure: PlaybackFailureView,
@@ -326,8 +314,8 @@ pub enum NoticeView {
     InvalidLink,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum SourceKindView {
+#[uniffi::remote(Enum)]
+pub enum SourceKind {
     Http,
     OtherUrl,
     YouTube,
@@ -572,7 +560,6 @@ fn stream_group(
                 let mut hidden = 0;
                 let order = filter
                     .sort
-                    .core()
                     .order(facts)
                     .into_iter()
                     .filter(|&i| {
@@ -601,16 +588,10 @@ fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
     StreamView {
         name: stream.name.clone(),
         description: stream.description.clone(),
-        kind: source_kind(stream.source.kind()),
+        kind: stream.source.kind(),
         quality: facts.quality.map(|q| QualityView {
             label: q.label().to_owned(),
-            tier: match q.tier() {
-                Tier::Ultra => QualityTier::Ultra,
-                Tier::High => QualityTier::High,
-                Tier::Standard => QualityTier::Standard,
-                Tier::Low => QualityTier::Low,
-                Tier::Cam => QualityTier::Cam,
-            },
+            tier: q.tier(),
             flags: q.flags.iter().map(|f| (*f).to_owned()).collect(),
         }),
         seeders: facts.seeders,
@@ -689,11 +670,7 @@ fn poster(meta: &MetaPreview) -> PosterView {
         content_type: meta.content_type.to_string(),
         name: meta.name.clone(),
         poster: meta.poster.as_ref().map(ToString::to_string),
-        shape: match meta.poster_shape {
-            PosterShape::Poster => PosterShapeView::Poster,
-            PosterShape::Square => PosterShapeView::Square,
-            PosterShape::Landscape => PosterShapeView::Landscape,
-        },
+        shape: meta.poster_shape,
         background: meta.background.as_ref().map(ToString::to_string),
         logo: meta.logo.as_ref().map(ToString::to_string),
         description: meta.description.clone(),
@@ -730,9 +707,7 @@ fn notice_view(notice: &Notice) -> NoticeView {
             scheme: scheme.clone(),
         },
         Notice::TorrentsOff => NoticeView::TorrentsOff,
-        Notice::UnsupportedSource(kind) => NoticeView::UnsupportedSource {
-            kind: source_kind(*kind),
-        },
+        Notice::UnsupportedSource(kind) => NoticeView::UnsupportedSource { kind: *kind },
         Notice::PlaybackFailed {
             failure,
             pick_another,
@@ -756,18 +731,6 @@ fn notice_view(notice: &Notice) -> NoticeView {
         },
         Notice::StoreClosed => NoticeView::StoreClosed,
         Notice::InvalidLink => NoticeView::InvalidLink,
-    }
-}
-
-fn source_kind(kind: SourceKind) -> SourceKindView {
-    match kind {
-        SourceKind::Http => SourceKindView::Http,
-        SourceKind::OtherUrl => SourceKindView::OtherUrl,
-        SourceKind::YouTube => SourceKindView::YouTube,
-        SourceKind::Torrent => SourceKindView::Torrent,
-        SourceKind::External => SourceKindView::External,
-        SourceKind::Archive => SourceKindView::Archive,
-        SourceKind::Usenet => SourceKindView::Usenet,
     }
 }
 

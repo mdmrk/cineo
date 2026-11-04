@@ -62,12 +62,12 @@ import io.github.mdmrk.cineo.rust.DetailView
 import io.github.mdmrk.cineo.rust.LibraryItemView
 import io.github.mdmrk.cineo.rust.MetaStatus
 import io.github.mdmrk.cineo.rust.NoticeView
-import io.github.mdmrk.cineo.rust.SourceKindView
+import io.github.mdmrk.cineo.rust.SourceKind
 import io.github.mdmrk.cineo.rust.StreamItems
 import io.github.mdmrk.cineo.rust.StreamView
-import io.github.mdmrk.cineo.rust.QualityTier
+import io.github.mdmrk.cineo.rust.Tier
 import io.github.mdmrk.cineo.rust.QualityView
-import io.github.mdmrk.cineo.rust.StreamSortView
+import io.github.mdmrk.cineo.rust.StreamSort
 import io.github.mdmrk.cineo.rust.VideoView
 
 private val Rounded = RoundedCornerShape(8.dp)
@@ -383,8 +383,8 @@ private fun Episode(video: VideoView, selected: Boolean, images: Images, onClick
 
 @Composable
 private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit) {
-    val playable = stream.kind == SourceKindView.HTTP || stream.kind == SourceKindView.TORRENT
-    val icon = if (stream.kind == SourceKindView.TORRENT) Icon.MAGNET else Icon.WORLD
+    val playable = stream.kind == SourceKind.HTTP || stream.kind == SourceKind.TORRENT
+    val icon = if (stream.kind == SourceKind.TORRENT) Icon.MAGNET else Icon.WORLD
     Row(
         Modifier
             .padding(horizontal = 16.dp)
@@ -441,7 +441,7 @@ class StreamFilterActions(
     val query: (String) -> Unit,
     val quality: (String?) -> Unit,
     val addon: (UInt?) -> Unit,
-    val sort: (StreamSortView) -> Unit,
+    val sort: (StreamSort) -> Unit,
 )
 
 @Composable
@@ -493,18 +493,18 @@ private fun StreamFilters(detail: DetailView, actions: StreamFilterActions) {
             item {
                 Text(stringResource(R.string.sort_by), style = MaterialTheme.typography.labelMedium, color = Brand.TextDim)
             }
-            items(StreamSortView.entries) { sort ->
+            items(StreamSort.entries) { sort ->
                 Chip(stringResource(sortLabel(sort)), filter.sort == sort) { actions.sort(sort) }
             }
         }
     }
 }
 
-private fun sortLabel(sort: StreamSortView): Int = when (sort) {
-    StreamSortView.ADDON_ORDER -> R.string.sort_addon_order
-    StreamSortView.QUALITY -> R.string.sort_quality
-    StreamSortView.SEEDERS -> R.string.sort_seeders
-    StreamSortView.SIZE -> R.string.sort_size
+private fun sortLabel(sort: StreamSort): Int = when (sort) {
+    StreamSort.ADDON_ORDER -> R.string.sort_addon_order
+    StreamSort.QUALITY -> R.string.sort_quality
+    StreamSort.SEEDERS -> R.string.sort_seeders
+    StreamSort.SIZE -> R.string.sort_size
 }
 
 @Composable
@@ -523,11 +523,11 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun QualityBadge(quality: QualityView) {
     val (ink, fill) = when (quality.tier) {
-        QualityTier.ULTRA -> Brand.OnAccent to Brand.Accent
-        QualityTier.HIGH -> Brand.Accent to Brand.Accent.copy(alpha = 0.15f)
-        QualityTier.STANDARD -> Brand.TextBright to Brand.Surface
-        QualityTier.LOW -> Brand.TextDim to Brand.Surface
-        QualityTier.CAM -> Brand.Warning to Brand.Warning.copy(alpha = 0.15f)
+        Tier.ULTRA -> Brand.OnAccent to Brand.Accent
+        Tier.HIGH -> Brand.Accent to Brand.Accent.copy(alpha = 0.15f)
+        Tier.STANDARD -> Brand.TextBright to Brand.Surface
+        Tier.LOW -> Brand.TextDim to Brand.Surface
+        Tier.CAM -> Brand.Warning to Brand.Warning.copy(alpha = 0.15f)
     }
     Badge(quality.label, ink, fill)
 }

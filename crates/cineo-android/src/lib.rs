@@ -9,9 +9,8 @@ pub use shell::{Cineo, ImageError, PlayerStatusView, SettingChange, StartError, 
 pub use view::{
     AddonListItems, AddonListView, AddonView, AppView, ArtView, DetailView, InstallView,
     LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView, PlaybackView,
-    PosterShapeView, PosterView, ProblemView, QualityTier, QualityView, RowItems, RowView,
-    SettingsView, SourceKindView, StreamFilterView, StreamGroupView, StreamItems, StreamSortView,
-    StreamView, TorrentView, VideoView,
+    PosterView, ProblemView, QualityView, RowItems, RowView, SettingsView, StreamFilterView,
+    StreamGroupView, StreamItems, StreamView, TorrentView, VideoView,
 };
 
 #[uniffi::export]

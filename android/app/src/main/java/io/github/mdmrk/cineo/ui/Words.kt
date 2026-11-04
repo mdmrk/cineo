@@ -7,7 +7,7 @@ import io.github.mdmrk.cineo.rust.NoticeView
 import io.github.mdmrk.cineo.rust.PlaybackFailureView
 import io.github.mdmrk.cineo.rust.ProblemView
 import io.github.mdmrk.cineo.rust.RowView
-import io.github.mdmrk.cineo.rust.SourceKindView
+import io.github.mdmrk.cineo.rust.SourceKind
 
 @Composable
 fun problemText(problem: ProblemView): String = when (problem) {
@@ -41,15 +41,15 @@ fun noticeText(notice: NoticeView): String = when (notice) {
 }
 
 @Composable
-private fun sourceName(kind: SourceKindView): String = stringResource(
+private fun sourceName(kind: SourceKind): String = stringResource(
     when (kind) {
-        SourceKindView.HTTP -> R.string.source_http
-        SourceKindView.OTHER_URL -> R.string.source_url
-        SourceKindView.YOU_TUBE -> R.string.source_youtube
-        SourceKindView.TORRENT -> R.string.source_torrent
-        SourceKindView.EXTERNAL -> R.string.source_external
-        SourceKindView.ARCHIVE -> R.string.source_archive
-        SourceKindView.USENET -> R.string.source_usenet
+        SourceKind.HTTP -> R.string.source_http
+        SourceKind.OTHER_URL -> R.string.source_url
+        SourceKind.YOU_TUBE -> R.string.source_youtube
+        SourceKind.TORRENT -> R.string.source_torrent
+        SourceKind.EXTERNAL -> R.string.source_external
+        SourceKind.ARCHIVE -> R.string.source_archive
+        SourceKind.USENET -> R.string.source_usenet
     },
 )
 

@@ -65,7 +65,7 @@ import io.github.mdmrk.cineo.rust.InstallView
 import io.github.mdmrk.cineo.rust.ProblemView
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.LocalUriHandler
-import io.github.mdmrk.cineo.rust.PosterShapeView
+import io.github.mdmrk.cineo.rust.PosterShape
 import io.github.mdmrk.cineo.rust.PosterView
 import io.github.mdmrk.cineo.rust.RowItems
 import io.github.mdmrk.cineo.rust.RowView
@@ -229,9 +229,9 @@ private fun PlaceholderStrip() {
 @Composable
 fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
     val ratio = when (item.shape) {
-        PosterShapeView.POSTER -> 2f / 3f
-        PosterShapeView.SQUARE -> 1f
-        PosterShapeView.LANDSCAPE -> 16f / 9f
+        PosterShape.POSTER -> 2f / 3f
+        PosterShape.SQUARE -> 1f
+        PosterShape.LANDSCAPE -> 16f / 9f
     }
     val width = if (ratio > 1f) CardWidth * 1.8f else CardWidth
     Column(Modifier.width(width).pressable { onOpen(item) }, verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -12,11 +12,11 @@ use std::time::{Duration, Instant};
 
 use cineo_android::{
     AddonListItems, AppView, Cineo, ImageError, InstallView, MetaStatus, Playback, Players,
-    ProblemView, QualityTier, RowItems, SettingChange, Started, StateListener, StreamItems,
-    StreamSortView, TorrentView, version,
+    ProblemView, RowItems, SettingChange, Started, StateListener, StreamItems, TorrentView,
+    version,
 };
-use cineo_core::app::PlayRequest;
 use cineo_core::app::Settings;
+use cineo_core::app::{PlayRequest, StreamSort, Tier};
 use cineo_player::embedded::{PlayerCommand, Status};
 use cineo_player::{PlayerError, PlayerEvent};
 use cineo_store::Store;
@@ -940,12 +940,12 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
         let four_k = streams[1].quality.as_ref().unwrap();
         assert_eq!(
             (four_k.label.as_str(), four_k.tier, four_k.flags.clone()),
-            ("4K", QualityTier::Ultra, vec!["HDR".to_owned()])
+            ("4K", Tier::Ultra, vec!["HDR".to_owned()])
         );
         assert_eq!(streams[2].seeders, Some(40));
         assert_eq!(streams[0].size, Some(734_003_200));
 
-        cineo.set_stream_sort(StreamSortView::Seeders);
+        cineo.set_stream_sort(StreamSort::Seeders);
         wait_for(&views, |v| order(v).0 == [3, 2, 0, 1]);
         cineo.set_stream_quality(Some("1080p".into()));
         wait_for(&views, |v| order(v).0 == [3, 2]);
@@ -971,7 +971,7 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
         let reopened = wait_for(&views, streams_ready);
         let filter = &reopened.detail.as_ref().unwrap().filter;
         assert_eq!(filter.query, "");
-        assert_eq!(filter.sort, StreamSortView::Seeders);
+        assert_eq!(filter.sort, StreamSort::Seeders);
         assert_eq!(order(&reopened).0, [3, 2, 0, 1]);
     });
 }
