@@ -65,10 +65,26 @@ struct FakePlayers {
     requests: Mutex<Vec<PlayRequest>>,
     events: Mutex<Option<UnboundedSender<PlayerEvent>>>,
     calls: Arc<Mutex<Vec<String>>>,
+    slow_release: Mutex<Option<SlowRelease>>,
 }
 
 #[derive(Debug)]
-struct FakePlayback(Arc<Mutex<Vec<String>>>);
+struct SlowRelease {
+    releasing: Sender<()>,
+    release: Receiver<()>,
+}
+
+#[derive(Debug)]
+struct FakePlayback(Arc<Mutex<Vec<String>>>, Mutex<Option<SlowRelease>>);
+
+impl Drop for FakePlayback {
+    fn drop(&mut self) {
+        if let Some(slow) = self.1.get_mut().unwrap().take() {
+            let _ = slow.releasing.send(());
+            let _ = slow.release.recv_timeout(Duration::from_secs(10));
+        }
+    }
+}
 
 impl Playback for FakePlayback {
     fn attach_surface(&self, wid: i64) -> Result<(), PlayerError> {
@@ -108,7 +124,11 @@ impl Players for FakePlayers {
         self.requests.lock().unwrap().push(request.clone());
         let (tx, rx) = unbounded_channel();
         *self.events.lock().unwrap() = Some(tx);
-        Ok((Box::new(FakePlayback(Arc::clone(&self.calls))), rx))
+        let slow = self.slow_release.lock().unwrap().take();
+        Ok((
+            Box::new(FakePlayback(Arc::clone(&self.calls), Mutex::new(slow))),
+            rx,
+        ))
     }
 }
 
@@ -425,6 +445,50 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
     let item = library.iter().find(|i| i.id == "tt0000001").unwrap();
     assert_eq!(item.time_offset_ms, 61_000);
     assert_eq!(item.duration_ms, 120_000);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_screen_answers_while_a_finished_player_is_released() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+    let (releasing_tx, releasing) = channel();
+    let (release, release_rx) = channel();
+    *players.slow_release.lock().unwrap() = Some(SlowRelease {
+        releasing: releasing_tx,
+        release: release_rx,
+    });
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+
+        let events = players.events.lock().unwrap().take().unwrap();
+        events
+            .send(PlayerEvent::Closed {
+                time_ms: 1_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        releasing.recv_timeout(Duration::from_secs(10)).unwrap();
+        let (answer, answered) = channel();
+        let screen = Arc::clone(&cineo);
+        std::thread::spawn(move || {
+            screen.detach_surface();
+            let _ = answer.send(screen.player_status().is_none());
+        });
+        let status = answered.recv_timeout(Duration::from_secs(2));
+        release.send(()).unwrap();
+        assert_eq!(status, Ok(true), "the screen waited for the player release");
+        wait_for(&views, |v| v.playback.is_none());
+        drop(cineo);
+    });
 }
 
 #[tokio::test(flavor = "multi_thread")]

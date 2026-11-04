@@ -420,7 +420,8 @@ impl Drop for Cineo {
         {
             error!("the shell thread panicked");
         }
-        lock(&self.screen).playback = None;
+        let playback = lock(&self.screen).playback.take();
+        drop(playback);
         if let Some(runtime) = self.runtime.take() {
             runtime.shutdown_background();
         }
@@ -598,14 +599,17 @@ impl Shell {
     }
 
     fn publish(&mut self) {
-        let playing = {
+        let (playing, finished) = {
             let mut screen = lock(&self.screen);
-            if self.state.playing.is_none() {
-                screen.playback = None;
+            let finished = if self.state.playing.is_none() {
                 screen.art = None;
-            }
-            screen.art.clone()
+                screen.playback.take()
+            } else {
+                None
+            };
+            (screen.art.clone(), finished)
         };
+        drop(finished);
         let detail = self.state.detail.as_ref().map(|d| d.id.clone());
         if detail != self.filtered {
             self.filter = StreamFilterView {
