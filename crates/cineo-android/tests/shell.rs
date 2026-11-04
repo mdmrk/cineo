@@ -901,6 +901,24 @@ async fn a_torrent_stream_asks_once_then_plays_through_the_engine() {
         cineo.play(0, 0);
         wait_for(&views, |v| v.playback.is_some());
         assert_eq!(players.requests.lock().unwrap().len(), 2, "asked only once");
+        players
+            .events
+            .lock()
+            .unwrap()
+            .take()
+            .unwrap()
+            .send(PlayerEvent::Closed {
+                time_ms: 2_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        wait_for(&views, |v| v.playback.is_none() && v.torrent.is_none());
+
+        cineo.resume("tt0000001".into());
+        wait_for(&views, |v| v.playback.is_some());
+        let resumed = players.requests.lock().unwrap()[2].clone();
+        assert_eq!(resumed.start_ms, 2_000);
+        assert_eq!(first_bytes(&resumed.url, 4096), seeder.film[..4096]);
         drop(cineo);
     });
 
