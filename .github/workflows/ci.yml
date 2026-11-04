@@ -83,7 +83,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6.4.1
       - run: echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;30.0.16248370" > /dev/null
       - run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370" cargo ndk -t arm64-v8a -P 26 clippy -p cineo-android --locked -- -D warnings
-      - run: ./gradlew assembleDebug
+      - run: ./gradlew assembleDebug testDebugUnitTest
         working-directory: android
 
   build:

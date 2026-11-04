@@ -46,8 +46,9 @@ holds the details it links to.
    bindings from that library into `app/build/generated/rust/kotlin`. The
    Android build keeps symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`)
    because `uniffi-bindgen` reads its metadata from them; AGP strips the
-   copy in the APK. CI runs `cargo ndk … clippy -p cineo-android` and the
-   Gradle build (job `check (android)`).
+   copy in the APK. `./gradlew testDebugUnitTest` runs the Kotlin unit
+   tests in `app/src/test/` on the JVM. CI runs `cargo ndk … clippy -p
+   cineo-android`, the Gradle build and those tests (job `check (android)`).
 6. To build the Android libmpv (ADR-0028):
    `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh`, with the NDK
    `scripts/libmpv-android.env` names, plus `python3` (with `venv`),
@@ -193,6 +194,7 @@ first test needs it.
 | Network integration | `crates/cineo-net/tests/`                    | local mock HTTP server (`wiremock`)                                                                                                | always                             |
 | Persistence         | `crates/cineo-store/tests/`                  | temp-dir SQLite, fixture DBs per schema version                                                                                    | always                             |
 | Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
+| Android UI logic    | `android/app/src/test/`                      | JUnit 4 on the JVM (`./gradlew testDebugUnitTest`)                                                                                 | always (check (android))           |
 | E2E                 | `crates/cineo-cli/tests/`                    | built binary (`CARGO_BIN_EXE_cineo`) + mock addon                                                                                  | always                             |
 | Live addons         | `scripts/` (manual)                          | real public addons                                                                                                                 | never in CI (flaky, external)      |
 
