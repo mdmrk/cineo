@@ -2,7 +2,9 @@ use serde_json::{Map, Value};
 use url::Url;
 
 use super::settings::WatchedAt;
-use crate::addon::{ContentType, Stream, TransportUrl, parse_stream_json, stream_to_json};
+use crate::addon::{
+    ContentType, MetaPreview, PosterShape, Stream, TransportUrl, parse_stream_json, stream_to_json,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LibraryItem {
@@ -65,6 +67,22 @@ impl SavedStream {
 }
 
 impl LibraryItem {
+    pub fn preview(&self) -> MetaPreview {
+        MetaPreview {
+            id: self.id.clone(),
+            content_type: self.content_type.clone(),
+            name: self.name.clone(),
+            poster: self.poster.clone(),
+            poster_shape: PosterShape::Poster,
+            background: None,
+            logo: None,
+            description: None,
+            release_info: None,
+            imdb_rating: None,
+            genres: Vec::new(),
+        }
+    }
+
     pub fn progress(&self) -> f32 {
         if self.duration_ms == 0 {
             return 0.0;

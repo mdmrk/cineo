@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use cineo_core::addon::{ContentType, MetaPreview, PosterShape, TransportUrl};
+use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Notice, PlayRequest, Resolution, SeekStep, Setting,
     State, StreamSort, SubtitleGroup, WatchedAt, update,
@@ -700,7 +700,7 @@ impl Shell {
                     .library
                     .iter()
                     .find(|item| item.id == id && item.content_type == content_type)
-                    .map(library_preview)
+                    .map(LibraryItem::preview)
             })
             .map(Box::new);
         self.dispatch(Action::OpenDetail {
@@ -909,22 +909,6 @@ fn find_subtitle(groups: &[SubtitleGroup], url: &Url) -> Option<(String, String)
                 (source.to_owned(), s.lang.clone())
             })
     })
-}
-
-fn library_preview(item: &LibraryItem) -> MetaPreview {
-    MetaPreview {
-        id: item.id.clone(),
-        content_type: item.content_type.clone(),
-        name: item.name.clone(),
-        poster: item.poster.clone(),
-        poster_shape: PosterShape::Poster,
-        background: None,
-        logo: None,
-        description: None,
-        release_info: None,
-        imdb_rating: None,
-        genres: Vec::new(),
-    }
 }
 
 fn now_ms() -> u64 {

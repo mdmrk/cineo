@@ -2177,19 +2177,7 @@ fn library_card(ui: &mut Ui, width: f32, item: &LibraryItem, shelf: Shelf, out: 
         out.push(action);
     }
     if response.clicked() && shelf == Shelf::Favorites {
-        out.push(open_detail(&MetaPreview {
-            id: item.id.clone(),
-            content_type: item.content_type.clone(),
-            name: item.name.clone(),
-            poster: item.poster.clone(),
-            poster_shape: PosterShape::Poster,
-            background: None,
-            logo: None,
-            description: None,
-            release_info: None,
-            imdb_rating: None,
-            genres: Vec::new(),
-        }));
+        out.push(open_detail(&item.preview()));
     } else if response.clicked() {
         out.push(Action::Resume(item.id.clone()));
     }
