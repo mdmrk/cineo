@@ -28,14 +28,12 @@ class TorrentService : Service() {
     }
 
     private fun notification(): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL,
-                getString(R.string.torrent_channel),
-                NotificationManager.IMPORTANCE_LOW,
-            )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            CHANNEL,
+            getString(R.string.torrent_channel),
+            NotificationManager.IMPORTANCE_LOW,
+        )
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val open = PendingIntent.getActivity(
             this,
             0,
