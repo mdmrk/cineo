@@ -2,9 +2,9 @@ use cineo_core::addon::{
     AddonDescriptor, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl, Video,
 };
 use cineo_core::app::{
-    AddonList, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice, PlayRequest,
-    PlaybackFailure, Problem, Resolution, Row, SeekStep, Settings, State, StreamFacts, StreamGroup,
-    StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
+    AddonList, CatalogTarget, Detail, InstalledAddon, Language, LibraryItem, Loadable, Notice,
+    PlayRequest, PlaybackFailure, Problem, Resolution, Row, SeekStep, Settings, State, StreamFacts,
+    StreamGroup, StreamSort, Tier, TorrentStatus, WatchedAt, continue_watching, stream_matcher,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -616,7 +616,7 @@ fn addon(addon: &InstalledAddon) -> AddonView {
 fn addon_list(list: &AddonList, installed: &[TransportUrl]) -> AddonListView {
     let target = &list.target;
     AddonListView {
-        key: format!("{} {}", target.addon, target.path.to_url_path()),
+        key: key(target),
         name: target.name.clone(),
         addon_name: target.addon_name.clone(),
         items: match &list.addons {
@@ -645,10 +645,14 @@ fn listed_addon(addon: &AddonDescriptor, installed: &[TransportUrl]) -> ListedAd
     }
 }
 
+fn key(target: &CatalogTarget) -> String {
+    format!("{} {}", target.addon, target.path.to_url_path())
+}
+
 fn row(row: &Row) -> RowView {
     let target = &row.target;
     RowView {
-        key: format!("{} {}", target.addon, target.path.to_url_path()),
+        key: key(target),
         addon_name: target.addon_name.clone(),
         name: target.name.clone(),
         content_type: target.path.content_type.to_string(),
