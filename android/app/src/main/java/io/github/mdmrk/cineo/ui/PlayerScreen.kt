@@ -15,6 +15,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -80,7 +89,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, cineo: Cineo) {
         )
         val current = status
         if (current == null || !current.loaded || current.waiting) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center))
+            CircularProgressIndicator(Modifier.align(Alignment.Center).size(64.dp), color = Brand.Accent)
         }
         if (controls && current != null) {
             Controls(
@@ -115,31 +124,62 @@ private fun Controls(
     seekStep: Int,
     onSeekBy: (Int) -> Unit,
 ) {
-    val white = Color.White
-    Column(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).safeDrawingPadding().padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.back), color = white) }
-            Text(title, color = white)
-        }
+    val (back, forward) = when (seekStep) {
+        5 -> Icon.REWIND_BACKWARD_5 to Icon.REWIND_FORWARD_5
+        15 -> Icon.REWIND_BACKWARD_15 to Icon.REWIND_FORWARD_15
+        30 -> Icon.REWIND_BACKWARD_30 to Icon.REWIND_FORWARD_30
+        else -> Icon.REWIND_BACKWARD_10 to Icon.REWIND_FORWARD_10
+    }
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color.Black.copy(alpha = 0.7f),
+                    0.25f to Color.Transparent,
+                    0.7f to Color.Transparent,
+                    1f to Color.Black.copy(alpha = 0.8f),
+                ),
+            ),
+        )
         Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = { onSeekBy(-seekStep) }) {
-                Text("−$seekStep", color = white)
+            IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Color.White) }
+            Text(
+                title,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Row(
+            Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(40.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = { onSeekBy(-seekStep) }, modifier = Modifier.size(56.dp)) {
+                CineoIcon(back, tint = Color.White, size = 36.sp)
             }
-            TextButton(onClick = onTogglePause) {
-                Text(stringResource(if (status.paused) R.string.play else R.string.pause), color = white)
+            IconButton(
+                onClick = onTogglePause,
+                modifier = Modifier.size(76.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
+            ) {
+                CineoIcon(
+                    if (status.paused) Icon.PLAYER_PLAY else Icon.PLAYER_PAUSE,
+                    filled = true,
+                    tint = Color.White,
+                    size = 40.sp,
+                )
             }
-            TextButton(onClick = { onSeekBy(seekStep) }) {
-                Text("+$seekStep", color = white)
+            IconButton(onClick = { onSeekBy(seekStep) }, modifier = Modifier.size(56.dp)) {
+                CineoIcon(forward, tint = Color.White, size = 36.sp)
             }
         }
-        Column {
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
             TorrentStats(torrent)
             val duration = status.durationS.toFloat().coerceAtLeast(0f)
             Slider(
@@ -148,8 +188,16 @@ private fun Controls(
                 onValueChangeFinished = onSeekDone,
                 valueRange = 0f..duration.coerceAtLeast(1f),
                 enabled = duration > 0f,
+                colors = SliderDefaults.colors(
+                    thumbColor = Brand.Accent,
+                    activeTrackColor = Brand.Accent,
+                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                ),
             )
-            Text("${clock(position.toDouble())} / ${clock(status.durationS)}", color = white)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(clock(position.toDouble()), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Text(clock(status.durationS), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
 }

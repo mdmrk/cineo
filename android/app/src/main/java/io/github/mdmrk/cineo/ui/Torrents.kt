@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,16 +48,16 @@ fun TorrentStats(torrent: TorrentView?) {
 fun ConnectingScreen(title: String, torrent: TorrentView?, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     Box(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding().padding(16.dp)) {
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
-            Text(stringResource(R.string.back), color = Color.White)
+        IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
+            CineoIcon(Icon.ARROW_LEFT, tint = Color.White)
         }
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CircularProgressIndicator()
-            Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium)
+            CircularProgressIndicator(Modifier.size(64.dp), color = Brand.Accent)
+            Text(title, color = Color.White, style = MaterialTheme.typography.headlineSmall)
             TorrentStats(torrent)
         }
     }
