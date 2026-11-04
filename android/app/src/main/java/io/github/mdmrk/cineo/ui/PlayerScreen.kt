@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +54,7 @@ import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
 import io.github.mdmrk.cineo.rust.TorrentView
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable
@@ -266,9 +267,7 @@ private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, o
         Box(Modifier.fillMaxWidth(fraction).height(4.dp).clip(CircleShape).background(Brand.Accent))
         Box(
             Modifier
-                .fillMaxWidth(fraction)
-                .wrapContentWidth(Alignment.End)
-                .offset(x = 7.dp)
+                .offset { IntOffset((fraction * width).roundToInt() - 7.dp.roundToPx(), 0) }
                 .size(14.dp)
                 .clip(CircleShape)
                 .background(Brand.Accent),
