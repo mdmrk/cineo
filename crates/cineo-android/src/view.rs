@@ -8,8 +8,11 @@ use cineo_core::app::{
 pub struct AppView {
     pub addons: Vec<AddonView>,
     pub addons_loading: u32,
+    pub unavailable_addons: Vec<String>,
     pub install: Option<InstallView>,
     pub board: Vec<RowView>,
+    pub search_query: String,
+    pub search: Vec<RowView>,
     pub continue_watching: Vec<LibraryItemView>,
     pub favorites: Vec<LibraryItemView>,
     pub recent: Vec<LibraryItemView>,
@@ -226,6 +229,15 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
     AppView {
         addons: state.addons.iter().map(addon).collect(),
         addons_loading: u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX),
+        unavailable_addons: state
+            .installed
+            .iter()
+            .filter(|t| {
+                !state.addons_loading.contains(t)
+                    && !state.addons.iter().any(|a| &a.transport == *t)
+            })
+            .map(ToString::to_string)
+            .collect(),
         install: state.install.as_ref().map(|install| match install {
             Loadable::Loading => InstallView::Installing,
             Loadable::Ready(name) => InstallView::Installed { name: name.clone() },
@@ -234,6 +246,8 @@ pub(crate) fn view(state: &State, playing: Option<&str>) -> AppView {
             },
         }),
         board: state.board.iter().map(row).collect(),
+        search_query: state.search_query.clone(),
+        search: state.search.iter().map(row).collect(),
         continue_watching: continue_watching(&state.library, state.settings.watched_at)
             .into_iter()
             .map(library_item)

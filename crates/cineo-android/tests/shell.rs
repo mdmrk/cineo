@@ -669,6 +669,76 @@ async fn addons_can_be_reordered_and_removed_with_their_rows() {
         let (_cineo, views) = start(dir.path());
         let restored = wait_for(&views, |v| v.addons.len() == 1 && v.addons_loading == 0);
         assert_eq!(restored.addons[0].transport, quirks);
+        assert!(restored.unavailable_addons.is_empty());
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_addon_that_no_longer_loads_is_listed_and_can_be_removed() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest.clone());
+        wait_for(&views, |v| v.addons.len() == 1);
+    });
+    server.reset().await;
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        let broken = wait_for(&views, |v| {
+            v.addons_loading == 0 && !v.unavailable_addons.is_empty()
+        });
+        assert!(broken.addons.is_empty());
+        assert_eq!(broken.unavailable_addons, std::slice::from_ref(&manifest));
+        cineo.remove_addon(&manifest);
+        wait_for(&views, |v| v.unavailable_addons.is_empty());
+        drop(cineo);
+    });
+    assert!(
+        Store::open_in(dir.path())
+            .unwrap()
+            .addons()
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_search_fills_rows_from_search_catalogs_and_opens_its_results() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    serve(
+        &server,
+        "/cfg/catalog/movie/search/search=first.json",
+        fixture("addons/basic/catalog-movie-top.json"),
+    )
+    .await;
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.search("  first ".into());
+        let found = wait_for(&views, |v| {
+            !v.search.is_empty() && v.search.iter().all(|r| r.items != RowItems::Loading)
+        });
+        assert_eq!(found.search_query, "first");
+        assert_eq!(found.search.len(), 1);
+        let RowItems::Ready { items } = &found.search[0].items else {
+            panic!("the search did not load: {:?}", found.search[0].items);
+        };
+        assert_eq!(items[0].name, "First Example Film");
+        cineo.open_detail("movie".into(), items[0].id.clone());
+        let opened = wait_for(&views, |v| v.detail.is_some());
+        assert_eq!(
+            opened.detail.unwrap().name.as_deref(),
+            Some("First Example Film")
+        );
+        cineo.search(String::new());
+        wait_for(&views, |v| v.search.is_empty() && v.search_query.is_empty());
     });
 }
 

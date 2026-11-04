@@ -137,6 +137,10 @@ impl Cineo {
         self.send(Action::DismissNotice);
     }
 
+    pub fn search(&self, query: String) {
+        self.send(Action::Search(query));
+    }
+
     pub fn open_detail(&self, content_type: String, id: String) {
         if self.tx.send(Msg::OpenDetail { content_type, id }).is_err() {
             warn!("the shell thread has stopped");
@@ -437,6 +441,7 @@ impl Shell {
             .state
             .board
             .iter()
+            .chain(&self.state.search)
             .filter_map(|row| row.items.ready())
             .flatten()
             .find(|item| item.id == id && item.content_type == content_type)

@@ -59,8 +59,8 @@ private val PosterWidth = 112.dp
 fun HomeScreen(
     view: AppView?,
     images: Images,
-    onInstall: (String) -> Unit,
     onOpen: (PosterView) -> Unit,
+    onOpenAddons: () -> Unit,
     library: LibraryActions,
     padding: PaddingValues,
 ) {
@@ -76,7 +76,6 @@ fun HomeScreen(
         if (resume.isNotEmpty()) {
             item(key = "continue") { ContinueWatching(resume, images, library) }
         }
-        item(key = "install") { InstallAddon(view?.install, onInstall) }
         when {
             view == null || (view.addons.isEmpty() && view.addonsLoading > 0u) -> item(key = "loading") {
                 Text(
@@ -96,7 +95,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
+fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
     var url by rememberSaveable { mutableStateOf("") }
     val busy = install is InstallView.Installing
     val submit = { if (!busy && url.isNotBlank()) onInstall(url.trim()) }
@@ -130,7 +129,7 @@ private fun InstallAddon(install: InstallView?, onInstall: (String) -> Unit) {
 }
 
 @Composable
-private fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
+fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             targetLabel(row),

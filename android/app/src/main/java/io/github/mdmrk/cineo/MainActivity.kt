@@ -20,7 +20,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
+import io.github.mdmrk.cineo.ui.SearchScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import io.github.mdmrk.cineo.ui.DetailScreen
 import io.github.mdmrk.cineo.ui.HomeScreen
 import io.github.mdmrk.cineo.ui.Images
@@ -67,6 +72,7 @@ class MainActivity : ComponentActivity() {
                         val cineo = started.cineo
                         val view by app.view.collectAsStateWithLifecycle()
                         val images = remember(cineo) { Images(cineo) }
+                        var page by rememberSaveable { mutableStateOf(Page.HOME) }
                         val current = view
                         val playback = current?.playback
                         val detail = current?.detail
@@ -94,20 +100,23 @@ class MainActivity : ComponentActivity() {
                                         remove = { cineo.removeFromLibrary(it.id) },
                                     )
                                 }
-                                Pages { page, padding ->
+                                Pages(page, { page = it }) { padding ->
+                                    val open = { poster: io.github.mdmrk.cineo.rust.PosterView ->
+                                        cineo.openDetail(poster.contentType, poster.id)
+                                    }
                                     when (page) {
                                         Page.HOME -> HomeScreen(
                                             view = current,
                                             images = images,
-                                            onInstall = cineo::installAddon,
-                                            onOpen = { cineo.openDetail(it.contentType, it.id) },
+                                            onOpen = open,
+                                            onOpenAddons = { page = Page.ADDONS },
                                             library = library,
                                             padding = padding,
                                         )
+                                        Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
                                         Page.LIBRARY -> LibraryScreen(current, images, library, padding)
-                                        Page.SETTINGS -> current?.let {
-                                            SettingsScreen(it.settings, it.addons, cineo, padding)
-                                        }
+                                        Page.ADDONS -> AddonsScreen(current, cineo, padding)
+                                        Page.SETTINGS -> current?.let { SettingsScreen(it.settings, cineo, padding) }
                                     }
                                 }
                             }

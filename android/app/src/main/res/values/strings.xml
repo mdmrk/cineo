@@ -139,4 +139,11 @@
     <string name="stats_of">%1$s of %2$s</string>
     <string name="torrent_channel">Torrent streaming</string>
     <string name="torrent_notification">Streaming a torrent</string>
+    <string name="page_search">Search</string>
+    <string name="open_addons">Open Addons</string>
+    <string name="search_hint">Search movies and series</string>
+    <string name="search_help">Results come from every installed addon that supports search.</string>
+    <string name="search_unsupported">No installed addon supports search.</string>
+    <string name="addons_installed">Installed</string>
+    <string name="badge_unavailable">Could not load</string>
 </resources>

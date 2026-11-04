@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -31,14 +30,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.mdmrk.cineo.R
-import io.github.mdmrk.cineo.rust.AddonView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
 import java.text.Collator
 
 @Composable
-fun SettingsScreen(settings: SettingsView, addons: List<AddonView>, cineo: Cineo, padding: PaddingValues) {
+fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues) {
     val change = cineo::changeSetting
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -83,23 +81,6 @@ fun SettingsScreen(settings: SettingsView, addons: List<AddonView>, cineo: Cineo
                 settings.languages,
                 settings.subtitleLanguage,
             ) { change(SettingChange.SubtitleLanguage(it)) }
-        }
-        item(key = "addons") {
-            Section(stringResource(R.string.page_addons))
-            Text(
-                stringResource(if (addons.isEmpty()) R.string.addons_none else R.string.addons_dek),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-        itemsIndexed(addons, key = { _, addon -> addon.transport }) { index, addon ->
-            AddonRow(
-                addon,
-                canMoveUp = index > 0,
-                canMoveDown = index < addons.size - 1,
-                onMove = { by -> cineo.moveAddon(index.toUInt(), (index + by).toUInt()) },
-                onRemove = { cineo.removeAddon(addon.transport) },
-            )
         }
         item(key = "data") {
             Section(stringResource(R.string.section_data))
@@ -210,33 +191,6 @@ private fun LanguagePicker(
             }
         }
     }
-}
-
-@Composable
-private fun AddonRow(
-    addon: AddonView,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onMove: (Int) -> Unit,
-    onRemove: () -> Unit,
-) {
-    ListItem(
-        headlineContent = { Text(addon.name) },
-        supportingContent = {
-            Column {
-                Text("v${addon.version}", style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { onMove(-1) }, enabled = canMoveUp) {
-                        Text(stringResource(R.string.move_up))
-                    }
-                    TextButton(onClick = { onMove(1) }, enabled = canMoveDown) {
-                        Text(stringResource(R.string.move_down))
-                    }
-                    TextButton(onClick = onRemove) { Text(stringResource(R.string.remove)) }
-                }
-            }
-        },
-    )
 }
 
 @Composable
