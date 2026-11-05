@@ -37,6 +37,7 @@ impl std::fmt::Debug for Video {
 #[non_exhaustive]
 pub enum PlayerCommand {
     TogglePause,
+    SetPause(bool),
     SeekTo(f64),
     SeekBy(f64),
     SetVolume(f64),
@@ -563,6 +564,11 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
     let track = |id: Option<i64>| id.map_or_else(|| "no".to_owned(), |id| id.to_string());
     let args = match command {
         PlayerCommand::TogglePause => vec!["cycle".into(), "pause".into()],
+        PlayerCommand::SetPause(paused) => vec![
+            "set".into(),
+            "pause".into(),
+            if paused { "yes" } else { "no" }.into(),
+        ],
         PlayerCommand::SeekTo(seconds) if seconds.is_finite() => vec![
             "seek".into(),
             format!("{:.3}", seconds.max(0.0)),

@@ -97,6 +97,14 @@ fn commands_are_built_from_typed_values() {
         Some("cycle pause")
     );
     assert_eq!(
+        args(PlayerCommand::SetPause(true)).as_deref(),
+        Some("set pause yes")
+    );
+    assert_eq!(
+        args(PlayerCommand::SetPause(false)).as_deref(),
+        Some("set pause no")
+    );
+    assert_eq!(
         args(PlayerCommand::SeekTo(61.5)).as_deref(),
         Some("seek 61.500 absolute")
     );
