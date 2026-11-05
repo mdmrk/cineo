@@ -1,5 +1,9 @@
 package io.github.mdmrk.cineo.ui
 
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
@@ -41,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -86,6 +91,12 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
             delay(playback.hideControlsMs.toLong())
             controls = false
         }
+    }
+    val context = LocalContext.current
+    val focus = remember(context) { PlaybackFocus(context) { cineo.pause() } }
+    DisposableEffect(focus) { onDispose { focus.abandon() } }
+    LaunchedEffect(status?.paused) {
+        if (status?.paused == false) focus.request()
     }
     BackHandler { cineo.stopPlayback() }
     FullScreen()
@@ -236,6 +247,37 @@ private fun Controls(
                 Text(clock(position.toDouble()), color = Color.White, style = MaterialTheme.typography.labelMedium)
                 Text(clock(status.durationS), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
             }
+        }
+    }
+}
+
+private class PlaybackFocus(context: Context, private val onLoss: () -> Unit) :
+    AudioManager.OnAudioFocusChangeListener {
+    private val audio = context.getSystemService(AudioManager::class.java)
+    private val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                .build(),
+        )
+        .setOnAudioFocusChangeListener(this)
+        .build()
+    private var held = false
+
+    fun request() {
+        if (!held) held = audio?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    }
+
+    fun abandon() {
+        audio?.abandonAudioFocusRequest(request)
+        held = false
+    }
+
+    override fun onAudioFocusChange(change: Int) {
+        if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            held = false
+            onLoss()
         }
     }
 }

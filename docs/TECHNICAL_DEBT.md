@@ -408,6 +408,16 @@ Format:
 - Exit: the style controls and the delay buttons on Android, sending the
   same `PlayerCommand`s as the desktop.
 
+### Android: audio focus is only taken and given up
+- Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`PlaybackFocus`)
+- Gap: playback pauses when another app takes the audio focus, but does not
+  resume when the focus comes back after a short loss, does not duck, and
+  does not pause when headphones are unplugged (`ACTION_AUDIO_BECOMING_NOISY`).
+  There is no media session, so no lock-screen or headset controls.
+- Why: the first slice only stops Cineo and other apps playing at once.
+- Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
+  becoming-noisy receiver, and a `MediaSession`.
+
 ### Android: no update check
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
 - Gap: releases carry the APK (ADR-0029), but the app never says that a

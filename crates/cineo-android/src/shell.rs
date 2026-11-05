@@ -396,6 +396,10 @@ impl Cineo {
         }
     }
 
+    pub fn pause(&self) {
+        self.command(PlayerCommand::SetPause(true));
+    }
+
     pub fn toggle_pause(&self) {
         self.command(PlayerCommand::TogglePause);
     }
