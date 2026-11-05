@@ -238,6 +238,7 @@ pub struct Player {
     pending: Mutex<Option<Url>>,
     status: Arc<Mutex<Status>>,
     finished: Arc<AtomicBool>,
+    events_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl std::fmt::Debug for Player {
@@ -252,6 +253,11 @@ impl Drop for Player {
     fn drop(&mut self) {
         if !self.is_finished() {
             let _ = self.core.command_async(&["quit"]);
+        }
+        if let Some(thread) = self.events_thread.take()
+            && thread.join().is_err()
+        {
+            error!("the mpv event thread panicked");
         }
     }
 }
@@ -405,7 +411,8 @@ impl Player {
             events: tx,
             tracker: Tracker::new(),
         };
-        std::thread::Builder::new()
+        let joins_on_drop = renderer.is_none();
+        let events_thread = std::thread::Builder::new()
             .name("mpv-events".into())
             .spawn(move || thread.run())
             .map_err(|err| PlayerError::Libmpv(format!("cannot start the event thread: {err}")))?;
@@ -415,6 +422,7 @@ impl Player {
                 pending: Mutex::new(waits_for_surface.then(|| request.url.clone())),
                 status,
                 finished,
+                events_thread: joins_on_drop.then_some(events_thread),
             },
             renderer,
             rx,

@@ -442,6 +442,19 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
 
 #[test]
 #[ignore = "needs libmpv"]
+fn real_libmpv_is_destroyed_before_an_ended_player_is_dropped() {
+    let (url, _heads) = serve(wav(1));
+    let (player, _, mut events) =
+        Player::start_with(&request(&url), Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
+    let last = next_end(&mut events, &player);
+    assert!(matches!(last, Some(PlayerEvent::Ended { .. })), "{last:?}");
+    let core = Arc::downgrade(&player.core);
+    drop(player);
+    assert!(core.upgrade().is_none(), "mpv is still alive after drop");
+}
+
+#[test]
+#[ignore = "needs libmpv"]
 fn real_libmpv_resumes_on_a_server_that_does_not_send_accept_ranges() {
     let (url, _heads) = serve_ranges(wav(60), false);
     let mut req = request(&url);
