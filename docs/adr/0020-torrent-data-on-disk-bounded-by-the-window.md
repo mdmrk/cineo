@@ -31,6 +31,12 @@ single piece without hole punching (platform-specific, `unsafe` FFI).
 - Settings → "Torrent data": in memory with 256 MB, 512 MB, 1 GB or 2 GB,
   or on disk with 2, 4 or 8 GB. The stored value `disk` from before means
   on disk with 4 GB. In memory with 1 GB stays the default.
+- **Amended 2026-11-05 (owner decision): on Android the default is on disk
+  with 4 GB.** Phones have less memory to spare than desktops, so the
+  Android shell starts and resets its settings from that default; a value
+  already saved stays. The desktop keeps in memory with 1 GB. `cineo-core`
+  takes the shell's defaults as input (`State::default_settings`), and the
+  store fills unsaved keys from them (`Store::settings_over`).
 - Nothing is kept as a cache, as ADR-0015 decided: the data is deleted when
   playback stops. The setting's help text says so.
 

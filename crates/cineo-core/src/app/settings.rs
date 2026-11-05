@@ -481,10 +481,10 @@ impl Settings {
     }
 
     #[must_use]
-    pub fn reset(self) -> Self {
+    pub fn reset(self, defaults: Self) -> Self {
         Self {
             p2p_acknowledged: self.p2p_acknowledged,
-            ..Self::default()
+            ..defaults
         }
     }
 }

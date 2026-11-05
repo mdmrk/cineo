@@ -11,8 +11,8 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Loadable, Lookahead, Notice, PlaybackFailure, Problem,
-    SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest, TorrentStatus, WatchedAt,
-    continue_watching, find_subtitle, update,
+    SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest, TorrentStatus,
+    TorrentStorage, WatchedAt, continue_watching, find_subtitle, update,
 };
 
 fn player_failed(reason: &str, pick_another: bool) -> Notice {
@@ -1512,6 +1512,24 @@ fn resetting_settings_restores_defaults_but_keeps_the_p2p_notice_accepted() {
     };
     assert_eq!(effects, vec![Effect::SaveSettings(expected)]);
     assert_eq!(state.settings, expected);
+}
+
+#[test]
+fn resetting_settings_restores_the_shells_defaults() {
+    let mut state = State {
+        default_settings: Settings {
+            torrent_storage: TorrentStorage::Disk4096,
+            ..Settings::default()
+        },
+        ..detail_with_p2p_accepted()
+    };
+    update(
+        &mut state,
+        Action::ChangeSetting(Setting::TorrentStorage(TorrentStorage::Ram512)),
+    );
+    update(&mut state, Action::ResetSettings);
+    assert_eq!(state.settings.torrent_storage, TorrentStorage::Disk4096);
+    assert!(state.settings.p2p_acknowledged);
 }
 
 fn binge_streams(file: &str) -> Vec<cineo_core::addon::Stream> {

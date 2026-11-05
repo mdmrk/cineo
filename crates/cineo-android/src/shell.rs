@@ -8,7 +8,7 @@ use std::time::Duration;
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Notice, PlayRequest, Resolution, SeekStep, Setting,
-    State, StreamSort, SubtitleGroup, WatchedAt, find_subtitle, update,
+    Settings, State, StreamSort, SubtitleGroup, TorrentStorage, WatchedAt, find_subtitle, update,
 };
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy, fetch_task};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
@@ -116,6 +116,13 @@ pub struct AddonSubtitleView {
     pub url: String,
     pub label: String,
     pub selected: bool,
+}
+
+fn phone_settings() -> Settings {
+    Settings {
+        torrent_storage: TorrentStorage::Disk4096,
+        ..Settings::default()
+    }
 }
 
 fn track_views(status: &Status, kind: TrackKind) -> Vec<TrackView> {
@@ -531,7 +538,7 @@ impl Cineo {
             addons: store.addons().map_err(store_error)?,
             library: store.library().map_err(store_error)?,
         };
-        let settings = store.settings().map_err(store_error)?;
+        let settings = store.settings_over(phone_settings()).map_err(store_error)?;
         let client = AddonClient::new(NetPolicy {
             allow_private_networks: settings.allow_private_network,
             ..NetPolicy::default()
@@ -557,7 +564,11 @@ impl Cineo {
             },
         );
         let shell = Shell {
-            state: State::default(),
+            state: State {
+                settings: phone_settings(),
+                default_settings: phone_settings(),
+                ..State::default()
+            },
             client: client.clone(),
             runtime: runtime.handle().clone(),
             tx: tx.clone(),

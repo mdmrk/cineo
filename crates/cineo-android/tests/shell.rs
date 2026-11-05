@@ -15,8 +15,8 @@ use cineo_android::{
     MetaStatus, Playback, PlayerStatsView, Players, ProblemView, RowItems, SettingChange, Started,
     StateListener, StreamItems, TorrentView, TrackView, VideoSizeView, version,
 };
-use cineo_core::app::Settings;
 use cineo_core::app::{PlayRequest, Resolution, StreamSort, SubtitleFont, Tier};
+use cineo_core::app::{Settings, TorrentStorage};
 use cineo_player::embedded::{PlayerCommand, Stats, Status, Track, TrackKind};
 use cineo_player::{PlayerError, PlayerEvent};
 use cineo_store::Store;
@@ -879,11 +879,42 @@ async fn changed_settings_reach_the_player_and_survive_a_restart_until_reset() {
         assert_eq!(reset.watched_at_percent, 92);
         assert_eq!(reset.subtitle_language, None);
         assert!(!reset.allow_private_network);
+        assert_eq!(reset.torrent_storage.value, "disk");
         drop(cineo);
     });
 
     let saved = Store::open_in(dir.path()).unwrap().settings().unwrap();
-    assert_eq!(saved, Settings::default());
+    assert_eq!(
+        saved,
+        Settings {
+            torrent_storage: TorrentStorage::Disk4096,
+            ..Settings::default()
+        }
+    );
+}
+
+#[test]
+fn a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_reset() {
+    let dir = tempdir::Dir::new();
+    Store::open_in(dir.path())
+        .unwrap()
+        .save_addons(&[])
+        .unwrap();
+
+    let (cineo, views) = start(dir.path());
+    let first = wait_for(&views, |_| true).settings;
+    assert_eq!(first.torrent_storage.value, "disk");
+    cineo.change_setting(SettingChange::Value {
+        key: "torrent_storage".into(),
+        value: "ram-512".into(),
+    });
+    wait_for(&views, |v| v.settings.torrent_storage.value == "ram-512");
+    cineo.reset_settings();
+    wait_for(&views, |v| v.settings.torrent_storage.value == "disk");
+    drop(cineo);
+
+    let saved = Store::open_in(dir.path()).unwrap().settings().unwrap();
+    assert_eq!(saved.torrent_storage, TorrentStorage::Disk4096);
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -183,7 +183,11 @@ impl Store {
     }
 
     pub fn settings(&self) -> Result<Settings, StoreError> {
-        let mut settings = Settings::default();
+        self.settings_over(Settings::default())
+    }
+
+    pub fn settings_over(&self, defaults: Settings) -> Result<Settings, StoreError> {
+        let mut settings = defaults;
         let mut stmt = self.conn.prepare("SELECT key, value FROM settings")?;
         let rows = stmt.query_map([], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))

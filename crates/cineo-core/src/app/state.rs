@@ -136,6 +136,7 @@ pub struct State {
     pub library: Vec<LibraryItem>,
     pub notice: Option<Notice>,
     pub settings: Settings,
+    pub default_settings: Settings,
     pub p2p_prompt: Option<(usize, usize)>,
     pub link_prompt: Option<TransportUrl>,
     pub torrent: Option<TorrentPlayback>,
@@ -524,7 +525,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::ResetSettings => {
             let was_checking = state.settings.check_for_updates;
-            state.settings = state.settings.reset();
+            state.settings = state.settings.reset(state.default_settings);
             let mut effects = settings_changed(state);
             if !was_checking {
                 effects.extend(check_for_update(state));
