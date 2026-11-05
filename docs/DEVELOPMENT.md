@@ -646,6 +646,17 @@ The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read
 (ADR-0030), with a 512 × 512 icon (`images/icon.png`, the brand logo on the launcher background) and six phone screenshots in `images/phoneScreenshots/` that show only Creative Commons films (their credits are in `docs/LEGAL.md`).
 
+`docs/fdroid/io.github.mdmrk.cineo.yml` is the draft build recipe for
+F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint`
+(fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05) but
+has never been built: F-Droid publishes only an APK that reproduces ours
+(`Binaries`, `AllowedAPKSigningKeys`), and the build is not yet
+reproducible (`docs/TECHNICAL_DEBT.md`). Updates are manual
+(`UpdateCheckMode: None`), because F-Droid reads the version with a regular
+expression and Gradle computes it. Each release changes `versionName`,
+`versionCode`, `commit`, `CurrentVersion` and `CurrentVersionCode`, and the
+Rust and cargo-ndk versions the release was built with.
+
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
 

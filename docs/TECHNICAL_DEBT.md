@@ -431,6 +431,20 @@ Format:
 - Exit: a `versionCode` that also counts prereleases and that F-Droid
   reads, with the check in `scripts/package.sh` kept.
 
+### Android: the build is not reproducible
+- Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
+  [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
+- Gap: F-Droid publishes our signed APK only if its own build is byte for
+  byte the same (ADR-0030), and nothing makes ours path- or time-independent:
+  no `--remap-path-prefix` for Rust, the latest stable toolchain at build
+  time (ADR-0025), and libmpv and FFmpeg built without a check that two
+  builds match. Whether they match is UNKNOWN; it has never been tried.
+- Why: releases only came from GitHub until now.
+- Instead: the F-Droid recipe (`docs/fdroid/`) is a draft, and the app is
+  not in F-Droid.
+- Exit: build twice from different directories, compare the unsigned
+  APKs, fix each difference, and keep the comparison in CI.
+
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
   [libmpv-android.env](../scripts/libmpv-android.env)
