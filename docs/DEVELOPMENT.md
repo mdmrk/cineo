@@ -640,6 +640,10 @@ write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
 start without a cache. The `cineo` CLI is not shipped.
 
+The Android store listing (title, short and full description) lives in
+`fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read
+(ADR-0030). It has no screenshots yet.
+
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
 

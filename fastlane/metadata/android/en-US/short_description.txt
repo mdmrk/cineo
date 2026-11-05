@@ -1,0 +1,1 @@
+A native media center for the Stremio-protocol addons you install

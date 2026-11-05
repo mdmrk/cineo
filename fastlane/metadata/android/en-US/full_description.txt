@@ -1,0 +1,16 @@
+Cineo is a fast, native media center written in Rust. It plays what the Stremio-protocol addons you install provide: it ships with no content and no addon of its own beyond Cinemeta, the metadata catalog run by Stremio, which it installs on first run.
+
+<b>Features</b>
+<ul>
+<li>Install addons by URL, reorder them and remove them</li>
+<li>Browse their catalogs on the home screen and search across them</li>
+<li>Built-in player based on libmpv, with hardware decoding</li>
+<li>Streams over HTTP(S) and BitTorrent, through Cineo's own streaming engine</li>
+<li>Subtitles from the file or from addons, with a preferred language</li>
+<li>A local library: continue watching, favourites and recently played</li>
+<li>No account and no cloud: everything stays on the phone</li>
+</ul>
+
+BitTorrent streams share data with other peers while they play (uploading can be turned off in Settings), and Cineo asks before the first one. You are responsible for what you watch through the addons you install.
+
+Cineo is free software under the MIT license. libmpv and FFmpeg are bundled under the LGPL-2.1; their licenses are under Settings, About.
