@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Cineo</string>
+    <string name="app_name" translatable="false">Cineo</string>
     <string name="start_failed">Cineo could not start: %1$s</string>
     <string name="home_empty">No addons installed. Catalogs show up here once you add one by its manifest URL.</string>
     <string name="addons_install">Install an addon</string>

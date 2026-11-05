@@ -359,14 +359,20 @@ Format:
 - Exit: add `Position`, `Seek`, `SetPosition`, `Volume` and next episode,
   and a test that talks to the service over a private bus.
 
-### Android: English only
-- Where: [strings.xml](../android/app/src/main/res/values/strings.xml)
-- Gap: the Android UI has only the English texts; the desktop has eight
-  languages (ADR-0021).
-- Why: the first Android slice copied only `en.toml`'s texts.
-- Instead: every Android user sees English.
-- Exit: Android string resources for the desktop's languages, kept in
-  step with `crates/cineo-desktop/assets/locales/`.
+### Android: the language follows the system only
+- Where: [res](../android/app/src/main/res) (`values-*/strings.xml`)
+- Gap: the Android UI has the desktop's eight languages, but no Language
+  setting: Android picks the strings from the system language. Its texts
+  are a copy of the desktop's translations (`crates/cineo-desktop/assets/locales/`)
+  plus 24 strings and 2 plurals of its own, translated on 2026-11-05 and
+  not reviewed by a native speaker; nothing keeps the two copies in step.
+- Why: the desktop's catalogs are compiled into the Rust UI; Android needs
+  its own string resources.
+- Instead: a user whose system language is not one of the eight sees
+  English. `TranslationsTest` checks that every language has every string
+  with the same arguments as English.
+- Exit: an in-app language choice (`AppCompatDelegate` locales or Android
+  13's per-app language), and one source for both UIs' texts.
 
 ### Android: mpv's quality rendering shows a black picture
 - Where: [mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`SURFACE_OPTIONS`)

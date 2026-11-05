@@ -40,9 +40,11 @@ Cineo ships no content. On first run it installs Cinemeta, Stremio's metadata ca
 <li>Clear the history or reset all settings from Settings</li>
 </ul>
 
+<b>Languages</b>
+English, Spanish, Brazilian Portuguese, Russian, Italian, German and French, following your system language.
+
 <b>Limitations</b>
 <ul>
-<li>English only</li>
 <li>Phones with a 64-bit ARM processor (arm64-v8a); no Android TV version</li>
 </ul>
 

@@ -195,3 +195,7 @@ dependencies {
     implementation("org.rustls:rustls-platform-verifier:${cargoLockVersion("rustls-platform-verifier-android")}")
     testImplementation("junit:junit:4.13.2")
 }
+
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/res")
+}
