@@ -41,7 +41,7 @@ while read -r name url sha; do
   [[ -z $name ]] && continue
   archive=$src/$(basename "$url")
   if [[ ! -f $archive ]] || ! echo "$sha  $archive" | sha256sum -c --status -; then
-    curl -fsSL --retry 3 -o "$archive" "$url"
+    curl -fsSL --retry 5 --retry-all-errors -o "$archive" "$url"
     echo "$sha  $archive" | sha256sum -c -
   fi
   rm -rf "${src:?}/$name"
