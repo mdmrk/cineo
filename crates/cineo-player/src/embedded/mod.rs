@@ -150,6 +150,7 @@ const SURFACE_OPTIONS: &[(&str, &str)] = &[
     ("opengl-es", "yes"),
     ("profile", "fast"),
     ("vd-lavc-o", "ndk_codec=1"),
+    ("vf", "format=fmt=yuv420p"),
 ];
 
 #[derive(Debug)]

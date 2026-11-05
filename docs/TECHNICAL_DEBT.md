@@ -384,6 +384,21 @@ Format:
 - Instead: surface playback uses `profile=fast` (bilinear, no dithering).
 - Exit: find the failing stage on Mali, or test `vo=gpu-next`.
 
+### Android: HEVC 10-bit decodes in software and draws in 8-bit
+- Where: [mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`SURFACE_OPTIONS`)
+- Gap: on a Redmi 9 MediaTek's HEVC decoder fails on 10-bit video
+  (`OMX.MTK.VIDEO.DECODER.HEVC` `ERROR(0x80001005)`), so mpv decodes it in
+  software, which may not keep up with real 1080p content (only a test
+  pattern was tried, 2026-11-05). The Mali GPU has no 16-bit UNORM
+  textures, so mpv would draw 10-bit frames through the shader path that
+  shows a black picture (entry above); `vf=format=fmt=yuv420p` converts
+  software frames to 8-bit 4:2:0 on the CPU first, losing the extra
+  precision and adding CPU work. Hardware frames pass through unchanged.
+- Why: the picture was black for every 10-bit HEVC release (seen with
+  Torrentio's x265 encodes).
+- Exit: fix the shader path on Mali (entry above) and drop the conversion;
+  try whether another MediaTek decoder setting accepts Main10.
+
 ### Android: torrents use mobile data and battery without limits
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs),
   [TorrentService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/TorrentService.kt)

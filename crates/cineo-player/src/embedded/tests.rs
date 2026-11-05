@@ -75,7 +75,7 @@ fn only_missing_script_options_are_tolerated() {
 }
 
 #[test]
-fn surface_playback_starts_without_video_output_and_decodes_through_the_ndk() {
+fn surface_playback_starts_without_video_output_decodes_through_the_ndk_and_draws_8_bit() {
     let option = |name| {
         SURFACE_OPTIONS
             .iter()
@@ -86,6 +86,7 @@ fn surface_playback_starts_without_video_output_and_decodes_through_the_ndk() {
     assert_eq!(option("gpu-context"), Some("android"));
     assert_eq!(option("vd-lavc-o"), Some("ndk_codec=1"));
     assert_eq!(option("profile"), Some("fast"));
+    assert_eq!(option("vf"), Some("format=fmt=yuv420p"));
     assert_eq!(option("hwdec"), None);
 }
 
