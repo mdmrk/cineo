@@ -642,7 +642,7 @@ start without a cache. The `cineo` CLI is not shipped.
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read
-(ADR-0030). It has no screenshots yet.
+(ADR-0030), with six phone screenshots in `images/phoneScreenshots/` that show only Creative Commons films (their credits are in `docs/LEGAL.md`).
 
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:

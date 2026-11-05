@@ -152,6 +152,17 @@ in `android/app/src/main/res/font/`, and carries their license texts in
 `Tabler-MIT.txt` copied from iconflow's `THIRD_PARTY_LICENSES_FONTS.md`).
 Added 2026-11-04.
 
+The store screenshots (`fastlane/metadata/android/en-US/images/phoneScreenshots/`)
+were taken on the owner's phone on 2026-11-05. They show posters and frames
+from Blender Foundation open movies: Sintel (2010, © Blender Foundation,
+CC BY 3.0, <https://durian.blender.org>), Tears of Steel (2012,
+© Blender Foundation, CC BY 3.0, <https://mango.blender.org>) and
+Elephants Dream (2006, Orange Open Movie Project, CC BY 2.5,
+<https://orange.blender.org>), served by a throwaway local addon for the
+capture. The posters came from Wikimedia Commons. The Addons screenshot
+names Cinemeta and OpenSubtitles, the user's installed addons; no
+endorsement is implied.
+
 ## Trademarks and branding
 - "Stremio" is a name of its respective owner. Cineo is **not affiliated
   with, endorsed by, or sponsored by** Stremio or Smart Code OOD.
