@@ -120,7 +120,10 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                     dragging = null
                 },
                 onBack = { cineo.stopPlayback() },
-                onTogglePause = { cineo.togglePause() },
+                onTogglePause = {
+                    cineo.togglePause()
+                    status = current.copy(paused = !current.paused)
+                },
                 seekStep = playback.seekStepS.toInt(),
                 onSeekBy = { cineo.seekBy(it.toDouble()) },
                 onToggleStats = { stats = !stats },
