@@ -44,7 +44,8 @@ old one *Superseded by NNNN*.
 | [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted |
 | [0028](0028-android-port.md) | Android port | Accepted (LGPL in a signed APK: settled by 0029) |
-| [0029](0029-android-releases.md) | Android releases | Accepted |
+| [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030) |
+| [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted |
 
 ## What we took from the reference projects
 
