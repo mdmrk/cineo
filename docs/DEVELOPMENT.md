@@ -620,14 +620,17 @@ profile, docs, cargo-deny); `check (windows)` runs clippy and nextest on
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
-provenance. `build (android)` restores libmpv from the cache (keyed by
+provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
+named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
+`.github/actions/setup-android`. `build (android)` restores libmpv from the cache (keyed by
 the hash of the script and its `.env`, never on tags) and runs
 `scripts/release-android.sh` with the `versionCode` set to the workflow's
 run number: it builds libmpv if needed, a signed `assembleRelease`, and
 runs `scripts/package.sh android`, which checks that the APK holds libmpv,
-FFmpeg, `libmpv.md`, the license texts and the sources archive, that each `.so` matches its
-hash, and that `apksigner verify` passes. It fails if a signing secret is
-missing rather than publish an unsigned APK; `check (android)` builds an
+FFmpeg, `libmpv.md` and the license texts, that each `.so` matches its
+hash, and that `apksigner verify` passes. The script fails if a signing
+secret is missing or the decoded keystore is empty rather than publish an
+unsigned APK; `check (android)` builds an
 unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
 write to the repository. The checks and prerelease builds restore the compiled

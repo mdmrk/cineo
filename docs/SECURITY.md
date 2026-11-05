@@ -199,7 +199,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - Never put full addon/transport URLs, stream URLs with tokens or
   `proxyHeaders` values into logs or error messages; use origin + path.
 - Never pass addon strings as mpv options or command-line arguments.
-- GitHub workflows: reference actions by an exact version tag (`@vX.Y.Z`);
+- GitHub workflows and the local actions in `.github/actions/`: reference
+  actions by an exact version tag (`@vX.Y.Z`);
   default `permissions: contents: read`; `persist-credentials: false`; pass
   inputs through `env:`, never by interpolating them into `run:`.
 - Build caches (`Swatinem/rust-cache`) are written only by runs on `main`.
@@ -213,7 +214,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - The Android release key is only in repository secrets, decoded into
   the runner's temporary directory by `build (android)`, which runs on
   pushes only, never for pull requests. Pull requests build an unsigned
-  debug APK. A missing secret fails the build; an unsigned APK is never
+  debug APK. A missing secret or an empty keystore fails
+  `scripts/release-android.sh`; an unsigned APK is never
   published (ADR-0029).
 - Any change to a security default updates this document and adds a test
   that pins the new behavior.

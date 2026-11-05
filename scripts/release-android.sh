@@ -9,6 +9,10 @@ for name in CINEO_KEYSTORE CINEO_KEYSTORE_PASSWORD CINEO_KEY_ALIAS CINEO_KEY_PAS
     exit 1
   fi
 done
+if [[ ! -s $CINEO_KEYSTORE ]]; then
+  echo "$CINEO_KEYSTORE is missing or empty: an unsigned APK is never released" >&2
+  exit 1
+fi
 if [[ ! ${CINEO_VERSION_CODE:-} =~ ^[1-9][0-9]*$ ]]; then
   echo "set CINEO_VERSION_CODE above the last released one (CI uses its run number)" >&2
   exit 1
