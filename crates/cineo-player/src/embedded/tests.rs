@@ -306,6 +306,10 @@ fn listen(
 }
 
 fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
+    serve_ranges(body, true)
+}
+
+fn serve_ranges(body: Vec<u8>, advertised: bool) -> (String, std_mpsc::Receiver<String>) {
     listen(move |mut stream, head| {
         let len = body.len();
         let start = head
@@ -313,6 +317,11 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
             .find_map(|line| line.strip_prefix("Range: bytes="))
             .and_then(|range| range.split('-').next()?.parse::<usize>().ok())
             .filter(|&start| start < len);
+        let accept = if advertised {
+            "Accept-Ranges: bytes\r\n"
+        } else {
+            ""
+        };
         let status = match start {
             Some(start) => format!(
                 "206 Partial Content\r\nContent-Range: bytes {start}-{}/{len}",
@@ -323,7 +332,7 @@ fn serve(body: Vec<u8>) -> (String, std_mpsc::Receiver<String>) {
         let part = &body[start.unwrap_or(0)..];
         let _ = write!(
             stream,
-            "HTTP/1.1 {status}\r\nAccept-Ranges: bytes\r\nContent-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            "HTTP/1.1 {status}\r\n{accept}Content-Type: audio/wav\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             part.len()
         );
         let _ = stream.write_all(part);
@@ -421,6 +430,29 @@ fn real_libmpv_stop_reports_the_position_and_shuts_down() {
         std::thread::sleep(Duration::from_millis(5));
     }
     assert!(player.is_finished(), "mpv shut down after the stop");
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_resumes_on_a_server_that_does_not_send_accept_ranges() {
+    let (url, _heads) = serve_ranges(wav(60), false);
+    let mut req = request(&url);
+    req.start_ms = 30_000;
+    let (player, _, mut events) =
+        Player::start_with(&req, Arc::new(|| {}), Output::None, AUDIO_ONLY).unwrap();
+    let last = next_end(&mut events, &player);
+    let Some(PlayerEvent::Closed {
+        time_ms,
+        duration_ms,
+    }) = last
+    else {
+        panic!("{last:?}");
+    };
+    assert!(
+        time_ms >= 30_000,
+        "resumed at the start position: {time_ms}"
+    );
+    assert_eq!(duration_ms, 60_000);
 }
 
 fn serve_nothing() -> (String, std_mpsc::Receiver<String>) {
