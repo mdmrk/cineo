@@ -39,5 +39,6 @@ enum class Icon(val regular: Char?, val filled: Char?) {
     INFO_CIRCLE('\ueabd', '\ue24e'),
     ACTIVITY('\ue00b', null),
     BADGE_CC('\ue172', '\ue05b'),
-    LANGUAGE('\ueb03', null);
+    LANGUAGE('\ueb03', null),
+    PLAYER_SKIP_FORWARD('\ueedb', '\ue2ed');
 }

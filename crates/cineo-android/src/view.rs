@@ -3,10 +3,10 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     AddonList, CatalogTarget, Detail, DownloadLimit, HideControls, InstalledAddon, Language,
-    LibraryItem, Loadable, Notice, PeerLimit, PlayRequest, PlaybackFailure, Problem, Ranged,
-    Resolution, Row, SeekStep, Setting, Settings, State, StreamFacts, StreamGroup, StreamSort,
-    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOutline, Tier, TorrentStatus,
-    TorrentStorage, UploadLimit, WatchedAt, continue_watching, stream_matcher,
+    LibraryItem, Loadable, NextVideoNotice, Notice, PeerLimit, PlayRequest, PlaybackFailure,
+    Problem, Ranged, Resolution, Row, SeekStep, Setting, Settings, State, StreamFacts, StreamGroup,
+    StreamSort, SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOutline, Tier,
+    TorrentStatus, TorrentStorage, UploadLimit, WatchedAt, continue_watching, stream_matcher,
 };
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -46,6 +46,8 @@ pub struct SettingsView {
     pub allow_private_network: bool,
     pub p2p_enabled: bool,
     pub hide_controls: ChoiceView,
+    pub binge_watching: ToggleView,
+    pub next_video_notice: ChoiceView,
     pub subtitle_size: RangeView,
     pub subtitle_font: ChoiceView,
     pub subtitle_bold: ToggleView,
@@ -223,6 +225,16 @@ pub struct PlaybackView {
     pub art: ArtView,
     pub seek_step_s: u32,
     pub hide_controls_ms: u32,
+    pub next: Option<NextView>,
+    pub binge_watching: bool,
+    pub next_notice_s: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct NextView {
+    pub title: String,
+    pub image: Option<String>,
+    pub ready: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -429,6 +441,17 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
             art: art.clone(),
             seek_step_s: state.settings.seek_step.whole_seconds(),
             hide_controls_ms: hide_controls_ms(state.settings.hide_controls),
+            next: state
+                .playing
+                .as_ref()
+                .and_then(|p| p.next.as_ref())
+                .map(|n| NextView {
+                    title: n.title.clone(),
+                    image: n.image.as_ref().map(ToString::to_string),
+                    ready: n.stream.is_some(),
+                }),
+            binge_watching: state.settings.binge_watching,
+            next_notice_s: next_notice_s(state.settings.next_video_notice),
         }),
         connecting: state
             .torrent
@@ -474,6 +497,12 @@ fn settings(settings: &Settings) -> SettingsView {
             settings.hide_controls,
             HideControls::ALL,
             Setting::HideControls,
+        ),
+        binge_watching: toggle(settings.binge_watching, Setting::BingeWatching),
+        next_video_notice: choice(
+            settings.next_video_notice,
+            NextVideoNotice::ALL,
+            Setting::NextVideoNotice,
         ),
         subtitle_size: range(settings.subtitle_size, Setting::SubtitleSize),
         subtitle_font: choice(
@@ -552,6 +581,13 @@ fn range<const MIN: u32, const MAX: u32>(
 fn hide_controls_ms(hide: HideControls) -> u32 {
     let ms = std::time::Duration::from_secs_f64(hide.seconds()).as_millis();
     u32::try_from(ms).unwrap_or(u32::MAX)
+}
+
+fn next_notice_s(notice: NextVideoNotice) -> u32 {
+    std::time::Duration::from_secs_f64(notice.seconds())
+        .as_secs()
+        .try_into()
+        .unwrap_or(u32::MAX)
 }
 
 fn shelf(

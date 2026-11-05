@@ -246,4 +246,11 @@
         <item quantity="one">%1$d Sekunde vor</item>
         <item quantity="other">%1$d Sekunden vor</item>
     </plurals>
+    <string name="binge_watching">Nächste Folge automatisch abspielen</string>
+    <string name="binge_watching_help">Endet eine Folge, wird die nächste vom selben Add-on abgespielt, oder ihre Streams werden geöffnet.</string>
+    <string name="next_notice">Hinweis zur nächsten Folge</string>
+    <string name="next_notice_help">Wie lange vor dem Ende die nächste Folge angeboten wird.</string>
+    <string name="next_notice_off">Aus</string>
+    <string name="next_episode">Nächste Folge</string>
+    <string name="next_episode_in">Nächste Folge in %1$d s</string>
 </resources>

@@ -116,6 +116,24 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                     { stringResource(R.string.seconds_decimal, it) },
                     set,
                 )
+                Divider()
+                Switch(
+                    stringResource(R.string.binge_watching),
+                    stringResource(R.string.binge_watching_help),
+                    settings.bingeWatching,
+                    set,
+                )
+                Divider()
+                Choice(
+                    stringResource(R.string.next_notice),
+                    stringResource(R.string.next_notice_help),
+                    settings.nextVideoNotice,
+                    {
+                        if (it == "0") stringResource(R.string.next_notice_off)
+                        else stringResource(R.string.seconds, it.toInt())
+                    },
+                    set,
+                )
             }
         }
         item(key = "languages") {

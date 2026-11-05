@@ -248,4 +248,11 @@
         <item quantity="many">Avançar %1$d segundos</item>
         <item quantity="other">Avançar %1$d segundos</item>
     </plurals>
+    <string name="binge_watching">Reproduzir o próximo episódio automaticamente</string>
+    <string name="binge_watching_help">Quando um episódio termina, o próximo é reproduzido pelo mesmo complemento, ou seus streams são abertos.</string>
+    <string name="next_notice">Aviso do próximo episódio</string>
+    <string name="next_notice_help">Quanto tempo antes do fim o próximo episódio é oferecido.</string>
+    <string name="next_notice_off">Desativado</string>
+    <string name="next_episode">Próximo episódio</string>
+    <string name="next_episode_in">Próximo episódio em %1$d s</string>
 </resources>

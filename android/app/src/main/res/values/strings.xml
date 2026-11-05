@@ -247,4 +247,11 @@
     <string name="sort_size">Size</string>
     <string name="streams_no_match">No matching streams</string>
     <string name="streams_hidden">Torrent streams hidden: %1$d (peer-to-peer is off in Settings)</string>
+    <string name="binge_watching">Play the next episode automatically</string>
+    <string name="binge_watching_help">When an episode ends, the next one plays from the same addon, or its streams open.</string>
+    <string name="next_notice">Next episode notice</string>
+    <string name="next_notice_help">How long before the end the next episode is offered.</string>
+    <string name="next_notice_off">Off</string>
+    <string name="next_episode">Next episode</string>
+    <string name="next_episode_in">Next episode in %1$d s</string>
 </resources>

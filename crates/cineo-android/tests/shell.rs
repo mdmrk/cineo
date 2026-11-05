@@ -1551,3 +1551,116 @@ fn the_app_reports_the_workspace_version() {
         .unwrap();
     assert_eq!(version(), workspace);
 }
+
+fn binge_streams(file: &str) -> Vec<u8> {
+    format!(
+        r#"{{"streams":[{{"name":"1080p","url":"https://media.example/{file}.mp4","behaviorHints":{{"bingeGroup":"ex-1080"}}}}]}}"#
+    )
+    .into_bytes()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_player_offers_the_next_episode_and_plays_it_on_request() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    serve(
+        &server,
+        "/cfg/meta/series/tt0000010.json",
+        fixture("addons/basic/meta-series.json"),
+    )
+    .await;
+    Mock::given(method("GET"))
+        .and(path_regex(
+            r"^/cfg/stream/series/tt0000010(:|%3A)1(:|%3A)1\.json$",
+        ))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_raw(binge_streams("e1"), "application/json"),
+        )
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path_regex(
+            r"^/cfg/stream/series/tt0000010(:|%3A)1(:|%3A)2\.json$",
+        ))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_raw(binge_streams("e2"), "application/json"),
+        )
+        .mount(&server)
+        .await;
+    let manifest = format!("{}/cfg/manifest.json", server.uri());
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("series".into(), "tt0000010".into());
+        wait_for(&views, |v| {
+            v.detail
+                .as_ref()
+                .is_some_and(|d| d.meta == MetaStatus::Ready)
+        });
+        cineo.select_video("tt0000010:1:1".into());
+        wait_for(&views, streams_ready);
+        cineo.play(0, 0);
+        let playing = wait_for(&views, |v| v.playback.is_some()).playback.unwrap();
+        assert!(playing.binge_watching);
+        assert_eq!(playing.next_notice_s, 35);
+        assert_eq!(playing.next, None);
+
+        players
+            .events
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .send(PlayerEvent::Progress {
+                time_ms: 10_000,
+                duration_ms: 1_320_000,
+            })
+            .unwrap();
+        let next = wait_for(&views, |v| {
+            v.playback.as_ref().is_some_and(|p| p.next.is_some())
+        })
+        .playback
+        .unwrap()
+        .next
+        .unwrap();
+        assert!(next.title.contains("Pilot, Part Two"), "{}", next.title);
+
+        cineo.pause();
+        assert!(
+            players
+                .calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c == "SetPause(true)")
+        );
+        wait_for(&views, |v| {
+            v.playback
+                .as_ref()
+                .and_then(|p| p.next.as_ref())
+                .is_some_and(|n| n.ready)
+        });
+        cineo.play_next();
+        wait_for(&views, |v| {
+            v.playback.as_ref().is_some_and(|p| {
+                p.next
+                    .as_ref()
+                    .is_none_or(|n| !n.title.contains("Part Two"))
+            })
+        });
+        let requests = players.requests.lock().unwrap().clone();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[1].url.as_str(), "https://media.example/e2.mp4");
+        assert_eq!(requests[1].video_id, "tt0000010:1:2");
+        drop(cineo);
+    });
+}

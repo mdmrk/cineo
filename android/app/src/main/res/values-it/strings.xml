@@ -248,4 +248,11 @@
         <item quantity="many">Avanti di %1$d secondi</item>
         <item quantity="other">Avanti di %1$d secondi</item>
     </plurals>
+    <string name="binge_watching">Riproduci automaticamente l\'episodio successivo</string>
+    <string name="binge_watching_help">Al termine di un episodio, il successivo parte dallo stesso add-on, oppure si aprono i suoi flussi.</string>
+    <string name="next_notice">Avviso dell\'episodio successivo</string>
+    <string name="next_notice_help">Quanto prima della fine viene proposto l\'episodio successivo.</string>
+    <string name="next_notice_off">Disattivato</string>
+    <string name="next_episode">Episodio successivo</string>
+    <string name="next_episode_in">Episodio successivo tra %1$d s</string>
 </resources>

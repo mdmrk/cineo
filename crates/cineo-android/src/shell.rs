@@ -396,6 +396,10 @@ impl Cineo {
         }
     }
 
+    pub fn play_next(&self) {
+        self.send(Action::PlayNext);
+    }
+
     pub fn pause(&self) {
         self.command(PlayerCommand::SetPause(true));
     }

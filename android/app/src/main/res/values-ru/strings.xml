@@ -250,4 +250,11 @@
         <item quantity="many">Вперёд на %1$d секунд</item>
         <item quantity="other">Вперёд на %1$d секунды</item>
     </plurals>
+    <string name="binge_watching">Автоматически включать следующую серию</string>
+    <string name="binge_watching_help">Когда серия заканчивается, следующая запускается из того же аддона или открывается список её потоков.</string>
+    <string name="next_notice">Уведомление о следующей серии</string>
+    <string name="next_notice_help">За сколько до конца предлагается следующая серия.</string>
+    <string name="next_notice_off">Выкл.</string>
+    <string name="next_episode">Следующая серия</string>
+    <string name="next_episode_in">Следующая серия через %1$d с</string>
 </resources>

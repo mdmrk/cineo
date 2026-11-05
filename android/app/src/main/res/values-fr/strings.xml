@@ -248,4 +248,11 @@
         <item quantity="many">Avancer de %1$d secondes</item>
         <item quantity="other">Avancer de %1$d secondes</item>
     </plurals>
+    <string name="binge_watching">Lire automatiquement l\'épisode suivant</string>
+    <string name="binge_watching_help">Quand un épisode se termine, le suivant est lu depuis la même extension, ou ses flux s\'ouvrent.</string>
+    <string name="next_notice">Annonce de l\'épisode suivant</string>
+    <string name="next_notice_help">Combien de temps avant la fin l\'épisode suivant est proposé.</string>
+    <string name="next_notice_off">Désactivée</string>
+    <string name="next_episode">Épisode suivant</string>
+    <string name="next_episode_in">Épisode suivant dans %1$d s</string>
 </resources>

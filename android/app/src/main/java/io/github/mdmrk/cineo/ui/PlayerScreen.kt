@@ -47,6 +47,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import io.github.mdmrk.cineo.rust.NextView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -137,11 +142,27 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                 },
                 seekStep = playback.seekStepS.toInt(),
                 onSeekBy = { cineo.seekBy(it.toDouble()) },
+                onNext = playback.next?.let { { cineo.playNext() } },
                 onToggleStats = { stats = !stats },
                 onAudio = { cineo.selectAudio(it) },
                 onSubtitle = { cineo.selectSubtitle(it) },
                 onAddonSubtitle = { cineo.selectAddonSubtitle(it) },
                 onMenu = { menu = it },
+            )
+        }
+        val next = playback.next
+        if (next != null && current != null) {
+            NextEpisode(
+                next = next,
+                status = current,
+                noticeS = playback.nextNoticeS.toInt(),
+                auto = playback.bingeWatching,
+                images = images,
+                onPlay = { cineo.playNext() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .safeDrawingPadding()
+                    .padding(end = 16.dp, bottom = 120.dp),
             )
         }
         if (stats && current != null) {
@@ -165,6 +186,7 @@ private fun Controls(
     onTogglePause: () -> Unit,
     seekStep: Int,
     onSeekBy: (Int) -> Unit,
+    onNext: (() -> Unit)?,
     onToggleStats: () -> Unit,
     onAudio: (Long) -> Unit,
     onSubtitle: (Long?) -> Unit,
@@ -233,9 +255,28 @@ private fun Controls(
                 CineoIcon(forward, tint = Color.White, size = 36.sp, label = pluralStringResource(R.plurals.seek_forward, seekStep, seekStep))
             }
         }
+
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
+            if (onNext != null) {
+                Row(
+                    Modifier
+                        .align(Alignment.End)
+                        .clip(CircleShape)
+                        .clickable(onClick = onNext)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CineoIcon(Icon.PLAYER_SKIP_FORWARD, filled = true, tint = Color.White, size = 16.sp)
+                    Text(
+                        stringResource(R.string.next_episode),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+            }
             val duration = status.durationS.toFloat().coerceAtLeast(0f)
             SeekBar(
                 position = position,
@@ -249,6 +290,85 @@ private fun Controls(
             }
         }
     }
+}
+
+@Composable
+private fun NextEpisode(
+    next: NextView,
+    status: PlayerStatusView,
+    noticeS: Int,
+    auto: Boolean,
+    images: Images,
+    onPlay: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var dismissed by remember(next.title) { mutableStateOf(false) }
+    val notice = remember(next.title) { NoticeClock() }
+    var requested by remember(next.title) { mutableStateOf(false) }
+    val remaining = status.durationS - status.positionS
+    if (!status.loaded || status.durationS <= 0.0 || remaining <= 0.0 || remaining > noticeS) {
+        notice.shownAt = null
+        return
+    }
+    if (dismissed) return
+    val since = notice.shownAt?.takeIf { it <= status.positionS } ?: status.positionS
+    notice.shownAt = since
+    val left = (AUTO_NEXT_S - (status.positionS - since)).coerceAtLeast(0.0)
+    LaunchedEffect(auto, left <= 0.0) {
+        if (auto && left <= 0.0 && !requested) {
+            requested = true
+            onPlay()
+        }
+    }
+    Box(
+        modifier
+            .width(280.dp)
+            .height(158.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Brand.Panel)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+    ) {
+        NetImage(images, next.image, 280.dp, Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)))
+        IconButton(onClick = { dismissed = true }, modifier = Modifier.align(Alignment.TopEnd)) {
+            CineoIcon(Icon.X, tint = Color.White, label = stringResource(R.string.dismiss))
+        }
+        Column(
+            Modifier.align(Alignment.Center).padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                if (auto) stringResource(R.string.next_episode_in, kotlin.math.ceil(left).toInt())
+                else stringResource(R.string.next_episode),
+                color = Brand.Text,
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                next.title,
+                color = Brand.TextBright,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Button(
+                onClick = {
+                    requested = true
+                    onPlay()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Brand.Accent, contentColor = Brand.OnAccent),
+            ) {
+                CineoIcon(Icon.PLAYER_PLAY, filled = true, tint = Brand.OnAccent)
+                Text(stringResource(R.string.play), modifier = Modifier.padding(start = 6.dp))
+            }
+        }
+    }
+}
+
+private const val AUTO_NEXT_S = 10.0
+
+private class NoticeClock {
+    var shownAt: Double? = null
 }
 
 private class PlaybackFocus(context: Context, private val onLoss: () -> Unit) :
