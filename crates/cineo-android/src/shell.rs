@@ -810,7 +810,7 @@ impl Shell {
         }
     }
 
-    fn load_subtitle(&mut self, url: Url) {
+    fn load_subtitle(&self, url: Url) {
         let Some((title, lang)) = find_subtitle(&self.state.subtitles, &url) else {
             return;
         };

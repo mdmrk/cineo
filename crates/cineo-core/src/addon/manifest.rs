@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde_json::Value;
 use url::Url;
 
-use super::json::{self, Object, field, kind};
+use super::json::{self, Object, expected, field};
 use super::request::{ExtraValue, ResourcePath};
 use super::types::{ContentType, ResourceName};
 use crate::diagnostics::{Parsed, Warnings};
@@ -179,7 +179,7 @@ pub(super) fn manifest_from_value(root: Value) -> Result<Parsed<Manifest>, Manif
         Some(other) => {
             return Err(ManifestError::InvalidField {
                 field: "types",
-                reason: format!("expected array, got {}", kind(other)),
+                reason: expected("array", other),
             });
         }
         None => return Err(ManifestError::MissingField("types")),
@@ -193,7 +193,7 @@ pub(super) fn manifest_from_value(root: Value) -> Result<Parsed<Manifest>, Manif
         Some(other) => {
             return Err(ManifestError::InvalidField {
                 field: "resources",
-                reason: format!("expected array, got {}", kind(other)),
+                reason: expected("array", other),
             });
         }
         None => return Err(ManifestError::MissingField("resources")),
@@ -223,10 +223,7 @@ pub(super) fn manifest_from_value(root: Value) -> Result<Parsed<Manifest>, Manif
         }
         None | Some(Value::Null) => BehaviorHints::default(),
         Some(other) => {
-            warnings.ignored(
-                "behaviorHints",
-                format!("expected object, got {}", kind(other)),
-            );
+            warnings.ignored("behaviorHints", expected("object", other));
             BehaviorHints::default()
         }
     };
@@ -258,7 +255,7 @@ fn required_string(obj: &Object, key: &'static str) -> Result<String, ManifestEr
         None | Some(Value::Null) => Err(ManifestError::MissingField(key)),
         Some(other) => Err(ManifestError::InvalidField {
             field: key,
-            reason: format!("expected string, got {}", kind(other)),
+            reason: expected("string", other),
         }),
     }
 }
@@ -317,10 +314,7 @@ fn parse_resources(
                 }
             }
             other => {
-                warnings.skipped(
-                    loc,
-                    format!("expected string or object, got {}", kind(other)),
-                );
+                warnings.skipped(loc, expected("string or object", other));
                 continue;
             }
         };
@@ -338,7 +332,7 @@ fn parse_catalogs(obj: &Object, key: &str, warnings: &mut Warnings) -> Vec<Catal
         None | Some(Value::Null) => return Vec::new(),
         Some(Value::Array(items)) => items,
         Some(other) => {
-            warnings.ignored(key, format!("expected array, got {}", kind(other)));
+            warnings.ignored(key, expected("array", other));
             return Vec::new();
         }
     };
@@ -399,10 +393,7 @@ fn parse_extra(cat: &Object, loc: &str, warnings: &mut Warnings) -> Vec<ExtraPro
                 .collect()
         }
         Some(other) => {
-            warnings.ignored(
-                field(loc, "extra"),
-                format!("expected array, got {}", kind(other)),
-            );
+            warnings.ignored(field(loc, "extra"), expected("array", other));
             Vec::new()
         }
     };

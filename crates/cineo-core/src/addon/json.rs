@@ -15,7 +15,7 @@ pub(crate) fn object<'a>(
     if let Value::Object(obj) = item {
         Some(obj)
     } else {
-        warnings.skipped(loc, format!("expected object, got {}", kind(item)));
+        warnings.skipped(loc, expected("object", item));
         None
     }
 }
@@ -63,10 +63,7 @@ pub(crate) fn list<T>(
                 .collect()
         }
         Some(other) => {
-            warnings.ignored(
-                field(loc, key),
-                format!("expected array, got {}", kind(other)),
-            );
+            warnings.ignored(field(loc, key), expected("array", other));
             Vec::new()
         }
     }
@@ -113,10 +110,7 @@ pub(crate) fn opt_str<'a>(
         Some(Value::String(s)) if s.is_empty() => None,
         Some(Value::String(s)) => Some(s),
         Some(other) => {
-            warnings.ignored(
-                field(loc, key),
-                format!("expected string, got {}", kind(other)),
-            );
+            warnings.ignored(field(loc, key), expected("string", other));
             None
         }
     }
@@ -156,10 +150,7 @@ pub(crate) fn bool_or_false(obj: &Object, key: &str, loc: &str, warnings: &mut W
         None | Some(Value::Null) => false,
         Some(Value::Bool(b)) => *b,
         Some(other) => {
-            warnings.ignored(
-                field(loc, key),
-                format!("expected boolean, got {}", kind(other)),
-            );
+            warnings.ignored(field(loc, key), expected("boolean", other));
             false
         }
     }
@@ -182,7 +173,7 @@ pub(crate) fn string_list(
                     other => {
                         warnings.skipped(
                             format!("{}[{i}]", field(loc, key)),
-                            format!("expected string, got {}", kind(other)),
+                            expected("string", other),
                         );
                         None
                     }
@@ -190,10 +181,7 @@ pub(crate) fn string_list(
                 .collect(),
         ),
         Some(other) => {
-            warnings.ignored(
-                field(loc, key),
-                format!("expected array, got {}", kind(other)),
-            );
+            warnings.ignored(field(loc, key), expected("array", other));
             None
         }
     }
@@ -207,7 +195,11 @@ pub(crate) fn field(loc: &str, key: &str) -> String {
     }
 }
 
-pub(crate) fn kind(value: &Value) -> &'static str {
+pub(crate) fn expected(what: &str, got: &Value) -> String {
+    format!("expected {what}, got {}", kind(got))
+}
+
+fn kind(value: &Value) -> &'static str {
     match value {
         Value::Null => "null",
         Value::Bool(_) => "boolean",

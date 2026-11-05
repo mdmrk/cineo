@@ -547,7 +547,7 @@ fn argb(alpha: u8, [r, g, b]: [u8; 3]) -> String {
 
 fn language_list(languages: impl Iterator<Item = Language>) -> String {
     languages
-        .flat_map(|l| l.codes())
+        .flat_map(Language::codes)
         .collect::<Vec<_>>()
         .join(",")
 }
