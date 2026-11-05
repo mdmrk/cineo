@@ -628,7 +628,9 @@ the hash of the script and its `.env`, never on tags) and runs
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that
 the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
 `.so` matches its hash, that every `.so` in the APK has its LOAD segments
-aligned to at least 16 KB (`readelf`), that `apksigner verify` passes, and
+aligned to at least 16 KB (`readelf`), that `apksigner verify` passes, that
+the signing block has no dependency-info block (Gradle's is encrypted for
+Google, and IzzyOnDroid flags it; `dependenciesInfo` turns it off), and
 that the
 `versionCode` is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace
 version, which Gradle computes (ADR-0030). The script fails if a signing

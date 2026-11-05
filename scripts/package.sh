@@ -68,6 +68,19 @@ EOT
     sdk=${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}
     build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
     "$build_tools/apksigner" verify "$apk"
+    python3 -I - "$apk" <<'PY'
+import struct, sys
+data = open(sys.argv[1], "rb").read()
+eocd = data.rfind(b"PK\x05\x06")
+cd = struct.unpack("<I", data[eocd + 16:eocd + 20])[0]
+assert data[cd - 16:cd] == b"APK Sig Block 42", "the APK has no signing block"
+at = cd - struct.unpack("<Q", data[cd - 24:cd - 16])[0]
+while at < cd - 24:
+    length, block = struct.unpack("<QI", data[at:at + 12])
+    if block == 0x504B4453:
+        sys.exit(f"{sys.argv[1]}: the signing block carries Google's encrypted dependency info")
+    at += 8 + length
+PY
     version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
     IFS=. read -r major minor patch <<<"$version"
     expected=$((major * 10000 + minor * 100 + patch))
