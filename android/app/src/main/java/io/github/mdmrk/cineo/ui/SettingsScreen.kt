@@ -26,12 +26,15 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,16 +43,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.mdmrk.cineo.R
+import io.github.mdmrk.cineo.rust.ChoiceView
 import io.github.mdmrk.cineo.rust.Cineo
+import io.github.mdmrk.cineo.rust.RangeView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
+import io.github.mdmrk.cineo.rust.ToggleView
 import io.github.mdmrk.cineo.rust.version
 import java.text.Collator
+import kotlin.math.roundToInt
 
 private val GroupShape = RoundedCornerShape(10.dp)
 
@@ -62,6 +71,7 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
     val languageNames = settings.languages.associateWith { languageName(it)?.let { id -> stringResource(id) } ?: it }
     val languages = listOf<String?>(null) + settings.languages.sortedWith(compareBy(collator) { languageNames.getValue(it) })
     val languageLabel = @Composable { code: String? -> code?.let { languageNames[it] ?: it } ?: none }
+    val set = { key: String, value: String -> change(SettingChange.Value(key, value)) }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -98,6 +108,14 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                     settings.watchedAtPercent,
                     { stringResource(R.string.watched_percent, it.toInt()) },
                 ) { change(SettingChange.WatchedAt(it)) }
+                Divider()
+                Choice(
+                    stringResource(R.string.hide_controls),
+                    stringResource(R.string.hide_controls_help),
+                    settings.hideControls,
+                    { stringResource(R.string.seconds_decimal, it) },
+                    set,
+                )
             }
         }
         item(key = "languages") {
@@ -111,22 +129,118 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                 ) { change(SettingChange.AudioLanguage(it)) }
                 Divider()
                 Picker(
+                    stringResource(R.string.audio_language_second),
+                    stringResource(R.string.audio_language_second_help),
+                    languages,
+                    settings.secondaryAudioLanguage,
+                    languageLabel,
+                ) { change(SettingChange.SecondaryAudioLanguage(it)) }
+                Divider()
+                Picker(
                     stringResource(R.string.subtitle_language),
                     stringResource(R.string.subtitle_language_help),
                     languages,
                     settings.subtitleLanguage,
                     languageLabel,
                 ) { change(SettingChange.SubtitleLanguage(it)) }
+                Divider()
+                Picker(
+                    stringResource(R.string.subtitle_language_second),
+                    stringResource(R.string.subtitle_language_second_help),
+                    languages,
+                    settings.secondarySubtitleLanguage,
+                    languageLabel,
+                ) { change(SettingChange.SecondarySubtitleLanguage(it)) }
             }
         }
-        item(key = "data") {
-            Group(stringResource(R.string.section_data)) {
+        item(key = "subtitles") {
+            val style = stringResource(R.string.subtitle_style_help)
+            Group(stringResource(R.string.section_subtitles)) {
+                Range(stringResource(R.string.subtitle_size), style, settings.subtitleSize, 5, set)
+                Divider()
+                Choice(stringResource(R.string.subtitle_font), style, settings.subtitleFont, { fontName(it) }, set)
+                Divider()
+                Switch(stringResource(R.string.subtitle_bold), style, settings.subtitleBold, set)
+                Divider()
+                Choice(stringResource(R.string.subtitle_color), style, settings.subtitleColor, { colorName(it) }, set)
+                Divider()
+                Range(stringResource(R.string.subtitle_opacity), style, settings.subtitleOpacity, 5, set)
+                Divider()
+                Choice(
+                    stringResource(R.string.subtitle_outline),
+                    stringResource(R.string.subtitle_outline_help),
+                    settings.subtitleOutline,
+                    { outlineName(it) },
+                    set,
+                )
+                Divider()
+                Choice(
+                    stringResource(R.string.subtitle_background),
+                    style,
+                    settings.subtitleBackground,
+                    { backgroundName(it) },
+                    set,
+                )
+                Divider()
+                Range(
+                    stringResource(R.string.subtitle_raise),
+                    stringResource(R.string.subtitle_raise_help),
+                    settings.subtitlePosition,
+                    1,
+                    set,
+                )
+                Divider()
+                Switch(
+                    stringResource(R.string.subtitle_keep_styles),
+                    stringResource(R.string.subtitle_keep_styles_help),
+                    settings.keepSubtitleStyles,
+                    set,
+                )
+            }
+        }
+        item(key = "torrents") {
+            val next = stringResource(R.string.next_torrent)
+            Group(stringResource(R.string.section_torrents)) {
                 Toggle(
                     stringResource(R.string.p2p_enabled),
                     stringResource(R.string.p2p_help),
                     settings.p2pEnabled,
                 ) { change(SettingChange.P2pEnabled(it)) }
                 Divider()
+                Switch(
+                    stringResource(R.string.torrent_upload),
+                    stringResource(R.string.torrent_upload_help),
+                    settings.torrentUpload,
+                    set,
+                )
+                Divider()
+                Choice(
+                    stringResource(R.string.torrent_storage),
+                    stringResource(R.string.torrent_storage_help),
+                    settings.torrentStorage,
+                    { storageName(it) },
+                    set,
+                )
+                Divider()
+                Choice(stringResource(R.string.download_limit), next, settings.downloadLimit, { rateName(it) }, set)
+                Divider()
+                Choice(stringResource(R.string.upload_limit), next, settings.uploadLimit, { rateName(it) }, set)
+                Divider()
+                Choice(
+                    stringResource(R.string.peer_limit),
+                    stringResource(R.string.peer_limit_help),
+                    settings.peerLimit,
+                    { it },
+                    set,
+                )
+                Divider()
+                Switch(stringResource(R.string.dht), stringResource(R.string.dht_help), settings.torrentDht, set)
+                Divider()
+                Port(stringResource(R.string.torrent_port), stringResource(R.string.torrent_port_help), settings.torrentPort, set)
+            }
+        }
+        item(key = "data") {
+            Group(stringResource(R.string.section_data)) {
                 Toggle(
                     stringResource(R.string.private_network),
                     stringResource(R.string.private_network_help),
@@ -255,6 +369,138 @@ private fun Toggle(title: String, help: String, on: Boolean, onChange: (Boolean)
         },
         modifier = Modifier.clickable { onChange(!on) },
     )
+}
+
+@Composable
+private fun Switch(title: String, help: String, view: ToggleView, set: (String, String) -> Unit) {
+    Toggle(title, help, view.on) { set(view.key, it.toString()) }
+}
+
+@Composable
+private fun Choice(
+    title: String,
+    help: String,
+    view: ChoiceView,
+    label: @Composable (String) -> String,
+    set: (String, String) -> Unit,
+) {
+    Picker(title, help, view.options, view.value, label) { set(view.key, it) }
+}
+
+@Composable
+private fun Range(title: String, help: String, view: RangeView, step: Int, set: (String, String) -> Unit) {
+    var dragged by remember(view.value) { mutableFloatStateOf(view.value.toFloat()) }
+    val min = view.min.toInt()
+    val max = view.max.toInt()
+    ListItem(
+        colors = rowColors,
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Column {
+                Text(help, style = MaterialTheme.typography.bodySmall)
+                Slider(
+                    value = dragged,
+                    onValueChange = { dragged = (min + ((it - min) / step).roundToInt() * step).toFloat() },
+                    onValueChangeFinished = { set(view.key, dragged.toInt().toString()) },
+                    valueRange = min.toFloat()..max.toFloat(),
+                    colors = SliderDefaults.colors(thumbColor = Brand.Accent, activeTrackColor = Brand.Accent),
+                )
+            }
+        },
+        trailingContent = {
+            Text(stringResource(R.string.percent, dragged.toInt()), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge)
+        },
+    )
+}
+
+@Composable
+private fun Port(title: String, help: String, view: RangeView, set: (String, String) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    ListItem(
+        colors = rowColors,
+        headlineContent = { Text(title) },
+        supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
+        trailingContent = {
+            Text(view.value.toString(), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge)
+        },
+        modifier = Modifier.clickable { editing = true },
+    )
+    if (editing) {
+        var text by remember { mutableStateOf(view.value.toString()) }
+        val port = text.toIntOrNull()?.takeIf { it in view.min.toInt()..view.max.toInt() }
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text(title) },
+            text = {
+                CineoField(
+                    value = text,
+                    onValueChange = { text = it.filter(Char::isDigit).take(5) },
+                    placeholder = "${view.min}–${view.max}",
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { editing = false; set(view.key, port.toString()) }, enabled = port != null) {
+                    Text(stringResource(R.string.save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editing = false }) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun fontName(value: String) = when (value) {
+    "sans" -> stringResource(R.string.font_sans)
+    "serif" -> stringResource(R.string.font_serif)
+    "mono" -> stringResource(R.string.font_mono)
+    else -> value
+}
+
+@Composable
+private fun colorName(value: String) = when (value) {
+    "white" -> stringResource(R.string.color_white)
+    "yellow" -> stringResource(R.string.color_yellow)
+    "cyan" -> stringResource(R.string.color_cyan)
+    "green" -> stringResource(R.string.color_green)
+    else -> value
+}
+
+@Composable
+private fun outlineName(value: String) = when (value) {
+    "black" -> stringResource(R.string.outline_black)
+    "gray" -> stringResource(R.string.outline_gray)
+    "none" -> stringResource(R.string.outline_none)
+    else -> value
+}
+
+@Composable
+private fun backgroundName(value: String) = when (value) {
+    "none" -> stringResource(R.string.background_none)
+    "black" -> stringResource(R.string.background_black)
+    "gray" -> stringResource(R.string.background_gray)
+    else -> value
+}
+
+@Composable
+private fun storageName(value: String) = when (value) {
+    "ram-256" -> stringResource(R.string.storage_memory, "256 MB")
+    "ram-512" -> stringResource(R.string.storage_memory, "512 MB")
+    "ram-1024" -> stringResource(R.string.storage_memory, "1 GB")
+    "ram-2048" -> stringResource(R.string.storage_memory, "2 GB")
+    "disk-2048" -> stringResource(R.string.storage_disk, "2 GB")
+    "disk" -> stringResource(R.string.storage_disk, "4 GB")
+    "disk-8192" -> stringResource(R.string.storage_disk, "8 GB")
+    else -> value
+}
+
+@Composable
+private fun rateName(value: String) = when {
+    value == "none" -> stringResource(R.string.no_limit)
+    value.endsWith("k") -> "${value.dropLast(1)} kB/s"
+    else -> "$value MB/s"
 }
 
 private const val SEARCHABLE_FROM = 12

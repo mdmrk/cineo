@@ -83,7 +83,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
     }
     LaunchedEffect(controls, status?.paused, menu) {
         if (controls && !menu && status?.paused == false) {
-            delay(3000)
+            delay(playback.hideControlsMs.toLong())
             controls = false
         }
     }

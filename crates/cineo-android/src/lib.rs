@@ -10,10 +10,10 @@ pub use shell::{
     SettingChange, StartError, StateListener, TrackView, VideoSizeView,
 };
 pub use view::{
-    AddonListItems, AddonListView, AddonView, AppView, ArtView, DetailView, InstallView,
-    LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView, PlaybackView,
-    PosterView, ProblemView, QualityView, RowItems, RowView, SettingsView, StreamFilterView,
-    StreamGroupView, StreamItems, StreamView, TorrentView, VideoView,
+    AddonListItems, AddonListView, AddonView, AppView, ArtView, ChoiceView, DetailView,
+    InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView,
+    PlaybackView, PosterView, ProblemView, QualityView, RangeView, RowItems, RowView, SettingsView,
+    StreamFilterView, StreamGroupView, StreamItems, StreamView, ToggleView, TorrentView, VideoView,
 };
 
 #[uniffi::export]

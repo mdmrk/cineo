@@ -385,19 +385,20 @@ Format:
   keeps DHT and uploads on with the desktop's defaults; how much battery
   and data this uses on a phone is UNKNOWN.
 - Why: step 4 of ADR-0028 only brought torrents over.
-- Instead: the P2P notice and the "Show and play torrent streams" setting
-  are the only controls on Android.
-- Exit: measure on a phone, then add a Wi-Fi-only option and the torrent
-  settings.
+- Instead: the P2P notice and the desktop's torrent settings (upload,
+  limits, peers, DHT, storage, port; in Settings since 2026-11-05) are the
+  controls on Android; none of them knows about mobile data.
+- Exit: measure on a phone, then add a Wi-Fi-only option.
 
 ### Android: no subtitle style or delay in the player
 - Where: [PlayerTracks.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerTracks.kt)
 - Gap: the desktop's Subtitles menu also changes the subtitle style and a
-  delay for the playing video; Android's menu only picks a subtitle, and
-  Android's Settings have no subtitle style.
+  delay for the playing video; Android's menu only picks a subtitle. The
+  style is in Android's Settings since 2026-11-05 and applies from the
+  next video.
 - Why: the first Android subtitle slice brought over the menu and the
   preferred-language pick only.
-- Instead: subtitles show with libmpv's defaults and no delay.
+- Instead: the style changes in Settings, before playing; no delay.
 - Exit: the style controls and the delay buttons on Android, sending the
   same `PlayerCommand`s as the desktop.
 

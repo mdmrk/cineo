@@ -56,9 +56,12 @@ pub enum SettingChange {
     SeekStep { seconds: u32 },
     AudioLanguage { code: Option<String> },
     SubtitleLanguage { code: Option<String> },
+    SecondaryAudioLanguage { code: Option<String> },
+    SecondarySubtitleLanguage { code: Option<String> },
     WatchedAt { percent: u32 },
     AllowPrivateNetwork { on: bool },
     P2pEnabled { on: bool },
+    Value { key: String, value: String },
 }
 
 impl SettingChange {
@@ -72,9 +75,16 @@ impl SettingChange {
             Self::SeekStep { seconds } => Setting::SeekStep(SeekStep::from_seconds(seconds)?),
             Self::AudioLanguage { code } => Setting::AudioLanguage(language(code)?),
             Self::SubtitleLanguage { code } => Setting::SubtitleLanguage(language(code)?),
+            Self::SecondaryAudioLanguage { code } => {
+                Setting::SecondaryAudioLanguage(language(code)?)
+            }
+            Self::SecondarySubtitleLanguage { code } => {
+                Setting::SecondarySubtitleLanguage(language(code)?)
+            }
             Self::WatchedAt { percent } => Setting::WatchedAt(WatchedAt::from_percent(percent)?),
             Self::AllowPrivateNetwork { on } => Setting::AllowPrivateNetwork(on),
             Self::P2pEnabled { on } => Setting::P2pEnabled(on),
+            Self::Value { key, value } => Setting::parse(&key, &value).ok()?,
         })
     }
 }
