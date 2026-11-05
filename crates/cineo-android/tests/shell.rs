@@ -1649,6 +1649,7 @@ async fn the_player_offers_the_next_episode_and_plays_it_on_request() {
                 .and_then(|p| p.next.as_ref())
                 .is_some_and(|n| n.ready)
         });
+        let first_events = players.events.lock().unwrap().clone().unwrap();
         cineo.play_next();
         wait_for(&views, |v| {
             v.playback.as_ref().is_some_and(|p| {
@@ -1661,6 +1662,16 @@ async fn the_player_offers_the_next_episode_and_plays_it_on_request() {
         assert_eq!(requests.len(), 2);
         assert_eq!(requests[1].url.as_str(), "https://media.example/e2.mp4");
         assert_eq!(requests[1].video_id, "tt0000010:1:2");
+
+        let _ = first_events.send(PlayerEvent::Closed {
+            time_ms: 20_000,
+            duration_ms: 1_320_000,
+        });
+        std::thread::sleep(Duration::from_millis(300));
+        assert!(
+            cineo.player_status().is_some(),
+            "the replaced player's close stopped the next episode"
+        );
         drop(cineo);
     });
 }

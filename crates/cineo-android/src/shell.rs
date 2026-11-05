@@ -242,6 +242,7 @@ enum Msg {
 #[derive(Debug, Default)]
 struct Screen {
     playback: Option<Box<dyn Playback>>,
+    forward: Option<tokio::task::AbortHandle>,
     subtitles: Option<Subtitles>,
     wid: Option<i64>,
     art: Option<ArtView>,
@@ -782,6 +783,9 @@ impl Shell {
     fn play(&mut self, request: &PlayRequest) {
         let old = {
             let mut screen = lock(&self.screen);
+            if let Some(forward) = screen.forward.take() {
+                forward.abort();
+            }
             (screen.playback.take(), screen.subtitles.take())
         };
         drop(old);
@@ -806,7 +810,7 @@ impl Shell {
                 let (meta_id, video_id) = (request.meta_id.clone(), request.video_id.clone());
                 let feed = self.torrents.feed();
                 feed.playing(&request.url);
-                self.runtime.spawn(forward_events(
+                let forward = self.runtime.spawn(forward_events(
                     events,
                     meta_id,
                     video_id,
@@ -821,6 +825,7 @@ impl Shell {
                         let _ = tx.send(Msg::Action(action));
                     },
                 ));
+                lock(&self.screen).forward = Some(forward.abort_handle());
             }
             Err(err) => {
                 error!(%err, "playback could not start");
