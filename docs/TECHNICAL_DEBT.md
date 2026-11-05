@@ -412,9 +412,22 @@ Format:
   page and install the new APK over the old one.
 - Exit: run the check on Android and open the release page, with a test.
 
+### Android: the release does not carry the libmpv source
+- Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
+  [libmpv-android.env](../scripts/libmpv-android.env)
+- Gap: the APK and the release carry no copy of the libmpv, FFmpeg and
+  library sources; `libmpv.md` names the upstream URLs and hashes and
+  the build script. Whether that meets LGPL-2.1 §4 and §6 is INFERRED,
+  not legal advice.
+- Why: the archive was 100 MB of a 155 MB APK, downloaded with every
+  update (owner decision 2026-11-05, ADR-0029).
+- Instead: if an upstream source is deleted, the build fails at its
+  checksum and a user cannot get that source from us.
+- Exit: none planned; move the pin to a source that is still published.
+
 ### Android: the libmpv build is not reproducible
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
-- Gap: rebuilding from the APK's `libmpv-android-sources.tar.xz` gives working
+- Gap: rebuilding from the pinned sources gives working
   libraries whose hashes differ from the release's (seen 2026-11-04). The
   build directory is embedded in them, for example in FFmpeg's configure
   line and its source paths; whether anything else differs is UNKNOWN.

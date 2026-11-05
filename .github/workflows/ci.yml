@@ -188,7 +188,6 @@ jobs:
           path: |
             target/libmpv-android/out
             target/libmpv-android/pins
-            target/libmpv-android/libmpv-android-sources.tar.xz
           key: libmpv-android-${{ hashFiles('scripts/build-libmpv-android.sh', 'scripts/libmpv-android.env') }}
       - if: steps.libmpv.outputs.cache-hit != 'true'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build > /dev/null

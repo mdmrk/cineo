@@ -109,11 +109,11 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
 - The Android release (ADR-0029) carries `libmpv.so` and FFmpeg's
   libraries, unmodified, as separate shared libraries in
   `lib/arm64-v8a/` of the APK, loaded at runtime (LGPL-2.1 §6(b)). The
-  APK also carries their source as
-  `assets/sources/libmpv-android-sources.tar.xz`, written by
-  `scripts/build-libmpv-android.sh`: the pinned source tarballs, libplacebo
-  at its pinned commit, the build script and its `.env`, so the object
-  code is accompanied by its source (§4). The APK carries their
+  release does not carry their source (amended 2026-11-05): `libmpv.md`
+  names each pinned upstream source with its URL and SHA-256, libplacebo
+  by commit, and `scripts/build-libmpv-android.sh` with its `.env` at the
+  release's tag, which downloads and checks them. Whether that meets §4
+  is INFERRED, not legal advice. The APK carries their
   license texts and `libmpv.md` in `assets/licenses/` (the versions, each
   `.so`'s SHA-256 and how to replace them), and the app shows them under
   Settings, About. To use another build, a user replaces the `.so` files

@@ -21,8 +21,7 @@ export CINEO_VERSION_CODE
 
 libmpv=target/libmpv-android
 pins=$(cat scripts/build-libmpv-android.sh scripts/libmpv-android.env | sha256sum | cut -d' ' -f1)
-if [[ $(cat "$libmpv/pins" 2>/dev/null) != "$pins" || ! -f $libmpv/out/libmpv.md ||
-  ! -f $libmpv/libmpv-android-sources.tar.xz ]]; then
+if [[ $(cat "$libmpv/pins" 2>/dev/null) != "$pins" || ! -f $libmpv/out/libmpv.md ]]; then
   ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION" scripts/build-libmpv-android.sh
   echo "$pins" >"$libmpv/pins"
 else

@@ -60,16 +60,13 @@ holds the details it links to.
    libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26,
    and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
    `SOURCES` and `libmpv.md` with each `.so`'s SHA-256), the same as
-   `libmpv-android-arm64-v8a.tar.xz`, and
-   `libmpv-android-sources.tar.xz` (ADR-0029): the source tarballs,
-   libplacebo without `.git`, the script and its `.env`. Unpacked, that
-   archive rebuilds with `scripts/build-libmpv-android.sh work` without
-   downloading any source. It stops if FFmpeg was configured
+   `libmpv-android-arm64-v8a.tar.xz`. `libmpv.md` lists the pinned
+   sources with their URLs and hashes; no source archive is written
+   (ADR-0029, amended 2026-11-05). It stops if FFmpeg was configured
    with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`, if mpv
    has GPL code, or if a library needs one that is neither shipped nor
    part of Android. Gradle copies `out/lib/` into the APK,
-   `out/licenses/` and `libmpv.md` into `assets/licenses/`, and the
-   sources archive, uncompressed, into `assets/sources/`. A debug build
+   and `out/licenses/` and `libmpv.md` into `assets/licenses/`. A debug build
    without them only warns; a release build fails.
 7. To build a signed release APK: set `CINEO_KEYSTORE` (the `.jks` file),
    `CINEO_KEYSTORE_PASSWORD`, `CINEO_KEY_ALIAS` and `CINEO_KEY_PASSWORD`,
@@ -84,10 +81,11 @@ holds the details it links to.
    SDK through `ANDROID_HOME` or `android/local.properties`, rebuilds
    libmpv only when the script or `.env` changed since the last build
    (`target/libmpv-android/pins`), and leaves
-   `dist/cineo-arm64-android.apk`. R8 stays off,
-   because JNA and the UniFFI bindings use reflection. AGP keeps the
-   libmpv and FFmpeg `.so` files unstripped, so they match the hashes in
-   `libmpv.md`.
+   `dist/cineo-arm64-android.apk`. Release builds run R8 with the keep
+   rules in `android/app/proguard-rules.pro` for JNA, the UniFFI bindings
+   and rustls-platform-verifier, and store the `.so` files compressed.
+   AGP keeps the libmpv and FFmpeg `.so` files unstripped, so they match
+   the hashes in `libmpv.md`.
 
 If you build with a distro-packaged Rust instead of rustup, make sure it is a
 current stable release. Some distro builds expect a cross linker name; if
@@ -643,7 +641,7 @@ Every release has these files, with the same names in every release so that
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded (ADR-0027)                      |
-| `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv, its licenses and its complete source (`assets/sources/`, ADR-0029) |
+| `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |

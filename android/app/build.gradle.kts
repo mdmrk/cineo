@@ -87,16 +87,14 @@ abstract class Libmpv : DefaultTask() {
         val out = root.resolve("out")
         val abi = jniLibs.get().dir("arm64-v8a").asFile
         val licenses = assets.get().dir("licenses").asFile
-        val sources = assets.get().dir("sources").asFile
-        listOf(abi, licenses, sources).forEach { it.deleteRecursively(); it.mkdirs() }
+        assets.get().dir("sources").asFile.deleteRecursively()
+        listOf(abi, licenses).forEach { it.deleteRecursively(); it.mkdirs() }
         val libs = out.resolve("lib").listFiles { file -> file.name.endsWith(".so") }.orEmpty()
         val notice = out.resolve("libmpv.md")
-        val archive = root.resolve("libmpv-android-sources.tar.xz")
         libs.forEach { it.copyTo(abi.resolve(it.name)) }
         out.resolve("licenses").listFiles().orEmpty().forEach { it.copyTo(licenses.resolve(it.name)) }
-        listOf(notice to licenses, archive to sources).filter { it.first.isFile }
-            .forEach { (file, dir) -> file.copyTo(dir.resolve(file.name)) }
-        if (libs.none { it.name == "libmpv.so" } || !notice.isFile || !archive.isFile) {
+        if (notice.isFile) notice.copyTo(licenses.resolve(notice.name))
+        if (libs.none { it.name == "libmpv.so" } || !notice.isFile) {
             val message = "No libmpv build at $root. Run scripts/build-libmpv-android.sh."
             if (required.get()) throw GradleException(message)
             logger.warn("$message The app will build, but cannot play.")
@@ -139,17 +137,16 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (env("CINEO_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
         }
     }
 
-    androidResources {
-        noCompress += "xz"
-    }
-
     packaging {
         jniLibs {
+            useLegacyPackaging = true
             keepDebugSymbols += listOf("**/libmpv.so", "**/libav*.so", "**/libsw*.so")
         }
     }

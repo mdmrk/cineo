@@ -37,11 +37,9 @@ fi
 meson=$work/venv/bin/meson
 
 step "sources"
-archives=()
 while read -r name url sha; do
   [[ -z $name ]] && continue
   archive=$src/$(basename "$url")
-  archives+=("$(basename "$url")")
   if [[ ! -f $archive ]] || ! echo "$sha  $archive" | sha256sum -c --status -; then
     curl -fsSL --retry 3 -o "$archive" "$url"
     echo "$sha  $archive" | sha256sum -c -
@@ -199,17 +197,21 @@ EOF
 
 ## Source
 
-The APK itself carries the complete source of these files and the script
-that built them, as assets/sources/libmpv-android-sources.tar.xz. To get
-it:
-
-    unzip cineo-arm64-android.apk assets/sources/libmpv-android-sources.tar.xz
-
-They were built from:
+The release does not carry their source. They were built, unmodified,
+from these pinned upstream sources (name, URL, SHA-256; libplacebo is a
+git commit):
 
 EOF
   sed 's/^/- /' "$out/SOURCES"
   cat <<EOF
+
+The script that built them is scripts/build-libmpv-android.sh with
+scripts/libmpv-android.env, at the tag of this release in
+https://github.com/mdmrk/cineo. With NDK $NDK_VERSION, python3 with venv,
+perl, make, ninja and pkg-config, it downloads those sources, checks
+their hashes and writes the libraries to target/libmpv-android/out/lib/:
+
+    ANDROID_NDK_HOME=/path/to/ndk/$NDK_VERSION scripts/build-libmpv-android.sh
 
 ## Using your own build
 
@@ -235,33 +237,6 @@ EOF
 archive=$work/libmpv-android-arm64-v8a.tar.xz
 tar -C "$out" -cJf "$archive" lib licenses SOURCES libmpv.md
 
-step "source archive"
-stage=$work/sources/libmpv-android-sources
-rm -rf "$work/sources"
-mkdir -p "$stage/scripts" "$stage/work/src"
-cp "$root/scripts/build-libmpv-android.sh" "$root/scripts/libmpv-android.env" "$stage/scripts/"
-cp "$out/SOURCES" "$out/libmpv.md" "$stage/"
-for name in "${archives[@]}"; do
-  cp "$src/$name" "$stage/work/src/"
-done
-tar -C "$src" --exclude-vcs -cf - libplacebo | tar -C "$stage/work/src" -xf -
-cat >"$stage/README.md" <<EOF
-# libmpv for Cineo on Android: complete source
-
-work/src/ holds the pinned source archives, which match the hashes in
-scripts/libmpv-android.env, and libplacebo at its pinned commit. To
-rebuild the libraries, install NDK $NDK_VERSION, python3 with venv, perl,
-make, ninja and pkg-config, then run:
-
-    ANDROID_NDK_HOME=/path/to/ndk/$NDK_VERSION scripts/build-libmpv-android.sh work
-
-It writes them to work/out/lib/. libmpv.md says how to put them into the
-APK.
-EOF
-sources=$work/libmpv-android-sources.tar.xz
-tar -C "$work/sources" -cJf "$sources" libmpv-android-sources
-rm -rf "$work/sources"
-
 step "done"
-sha256sum "$archive" "$sources"
+sha256sum "$archive"
 ls -l "$out/lib"

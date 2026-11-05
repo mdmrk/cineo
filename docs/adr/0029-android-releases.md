@@ -80,7 +80,24 @@ What we know (2026-11-04):
   archive the build wrote, that the `.so` files are the ones the hashes
   name, and that `apksigner verify` passes.
 - R8 code shrinking stays off: JNA and the UniFFI bindings use
-  reflection.
+  reflection (turned on by the 2026-11-05 amendment below).
+- **Amended 2026-11-05 (owner decision): the APK carries no source.** The
+  source archive was 100 MB of the 155 MB APK. The APK and the release no
+  longer carry it; `libmpv.md` names each pinned upstream source with its
+  URL and SHA-256 (libplacebo by commit) and the build script in this
+  repository at the release's tag, as the Windows release does for its
+  DLL. CI no longer checks for the archive. Whether pointing to upstream
+  sources meets LGPL-2.1 §4 and §6 is INFERRED, not legal advice
+  (`docs/TECHNICAL_DEBT.md`). The same change turns R8 on, with keep
+  rules for JNA, the UniFFI bindings and rustls-platform-verifier
+  (`android/app/proguard-rules.pro`), and stores the native libraries
+  compressed (`useLegacyPackaging`): Android extracts them on install, so
+  they take more space on the phone than in the APK. A local release
+  build went from 155 MB to 23 MB (VERIFIED 2026-11-05: the dex from
+  23.4 MB to 2.8 MB, the native libraries from 45 MB stored to about
+  21 MB compressed, the `.so` hashes unchanged). Signed with a debug key,
+  it started on the Redmi 9 with no exception in its log; playback with
+  this build was not tried.
 
 ## Consequences
 - The release key must be kept and backed up by the owner. If it is lost,

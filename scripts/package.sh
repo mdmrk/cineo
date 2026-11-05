@@ -50,11 +50,6 @@ EOT
     for required in assets/licenses/libmpv.md assets/licenses/mpv-LGPL-2.1.txt lib/arm64-v8a/libcineo_android.so; do
       grep -qxF "$required" <<<"$entries" || { echo "$apk has no $required" >&2; exit 1; }
     done
-    sources=assets/sources/libmpv-android-sources.tar.xz
-    if [[ $(unzip -p "$apk" "$sources" | sha256sum) != $(sha256sum <"$libmpv/libmpv-android-sources.tar.xz") ]]; then
-      echo "$apk: $sources is missing or not the one the libmpv build wrote" >&2
-      exit 1
-    fi
     for lib in libmpv.so libavcodec.so libavfilter.so libavformat.so libavutil.so libswresample.so libswscale.so; do
       shipped=$(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1)
       grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" \
