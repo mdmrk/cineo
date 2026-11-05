@@ -63,6 +63,7 @@
     <string name="favourite_remove">Remove from favourites</string>
     <string name="remove_continue">Remove from continue watching</string>
     <string name="remove_library">Remove from library</string>
+    <string name="more_actions">More actions</string>
     <string name="page_settings">Settings</string>
     <string name="page_addons">Addons</string>
     <string name="section_player">Player</string>
