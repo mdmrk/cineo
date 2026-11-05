@@ -11,9 +11,10 @@ if ! grep -qx "Pkg.Revision = $NDK_VERSION" "$ndk/source.properties"; then
 fi
 
 work=$(realpath -m "${1:-$root/target/libmpv-android}")
-src=$work/src
-build=$work/build
-prefix=$work/prefix
+stage=/tmp/cineo-libmpv-android
+src=$stage/src
+build=$stage/build
+prefix=$stage/prefix
 out=$work/out
 rm -rf "$build" "$prefix" "$out"
 mkdir -p "$src" "$build" "$prefix" "$out/lib" "$out/licenses"
@@ -23,6 +24,7 @@ triple=aarch64-linux-android
 cc=$toolchain/bin/$triple$ANDROID_API-clang
 cxx=$toolchain/bin/$triple$ANDROID_API-clang++
 export PATH="$toolchain/bin:$PATH"
+export SOURCE_DATE_EPOCH=0
 export PKG_CONFIG_LIBDIR=$prefix/lib/pkgconfig
 unset PKG_CONFIG_PATH PKG_CONFIG_SYSROOT_DIR
 jobs=$(nproc)
@@ -30,11 +32,11 @@ jobs=$(nproc)
 step() { printf '\n==> %s\n' "$*"; }
 
 step "meson $MESON_VERSION"
-if [[ ! -x $work/venv/bin/meson ]] || [[ $("$work/venv/bin/meson" --version) != "$MESON_VERSION" ]]; then
-  python3 -m venv "$work/venv"
-  "$work/venv/bin/pip" install --quiet "meson==$MESON_VERSION"
+if [[ ! -x $stage/venv/bin/meson ]] || [[ $("$stage/venv/bin/meson" --version) != "$MESON_VERSION" ]]; then
+  python3 -m venv "$stage/venv"
+  "$stage/venv/bin/pip" install --quiet "meson==$MESON_VERSION"
 fi
-meson=$work/venv/bin/meson
+meson=$stage/venv/bin/meson
 
 step "sources"
 while read -r name url sha; do
@@ -61,7 +63,7 @@ if [[ -d $src/libplacebo/.git ]]; then
 fi
 printf 'libplacebo %s %s\n' "$LIBPLACEBO_GIT" "$LIBPLACEBO_COMMIT" >>"$out/SOURCES"
 
-cat >"$work/cross.ini" <<EOF
+cat >"$stage/cross.ini" <<EOF
 [binaries]
 c = '$cc'
 cpp = '$cxx'
@@ -80,7 +82,7 @@ meson_build() {
   local name=$1
   shift
   step "$name"
-  "$meson" setup "$build/$name" "$src/$name" --cross-file "$work/cross.ini" \
+  "$meson" setup "$build/$name" "$src/$name" --cross-file "$stage/cross.ini" \
     --prefix "$prefix" --libdir lib --buildtype release --default-library static "$@"
   ninja -C "$build/$name" install >/dev/null
 }
@@ -111,7 +113,7 @@ mkdir -p "$build/ffmpeg"
   cd "$build/ffmpeg"
   "$src/ffmpeg/configure" --prefix="$prefix" \
     --target-os=android --arch=aarch64 --cpu=armv8-a --enable-cross-compile \
-    --cc="$cc" --cxx="$cxx" --nm=llvm-nm --ar=llvm-ar --ranlib=llvm-ranlib --strip=llvm-strip \
+    --cc="$(basename "$cc")" --cxx="$(basename "$cxx")" --nm=llvm-nm --ar=llvm-ar --ranlib=llvm-ranlib --strip=llvm-strip \
     --pkg-config=pkg-config --pkg-config-flags=--static \
     --enable-shared --disable-static --enable-pic \
     --disable-programs --disable-doc --disable-avdevice --disable-vulkan \
@@ -125,7 +127,7 @@ meson_build libplacebo -Dvulkan=disabled -Dopengl=enabled -Dglslang=disabled -Ds
   -Dlcms=disabled -Dd3d11=disabled -Ddemos=false -Dtests=false -Dbench=false -Dfuzz=false
 
 step "mpv"
-"$meson" setup "$build/mpv" "$src/mpv" --cross-file "$work/cross.ini" \
+"$meson" setup "$build/mpv" "$src/mpv" --cross-file "$stage/cross.ini" \
   --prefix "$prefix" --libdir lib --buildtype release --default-library shared -Dprefer_static=true \
   -Dc_link_args="['-Wl,--no-undefined', '-lc++_static', '-lc++abi']" \
   -Dgpl=false -Dlibmpv=true -Dcplayer=false -Dtests=false -Dbuild-date=false \

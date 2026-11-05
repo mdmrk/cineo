@@ -37,6 +37,13 @@ abstract class CargoNdk : DefaultTask() {
             workingDir = workspace.get().asFile
             environment("ANDROID_NDK_HOME", ndk.get().asFile.path)
             environment("CARGO_PROFILE_RELEASE_STRIP", "debuginfo")
+            val home = System.getProperty("user.home")
+            val remaps = listOf(
+                (System.getenv("CARGO_HOME") ?: "$home/.cargo") to "/cargo",
+                (System.getenv("RUSTUP_HOME") ?: "$home/.rustup") to "/rustup",
+                workspace.get().asFile.path to "/cineo",
+            ).map { (from, to) -> "--remap-path-prefix=${File(from).canonicalPath}=$to" }
+            environment("CARGO_ENCODED_RUSTFLAGS", remaps.joinToString("\u001f"))
             commandLine(
                 "cargo", "ndk", "-t", "arm64-v8a", "-P", api.get().toString(),
                 "-o", jniLibs.get().asFile.path,

@@ -57,8 +57,10 @@ holds the details it links to.
    `perl`, `make`, `ninja`, `git` and `curl` on the host. It downloads the
    pinned sources and checks their SHA-256, installs its own meson in a
    venv, cross-compiles OpenSSL, dav1d, freetype, fribidi, harfbuzz,
-   libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26,
-   and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
+   libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26
+   in the fixed `/tmp/cineo-libmpv-android` (sources, build, prefix and
+   meson; fixed so that the paths the libraries record are the same on
+   every machine), and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
    `SOURCES` and `libmpv.md` with each `.so`'s SHA-256), the same as
    `libmpv-android-arm64-v8a.tar.xz`. `libmpv.md` lists the pinned
    sources with their URLs and hashes; no source archive is written
@@ -627,7 +629,8 @@ the hash of the script and its `.env`, never on tags) and runs
 `scripts/release-android.sh`: it builds libmpv if needed, a signed
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that
 the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
-`.so` matches its hash, that every `.so` in the APK has its LOAD segments
+`.so` matches its hash, that no `.so` holds a build path or an OpenSSL build
+date (they would make the build unreproducible), that every `.so` in the APK has its LOAD segments
 aligned to at least 16 KB (`readelf`), that `apksigner verify` passes, that
 the signing block has no dependency-info block (Gradle's is encrypted for
 Google, and IzzyOnDroid flags it; `dependenciesInfo` turns it off), and
@@ -649,13 +652,18 @@ The Android store listing (title, short and full description) lives in
 `docs/fdroid/io.github.mdmrk.cineo.yml` is the draft build recipe for
 F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint`
 (fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05) but
-has never been built: F-Droid publishes only an APK that reproduces ours
-(`Binaries`, `AllowedAPKSigningKeys`), and the build is not yet
-reproducible (`docs/TECHNICAL_DEBT.md`). Updates are manual
+has never been built by F-Droid, which publishes only an APK that
+reproduces ours (`Binaries`, `AllowedAPKSigningKeys`). The build is
+reproducible across directories on one machine: Rust maps `CARGO_HOME`,
+`RUSTUP_HOME` and the checkout to `/cargo`, `/rustup` and `/cineo`
+(`--remap-path-prefix`), and libmpv is built in the fixed
+`/tmp/cineo-libmpv-android` with `SOURCE_DATE_EPOCH=0` and the NDK
+compilers named without their path (`docs/TECHNICAL_DEBT.md`). Updates are manual
 (`UpdateCheckMode: None`), because F-Droid reads the version with a regular
 expression and Gradle computes it. Each release changes `versionName`,
 `versionCode`, `commit`, `CurrentVersion` and `CurrentVersionCode`, and the
-Rust and cargo-ndk versions the release was built with.
+Rust and cargo-ndk versions the release was built with, which
+`scripts/release-android.sh` prints as its `F-Droid recipe:` line.
 
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:

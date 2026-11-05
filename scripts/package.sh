@@ -58,6 +58,17 @@ EOT
     libs=$(mktemp -d)
     unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
     for so in "$libs"/lib/arm64-v8a/*.so; do
+      text=$(strings -n 8 "$so")
+      for leak in "$PWD" "$HOME" "${CARGO_HOME:-$HOME/.cargo}" "${RUSTUP_HOME:-$HOME/.rustup}"; do
+        if grep -qF -- "$leak" <<<"$text"; then
+          echo "$apk: $(basename "$so") holds the build path $leak, so the build is not reproducible" >&2
+          exit 1
+        fi
+      done
+      if grep 'built on: ' <<<"$text" | grep -qv 'built on: Thu Jan  1 00:00:00 1970 UTC'; then
+        echo "$apk: $(basename "$so") holds a build date, so the build is not reproducible" >&2
+        exit 1
+      fi
       aligns=$(readelf -lW "$so" | awk '$1 == "LOAD" { print $NF }')
       [[ -n $aligns ]] || { echo "$apk: $(basename "$so") has no LOAD segment" >&2; exit 1; }
       for align in $aligns; do

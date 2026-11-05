@@ -431,19 +431,26 @@ Format:
 - Exit: a `versionCode` that also counts prereleases and that F-Droid
   reads, with the check in `scripts/package.sh` kept.
 
-### Android: the build is not reproducible
+### Android: the build is reproducible on one machine only
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
   [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
-- Gap: F-Droid publishes our signed APK only if its own build is byte for
-  byte the same (ADR-0030), and nothing makes ours path- or time-independent:
-  no `--remap-path-prefix` for Rust, the latest stable toolchain at build
-  time (ADR-0025), and libmpv and FFmpeg built without a check that two
-  builds match. Whether they match is UNKNOWN; it has never been tried.
-- Why: releases only came from GitHub until now.
-- Instead: the F-Droid recipe (`docs/fdroid/`) is a draft, and the app is
-  not in F-Droid.
-- Exit: build twice from different directories, compare the unsigned
-  APKs, fix each difference, and keep the comparison in CI.
+- Gap: two release builds from different directories and `CARGO_HOME`s on
+  the same machine give the same unsigned APK (VERIFIED 2026-11-05, SHA-256
+  `2fe745f8…dbe0a7`). Whether F-Droid's Debian build server gives the same
+  APK as CI's Ubuntu runner is UNKNOWN: Python, Perl and the host tools
+  that generate libplacebo's and OpenSSL's code differ. Rust is the latest
+  stable at release time (ADR-0025), so the recipe must name the version
+  CI used, which `release-android.sh` prints. libmpv is built in the fixed
+  `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
+  one machine, and its sources are downloaded again after a reboot.
+- Why: F-Droid publishes our signed APK only if its build matches
+  (ADR-0030); a fixed directory was the simplest way to make the paths
+  that FFmpeg, mpv and OpenSSL record the same everywhere.
+- Instead: `scripts/package.sh android` fails if a native library holds the
+  build path, `HOME`, `CARGO_HOME`, `RUSTUP_HOME` or an OpenSSL build date;
+  nothing compares two whole builds in CI.
+- Exit: an F-Droid build of a tag that matches the release, then a CI job
+  that builds twice and compares.
 
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
