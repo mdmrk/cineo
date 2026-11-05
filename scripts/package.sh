@@ -55,6 +55,16 @@ EOT
       grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" \
         || { echo "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names" >&2; exit 1; }
     done
+    libs=$(mktemp -d)
+    unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
+    for so in "$libs"/lib/arm64-v8a/*.so; do
+      aligns=$(readelf -lW "$so" | awk '$1 == "LOAD" { print $NF }')
+      [[ -n $aligns ]] || { echo "$apk: $(basename "$so") has no LOAD segment" >&2; exit 1; }
+      for align in $aligns; do
+        ((align >= 16384)) || { echo "$apk: $(basename "$so") has a LOAD segment aligned to $align, below 16 KB" >&2; exit 1; }
+      done
+    done
+    rm -rf "$libs"
     sdk=${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}
     build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
     "$build_tools/apksigner" verify "$apk"
