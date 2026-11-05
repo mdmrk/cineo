@@ -150,7 +150,6 @@ jobs:
           CINEO_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CINEO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           CINEO_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          CINEO_VERSION_CODE: ${{ github.run_number }}
       - run: rm -rf build prefix src venv cross.ini libmpv-android-arm64-v8a.tar.xz
         working-directory: target/libmpv-android
       - uses: actions/attest-build-provenance@v4.2.2

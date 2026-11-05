@@ -413,6 +413,18 @@ Format:
   page and install the new APK over the old one.
 - Exit: run the check on Android and open the release page, with a test.
 
+### Android: prereleases share the release's versionCode
+- Where: [build.gradle.kts](../android/app/build.gradle.kts) (`versionCode`)
+- Gap: the `versionCode` comes from the workspace version (ADR-0030), so a
+  prerelease APK has the same `versionCode` as the release before it.
+  Android refuses only a lower `versionCode`, so it installs over it
+  (INFERRED, not tried). Whether F-Droid's update checker can read a
+  `versionCode` that Gradle computes instead of a literal is UNKNOWN.
+- Why: F-Droid builds from a tag and cannot know CI's run number.
+- Instead: prereleases install over each other with the same number.
+- Exit: a `versionCode` that also counts prereleases and that F-Droid
+  reads, with the check in `scripts/package.sh` kept.
+
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
   [libmpv-android.env](../scripts/libmpv-android.env)

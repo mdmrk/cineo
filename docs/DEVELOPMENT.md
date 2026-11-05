@@ -624,11 +624,12 @@ provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
 named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
 `.github/actions/setup-android`. `build (android)` restores libmpv from the cache (keyed by
 the hash of the script and its `.env`, never on tags) and runs
-`scripts/release-android.sh` with the `versionCode` set to the workflow's
-run number: it builds libmpv if needed, a signed `assembleRelease`, and
-runs `scripts/package.sh android`, which checks that the APK holds libmpv,
-FFmpeg, `libmpv.md` and the license texts, that each `.so` matches its
-hash, and that `apksigner verify` passes. The script fails if a signing
+`scripts/release-android.sh`: it builds libmpv if needed, a signed
+`assembleRelease`, and runs `scripts/package.sh android`, which checks that
+the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
+`.so` matches its hash, that `apksigner verify` passes, and that the
+`versionCode` is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace
+version, which Gradle computes (ADR-0030). The script fails if a signing
 secret is missing or the decoded keystore is empty rather than publish an
 unsigned APK; `check (android)` builds an
 unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with

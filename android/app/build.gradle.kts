@@ -102,6 +102,14 @@ abstract class Libmpv : DefaultTask() {
     }
 }
 
+fun versionCode(version: String): Int {
+    val parts = Regex("""(\d+)\.(\d+)\.(\d+)""").matchEntire(version)?.destructured?.toList()?.map { it.toInt() }
+    requireNotNull(parts) { "the workspace version $version is not MAJOR.MINOR.PATCH" }
+    val (major, minor, patch) = parts
+    require(minor < 100 && patch < 100) { "the versionCode needs MINOR and PATCH below 100, not $version" }
+    return major * 10000 + minor * 100 + patch
+}
+
 fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
 
 val uniffiBindgen = tasks.register<UniffiBindgen>("uniffiBindgen") {
@@ -121,8 +129,8 @@ android {
         applicationId = "io.github.mdmrk.cineo"
         minSdk = minApi
         targetSdk = 36
-        versionCode = env("CINEO_VERSION_CODE")?.toInt() ?: 1
         versionName = workspaceVersion()
+        versionCode = versionCode(workspaceVersion())
         ndk { abiFilters += "arm64-v8a" }
     }
 

@@ -13,15 +13,10 @@ if [[ ! -s $CINEO_KEYSTORE ]]; then
   echo "$CINEO_KEYSTORE is missing or empty: an unsigned APK is never released" >&2
   exit 1
 fi
-if [[ ! ${CINEO_VERSION_CODE:-} =~ ^[1-9][0-9]*$ ]]; then
-  echo "set CINEO_VERSION_CODE above the last released one (CI uses its run number)" >&2
-  exit 1
-fi
 if [[ -z ${ANDROID_HOME:-} && -f android/local.properties ]]; then
   ANDROID_HOME=$(sed -n 's/^sdk\.dir=//p' android/local.properties)
 fi
 export ANDROID_HOME=${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}
-export CINEO_VERSION_CODE
 
 libmpv=target/libmpv-android
 pins=$(cat scripts/build-libmpv-android.sh scripts/libmpv-android.env | sha256sum | cut -d' ' -f1)
@@ -32,6 +27,5 @@ else
   echo "libmpv is up to date with its pins"
 fi
 
-echo "versionCode $CINEO_VERSION_CODE"
 (cd android && ./gradlew assembleRelease)
 scripts/package.sh android
