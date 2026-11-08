@@ -259,6 +259,15 @@ fn lock(screen: &Mutex<Screen>) -> MutexGuard<'_, Screen> {
     screen.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+#[derive(Debug)]
+struct AbortOnDrop(tokio::task::AbortHandle);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 #[derive(Debug, uniffi::Object)]
 pub struct Cineo {
     tx: Sender<Msg>,
@@ -514,6 +523,7 @@ impl Cineo {
         let task = runtime
             .handle()
             .spawn(async move { client.fetch_image(&url, MAX_IMAGE_BYTES).await });
+        let _abort = AbortOnDrop(task.abort_handle());
         match task.await {
             Ok(result) => result.map_err(|err| ImageError::Fetch {
                 reason: err.to_string(),

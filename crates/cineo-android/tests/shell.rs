@@ -26,6 +26,7 @@ use librqbit::{
     AddTorrent, AddTorrentOptions, CreateTorrentOptions, ListenerOptions, Session, SessionOptions,
     create_torrent,
 };
+use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use wiremock::matchers::{method, path, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -390,6 +391,64 @@ async fn images_come_through_the_addon_client_and_its_limits() {
     let bad = cineo.fetch_image("not a url".into()).await;
     assert!(matches!(bad, Err(ImageError::InvalidUrl { .. })), "{bad:?}");
     tokio::task::block_in_place(|| drop(cineo));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_image_nobody_waits_for_stops_downloading() {
+    let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .unwrap();
+    let url = format!("http://{}/poster.png", listener.local_addr().unwrap());
+    let dir = local_data_dir();
+    let (cineo, _views) = tokio::task::block_in_place(|| start(dir.path()));
+
+    let (mut socket, _) = tokio::select! {
+        result = cineo.fetch_image(url) => panic!("the image finished: {result:?}"),
+        accepted = listener.accept() => accepted.unwrap(),
+    };
+    let closed = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut buffer = [0; 1024];
+        while matches!(socket.read(&mut buffer).await, Ok(read) if read > 0) {}
+    })
+    .await;
+    assert!(closed.is_ok(), "the request was still open after 5 s");
+    tokio::task::block_in_place(|| drop(cineo));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_player_gets_only_what_it_draws_and_the_lists_come_back_when_it_closes() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| v.addons.len() == 1);
+        cineo.open_detail("movie".into(), "tt0000001".into());
+        wait_for(&views, streams_ready);
+
+        cineo.play(0, 0);
+        let playing = wait_for(&views, |v| v.playback.is_some());
+        assert!(playing.addons.is_empty());
+        assert!(playing.board.is_empty());
+        assert!(playing.recent.is_empty());
+        assert!(playing.detail.is_none());
+
+        let events = players.events.lock().unwrap().take().unwrap();
+        events
+            .send(PlayerEvent::Closed {
+                time_ms: 61_000,
+                duration_ms: 120_000,
+            })
+            .unwrap();
+        let closed = wait_for(&views, |v| v.playback.is_none());
+        assert_eq!(closed.addons.len(), 1);
+        assert_eq!(closed.recent.len(), 1);
+        assert!(closed.detail.is_some_and(|d| !d.streams.is_empty()));
+        drop(cineo);
+    });
 }
 
 #[tokio::test(flavor = "multi_thread")]

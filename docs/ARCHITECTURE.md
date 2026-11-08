@@ -185,7 +185,10 @@ the way `cineo-desktop` does on its UI thread, and after each batch of
 messages hands Kotlin an `AppView` (only when it changed) through a
 `StateListener` that Kotlin implements. Kotlin calls methods such as
 `installAddon` that become `Action`s, and words the typed problems and
-notices itself (ADR-0017). Images come through `Cineo.fetchImage`, so they
+notices itself (ADR-0017). While the player or the torrent connecting
+screen is up, the `AppView` leaves out the addons, catalogs, library and
+detail those screens do not draw, so the torrent's status each second does
+not carry them across. Images come through `Cineo.fetchImage`, so they
 use `cineo-net` and its limits like every other request. The network
 effects (`cineo_net::fetch_task`) and the store's writer thread
 (`cineo_store::spawn_writer`) are shared with the desktop.

@@ -31,14 +31,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val MAX_SIDE = 4096
-private const val CACHE_BYTES = 32 * 1024 * 1024
+private const val MIN_CACHE_BYTES = 32L * 1024 * 1024
+private const val MAX_CACHE_BYTES = 128L * 1024 * 1024
+
+internal fun cacheBytes(heapBytes: Long): Int = (heapBytes / 4).coerceIn(MIN_CACHE_BYTES, MAX_CACHE_BYTES).toInt()
 
 internal class Decoded<T>(val image: T, val width: Int, val full: Boolean) {
     fun serves(wanted: Int) = full || width >= wanted
 }
 
 class Images(private val cineo: Cineo) {
-    private val cache = object : LruCache<String, Decoded<ImageBitmap>>(CACHE_BYTES) {
+    private val cache = object : LruCache<String, Decoded<ImageBitmap>>(cacheBytes(Runtime.getRuntime().maxMemory())) {
         override fun sizeOf(key: String, value: Decoded<ImageBitmap>) =
             value.image.width * value.image.height * 4
     }

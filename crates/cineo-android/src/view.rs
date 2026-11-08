@@ -397,46 +397,19 @@ pub enum PlaybackFailureView {
 }
 
 pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilterView) -> AppView {
-    AppView {
-        addons: state.addons.iter().map(addon).collect(),
-        addons_loading: u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX),
-        unavailable_addons: state
-            .installed
-            .iter()
-            .filter(|t| {
-                !state.addons_loading.contains(t)
-                    && !state.addons.iter().any(|a| &a.transport == *t)
-            })
-            .map(ToString::to_string)
-            .collect(),
-        addon_lists: state
-            .addon_lists
-            .iter()
-            .flatten()
-            .map(|l| addon_list(l, &state.installed))
-            .collect(),
-        install: state.install.as_ref().map(|install| match install {
-            Loadable::Loading => InstallView::Installing,
-            Loadable::Ready(name) => InstallView::Installed { name: name.clone() },
-            Loadable::Failed(problem) => InstallView::Failed {
-                problem: problem_view(problem),
-            },
-        }),
-        board: state.board.iter().map(row).collect(),
-        search_query: state.search_query.clone(),
-        search: state.search.iter().map(row).collect(),
-        continue_watching: continue_watching(&state.library, state.settings.watched_at)
-            .into_iter()
-            .map(library_item)
-            .collect(),
-        favorites: shelf(state, LibraryItem::is_favorite, |i| {
-            i.favorited.unwrap_or(0)
-        }),
-        recent: shelf(state, LibraryItem::was_played, |i| i.updated_ms),
-        detail: state
-            .detail
-            .as_ref()
-            .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled)),
+    let mut view = AppView {
+        addons: Vec::new(),
+        addons_loading: 0,
+        unavailable_addons: Vec::new(),
+        addon_lists: Vec::new(),
+        install: None,
+        board: Vec::new(),
+        search_query: String::new(),
+        search: Vec::new(),
+        continue_watching: Vec::new(),
+        favorites: Vec::new(),
+        recent: Vec::new(),
+        detail: None,
         playback: playing.map(|art| PlaybackView {
             art: art.clone(),
             seek_step_s: state.settings.seek_step.whole_seconds(),
@@ -475,7 +448,52 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
         p2p_prompt: state.p2p_prompt.is_some(),
         settings: settings(&state.settings),
         notice: state.notice.as_ref().map(notice_view),
+    };
+    if view.playback.is_none() && view.connecting.is_none() {
+        fill_browsing(&mut view, state, filter);
     }
+    view
+}
+
+fn fill_browsing(view: &mut AppView, state: &State, filter: &StreamFilterView) {
+    view.addons = state.addons.iter().map(addon).collect();
+    view.addons_loading = u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX);
+    view.unavailable_addons = state
+        .installed
+        .iter()
+        .filter(|t| {
+            !state.addons_loading.contains(t) && !state.addons.iter().any(|a| &a.transport == *t)
+        })
+        .map(ToString::to_string)
+        .collect();
+    view.addon_lists = state
+        .addon_lists
+        .iter()
+        .flatten()
+        .map(|l| addon_list(l, &state.installed))
+        .collect();
+    view.install = state.install.as_ref().map(|install| match install {
+        Loadable::Loading => InstallView::Installing,
+        Loadable::Ready(name) => InstallView::Installed { name: name.clone() },
+        Loadable::Failed(problem) => InstallView::Failed {
+            problem: problem_view(problem),
+        },
+    });
+    view.board = state.board.iter().map(row).collect();
+    view.search_query.clone_from(&state.search_query);
+    view.search = state.search.iter().map(row).collect();
+    view.continue_watching = continue_watching(&state.library, state.settings.watched_at)
+        .into_iter()
+        .map(library_item)
+        .collect();
+    view.favorites = shelf(state, LibraryItem::is_favorite, |i| {
+        i.favorited.unwrap_or(0)
+    });
+    view.recent = shelf(state, LibraryItem::was_played, |i| i.updated_ms);
+    view.detail = state
+        .detail
+        .as_ref()
+        .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled));
 }
 
 fn settings(settings: &Settings) -> SettingsView {
