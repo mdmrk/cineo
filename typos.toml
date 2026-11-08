@@ -13,6 +13,7 @@ fre = "fre"
 tha = "tha"
 strem = "strem"
 abd = "abd"
+seeked = "seeked"
 
 [default]
 extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs", "[0-9a-f]{3,}…[0-9a-f]{3,}"]
