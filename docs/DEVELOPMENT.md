@@ -508,7 +508,7 @@ Re-check them when adding.
 | `fastframe-log` (git, tag; no default features) | 0.17.0 | Records panics in `panic.log` without their message (desktop, ADR-0032) | MIT |
 | `fastframe-emoji` (git, tag; not on crates.io) | 0.17.0 | Colour emoji in egui text (desktop, ADR-0033) | MIT |
 | `fastframe-fonts` (git, tag; no default features) | 0.17.0 | Installed fonts as fallbacks for other scripts (desktop, ADR-0033) | MIT |
-| `fastframe-text` (git, tag; not on crates.io) | 0.17.0 | Follows the desktop's font rendering (desktop, ADR-0033) | MIT |
+| `fastframe-text` (`watch`; git, tag; not on crates.io) | 0.17.0 | Follows the desktop's font rendering and text size, live (desktop, ADR-0033) | MIT |
 | `fastframe-scroll` (git, tag; not on crates.io) | 0.17.0 | Touchpad scrolling with glide on Linux (desktop, ADR-0033) | MIT |
 | `fastframe-graphics` (git, tag; not on crates.io) | 0.17.0 | Explains in a dialog when no OpenGL window can open (desktop, ADR-0033) | MIT |
 | `keepawake` (Windows only)                                                             | 0.6.1                                                                                                                                  | Keeps the screen awake during playback on Windows with `SetThreadExecutionState` (desktop, ADR-0027)                                           | MIT                                  |

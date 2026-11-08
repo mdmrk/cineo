@@ -88,6 +88,7 @@ impl From<StartPage> for Page {
 
 #[derive(Debug, Clone, Default)]
 pub struct ViewState {
+    pub desktop_text_scale: Option<f32>,
     pub page: Page,
     pub addon_input: String,
     pub search_input: String,
@@ -185,7 +186,11 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
         ui.ctx().request_discard("theme applied");
         return out;
     }
-    apply_scale(ui.ctx(), state.settings.interface_scale);
+    apply_scale(
+        ui.ctx(),
+        state.settings.interface_scale,
+        view.desktop_text_scale,
+    );
     shortcuts(ui, state, view, &mut out);
     sidebar(ui, state, view, &mut out);
     if let Some(notice) = &state.notice {
@@ -240,8 +245,12 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
 }
 
 #[expect(clippy::cast_precision_loss, reason = "a percentage")]
-fn apply_scale(ctx: &egui::Context, scale: InterfaceScale) {
-    let zoom = scale.percent() as f32 / 100.0;
+fn zoom_factor(scale: InterfaceScale, desktop_text_scale: Option<f32>) -> f32 {
+    scale.percent() as f32 / 100.0 * desktop_text_scale.unwrap_or(1.0)
+}
+
+fn apply_scale(ctx: &egui::Context, scale: InterfaceScale, desktop_text_scale: Option<f32>) {
+    let zoom = zoom_factor(scale, desktop_text_scale);
     if (ctx.zoom_factor() - zoom).abs() > f32::EPSILON {
         ctx.set_zoom_factor(zoom);
     }
@@ -450,5 +459,17 @@ fn open_detail(item: &MetaPreview) -> Action {
         content_type: item.content_type.clone(),
         id: item.id.clone(),
         preview: Some(Box::new(item.clone())),
+    }
+}
+
+#[cfg(test)]
+mod scale_tests {
+    use super::*;
+
+    #[test]
+    fn the_desktop_text_size_multiplies_the_interface_scale() {
+        assert_eq!(zoom_factor(InterfaceScale::S100, None), 1.0);
+        assert_eq!(zoom_factor(InterfaceScale::S100, Some(1.25)), 1.25);
+        assert_eq!(zoom_factor(InterfaceScale::S75, Some(2.0)), 1.5);
     }
 }

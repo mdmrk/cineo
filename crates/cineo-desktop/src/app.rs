@@ -93,7 +93,9 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         "Cineo",
         native,
         Box::new(move |cc| {
-            theme::apply_following_desktop(&cc.egui_ctx);
+            let rendering = theme::apply_following_desktop(&cc.egui_ctx);
+            let text_scale = fastframe_text::text_scale();
+            follow_desktop_text(rendering, text_scale, &results_tx, &cc.egui_ctx);
             cc.egui_ctx
                 .add_plugin(fastframe_emoji::EmojiPlugin::default());
             images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
@@ -115,6 +117,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 (results_tx, results_rx),
             );
             app.pending_link = link;
+            app.view.desktop_text_scale = Some(text_scale);
             Ok(Box::new(app))
         }),
     );
@@ -140,6 +143,8 @@ pub(crate) enum Msg {
     },
     Link(String),
     LinksRegistered(Result<(), String>),
+    TextRendering(fastframe_text::TextRendering),
+    TextScale(f32),
 }
 
 pub(crate) struct Io {
@@ -636,6 +641,8 @@ impl eframe::App for CineoApp {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
                 Msg::LinksRegistered(result) => self.view.links_registered = Some(result),
+                Msg::TextRendering(rendering) => theme::apply_text_rendering(ctx, &rendering),
+                Msg::TextScale(scale) => self.view.desktop_text_scale = Some(scale),
             }
         }
         if self.state.addons_loading.is_empty()
@@ -695,6 +702,32 @@ fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMu
             pause();
             ack.done();
         }
+    }
+}
+
+fn follow_desktop_text(
+    rendering: fastframe_text::TextRendering,
+    scale: f32,
+    tx: &Sender<Msg>,
+    ctx: &egui::Context,
+) {
+    let post = {
+        let (tx, ctx) = (tx.clone(), ctx.clone());
+        move |msg| {
+            let _ = tx.send(msg);
+            ctx.request_repaint();
+        }
+    };
+    let on_rendering = post.clone();
+    if let Err(err) = fastframe_text::watch::watch(rendering, move |rendering| {
+        on_rendering(Msg::TextRendering(rendering));
+    }) {
+        debug!(?err, "the desktop's font settings are not followed");
+    }
+    if let Err(err) = fastframe_text::watch::watch_text_scale(scale, move |scale| {
+        post(Msg::TextScale(scale));
+    }) {
+        debug!(?err, "the desktop's text size is not followed");
     }
 }
 

@@ -34,7 +34,8 @@ that was what it took (2026-11-08). Nine fastframe 0.17.0 crates need egui
   Inter) replace what 0.37 did for emoji and other scripts.
 - `fastframe-scroll` gives touchpad glide on Linux, in place of 0.37's
   kinetic scrolling. `line_scroll_speed` stays Cineo's.
-- `fastframe-text` applies the desktop's font rendering.
+- `fastframe-text` applies the desktop's font rendering and follows its
+  changes, and on Wayland its text size multiplies Cineo's interface scale.
 - `fastframe-graphics` shows a dialog when no OpenGL window can open. Its
   `wgpu` retry stays off, because libmpv renders through OpenGL.
 - These run from the real window start only, so the UI tests stay

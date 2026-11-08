@@ -189,10 +189,19 @@ pub(crate) fn apply(ctx: &egui::Context) {
     apply_with(ctx, fonts(), None);
 }
 
-pub(crate) fn apply_following_desktop(ctx: &egui::Context) {
+pub(crate) fn apply_following_desktop(ctx: &egui::Context) -> TextRendering {
     let rendering = fastframe_text::detect();
     let fonts = desktop_fonts(&rendering, fastframe_fonts::system::fallbacks());
     apply_with(ctx, fonts, Some(&rendering));
+    rendering
+}
+
+pub(crate) fn apply_text_rendering(ctx: &egui::Context, rendering: &TextRendering) {
+    ctx.set_fonts(desktop_fonts(
+        rendering,
+        fastframe_fonts::system::fallbacks(),
+    ));
+    ctx.all_styles_mut(|style| rendering.apply_to_visuals(&mut style.visuals));
 }
 
 fn apply_with(ctx: &egui::Context, fonts: FontDefinitions, rendering: Option<&TextRendering>) {
