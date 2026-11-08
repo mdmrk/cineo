@@ -26,6 +26,7 @@ import io.github.mdmrk.cineo.ui.SearchScreen
 import io.github.mdmrk.cineo.ui.StreamFilterActions
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import io.github.mdmrk.cineo.ui.DetailScreen
 import io.github.mdmrk.cineo.ui.HomeScreen
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
                         val view by app.view.collectAsStateWithLifecycle()
                         val images = remember(cineo) { Images(cineo) }
                         var page by rememberSaveable { mutableStateOf(Page.HOME) }
+                        val savedPages = rememberSaveableStateHolder()
                         val current = view
                         val playback = current?.playback
                         val detail = current?.detail
@@ -117,19 +119,21 @@ class MainActivity : ComponentActivity() {
                                     val open = { poster: io.github.mdmrk.cineo.rust.PosterView ->
                                         cineo.openDetail(poster.contentType, poster.id)
                                     }
-                                    when (page) {
-                                        Page.HOME -> HomeScreen(
-                                            view = current,
-                                            images = images,
-                                            onOpen = open,
-                                            onOpenAddons = { page = Page.ADDONS },
-                                            library = library,
-                                            padding = padding,
-                                        )
-                                        Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
-                                        Page.LIBRARY -> LibraryScreen(current, images, library, padding)
-                                        Page.ADDONS -> AddonsScreen(current, images, cineo, padding)
-                                        Page.SETTINGS -> current?.let { SettingsScreen(it.settings, cineo, padding) }
+                                    savedPages.SaveableStateProvider(page.name) {
+                                        when (page) {
+                                            Page.HOME -> HomeScreen(
+                                                view = current,
+                                                images = images,
+                                                onOpen = open,
+                                                onOpenAddons = { page = Page.ADDONS },
+                                                library = library,
+                                                padding = padding,
+                                            )
+                                            Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
+                                            Page.LIBRARY -> LibraryScreen(current, images, library, padding)
+                                            Page.ADDONS -> AddonsScreen(current, images, cineo, padding)
+                                            Page.SETTINGS -> current?.let { SettingsScreen(it.settings, cineo, padding) }
+                                        }
                                     }
                                 }
                             }

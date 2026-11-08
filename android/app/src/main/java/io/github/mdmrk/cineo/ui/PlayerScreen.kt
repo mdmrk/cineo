@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,10 +116,10 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
         AndroidView(
             factory = { context ->
                 SurfaceView(context).apply {
-                    keepScreenOn = true
                     holder.addCallback(SurfaceCallback(cineo))
                 }
             },
+            update = { it.keepScreenOn = status?.paused != true },
             modifier = Modifier.fillMaxSize(),
         )
         val current = status
@@ -439,21 +440,23 @@ private fun clock(seconds: Double): String {
 private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, onDone: () -> Unit) {
     var width by remember { mutableStateOf(1) }
     val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
-    val at = { x: Float -> (x / width).coerceIn(0f, 1f) * duration }
+    val latestDuration by rememberUpdatedState(duration)
+    val seekable = duration > 0f
+    val at = { x: Float -> (x / width).coerceIn(0f, 1f) * latestDuration }
     Box(
         Modifier
             .fillMaxWidth()
             .height(32.dp)
             .onSizeChanged { width = it.width.coerceAtLeast(1) }
-            .pointerInput(duration) {
-                if (duration <= 0f) return@pointerInput
+            .pointerInput(seekable) {
+                if (!seekable) return@pointerInput
                 detectTapGestures { offset ->
                     onDrag(at(offset.x))
                     onDone()
                 }
             }
-            .pointerInput(duration) {
-                if (duration <= 0f) return@pointerInput
+            .pointerInput(seekable) {
+                if (!seekable) return@pointerInput
                 detectHorizontalDragGestures(
                     onDragStart = { onDrag(at(it.x)) },
                     onDragEnd = onDone,

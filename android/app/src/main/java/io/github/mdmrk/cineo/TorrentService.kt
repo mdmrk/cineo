@@ -27,6 +27,11 @@ class TorrentService : Service() {
         return START_NOT_STICKY
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        ((application as CineoApplication).started as? Started.Running)?.cineo?.stopPlayback()
+        stopSelf()
+    }
+
     private fun notification(): Notification {
         val channel = NotificationChannel(
             CHANNEL,
