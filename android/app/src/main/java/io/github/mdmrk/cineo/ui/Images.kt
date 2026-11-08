@@ -85,11 +85,13 @@ fun NetImage(
     contentDescription: String? = null,
     contentScale: ContentScale = ContentScale.Crop,
     alignment: Alignment = Alignment.Center,
+    onFailed: () -> Unit = {},
 ) {
     val widthPx = with(LocalDensity.current) { width.roundToPx() }
     var image by remember(url) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(url, widthPx) {
         image = url?.let { images.load(it, widthPx) }
+        if (url != null && image == null) onFailed()
     }
     val alpha by animateFloatAsState(if (image != null) 1f else 0f, label = "image")
     image?.let {

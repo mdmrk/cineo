@@ -246,27 +246,30 @@ fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
 
 @Composable
 fun Artwork(name: String, url: String?, images: Images, width: Dp, modifier: Modifier = Modifier) {
+    var failed by remember(url) { mutableStateOf(false) }
     Box(
         modifier.fillMaxWidth().clip(CardShape).background(
             Brush.linearGradient(listOf(Brand.SurfaceHover, Brand.Panel)),
         ),
     ) {
-        Column(
-            Modifier.align(Alignment.Center).padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            CineoIcon(Icon.MOVIE, tint = Brand.TextFaint, size = MaterialTheme.typography.headlineSmall.fontSize)
-            Text(
-                name,
-                style = MaterialTheme.typography.titleSmall,
-                color = Brand.Text,
-                textAlign = TextAlign.Center,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (url == null || failed) {
+            Column(
+                Modifier.align(Alignment.Center).padding(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CineoIcon(Icon.MOVIE, tint = Brand.TextFaint, size = MaterialTheme.typography.headlineSmall.fontSize)
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Brand.Text,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
-        NetImage(images, url, width, Modifier.fillMaxSize(), contentDescription = name)
+        NetImage(images, url, width, Modifier.fillMaxSize(), contentDescription = name) { failed = true }
     }
 }
 
