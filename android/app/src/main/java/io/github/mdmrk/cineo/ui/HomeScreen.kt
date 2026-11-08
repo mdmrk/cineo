@@ -199,7 +199,7 @@ fun CatalogRow(row: RowView, images: Images, onOpen: (PosterView) -> Unit) {
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(items.items, key = { "${it.contentType}/${it.id}" }) { PosterCard(it, images, onOpen) }
+                items(items.items, key = { it.id }) { PosterCard(it, images, onOpen) }
             }
         }
     }

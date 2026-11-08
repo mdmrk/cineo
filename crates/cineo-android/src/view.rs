@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use cineo_core::addon::{
     AddonDescriptor, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl, Video,
 };
@@ -832,9 +834,16 @@ fn row(row: &Row) -> RowView {
         content_type: target.path.content_type.to_string(),
         items: match &row.items {
             Loadable::Loading => RowItems::Loading,
-            Loadable::Ready(items) => RowItems::Ready {
-                items: items.iter().map(poster).collect(),
-            },
+            Loadable::Ready(items) => {
+                let mut seen = HashSet::new();
+                RowItems::Ready {
+                    items: items
+                        .iter()
+                        .filter(|item| seen.insert(item.id.as_str()))
+                        .map(poster)
+                        .collect(),
+                }
+            }
             Loadable::Failed(problem) => RowItems::Failed {
                 problem: problem_view(problem),
             },

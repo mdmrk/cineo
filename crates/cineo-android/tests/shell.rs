@@ -394,6 +394,46 @@ async fn images_come_through_the_addon_client_and_its_limits() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_catalog_that_repeats_an_item_shows_it_once() {
+    let server = MockServer::start().await;
+    serve(
+        &server,
+        "/cfg/manifest.json",
+        fixture("addons/basic/manifest.json"),
+    )
+    .await;
+    let metas = serde_json::json!({ "metas": [
+        { "id": "tt1", "type": "movie", "name": "First" },
+        { "id": "tt2", "type": "movie", "name": "Second" },
+        { "id": "tt1", "type": "movie", "name": "First again" },
+    ]});
+    serve(
+        &server,
+        "/cfg/catalog/movie/top.json",
+        serde_json::to_vec(&metas).unwrap(),
+    )
+    .await;
+    let manifest = format!("{}/cfg/manifest.json", server.uri());
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest);
+        let board = wait_for(&views, |v| {
+            v.board
+                .first()
+                .is_some_and(|r| matches!(r.items, RowItems::Ready { .. }))
+        });
+        let RowItems::Ready { items } = &board.board[0].items else {
+            panic!("the row did not load");
+        };
+        let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, ["First", "Second"]);
+        drop(cineo);
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn an_image_nobody_waits_for_stops_downloading() {
     let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
         .await
