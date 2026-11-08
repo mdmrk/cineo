@@ -53,6 +53,7 @@ keepawake.workspace = true
 
 [dev-dependencies]
 egui_kittest.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

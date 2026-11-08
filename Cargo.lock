@@ -1153,6 +1153,7 @@ dependencies = [
  "rust-i18n",
  "semver",
  "sys-locale",
+ "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",
