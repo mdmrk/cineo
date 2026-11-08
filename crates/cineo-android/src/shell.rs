@@ -337,9 +337,7 @@ impl Cineo {
     }
 
     pub fn open_detail(&self, content_type: String, id: String) {
-        if self.tx.send(Msg::OpenDetail { content_type, id }).is_err() {
-            warn!("the shell thread has stopped");
-        }
+        self.post(Msg::OpenDetail { content_type, id });
     }
 
     pub fn close_detail(&self) {
@@ -479,9 +477,7 @@ impl Cineo {
             return;
         };
         self.stop_auto_subtitle();
-        if self.tx.send(Msg::LoadSubtitle(url)).is_err() {
-            warn!("the shell thread has stopped");
-        }
+        self.post(Msg::LoadSubtitle(url));
     }
 
     pub fn attach_surface(&self, wid: i64) {
@@ -620,16 +616,18 @@ impl Cineo {
         }))
     }
 
-    fn send(&self, action: Action) {
-        if self.tx.send(Msg::Action(action)).is_err() {
+    fn post(&self, msg: Msg) {
+        if self.tx.send(msg).is_err() {
             warn!("the shell thread has stopped");
         }
     }
 
+    fn send(&self, action: Action) {
+        self.post(Msg::Action(action));
+    }
+
     fn filter(&self, change: FilterChange) {
-        if self.tx.send(Msg::Filter(change)).is_err() {
-            warn!("the shell thread has stopped");
-        }
+        self.post(Msg::Filter(change));
     }
 
     fn command(&self, command: PlayerCommand) {

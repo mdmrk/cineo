@@ -34,10 +34,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -307,13 +307,10 @@ private fun NextEpisode(
     val notice = remember(next.title) { NoticeClock() }
     var requested by remember(next.title) { mutableStateOf(false) }
     val remaining = status.durationS - status.positionS
-    if (!status.loaded || status.durationS <= 0.0 || remaining <= 0.0 || remaining > noticeS) {
-        notice.shownAt = null
-        return
-    }
-    if (dismissed) return
-    val since = notice.shownAt?.takeIf { it <= status.positionS } ?: status.positionS
-    notice.shownAt = since
+    val inNotice = status.loaded && status.durationS > 0.0 && remaining > 0.0 && remaining <= noticeS
+    val since = if (inNotice) notice.shownAt?.takeIf { it <= status.positionS } ?: status.positionS else null
+    SideEffect { notice.shownAt = since }
+    if (since == null || dismissed) return
     val left = (AUTO_NEXT_S - (status.positionS - since)).coerceAtLeast(0.0)
     LaunchedEffect(auto, left <= 0.0) {
         if (auto && left <= 0.0 && !requested) {

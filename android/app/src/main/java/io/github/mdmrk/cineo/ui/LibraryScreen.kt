@@ -1,6 +1,5 @@
 package io.github.mdmrk.cineo.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,8 +21,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,20 +31,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,15 +82,7 @@ fun LibraryScreen(view: AppView?, images: Images, actions: LibraryActions, paddi
                         stringResource(R.string.recently_played) to recent.size,
                         stringResource(R.string.favourites) to favorites.size,
                     ).forEachIndexed { index, (label, count) ->
-                        FilterChip(
-                            selected = tab == index,
-                            onClick = { tab = index },
-                            label = { Text(if (count > 0) "$label · $count" else label) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Brand.Accent,
-                                selectedLabelColor = Brand.OnAccent,
-                            ),
-                        )
+                        Chip(if (count > 0) "$label · $count" else label, tab == index) { tab = index }
                     }
                 }
             }

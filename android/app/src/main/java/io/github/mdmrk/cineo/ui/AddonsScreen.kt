@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -110,15 +108,10 @@ fun AddonsScreen(view: AppView?, images: Images, cineo: Cineo, padding: PaddingV
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(lists, key = { it.key }) { entry ->
-                            FilterChip(
-                                selected = entry.key == list.key,
-                                onClick = { selected = entry.key },
-                                label = { Text(if (severalAddons) "${entry.name} · ${entry.addonName}" else entry.name) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Brand.Accent,
-                                    selectedLabelColor = Brand.OnAccent,
-                                ),
-                            )
+                            Chip(
+                                if (severalAddons) "${entry.name} · ${entry.addonName}" else entry.name,
+                                entry.key == list.key,
+                            ) { selected = entry.key }
                         }
                     }
                 }

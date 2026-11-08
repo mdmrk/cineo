@@ -15,12 +15,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -29,8 +27,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,7 +42,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -345,20 +340,11 @@ private fun EpisodesHeader(seasons: List<Int>, season: Int?, onSeason: (Int) -> 
         if (seasons.size > 1) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(seasons) { number ->
-                    FilterChip(
-                        selected = number == season,
-                        onClick = { onSeason(number) },
-                        label = {
-                            Text(
-                                if (number == 0) stringResource(R.string.specials)
-                                else stringResource(R.string.season, number),
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Brand.Accent,
-                            selectedLabelColor = Brand.OnAccent,
-                        ),
-                    )
+                    Chip(
+                        if (number == 0) stringResource(R.string.specials)
+                        else stringResource(R.string.season, number),
+                        number == season,
+                    ) { onSeason(number) }
                 }
             }
         }
@@ -529,19 +515,6 @@ private fun sortLabel(sort: StreamSort): Int = when (sort) {
     StreamSort.QUALITY -> R.string.sort_quality
     StreamSort.SEEDERS -> R.string.sort_seeders
     StreamSort.SIZE -> R.string.sort_size
-}
-
-@Composable
-private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = Brand.Accent,
-            selectedLabelColor = Brand.OnAccent,
-        ),
-    )
 }
 
 @Composable
