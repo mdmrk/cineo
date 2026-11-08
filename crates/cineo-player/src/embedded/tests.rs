@@ -106,6 +106,14 @@ fn commands_are_built_from_typed_values() {
         Some("set pause no")
     );
     assert_eq!(
+        args(PlayerCommand::SetMute(true)).as_deref(),
+        Some("set mute yes")
+    );
+    assert_eq!(
+        args(PlayerCommand::SetMute(false)).as_deref(),
+        Some("set mute no")
+    );
+    assert_eq!(
         args(PlayerCommand::SeekTo(61.5)).as_deref(),
         Some("seek 61.500 absolute")
     );

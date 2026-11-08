@@ -42,6 +42,7 @@ pub enum PlayerCommand {
     SeekBy(f64),
     SetVolume(f64),
     ToggleMute,
+    SetMute(bool),
     SetAudio(Option<i64>),
     SetSubtitle(Option<i64>),
     SetSubtitleDelay(f64),
@@ -628,6 +629,11 @@ fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
         | PlayerCommand::SetVolume(_)
         | PlayerCommand::SetSubtitleDelay(_) => return None,
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],
+        PlayerCommand::SetMute(muted) => vec![
+            "set".into(),
+            "mute".into(),
+            if muted { "yes" } else { "no" }.into(),
+        ],
         PlayerCommand::SetAudio(id) => vec!["set".into(), "aid".into(), track(id)],
         PlayerCommand::SetSubtitle(id) => vec!["set".into(), "sid".into(), track(id)],
         PlayerCommand::Stop => vec!["quit".into()],

@@ -470,7 +470,7 @@ impl CineoApp {
         let Some(embedded) = &self.playback else {
             return;
         };
-        if let Some(command) = remote_command(remote, embedded.player.status().paused) {
+        for command in remote_commands(remote, &embedded.player.status()) {
             embedded.player.send(command);
         }
     }
@@ -765,16 +765,23 @@ fn window_title(playing: Option<&str>) -> String {
     }
 }
 
-fn remote_command(remote: Remote, paused: bool) -> Option<PlayerCommand> {
+fn remote_commands(remote: Remote, status: &Status) -> Vec<PlayerCommand> {
+    let length = status.duration_s;
     match remote {
-        Remote::PlayPause => Some(PlayerCommand::TogglePause),
-        Remote::Play if paused => Some(PlayerCommand::TogglePause),
-        Remote::Pause if !paused => Some(PlayerCommand::TogglePause),
-        Remote::Stop => Some(PlayerCommand::Stop),
-        Remote::SeekBy(seconds) => Some(PlayerCommand::SeekBy(seconds)),
-        Remote::SeekTo(seconds) => Some(PlayerCommand::SeekTo(seconds)),
-        Remote::SetVolume(percent) => Some(PlayerCommand::SetVolume(percent)),
-        Remote::Play | Remote::Pause | Remote::Raise => None,
+        Remote::PlayPause => vec![PlayerCommand::TogglePause],
+        Remote::Play => vec![PlayerCommand::SetPause(false)],
+        Remote::Pause => vec![PlayerCommand::SetPause(true)],
+        Remote::Stop => vec![PlayerCommand::Stop],
+        Remote::SeekBy(seconds) if length > 0.0 => vec![PlayerCommand::SeekBy(seconds)],
+        Remote::SeekTo(seconds) if length > 0.0 && (0.0..=length).contains(&seconds) => {
+            vec![PlayerCommand::SeekTo(seconds)]
+        }
+        Remote::SetVolume(percent) if status.muted && percent > 0.0 => vec![
+            PlayerCommand::SetMute(false),
+            PlayerCommand::SetVolume(percent),
+        ],
+        Remote::SetVolume(percent) => vec![PlayerCommand::SetVolume(percent)],
+        Remote::SeekBy(_) | Remote::SeekTo(_) | Remote::Raise => Vec::new(),
     }
 }
 
@@ -936,30 +943,69 @@ mod tests {
 
     #[test]
     fn media_keys_become_player_commands() {
-        let toggle = Some(PlayerCommand::TogglePause);
+        let video = Status {
+            duration_s: 600.0,
+            ..Status::default()
+        };
+        let one = |remote| super::remote_commands(remote, &video);
+        assert_eq!(one(Remote::PlayPause), [PlayerCommand::TogglePause]);
+        assert_eq!(one(Remote::Stop), [PlayerCommand::Stop]);
+        assert_eq!(one(Remote::Raise), []);
+        assert_eq!(one(Remote::SeekBy(-5.0)), [PlayerCommand::SeekBy(-5.0)]);
+        assert_eq!(one(Remote::SeekTo(90.0)), [PlayerCommand::SeekTo(90.0)]);
+        assert_eq!(
+            one(Remote::SetVolume(50.0)),
+            [PlayerCommand::SetVolume(50.0)]
+        );
+    }
+
+    #[test]
+    fn repeated_play_or_pause_requests_cannot_undo_each_other() {
         for paused in [false, true] {
-            assert_eq!(remote_command(Remote::PlayPause, paused), toggle);
+            let status = Status {
+                paused,
+                ..Status::default()
+            };
             assert_eq!(
-                remote_command(Remote::Stop, paused),
-                Some(PlayerCommand::Stop)
-            );
-            assert_eq!(remote_command(Remote::Raise, paused), None);
-            assert_eq!(
-                remote_command(Remote::SeekBy(-5.0), paused),
-                Some(PlayerCommand::SeekBy(-5.0))
+                super::remote_commands(Remote::Pause, &status),
+                [PlayerCommand::SetPause(true)]
             );
             assert_eq!(
-                remote_command(Remote::SeekTo(90.0), paused),
-                Some(PlayerCommand::SeekTo(90.0))
-            );
-            assert_eq!(
-                remote_command(Remote::SetVolume(50.0), paused),
-                Some(PlayerCommand::SetVolume(50.0))
+                super::remote_commands(Remote::Play, &status),
+                [PlayerCommand::SetPause(false)]
             );
         }
-        assert_eq!(remote_command(Remote::Play, true), toggle);
-        assert_eq!(remote_command(Remote::Play, false), None, "already playing");
-        assert_eq!(remote_command(Remote::Pause, false), toggle);
-        assert_eq!(remote_command(Remote::Pause, true), None, "already paused");
+    }
+
+    #[test]
+    fn a_remote_seek_must_fit_a_video_of_known_length() {
+        let video = Status {
+            duration_s: 600.0,
+            ..Status::default()
+        };
+        assert_eq!(super::remote_commands(Remote::SeekTo(601.0), &video), []);
+        assert_eq!(super::remote_commands(Remote::SeekTo(-1.0), &video), []);
+        let live = Status::default();
+        assert_eq!(super::remote_commands(Remote::SeekTo(10.0), &live), []);
+        assert_eq!(super::remote_commands(Remote::SeekBy(10.0), &live), []);
+    }
+
+    #[test]
+    fn raising_the_volume_from_the_desktop_unmutes() {
+        let muted = Status {
+            muted: true,
+            ..Status::default()
+        };
+        assert_eq!(
+            super::remote_commands(Remote::SetVolume(50.0), &muted),
+            [
+                PlayerCommand::SetMute(false),
+                PlayerCommand::SetVolume(50.0)
+            ]
+        );
+        assert_eq!(
+            super::remote_commands(Remote::SetVolume(0.0), &muted),
+            [PlayerCommand::SetVolume(0.0)]
+        );
     }
 }
