@@ -39,6 +39,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -435,7 +436,7 @@ private fun clock(seconds: Double): String {
 
 @Composable
 private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, onDone: () -> Unit) {
-    var width by remember { mutableStateOf(1) }
+    var width by remember { mutableIntStateOf(1) }
     val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
     val latestDuration by rememberUpdatedState(duration)
     val seekable = duration > 0f

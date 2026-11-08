@@ -20,6 +20,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.mdmrk.cineo.rust.PosterView
 import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.SearchScreen
@@ -116,7 +117,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 BackHandler(enabled = page != Page.HOME) { page = Page.HOME }
                                 Pages(page, { page = it }) { padding ->
-                                    val open = { poster: io.github.mdmrk.cineo.rust.PosterView ->
+                                    val open = { poster: PosterView ->
                                         cineo.openDetail(poster.contentType, poster.id)
                                     }
                                     savedPages.SaveableStateProvider(page.name) {

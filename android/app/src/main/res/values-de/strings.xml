@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">Ungültige Add-on-URL: %1$s</string>
     <string name="problem_no_meta">Kein installiertes Add-on liefert Details zu diesem Eintrag</string>
     <string name="problem_unsupported_filter">Dieser Katalog unterstützt diesen Filter nicht</string>
-    <string name="notice_addon_unavailable">Ein Add-on konnte nicht geladen werden: %1$s</string>
     <string name="notice_unsupported_scheme">Nicht unterstütztes Stream-Schema `%1$s`</string>
     <string name="notice_torrents_off">Torrent-Streams sind in den Einstellungen ausgeschaltet</string>
     <string name="notice_unsupported_source">%1$s-Streams werden noch nicht unterstützt</string>
-    <string name="notice_torrent_failed">Der Torrent konnte nicht abgespielt werden: %1$s</string>
-    <string name="notice_pick_another">Der letzte Stream konnte nicht abgespielt werden, wähle einen anderen. %1$s</string>
     <string name="notice_engine_address">Die Torrent-Engine hat eine unerwartete Adresse geliefert</string>
-    <string name="notice_subtitle_failed">Der Untertitel konnte nicht geladen werden: %1$s</string>
-    <string name="notice_save_failed">Änderungen konnten nicht gespeichert werden: %1$s</string>
     <string name="notice_store_closed">Änderungen können nicht mehr gespeichert werden</string>
     <string name="notice_invalid_link">Dieser Link kann von Cineo nicht geöffnet werden</string>
     <string name="source_http">HTTP</string>

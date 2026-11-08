@@ -35,15 +35,10 @@
     <string name="problem_invalid_url">Invalid addon URL: %1$s</string>
     <string name="problem_no_meta">No installed addon provides details for this item</string>
     <string name="problem_unsupported_filter">This catalog does not support that filter</string>
-    <string name="notice_addon_unavailable">An addon could not be loaded: %1$s</string>
     <string name="notice_unsupported_scheme">Unsupported stream scheme `%1$s`</string>
     <string name="notice_torrents_off">Torrent streams are turned off in Settings</string>
     <string name="notice_unsupported_source">%1$s streams are not supported yet</string>
-    <string name="notice_torrent_failed">The torrent could not be played: %1$s</string>
-    <string name="notice_pick_another">The last stream could not be played, pick another one. %1$s</string>
     <string name="notice_engine_address">The torrent engine returned an unexpected address</string>
-    <string name="notice_subtitle_failed">Could not load the subtitle: %1$s</string>
-    <string name="notice_save_failed">Could not save changes: %1$s</string>
     <string name="notice_store_closed">Changes can no longer be saved</string>
     <string name="notice_invalid_link">That link cannot be opened by Cineo</string>
     <string name="source_http">HTTP</string>

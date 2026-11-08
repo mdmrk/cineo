@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">URL de add-on no válida: %1$s</string>
     <string name="problem_no_meta">Ningún add-on instalado ofrece detalles de este elemento</string>
     <string name="problem_unsupported_filter">Este catálogo no admite ese filtro</string>
-    <string name="notice_addon_unavailable">No se pudo cargar un add-on: %1$s</string>
     <string name="notice_unsupported_scheme">Esquema de transmisión no compatible: `%1$s`</string>
     <string name="notice_torrents_off">Las transmisiones torrent están desactivadas en Configuración</string>
     <string name="notice_unsupported_source">Las transmisiones de tipo %1$s aún no son compatibles</string>
-    <string name="notice_torrent_failed">No se pudo reproducir el torrent: %1$s</string>
-    <string name="notice_pick_another">No se pudo reproducir la última transmisión, elige otra. %1$s</string>
     <string name="notice_engine_address">El motor de torrents devolvió una dirección inesperada</string>
-    <string name="notice_subtitle_failed">No se pudo cargar el subtítulo: %1$s</string>
-    <string name="notice_save_failed">No se pudieron guardar los cambios: %1$s</string>
     <string name="notice_store_closed">Los cambios ya no se pueden guardar</string>
     <string name="notice_invalid_link">Cineo no puede abrir ese enlace</string>
     <string name="source_http">HTTP</string>

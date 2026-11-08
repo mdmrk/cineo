@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">Неверный URL аддона: %1$s</string>
     <string name="problem_no_meta">Ни один установленный аддон не предоставляет сведения об этом элементе</string>
     <string name="problem_unsupported_filter">Этот каталог не поддерживает такой фильтр</string>
-    <string name="notice_addon_unavailable">Не удалось загрузить аддон: %1$s</string>
     <string name="notice_unsupported_scheme">Неподдерживаемая схема потока `%1$s`</string>
     <string name="notice_torrents_off">Торрент-потоки отключены в настройках</string>
     <string name="notice_unsupported_source">Потоки типа «%1$s» пока не поддерживаются</string>
-    <string name="notice_torrent_failed">Не удалось воспроизвести торрент: %1$s</string>
-    <string name="notice_pick_another">Не удалось воспроизвести последний поток, выберите другой. %1$s</string>
     <string name="notice_engine_address">Торрент-движок вернул неожиданный адрес</string>
-    <string name="notice_subtitle_failed">Не удалось загрузить субтитры: %1$s</string>
-    <string name="notice_save_failed">Не удалось сохранить изменения: %1$s</string>
     <string name="notice_store_closed">Изменения больше не могут быть сохранены</string>
     <string name="notice_invalid_link">Cineo не может открыть эту ссылку</string>
     <string name="source_http">HTTP</string>

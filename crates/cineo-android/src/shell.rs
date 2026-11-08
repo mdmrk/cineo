@@ -255,6 +255,12 @@ struct Subtitles {
     auto: Vec<Language>,
 }
 
+impl Screen {
+    fn take_player(&mut self) -> (Option<Box<dyn Playback>>, Option<Subtitles>) {
+        (self.playback.take(), self.subtitles.take())
+    }
+}
+
 fn lock(screen: &Mutex<Screen>) -> MutexGuard<'_, Screen> {
     screen.lock().unwrap_or_else(PoisonError::into_inner)
 }
@@ -397,10 +403,9 @@ impl Cineo {
     }
 
     pub fn stop_playback(&self) {
-        if lock(&self.screen).playback.is_some() {
-            self.command(PlayerCommand::Stop);
-        } else {
-            self.send(Action::PlaybackStopped);
+        match &lock(&self.screen).playback {
+            Some(playback) => playback.send(PlayerCommand::Stop),
+            None => self.send(Action::PlaybackStopped),
         }
     }
 
@@ -512,21 +517,19 @@ impl Cineo {
         let url = Url::parse(&url).map_err(|err| ImageError::InvalidUrl {
             reason: err.to_string(),
         })?;
-        let runtime = self.runtime.as_ref().ok_or_else(|| ImageError::Fetch {
-            reason: "the runtime has stopped".into(),
-        })?;
+        let failed = |reason: String| ImageError::Fetch { reason };
+        let runtime = self
+            .runtime
+            .as_ref()
+            .ok_or_else(|| failed("the runtime has stopped".into()))?;
         let client = self.client.clone();
         let task = runtime
             .handle()
             .spawn(async move { client.fetch_image(&url, MAX_IMAGE_BYTES).await });
         let _abort = AbortOnDrop(task.abort_handle());
         match task.await {
-            Ok(result) => result.map_err(|err| ImageError::Fetch {
-                reason: err.to_string(),
-            }),
-            Err(err) => Err(ImageError::Fetch {
-                reason: err.to_string(),
-            }),
+            Ok(result) => result.map_err(|err| failed(err.to_string())),
+            Err(err) => Err(failed(err.to_string())),
         }
     }
 }
@@ -651,10 +654,7 @@ impl Drop for Cineo {
         {
             error!("the shell thread panicked");
         }
-        let finished = {
-            let mut screen = lock(&self.screen);
-            (screen.playback.take(), screen.subtitles.take())
-        };
+        let finished = lock(&self.screen).take_player();
         drop(finished);
         if let Some(runtime) = self.runtime.take() {
             runtime.shutdown_background();
@@ -794,7 +794,7 @@ impl Shell {
             if let Some(forward) = screen.forward.take() {
                 forward.abort();
             }
-            (screen.playback.take(), screen.subtitles.take())
+            screen.take_player()
         };
         drop(old);
         match self.players.start(request) {
@@ -901,7 +901,7 @@ impl Shell {
             let mut screen = lock(&self.screen);
             let finished = if self.state.playing.is_none() {
                 screen.art = None;
-                (screen.playback.take(), screen.subtitles.take())
+                screen.take_player()
             } else {
                 if let Some(subtitles) = &mut screen.subtitles
                     && subtitles.groups != self.state.subtitles

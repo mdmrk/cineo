@@ -1307,8 +1307,6 @@ async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
             (four_k.resolution, four_k.tier, four_k.flags.clone()),
             (Resolution::Uhd, Tier::Ultra, vec!["HDR".to_owned()])
         );
-        assert_eq!(streams[2].seeders, Some(40));
-        assert_eq!(streams[0].size, Some(734_003_200));
 
         cineo.set_stream_sort(StreamSort::Seeders);
         wait_for(&views, |v| order(v).0 == [3, 2, 0, 1]);

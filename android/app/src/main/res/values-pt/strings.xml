@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">URL de complemento inválida: %1$s</string>
     <string name="problem_no_meta">Nenhum complemento instalado oferece detalhes para este item</string>
     <string name="problem_unsupported_filter">Este catálogo não aceita esse filtro</string>
-    <string name="notice_addon_unavailable">Não foi possível carregar um complemento: %1$s</string>
     <string name="notice_unsupported_scheme">Esquema de stream não suportado `%1$s`</string>
     <string name="notice_torrents_off">Os streams torrent estão desativados nas Configurações</string>
     <string name="notice_unsupported_source">Streams %1$s ainda não são suportados</string>
-    <string name="notice_torrent_failed">Não foi possível reproduzir o torrent: %1$s</string>
-    <string name="notice_pick_another">Não foi possível reproduzir o último stream, escolha outro. %1$s</string>
     <string name="notice_engine_address">O mecanismo de torrent retornou um endereço inesperado</string>
-    <string name="notice_subtitle_failed">Não foi possível carregar a legenda: %1$s</string>
-    <string name="notice_save_failed">Não foi possível salvar as alterações: %1$s</string>
     <string name="notice_store_closed">As alterações não podem mais ser salvas</string>
     <string name="notice_invalid_link">Esse link não pode ser aberto pelo Cineo</string>
     <string name="source_http">HTTP</string>

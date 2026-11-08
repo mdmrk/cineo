@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -68,8 +69,12 @@ private fun decode(bytes: ByteArray, width: Int): Decoded<ImageBitmap>? {
     while (bounds.outWidth / (sample * 2) >= width) sample *= 2
     val options = BitmapFactory.Options().apply { inSampleSize = sample }
     val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap() ?: return null
+    image.prepareToDraw()
     return Decoded(image, image.width, full = sample == 1)
 }
+
+@Composable
+fun windowWidth(): Dp = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() }
 
 @Composable
 fun NetImage(

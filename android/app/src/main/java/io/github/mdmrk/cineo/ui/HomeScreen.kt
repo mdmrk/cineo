@@ -50,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -120,7 +119,7 @@ fun HomeScreen(
 
 @Composable
 private fun Featured(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
-    val width = LocalConfiguration.current.screenWidthDp.dp
+    val width = windowWidth()
     Box(Modifier.fillMaxWidth().aspectRatio(0.78f).clickable { onOpen(item) }) {
         Placeholder(Modifier.fillMaxSize())
         NetImage(images, item.background, width * 2, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)

@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">URL d\'extension non valide : %1$s</string>
     <string name="problem_no_meta">Aucune extension installée ne fournit de détails pour cet élément</string>
     <string name="problem_unsupported_filter">Ce catalogue ne prend pas en charge ce filtre</string>
-    <string name="notice_addon_unavailable">Une extension n\'a pas pu être chargée : %1$s</string>
     <string name="notice_unsupported_scheme">Schéma de flux non pris en charge `%1$s`</string>
     <string name="notice_torrents_off">Les flux torrent sont désactivés dans les Réglages</string>
     <string name="notice_unsupported_source">Les flux %1$s ne sont pas encore pris en charge</string>
-    <string name="notice_torrent_failed">Le torrent n\'a pas pu être lu : %1$s</string>
-    <string name="notice_pick_another">Le dernier flux n\'a pas pu être lu, choisissez-en un autre. %1$s</string>
     <string name="notice_engine_address">Le moteur torrent a renvoyé une adresse inattendue</string>
-    <string name="notice_subtitle_failed">Impossible de charger le sous-titre : %1$s</string>
-    <string name="notice_save_failed">Impossible d\'enregistrer les modifications : %1$s</string>
     <string name="notice_store_closed">Les modifications ne peuvent plus être enregistrées</string>
     <string name="notice_invalid_link">Ce lien ne peut pas être ouvert par Cineo</string>
     <string name="source_http">HTTP</string>

@@ -100,7 +100,6 @@ pub enum TorrentView {
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DetailView {
-    pub content_type: String,
     pub id: String,
     pub name: Option<String>,
     pub favorite: bool,
@@ -216,8 +215,6 @@ pub struct StreamView {
     pub description: Option<String>,
     pub kind: SourceKind,
     pub quality: Option<QualityView>,
-    pub seeders: Option<u64>,
-    pub size: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -282,7 +279,6 @@ pub enum AddonListItems {
 pub struct ListedAddonView {
     pub transport: String,
     pub name: String,
-    pub version: String,
     pub description: Option<String>,
     pub logo: Option<String>,
     pub installed: bool,
@@ -300,18 +296,11 @@ pub enum InstallView {
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum ProblemView {
     AlreadyInstalled,
-    ConfigurationRequired {
-        transport: String,
-        configure_url: String,
-    },
-    InvalidAddonUrl {
-        reason: String,
-    },
+    ConfigurationRequired { configure_url: String },
+    InvalidAddonUrl { reason: String },
     NoMetaAddon,
     UnsupportedFilter,
-    Request {
-        reason: String,
-    },
+    Request { reason: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -653,7 +642,6 @@ fn detail(
         preview.and_then(pick).map(ToString::to_string)
     };
     DetailView {
-        content_type: detail.content_type.to_string(),
         id: detail.id.clone(),
         name: preview.map(|p| p.name.clone()),
         favorite: library.iter().any(|i| i.id == detail.id && i.is_favorite()),
@@ -783,8 +771,6 @@ fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
             tier: q.tier(),
             flags: q.flags.iter().map(|f| (*f).to_owned()).collect(),
         }),
-        seeders: facts.seeders,
-        size: facts.size,
     }
 }
 
@@ -825,7 +811,6 @@ fn listed_addon(addon: &AddonDescriptor, installed: &[TransportUrl]) -> ListedAd
     ListedAddonView {
         transport: addon.transport.to_string(),
         name: manifest.name.clone(),
-        version: manifest.version.to_string(),
         description: manifest.description.clone(),
         logo: manifest.logo.as_ref().map(ToString::to_string),
         installed: installed.contains(&addon.transport),
@@ -877,7 +862,6 @@ fn problem_view(problem: &Problem) -> ProblemView {
     match problem {
         Problem::AlreadyInstalled => ProblemView::AlreadyInstalled,
         Problem::ConfigurationRequired(transport) => ProblemView::ConfigurationRequired {
-            transport: transport.to_string(),
             configure_url: transport.configure_url().to_string(),
         },
         Problem::InvalidAddonUrl(reason) => ProblemView::InvalidAddonUrl {

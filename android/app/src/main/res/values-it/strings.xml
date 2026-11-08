@@ -26,15 +26,10 @@
     <string name="problem_invalid_url">URL dell\'add-on non valido: %1$s</string>
     <string name="problem_no_meta">Nessun add-on installato fornisce i dettagli di questo elemento</string>
     <string name="problem_unsupported_filter">Questo catalogo non supporta quel filtro</string>
-    <string name="notice_addon_unavailable">Impossibile caricare un add-on: %1$s</string>
     <string name="notice_unsupported_scheme">Schema di flusso non supportato `%1$s`</string>
     <string name="notice_torrents_off">I flussi torrent sono disattivati nelle Impostazioni</string>
     <string name="notice_unsupported_source">I flussi %1$s non sono ancora supportati</string>
-    <string name="notice_torrent_failed">Impossibile riprodurre il torrent: %1$s</string>
-    <string name="notice_pick_another">Impossibile riprodurre l\'ultimo flusso, scegline un altro. %1$s</string>
     <string name="notice_engine_address">Il motore torrent ha restituito un indirizzo inatteso</string>
-    <string name="notice_subtitle_failed">Impossibile caricare i sottotitoli: %1$s</string>
-    <string name="notice_save_failed">Impossibile salvare le modifiche: %1$s</string>
     <string name="notice_store_closed">Le modifiche non possono più essere salvate</string>
     <string name="notice_invalid_link">Cineo non può aprire quel link</string>
     <string name="source_http">HTTP</string>

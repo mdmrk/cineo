@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,10 +55,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import io.github.mdmrk.cineo.R
+import kotlinx.coroutines.delay
 import io.github.mdmrk.cineo.rust.DetailView
 import io.github.mdmrk.cineo.rust.LibraryItemView
 import io.github.mdmrk.cineo.rust.MetaStatus
-import io.github.mdmrk.cineo.rust.NoticeView
 import io.github.mdmrk.cineo.rust.SourceKind
 import io.github.mdmrk.cineo.rust.StreamItems
 import io.github.mdmrk.cineo.rust.StreamView
@@ -124,11 +124,7 @@ fun DetailScreen(
             }
             if (detail.streams.isEmpty()) {
                 section("no-streams") {
-                    Text(
-                        stringResource(R.string.streams_unavailable),
-                        color = Brand.TextDim,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                    Note(stringResource(R.string.streams_unavailable))
                 }
             }
             detail.streams.forEachIndexed { groupIndex, group ->
@@ -145,29 +141,17 @@ fun DetailScreen(
                         Placeholder(Modifier.padding(top = SectionGap).padding(horizontal = 16.dp).fillMaxWidth().height(64.dp).clip(Rounded))
                     }
                     is StreamItems.Failed -> section("failed-$groupIndex") {
-                        Text(
-                            problemText(items.problem),
-                            color = Brand.TextDim,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
+                        Note(problemText(items.problem))
                     }
                     is StreamItems.Ready -> {
                         if (items.streams.isEmpty()) {
                             section("empty-$groupIndex") {
-                                Text(
-                                    stringResource(R.string.streams_empty),
-                                    color = Brand.TextDim,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                )
+                                Note(stringResource(R.string.streams_empty))
                             }
                         }
                         if (items.streams.isNotEmpty() && items.order.isEmpty() && items.hidden.toInt() < items.streams.size) {
                             section("no-match-$groupIndex") {
-                                Text(
-                                    stringResource(R.string.streams_no_match),
-                                    color = Brand.TextDim,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                )
+                                Note(stringResource(R.string.streams_no_match))
                             }
                         }
                         items(items.order, key = { "stream-$groupIndex-$it" }) { index ->
@@ -215,6 +199,11 @@ private fun LazyListScope.section(key: String, content: @Composable () -> Unit) 
 }
 
 @Composable
+private fun Note(text: String) {
+    Text(text, color = Brand.TextDim, modifier = Modifier.padding(horizontal = 16.dp))
+}
+
+@Composable
 private fun RoundButton(icon: Icon, filled: Boolean, tint: Color, label: String, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
@@ -230,7 +219,7 @@ private val PosterWidth = 120.dp
 
 @Composable
 private fun Header(detail: DetailView, images: Images) {
-    val width = LocalConfiguration.current.screenWidthDp.dp
+    val width = windowWidth()
     var expanded by rememberSaveable(detail.id) { mutableStateOf(false) }
     val background = detail.background
     Box(Modifier.fillMaxWidth()) {
@@ -424,7 +413,7 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
                     quality.flags.forEach { Badge(it, Brand.TextDim, Brand.Surface) }
                 }
             }
-            val text = if (playable) stream.description else noticeText(NoticeView.UnsupportedSource(stream.kind))
+            val text = if (playable) stream.description else unsupportedSourceText(stream.kind)
             text?.let {
                 Text(
                     it,
@@ -446,6 +435,8 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
     }
 }
 
+private const val STREAM_SEARCH_DELAY_MS = 200L
+
 class StreamFilterActions(
     val query: (String) -> Unit,
     val quality: (Resolution?) -> Unit,
@@ -457,22 +448,24 @@ class StreamFilterActions(
 private fun StreamFilters(detail: DetailView, actions: StreamFilterActions) {
     val filter = detail.filter
     var query by rememberSaveable(detail.id) { mutableStateOf(filter.query) }
+    LaunchedEffect(query) {
+        if (query != filter.query) {
+            delay(STREAM_SEARCH_DELAY_MS)
+            actions.query(query)
+        }
+    }
     val groups = detail.streams.withIndex().filter { (_, g) -> (g.items as? StreamItems.Ready)?.streams?.isNotEmpty() == true }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         CineoField(
             value = query,
-            onValueChange = {
-                query = it
-                actions.query(it)
-            },
+            onValueChange = { query = it },
             placeholder = stringResource(R.string.streams_search),
             leading = Icon.SEARCH,
             trailing = if (query.isEmpty()) null else {
                 {
-                    IconButton(onClick = {
-                        query = ""
-                        actions.query("")
-                    }) { CineoIcon(Icon.X, tint = Brand.TextDim, label = stringResource(R.string.clear)) }
+                    IconButton(onClick = { query = "" }) {
+                        CineoIcon(Icon.X, tint = Brand.TextDim, label = stringResource(R.string.clear))
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),

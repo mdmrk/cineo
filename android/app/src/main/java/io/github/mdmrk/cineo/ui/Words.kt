@@ -20,25 +20,8 @@ fun problemText(problem: ProblemView): String = when (problem) {
 }
 
 @Composable
-fun noticeText(notice: NoticeView): String = when (notice) {
-    is NoticeView.AddonUnavailable -> stringResource(R.string.notice_addon_unavailable, notice.reason)
-    is NoticeView.UnsupportedScheme -> stringResource(R.string.notice_unsupported_scheme, notice.scheme)
-    is NoticeView.TorrentsOff -> stringResource(R.string.notice_torrents_off)
-    is NoticeView.UnsupportedSource ->
-        stringResource(R.string.notice_unsupported_source, sourceName(notice.kind))
-    is NoticeView.PlaybackFailed -> {
-        val reason = when (val failure = notice.failure) {
-            is PlaybackFailureView.Player -> failure.reason
-            is PlaybackFailureView.Torrent -> stringResource(R.string.notice_torrent_failed, failure.reason)
-        }
-        if (notice.pickAnother) stringResource(R.string.notice_pick_another, reason) else reason
-    }
-    is NoticeView.UnexpectedEngineAddress -> stringResource(R.string.notice_engine_address)
-    is NoticeView.SubtitleFailed -> stringResource(R.string.notice_subtitle_failed, notice.reason)
-    is NoticeView.SaveFailed -> stringResource(R.string.notice_save_failed, notice.reason)
-    is NoticeView.StoreClosed -> stringResource(R.string.notice_store_closed)
-    is NoticeView.InvalidLink -> stringResource(R.string.notice_invalid_link)
-}
+fun unsupportedSourceText(kind: SourceKind): String =
+    stringResource(R.string.notice_unsupported_source, sourceName(kind))
 
 @Composable
 private fun sourceName(kind: SourceKind): String = stringResource(
@@ -68,6 +51,9 @@ fun catalogTitle(row: RowView): String {
 @Composable
 fun noticeParts(notice: NoticeView): Pair<String, String?> = when (notice) {
     is NoticeView.AddonUnavailable -> stringResource(R.string.notice_addon_unavailable_short) to notice.reason
+    is NoticeView.UnsupportedScheme -> stringResource(R.string.notice_unsupported_scheme, notice.scheme) to null
+    is NoticeView.TorrentsOff -> stringResource(R.string.notice_torrents_off) to null
+    is NoticeView.UnsupportedSource -> unsupportedSourceText(notice.kind) to null
     is NoticeView.PlaybackFailed -> {
         val title = when {
             notice.pickAnother -> R.string.notice_pick_another_short
@@ -80,7 +66,9 @@ fun noticeParts(notice: NoticeView): Pair<String, String?> = when (notice) {
         }
         stringResource(title) to reason
     }
+    is NoticeView.UnexpectedEngineAddress -> stringResource(R.string.notice_engine_address) to null
     is NoticeView.SubtitleFailed -> stringResource(R.string.notice_subtitle_failed_short) to notice.reason
     is NoticeView.SaveFailed -> stringResource(R.string.notice_save_failed_short) to notice.reason
-    else -> noticeText(notice) to null
+    is NoticeView.StoreClosed -> stringResource(R.string.notice_store_closed) to null
+    is NoticeView.InvalidLink -> stringResource(R.string.notice_invalid_link) to null
 }
