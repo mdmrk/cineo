@@ -389,7 +389,8 @@ and result in the PR.
   Release builds strip symbols and abort on panic (`panic = "abort"`), so a
   panic anywhere, including a background task, closes the app and its
   backtrace shows addresses only; reproduce with a debug build to get
-  function names.
+  function names. Each panic also adds a line to `<data dir>/panic.log` with
+  its location, without its message.
 - Use a throwaway data directory: `--data-dir <tmp>`.
 - A stream addon that returns direct `http(s)` URLs. Without one, use this
   local addon (only for testing; the video must be a file you may use):
@@ -501,6 +502,10 @@ Re-check them when adding.
 | `librqbit` (`rust-tls`, `disable-upload`, no default features)                         | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012)                                                                                                           | Apache-2.0                           |
 | `zbus` (`default-rt`, `service`; no default features; not on Windows)                  | 6.2.1; `accesskit_unix` still pulls in 5.19.0, so both versions build until it moves to 6                                              | Keeps the screen awake during playback over the session D-Bus (desktop)                                                                         | MIT                                  |
 | `fastframe-now-playing` (git, tag; not on crates.io)                                   | 0.17.0                                                                                                                                 | Media keys and the desktop's media controls: MPRIS through `mpris-server` 0.10.0 on Linux, SMTC through `souvlaki` 0.8.3 on Windows (desktop, ADR-0031) | MIT (`mpris-server`: MPL-2.0)        |
+| `fastframe-instance` (git, tag; not on crates.io) | 0.17.0 | Hands a link from a new launch to the running window (desktop, ADR-0032) | MIT |
+| `fastframe-file` (git, tag; not on crates.io) | 0.17.0 | Replaces the bundled libmpv, the link registration entry and the torrent blocklist without leaving a half-written file (desktop, stream, ADR-0032) | MIT |
+| `fastframe-power` (git, tag; not on crates.io) | 0.17.0 | Blocks idle system sleep during playback (desktop, ADR-0032); the screen stays on through `zbus` and `keepawake` | MIT |
+| `fastframe-log` (git, tag; no default features) | 0.17.0 | Records panics in `panic.log` without their message (desktop, ADR-0032) | MIT |
 | `keepawake` (Windows only)                                                             | 0.6.1                                                                                                                                  | Keeps the screen awake during playback on Windows with `SetThreadExecutionState` (desktop, ADR-0027)                                           | MIT                                  |
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util`                | 1.12.0 / 0.1.21 / 0.1.5                                                                                                                | Loopback HTTP server for the player (stream)                                                                                                    | MIT                                  |
 | `bytes`                                                                                | 1.12.1                                                                                                                                 | Response bodies (stream)                                                                                                                        | MIT                                  |

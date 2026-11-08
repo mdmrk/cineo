@@ -54,6 +54,7 @@ fn start(cli: Cli) -> anyhow::Result<()> {
         .cache_dir
         .or_else(cineo_store::default_cache_dir)
         .unwrap_or_else(|| data_dir.join("cache"));
+    cineo_desktop::panic_log::record_panics(&data_dir);
     if let Some(link) = &cli.link
         && cineo_desktop::instance::forward(&data_dir, link)
     {

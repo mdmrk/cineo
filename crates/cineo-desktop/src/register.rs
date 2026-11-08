@@ -13,7 +13,6 @@ pub(crate) fn register() -> anyhow::Result<()> {
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".local/share")))
         .context("no home directory")?;
     let dir = data.join("applications");
-    std::fs::create_dir_all(&dir)?;
     let mimes: String = SCHEMES
         .iter()
         .map(|s| format!("x-scheme-handler/{s};"))
@@ -23,7 +22,7 @@ pub(crate) fn register() -> anyhow::Result<()> {
         desktop_quote(&exe.to_string_lossy())
     );
     let file = "cineo-links.desktop";
-    std::fs::write(dir.join(file), entry)?;
+    fastframe_file::write(&dir.join(file), entry)?;
     let _ = Command::new("update-desktop-database").arg(&dir).output();
     run(Command::new("xdg-mime")
         .arg("default")

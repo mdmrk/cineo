@@ -112,7 +112,7 @@ impl SessionPlan<'_> {
 
 fn write_blocklist(cache_dir: &Path) -> std::io::Result<Url> {
     let path = cache_dir.join("blocklist.txt");
-    std::fs::write(&path, blocklist::p2p_list())?;
+    fastframe_file::write(&path, blocklist::p2p_list())?;
     Url::from_file_path(&path).map_err(|()| std::io::Error::other("the cache path is not absolute"))
 }
 

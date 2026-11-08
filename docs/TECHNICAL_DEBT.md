@@ -279,7 +279,7 @@ Format:
 - Where: every `cfg(windows)` path (ADR-0027)
 - Gap: CI compiles and tests on `windows-latest`, and the app starts under
   wine, but no one has started it on real Windows. Playback with the embedded libmpv over the OpenGL
-  render API, `hwdec=auto-safe`, the named pipe, `reg.exe` registration,
+  render API, `hwdec=auto-safe`, the loopback link handover, `reg.exe` registration,
   SMTC, keep-awake and `install.ps1` are UNKNOWN.
 - Why: there is no Windows machine in development.
 - Instead: Windows is marked Untested in COMPATIBILITY.md.
@@ -326,8 +326,9 @@ Format:
 - Where: [keep_awake.rs](../crates/cineo-desktop/src/keep_awake.rs)
 - Gap: while a video plays, Cineo inhibits the screen saver only over the
   session D-Bus `org.freedesktop.ScreenSaver` interface. There is no
-  Wayland `idle-inhibit` and no XDG portal `Inhibit`, and nothing tests it
-  against a real desktop.
+  Wayland `idle-inhibit` and no XDG portal `Inhibit` for the screen, and
+  nothing tests it against a real desktop. `fastframe-power` only blocks idle
+  system sleep, not the screen turning off.
 - Why: the interface covers KDE Plasma and GNOME with one D-Bus call. With
   the libmpv render API, mpv does not do this itself (INFERRED).
 - Instead: on a desktop without the interface, a warning is logged and the

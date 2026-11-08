@@ -12,6 +12,7 @@ const PATH: &str = "/org/freedesktop/ScreenSaver";
 pub(crate) struct KeepAwake {
     tx: Option<Sender<bool>>,
     on: bool,
+    system: Option<fastframe_power::KeepAwake>,
 }
 
 impl KeepAwake {
@@ -26,6 +27,7 @@ impl KeepAwake {
         Self {
             tx: spawned.ok().map(|_| tx),
             on: false,
+            system: None,
         }
     }
 
@@ -34,6 +36,7 @@ impl KeepAwake {
             return;
         }
         self.on = on;
+        self.system = on.then(|| fastframe_power::KeepAwake::begin("Playing a video"));
         if let Some(tx) = &self.tx {
             let _ = tx.send(on);
         }
@@ -112,5 +115,25 @@ fn run(rx: &Receiver<bool>) {
             Ok(awake) => held = Some(awake),
             Err(err) => warn!(%err, "could not keep the screen awake"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::KeepAwake;
+
+    #[test]
+    fn the_system_stays_awake_only_while_on() {
+        let mut awake = KeepAwake::new();
+        assert!(awake.system.is_none());
+        awake.set(true);
+        assert!(
+            awake
+                .system
+                .as_ref()
+                .is_some_and(fastframe_power::KeepAwake::is_held)
+        );
+        awake.set(false);
+        assert!(awake.system.is_none());
     }
 }

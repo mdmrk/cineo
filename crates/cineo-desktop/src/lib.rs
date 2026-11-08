@@ -6,6 +6,7 @@ pub mod instance;
 mod keep_awake;
 pub mod libmpv;
 mod media_keys;
+pub mod panic_log;
 pub mod player;
 mod register;
 pub mod settings;

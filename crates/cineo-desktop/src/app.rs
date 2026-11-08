@@ -94,11 +94,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             io.gl.clone_from(&cc.get_proc_address);
             io.display = native_display(cc);
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
-            if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
+            if !instance::listen(&data_dir, move |link| {
                 let _ = tx.send(Msg::Link(link));
                 ctx.request_repaint();
             }) {
-                warn!(%err, "links from other launches will not reach this window");
+                warn!("links from other launches will not reach this window");
             }
             let mut app = CineoApp::new(
                 cc.egui_ctx.clone(),

@@ -1108,7 +1108,11 @@ dependencies = [
  "eframe",
  "egui_kittest",
  "fast_image_resize",
+ "fastframe-file",
+ "fastframe-instance",
+ "fastframe-log",
  "fastframe-now-playing",
+ "fastframe-power",
  "iconflow",
  "image",
  "keepawake",
@@ -1170,6 +1174,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "cineo-core",
+ "fastframe-file",
  "futures-util",
  "getrandom 0.4.3",
  "http-body-util",
@@ -2086,6 +2091,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastframe-file"
+version = "0.17.0"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+dependencies = [
+ "log",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "fastframe-instance"
+version = "0.17.0"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+dependencies = [
+ "directories",
+ "getrandom 0.4.3",
+ "log",
+]
+
+[[package]]
+name = "fastframe-log"
+version = "0.17.0"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+dependencies = [
+ "jiff",
+]
+
+[[package]]
 name = "fastframe-now-playing"
 version = "0.17.0"
 source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
@@ -2096,6 +2128,18 @@ dependencies = [
  "souvlaki",
  "tokio",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "fastframe-power"
+version = "0.17.0"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+dependencies = [
+ "log",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "windows-sys 0.60.2",
+ "zbus 5.19.0",
 ]
 
 [[package]]

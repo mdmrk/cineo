@@ -172,10 +172,10 @@ in the crate that does the IO:
 | Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL |
 | Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` |
 | libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) |
-| Single-instance handover (desktop `instance`) | Unix socket | named pipe |
+| Single-instance handover (desktop `instance`, ADR-0032) | Unix socket via `fastframe-instance` | loopback port and token via `fastframe-instance` |
 | Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` |
 | Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` |
-| Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver` | `SetThreadExecutionState` via `keepawake` |
+| Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver`, and idle sleep via `fastframe-power` | `SetThreadExecutionState` via `keepawake`, and idle sleep via `fastframe-power` |
 
 `std::os::unix` and `std::os::windows` need a `cfg`.
 

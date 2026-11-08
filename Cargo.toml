@@ -27,7 +27,11 @@ jni = { version = "0.22.4", default-features = false }
 iconflow = { version = "2.1.0", default-features = false, features = ["pack-tabler"] }
 etcetera = "0.11.0"
 fast_image_resize = "6.1.0"
+fastframe-file = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-instance = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0", default-features = false }
 fastframe-now-playing = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-power = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 futures-util = { version = "0.3.34", default-features = false }
 getrandom = "0.4.3"
 http-body-util = "0.1.5"

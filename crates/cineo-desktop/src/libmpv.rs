@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io;
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "bundled-libmpv")]
@@ -31,13 +31,7 @@ fn extract(root: &Path, version: &str, name: &str, bytes: &[u8]) -> io::Result<P
     let path = dir.join(name);
     let current = std::fs::metadata(&path).is_ok_and(|meta| meta.len() == bytes.len() as u64);
     if !current {
-        std::fs::create_dir_all(&dir)?;
-        let partial = dir.join(format!("{name}.partial"));
-        let mut file = std::fs::File::create(&partial)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        drop(file);
-        std::fs::rename(&partial, &path)?;
+        fastframe_file::write(&path, bytes)?;
     }
     remove_other_versions(root, version);
     Ok(path)
@@ -72,7 +66,7 @@ mod tests {
         let path = extract(&root, "1.0.0", "libmpv-2.dll", b"library").unwrap();
         assert_eq!(path, root.join("1.0.0").join("libmpv-2.dll"));
         assert_eq!(std::fs::read(&path).unwrap(), b"library");
-        assert!(!root.join("1.0.0").join("libmpv-2.dll.partial").exists());
+        assert_eq!(std::fs::read_dir(root.join("1.0.0")).unwrap().count(), 1);
         let _ = std::fs::remove_dir_all(&root);
     }
 

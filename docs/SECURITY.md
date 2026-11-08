@@ -109,12 +109,14 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 - Implemented (ADR-0018): `parse_link` allowlists the routes; an install
   link only sets a prompt that shows the full manifest URL
   (`an_install_link_installs_nothing_until_accepted`).
-- A running Cineo accepts links from new launches on `<data dir>/cineo.sock`
-  (mode 0600, `a_link_reaches_the_running_instance_through_a_private_socket`),
-  or on Windows on the named pipe `\\.\pipe\cineo-<hash of the data dir>`,
-  which rejects remote clients and is created as the first instance only.
-  Any process of the same user can connect to the pipe.
-  One line of at most 8 KiB is read, and it is handled like any other link.
+- A running Cineo accepts links from new launches on
+  `<data dir>/instance/instance.sock` (mode 0600, in a directory of mode
+  0700, `a_link_reaches_the_running_instance_through_a_private_socket`), or
+  on Windows on a loopback port (ADR-0032). The Windows port is reachable by
+  any local process, but a request must first present the 64-digit random
+  token in `<data dir>\instance\instance.key`, so any process that can read
+  the user's profile can send a link. A request of at most 16 KiB is read,
+  and it is handled like any other link.
 - Registering Cineo for `stremio://` and `cineo://` is opt-in from Settings
   and per user only.
 
@@ -178,7 +180,12 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   URLs and file paths are not exposed. The service goes away when playback
   ends.
 - While a video plays, Cineo asks the session D-Bus
-  `org.freedesktop.ScreenSaver` to keep the screen awake.
+  `org.freedesktop.ScreenSaver` to keep the screen awake, and the desktop
+  portal or logind to block idle sleep.
+- A panic appends one line to `<data dir>/panic.log` (mode 0600 on Unix):
+  time, version, thread and source location, never the panic's message
+  (`a_panic_is_recorded_without_its_message`). The default hook still prints
+  the message to stderr.
 - On Windows the media controls are the System Media Transport Controls
   of a hidden window Cineo creates for them at the first playback: they show
   the title and accept play, pause and stop, and show as stopped after it.
