@@ -341,7 +341,7 @@ Format:
 - Gap: Cineo is one egui release behind. It misses 0.37's accessibility
   improvements and fixes. Emoji, other scripts and scrolling come from
   fastframe instead, and that wiring, the font settings and the graphics
-  dialog (in English only) have no test on a real desktop.
+  dialog have no test on a real desktop.
 - Why: fastframe's egui crates need 0.36, and it has no move to 0.37 yet.
 - Instead: text and scrolling follow fastframe's behavior, not egui's.
 - Exit: move to the egui release fastframe adopts.

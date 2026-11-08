@@ -51,6 +51,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         library: store.library()?,
     };
     let saved = store.settings()?;
+    let ui_language = saved.ui_language;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
     let client = AddonClient::new(NetPolicy {
         allow_private_networks: allow_private_network,
@@ -124,7 +125,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     if let Err(err) = &result
         && fastframe_graphics::is_graphics_failure(err)
     {
-        fastframe_graphics::Graphics::new("Cineo").explain(err);
+        i18n::set(Locale::resolve(ui_language, Locale::system()));
+        fastframe_graphics::Graphics::new("Cineo")
+            .dialog(graphics_dialog)
+            .explain(err);
     }
     if writer.join().is_err() {
         error!("the store thread panicked");
@@ -705,6 +709,29 @@ fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMu
     }
 }
 
+fn graphics_dialog(trouble: &fastframe_graphics::Trouble<'_>) -> fastframe_graphics::Dialog {
+    use fastframe_graphics::{Cause, Dialog};
+    use rust_i18n::t;
+    let details = trouble.details;
+    let body = if trouble.cause == Cause::WindowsOnArm {
+        t!("graphics-arm", details = details).into_owned()
+    } else {
+        let remedy = if cfg!(windows) {
+            t!("graphics-remedy-windows")
+        } else {
+            t!("graphics-remedy-linux")
+        };
+        t!("graphics-driver", remedy = remedy, details = details).into_owned()
+    };
+    Dialog {
+        title: t!("graphics-title").into_owned(),
+        body,
+        open_label: t!("graphics-open-store").into_owned(),
+        close_label: t!("graphics-close").into_owned(),
+        ..Dialog::english(trouble)
+    }
+}
+
 fn follow_desktop_text(
     rendering: fastframe_text::TextRendering,
     scale: f32,
@@ -858,6 +885,28 @@ mod tests {
         );
         assert_eq!(pauses, 2, "waking up does not pause");
         assert!(suspend.is_done() && end.is_done());
+    }
+
+    #[test]
+    fn the_graphics_dialog_keeps_the_details_and_the_store_link() {
+        use fastframe_graphics::{COMPATIBILITY_PACK_PAGE, Cause, Trouble};
+        let arm = super::graphics_dialog(&Trouble::new(
+            "Cineo",
+            Cause::WindowsOnArm,
+            "opengl 1.1",
+            None,
+        ));
+        assert!(arm.body.contains("opengl 1.1"));
+        assert_eq!(arm.link.as_deref(), Some(COMPATIBILITY_PACK_PAGE));
+        let driver = super::graphics_dialog(&Trouble::new(
+            "Cineo",
+            Cause::NoGraphicsDriver,
+            "opengl 1.1",
+            None,
+        ));
+        assert!(driver.body.contains("opengl 1.1"));
+        assert!(driver.body.contains("OpenGL 2"));
+        assert_eq!(driver.link, None);
     }
 
     #[test]
