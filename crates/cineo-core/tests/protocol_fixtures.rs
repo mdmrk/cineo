@@ -10,6 +10,7 @@ use cineo_core::addon::{
     parse_catalog_response, parse_manifest, parse_meta_response, parse_stream_json,
     parse_stream_response, parse_subtitles_response, stream_to_json,
 };
+use cineo_core::diagnostics::Parsed;
 
 fn fixture(path: &str) -> Vec<u8> {
     let full = format!("{}/../../tests/addons/{path}", env!("CARGO_MANIFEST_DIR"));
@@ -27,6 +28,16 @@ fn path(resource: &str, content_type: &str, id: &str) -> ResourcePath {
         id: id.to_owned(),
         extra: Vec::new(),
     }
+}
+
+fn warning_locations<T>(parsed: &Parsed<T>) -> Vec<&str> {
+    let mut locations: Vec<_> = parsed
+        .warnings
+        .iter()
+        .map(|w| w.location.as_str())
+        .collect();
+    locations.sort_unstable();
+    locations
 }
 
 #[test]
@@ -124,12 +135,7 @@ fn options_limit_bounds_repeated_extra_values() {
 #[test]
 fn quirky_manifest_parses_with_expected_warnings() {
     let parsed = parse_manifest(&fixture("quirks/manifest.json")).unwrap();
-    let mut locations: Vec<_> = parsed
-        .warnings
-        .iter()
-        .map(|w| w.location.as_str())
-        .collect();
-    locations.sort_unstable();
+    let locations = warning_locations(&parsed);
     assert_eq!(
         locations,
         vec![
@@ -277,12 +283,7 @@ fn quirky_catalog_keeps_valid_entries_and_reports_the_rest() {
     assert_eq!(metas[2].poster, None, "non-http(s) image URLs are dropped");
     assert_eq!(metas[3].genres, vec!["Drama"]);
 
-    let mut locations: Vec<_> = parsed
-        .warnings
-        .iter()
-        .map(|w| w.location.as_str())
-        .collect();
-    locations.sort_unstable();
+    let locations = warning_locations(&parsed);
     assert_eq!(
         locations,
         vec![
@@ -416,12 +417,7 @@ fn quirky_streams_drop_bad_sources_and_unsafe_headers() {
         vec![("X-Ok".to_owned(), "1".to_owned())],
         "invalid names and CR/LF values are dropped"
     );
-    let mut locations: Vec<_> = parsed
-        .warnings
-        .iter()
-        .map(|w| w.location.as_str())
-        .collect();
-    locations.sort_unstable();
+    let locations = warning_locations(&parsed);
     assert_eq!(
         locations,
         vec![
