@@ -710,8 +710,8 @@ fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMu
 }
 
 fn graphics_dialog(trouble: &fastframe_graphics::Trouble<'_>) -> fastframe_graphics::Dialog {
+    use crate::i18n::t;
     use fastframe_graphics::{Cause, Dialog};
-    use rust_i18n::t;
     let details = trouble.details;
     let body = if trouble.cause == Cause::WindowsOnArm {
         t!("graphics-arm", details = details).into_owned()
@@ -907,6 +907,21 @@ mod tests {
         assert!(driver.body.contains("opengl 1.1"));
         assert!(driver.body.contains("OpenGL 2"));
         assert_eq!(driver.link, None);
+    }
+
+    #[test]
+    fn the_graphics_dialog_is_in_the_chosen_language() {
+        use fastframe_graphics::{Cause, Trouble};
+        crate::i18n::set(Locale::Spanish);
+        let dialog = super::graphics_dialog(&Trouble::new(
+            "Cineo",
+            Cause::NoGraphicsDriver,
+            "opengl 1.1",
+            None,
+        ));
+        crate::i18n::set(Locale::English);
+        assert_eq!(dialog.title, "Cineo no puede abrir su ventana");
+        assert!(dialog.body.contains("controlador gráfico"));
     }
 
     #[test]
