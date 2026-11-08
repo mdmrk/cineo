@@ -302,13 +302,13 @@ private fun Licenses() {
     val assets = LocalContext.current.assets
     var listing by remember { mutableStateOf(false) }
     var shown by remember { mutableStateOf<String?>(null) }
-    ListItem(
-        colors = rowColors,
-        headlineContent = { Text(stringResource(R.string.licenses)) },
-        supportingContent = { Text(stringResource(R.string.licenses_help), style = MaterialTheme.typography.bodySmall) },
-        trailingContent = { CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.TextDim, size = 20.sp) },
-        modifier = Modifier.clickable { listing = true },
-    )
+    SettingRow(
+        stringResource(R.string.licenses),
+        stringResource(R.string.licenses_help),
+        Modifier.clickable { listing = true },
+    ) {
+        CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.TextDim, size = 20.sp)
+    }
     if (listing) {
         val files = remember { assets.list(LICENSES).orEmpty().sorted() }
         PickerDialog(stringResource(R.string.licenses), files.map { it to it }, null, onDismiss = { listing = false }) {
@@ -371,20 +371,30 @@ private val rowColors @Composable get() = ListItemDefaults.colors(
 )
 
 @Composable
-private fun Toggle(title: String, help: String, on: Boolean, onChange: (Boolean) -> Unit) {
+private fun SettingRow(
+    title: String,
+    help: String,
+    modifier: Modifier = Modifier,
+    trailing: @Composable () -> Unit,
+) {
     ListItem(
         colors = rowColors,
         headlineContent = { Text(title) },
         supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-        trailingContent = {
-            Switch(
-                checked = on,
-                onCheckedChange = onChange,
-                colors = SwitchDefaults.colors(checkedTrackColor = Brand.Accent, checkedThumbColor = Brand.OnAccent),
-            )
-        },
-        modifier = Modifier.clickable { onChange(!on) },
+        trailingContent = trailing,
+        modifier = modifier,
     )
+}
+
+@Composable
+private fun Toggle(title: String, help: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    SettingRow(title, help, Modifier.clickable { onChange(!on) }) {
+        Switch(
+            checked = on,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(checkedTrackColor = Brand.Accent, checkedThumbColor = Brand.OnAccent),
+        )
+    }
 }
 
 @Composable
@@ -432,15 +442,9 @@ private fun Range(title: String, help: String, view: RangeView, step: Int, set: 
 @Composable
 private fun Port(title: String, help: String, view: RangeView, set: (String, String) -> Unit) {
     var editing by remember { mutableStateOf(false) }
-    ListItem(
-        colors = rowColors,
-        headlineContent = { Text(title) },
-        supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-        trailingContent = {
-            Text(view.value.toString(), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge)
-        },
-        modifier = Modifier.clickable { editing = true },
-    )
+    SettingRow(title, help, Modifier.clickable { editing = true }) {
+        Text(view.value.toString(), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge)
+    }
     if (editing) {
         var text by remember { mutableStateOf(view.value.toString()) }
         val port = text.toIntOrNull()?.takeIf { it in view.min.toInt()..view.max.toInt() }
@@ -531,22 +535,16 @@ private fun <T> Picker(
     onPick: (T) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    ListItem(
-        colors = rowColors,
-        headlineContent = { Text(title) },
-        supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-        trailingContent = {
-            Row(
-                Modifier.clip(RoundedCornerShape(50)).background(Brand.Surface).padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(label(current), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                CineoIcon(Icon.CHEVRON_DOWN, tint = Brand.TextDim, size = 16.sp)
-            }
-        },
-        modifier = Modifier.clickable { open = true },
-    )
+    SettingRow(title, help, Modifier.clickable { open = true }) {
+        Row(
+            Modifier.clip(RoundedCornerShape(50)).background(Brand.Surface).padding(start = 12.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(label(current), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            CineoIcon(Icon.CHEVRON_DOWN, tint = Brand.TextDim, size = 16.sp)
+        }
+    }
     if (open) {
         val labelled = options.map { it to label(it) }
         PickerDialog(title, labelled, current, onDismiss = { open = false }) {
@@ -632,17 +630,12 @@ private fun Confirmed(
     onConfirm: () -> Unit,
 ) {
     var asking by remember { mutableStateOf(false) }
-    ListItem(
-        colors = rowColors,
-        headlineContent = { Text(title) },
-        supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
-        trailingContent = {
-            OutlinedButton(
-                onClick = { asking = true },
-                border = BorderStroke(1.dp, Brand.Danger.copy(alpha = 0.6f)),
-            ) { Text(confirmLabel, color = Brand.Danger) }
-        },
-    )
+    SettingRow(title, help) {
+        OutlinedButton(
+            onClick = { asking = true },
+            border = BorderStroke(1.dp, Brand.Danger.copy(alpha = 0.6f)),
+        ) { Text(confirmLabel, color = Brand.Danger) }
+    }
     if (asking) {
         AlertDialog(
             onDismissRequest = { asking = false },
