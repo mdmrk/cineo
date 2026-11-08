@@ -52,17 +52,17 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
     let saved = store.settings()?;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
-    let client = Arc::new(AddonClient::new(NetPolicy {
+    let client = AddonClient::new(NetPolicy {
         allow_private_networks: allow_private_network,
         ..NetPolicy::default()
-    })?);
+    })?;
     let settings = Action::RestoreSettings(saved);
     let (results_tx, results_rx) = channel();
     let (store_tx, writer) =
         spawn_store_writer(store, results_tx.clone()).context("cannot start the store thread")?;
     let io = Io {
         runtime: runtime.handle().clone(),
-        client: Arc::clone(&client),
+        client: client.clone(),
         gl: None,
         display: None,
         #[cfg(windows)]
@@ -138,7 +138,7 @@ pub(crate) enum Msg {
 
 pub(crate) struct Io {
     pub(crate) runtime: tokio::runtime::Handle,
-    pub(crate) client: Arc<AddonClient>,
+    pub(crate) client: AddonClient,
     pub(crate) gl: Option<ProcAddress>,
     pub(crate) display: Option<Display>,
     #[cfg(windows)]
@@ -371,7 +371,7 @@ impl CineoApp {
             }
             return;
         }
-        let client = Arc::clone(&self.io.client);
+        let client = self.io.client.clone();
         let post = self.post();
         self.io.runtime.spawn(async move {
             let result = client.fetch_subtitle(&url).await.map_err(|e| e.to_string());

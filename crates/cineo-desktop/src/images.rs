@@ -20,7 +20,7 @@ const SIZE_HEADROOM: f32 = 2.0;
 type Entry = Poll<Result<Arc<ColorImage>, String>>;
 
 pub(crate) struct NetImageLoader {
-    client: Arc<AddonClient>,
+    client: AddonClient,
     runtime: tokio::runtime::Handle,
     cache: Arc<Mutex<HashMap<String, Entry>>>,
     decoders: Arc<Semaphore>,
@@ -29,7 +29,7 @@ pub(crate) struct NetImageLoader {
 impl NetImageLoader {
     const ID: &'static str = egui::generate_loader_id!(NetImageLoader);
 
-    pub(crate) fn new(client: Arc<AddonClient>, runtime: tokio::runtime::Handle) -> Self {
+    pub(crate) fn new(client: AddonClient, runtime: tokio::runtime::Handle) -> Self {
         let cores = std::thread::available_parallelism().map_or(2, usize::from);
         Self {
             client,
@@ -72,7 +72,7 @@ impl ImageLoader for NetImageLoader {
         cache.insert(uri.to_owned(), Poll::Pending);
         drop(cache);
 
-        let client = Arc::clone(&self.client);
+        let client = self.client.clone();
         let cache = Arc::clone(&self.cache);
         let ctx = ctx.clone();
         let uri = uri.to_owned();
@@ -213,7 +213,7 @@ mod tests {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap();
-        let client = Arc::new(AddonClient::new(cineo_net::NetPolicy::default()).unwrap());
+        let client = AddonClient::new(cineo_net::NetPolicy::default()).unwrap();
         let loader = NetImageLoader::new(client, runtime.handle().clone());
         let cache = Arc::clone(&loader.cache);
         let uri = "https://img.example/poster.png";
