@@ -218,93 +218,86 @@ impl TorrentStorage for CacheStorage {
 mod tests {
     use super::*;
 
-    fn storage(name: &str) -> (PathBuf, CacheStorage) {
-        let dir = std::env::temp_dir()
-            .join(format!("cineo-stream-storage-{}", std::process::id()))
-            .join(name);
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("{e}"));
-        let storage = CacheStorage::new(dir.clone(), Layout::new(vec![0, 10], 8, 25));
+    fn storage() -> (tempfile::TempDir, CacheStorage) {
+        let dir = tempfile::tempdir().unwrap();
+        let storage = CacheStorage::new(dir.path().to_owned(), Layout::new(vec![0, 10], 8, 25));
         (dir, storage)
     }
 
     fn names(dir: &Path) -> Vec<String> {
         let mut names: Vec<String> = std::fs::read_dir(dir)
-            .unwrap_or_else(|e| panic!("{e}"))
+            .unwrap()
             .map(|e| e.map(|e| e.file_name().to_string_lossy().into_owned()))
             .collect::<Result<_, _>>()
-            .unwrap_or_else(|e| panic!("{e}"));
+            .unwrap();
         names.sort();
         names
     }
 
     #[test]
     fn data_lives_under_piece_indexes_only() {
-        let (dir, s) = storage("names");
-        s.pwrite_all(1, 4, b"data")
-            .unwrap_or_else(|e| panic!("{e}"));
-        assert_eq!(names(&dir), ["1", "2"], "bytes 14..18 span pieces 1 and 2");
+        let (dir, s) = storage();
+        s.pwrite_all(1, 4, b"data").unwrap();
+        assert_eq!(
+            names(dir.path()),
+            ["1", "2"],
+            "bytes 14..18 span pieces 1 and 2"
+        );
         assert!(s.pwrite_all(2, 0, b"x").is_err(), "no such file");
         assert!(s.pwrite_all(1, 15, b"x").is_err(), "past the end");
     }
 
     #[test]
     fn writes_read_back_across_pieces_and_files() {
-        let (_, s) = storage("roundtrip");
-        s.pwrite_all(0, 0, b"0123456789")
-            .unwrap_or_else(|e| panic!("{e}"));
-        s.pwrite_all(1, 0, b"abcdefghijklmno")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let (_dir, s) = storage();
+        s.pwrite_all(0, 0, b"0123456789").unwrap();
+        s.pwrite_all(1, 0, b"abcdefghijklmno").unwrap();
         let mut buf = [0u8; 9];
-        s.pread_exact(1, 4, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pread_exact(1, 4, &mut buf).unwrap();
         assert_eq!(&buf, b"efghijklm");
     }
 
     #[test]
     fn vectored_writes_read_back_across_pieces() {
-        let (_, s) = storage("vectored");
+        let (_dir, s) = storage();
         let written = s
             .pwrite_all_vectored(0, 2, [IoSlice::new(b"abcde"), IoSlice::new(b"fghijklm")])
-            .unwrap_or_else(|e| panic!("{e}"));
+            .unwrap();
         assert_eq!(written, 13);
         let mut buf = [0u8; 13];
-        s.pread_exact(0, 2, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pread_exact(0, 2, &mut buf).unwrap();
         assert_eq!(&buf, b"abcdefghijklm");
     }
 
     #[test]
     fn reading_a_piece_never_written_is_an_error() {
-        let (dir, s) = storage("missing");
+        let (dir, s) = storage();
         let mut buf = [7u8; 8];
         assert!(s.pread_exact(0, 0, &mut buf).is_err());
-        assert!(names(&dir).is_empty(), "reading creates nothing");
+        assert!(names(dir.path()).is_empty(), "reading creates nothing");
     }
 
     #[test]
     fn unwritten_bytes_of_a_piece_read_as_zeros() {
-        let (_, s) = storage("zeros");
-        s.pwrite_all(0, 2, b"ab").unwrap_or_else(|e| panic!("{e}"));
+        let (_dir, s) = storage();
+        s.pwrite_all(0, 2, b"ab").unwrap();
         let mut buf = [7u8; 6];
-        s.pread_exact(0, 0, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pread_exact(0, 0, &mut buf).unwrap();
         assert_eq!(&buf, b"\0\0ab\0\0", "holes and the tail read as zeros");
     }
 
     #[test]
     fn a_discarded_piece_frees_its_file() {
-        let (dir, s) = storage("discard");
-        s.pwrite_all(0, 0, b"0123456789")
-            .unwrap_or_else(|e| panic!("{e}"));
-        let lengths = librqbit::storage::Lengths::new(25, 8).unwrap_or_else(|e| panic!("{e}"));
+        let (dir, s) = storage();
+        s.pwrite_all(0, 0, b"0123456789").unwrap();
+        let lengths = librqbit::storage::Lengths::new(25, 8).unwrap();
         let first = lengths
             .validate_piece_index(0)
             .unwrap_or_else(|| panic!("piece 0"));
-        s.discard_piece(first).unwrap_or_else(|e| panic!("{e}"));
-        assert_eq!(names(&dir), ["1"]);
+        s.discard_piece(first).unwrap();
+        assert_eq!(names(dir.path()), ["1"]);
         let mut buf = [0u8; 2];
         assert!(s.pread_exact(0, 0, &mut buf).is_err());
-        s.discard_piece(first).unwrap_or_else(|e| panic!("{e}"));
+        s.discard_piece(first).unwrap();
     }
 }

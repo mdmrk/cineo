@@ -156,10 +156,8 @@ mod tests {
     use super::*;
 
     async fn proxy(allow_private_network: bool) -> SocketAddr {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
-        let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let addr = listener.local_addr().unwrap();
         tokio::spawn(run(
             listener,
             Arc::new(Policy {
@@ -172,24 +170,16 @@ mod tests {
     }
 
     async fn connect(proxy: SocketAddr, password: &[u8], target: SocketAddr) -> u8 {
-        let mut s = TcpStream::connect(proxy)
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
-        s.write_all(&[5, 1, USER_PASS])
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
+        let mut s = TcpStream::connect(proxy).await.unwrap();
+        s.write_all(&[5, 1, USER_PASS]).await.unwrap();
         let mut choice = [0u8; 2];
-        s.read_exact(&mut choice)
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.read_exact(&mut choice).await.unwrap();
         assert_eq!(choice, [5, USER_PASS]);
         let mut auth = vec![1, 1, b'u', u8::try_from(password.len()).unwrap_or(0)];
         auth.extend_from_slice(password);
-        s.write_all(&auth).await.unwrap_or_else(|e| panic!("{e}"));
+        s.write_all(&auth).await.unwrap();
         let mut status = [0u8; 2];
-        s.read_exact(&mut status)
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.read_exact(&mut status).await.unwrap();
         if status[1] != 0 {
             return 0xa0 | status[1];
         }
@@ -199,19 +189,15 @@ mod tests {
         let mut req = vec![5, CONNECT, 0, ATYP_V4];
         req.extend_from_slice(&ip.octets());
         req.extend_from_slice(&target.port().to_be_bytes());
-        s.write_all(&req).await.unwrap_or_else(|e| panic!("{e}"));
+        s.write_all(&req).await.unwrap();
         let mut answer = [0u8; 10];
-        s.read_exact(&mut answer)
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.read_exact(&mut answer).await.unwrap();
         answer[1]
     }
 
     async fn local_target() -> SocketAddr {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
-            .await
-            .unwrap_or_else(|e| panic!("{e}"));
-        let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let addr = listener.local_addr().unwrap();
         tokio::spawn(async move { while listener.accept().await.is_ok() {} });
         addr
     }

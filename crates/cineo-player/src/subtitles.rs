@@ -146,23 +146,16 @@ mod tests {
 
     use super::*;
 
-    fn dir(name: &str) -> PathBuf {
-        std::env::temp_dir()
-            .join(format!("cineo-subtitles-{}", std::process::id()))
-            .join(name)
-    }
-
     fn url(s: &str) -> Url {
-        s.parse().unwrap_or_else(|e| panic!("{e}"))
+        s.parse().unwrap()
     }
 
     #[test]
     fn files_are_private_and_deleted_on_drop() {
-        let dir = dir("drop");
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("files");
         let mut files = SubtitleFiles::new(dir.clone());
-        let path = files
-            .write(&url("https://s.example/a.srt"), b"x")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let path = files.write(&url("https://s.example/a.srt"), b"x").unwrap();
         assert_eq!(
             files.get(&url("https://s.example/a.srt")),
             Some(path.as_path())
@@ -172,14 +165,12 @@ mod tests {
             let mode = |p: &Path| {
                 std::fs::metadata(p)
                     .map(|m| std::os::unix::fs::PermissionsExt::mode(&m.permissions()) & 0o777)
-                    .unwrap_or_else(|e| panic!("{e}"))
+                    .unwrap()
             };
             assert_eq!(mode(&dir), 0o700);
             assert_eq!(mode(&path), 0o600);
         }
-        let again = |files: &mut SubtitleFiles, u: &str| {
-            files.write(&url(u), b"y").unwrap_or_else(|e| panic!("{e}"))
-        };
+        let again = |files: &mut SubtitleFiles, u: &str| files.write(&url(u), b"y").unwrap();
         again(&mut files, "https://s.example/a.srt");
         again(&mut files, "https://s.example/b.srt");
         drop(files);
@@ -188,7 +179,8 @@ mod tests {
 
     #[test]
     fn entries_list_each_url_once_and_mark_the_loaded_selected_one() {
-        let mut files = SubtitleFiles::new(dir("entries"));
+        let tmp = tempfile::tempdir().unwrap();
+        let mut files = SubtitleFiles::new(tmp.path().join("files"));
         let sub = |u: &str, lang: &str| Subtitle {
             id: u.into(),
             url: url(u),
@@ -196,8 +188,7 @@ mod tests {
             label: None,
         };
         let group = |name: &str, subtitles| SubtitleGroup {
-            addon: TransportUrl::parse("https://a.example/manifest.json")
-                .unwrap_or_else(|e| panic!("{e}")),
+            addon: TransportUrl::parse("https://a.example/manifest.json").unwrap(),
             addon_name: name.into(),
             path: None,
             subtitles,
@@ -216,9 +207,7 @@ mod tests {
             ),
             group("Slow", Loadable::Loading),
         ];
-        let path = files
-            .write(&url("https://s.example/2"), b"x")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let path = files.write(&url("https://s.example/2"), b"x").unwrap();
         let tracks: Arc<[Track]> = [Track {
             id: 3,
             kind: TrackKind::Subtitle,
@@ -239,10 +228,10 @@ mod tests {
 
     #[test]
     fn entries_refresh_when_a_group_settles_or_the_tracks_change() {
-        let mut files = SubtitleFiles::new(dir("refresh"));
+        let tmp = tempfile::tempdir().unwrap();
+        let mut files = SubtitleFiles::new(tmp.path().join("files"));
         let mut groups = [SubtitleGroup {
-            addon: TransportUrl::parse("https://a.example/manifest.json")
-                .unwrap_or_else(|e| panic!("{e}")),
+            addon: TransportUrl::parse("https://a.example/manifest.json").unwrap(),
             addon_name: "Subs".into(),
             path: None,
             subtitles: Loadable::Loading,
@@ -256,9 +245,7 @@ mod tests {
             label: None,
         }]);
         assert!(!files.entries(&groups, &none)[0].selected);
-        let path = files
-            .write(&url("https://s.example/1"), b"x")
-            .unwrap_or_else(|e| panic!("{e}"));
+        let path = files.write(&url("https://s.example/1"), b"x").unwrap();
         let tracks: Arc<[Track]> = [Track {
             id: 3,
             kind: TrackKind::Subtitle,

@@ -133,17 +133,13 @@ mod tests {
     #[test]
     fn writes_read_back_across_pieces_and_files() {
         let s = storage();
-        s.pwrite_all(0, 0, b"0123456789")
-            .unwrap_or_else(|e| panic!("{e}"));
-        s.pwrite_all(1, 0, b"abcdefghijklmno")
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pwrite_all(0, 0, b"0123456789").unwrap();
+        s.pwrite_all(1, 0, b"abcdefghijklmno").unwrap();
         let mut buf = [0u8; 9];
-        s.pread_exact(1, 4, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pread_exact(1, 4, &mut buf).unwrap();
         assert_eq!(&buf, b"efghijklm");
         let mut buf = [0u8; 4];
-        s.pread_exact(0, 6, &mut buf)
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pread_exact(0, 6, &mut buf).unwrap();
         assert_eq!(&buf, b"6789");
         assert_eq!(s.held(), 25, "the last piece is short");
     }
@@ -153,18 +149,17 @@ mod tests {
         let s = storage();
         let mut buf = [0u8; 2];
         assert!(s.pread_exact(0, 0, &mut buf).is_err());
-        s.pwrite_all(0, 0, b"01234567")
-            .unwrap_or_else(|e| panic!("{e}"));
+        s.pwrite_all(0, 0, b"01234567").unwrap();
         assert!(s.pread_exact(0, 6, &mut buf).is_ok());
         assert!(
             s.pread_exact(0, 7, &mut buf).is_err(),
             "crosses into piece 1"
         );
-        let lengths = librqbit::storage::Lengths::new(25, 8).unwrap_or_else(|e| panic!("{e}"));
+        let lengths = librqbit::storage::Lengths::new(25, 8).unwrap();
         let first = lengths
             .validate_piece_index(0)
             .unwrap_or_else(|| panic!("piece 0"));
-        s.discard_piece(first).unwrap_or_else(|e| panic!("{e}"));
+        s.discard_piece(first).unwrap();
         assert!(s.pread_exact(0, 0, &mut buf).is_err());
         assert_eq!(s.held(), 0);
     }

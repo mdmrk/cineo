@@ -188,8 +188,8 @@ mod tests {
         ))];
         let mut files = Vec::new();
         while let Some(dir) = dirs.pop() {
-            for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("{e}")) {
-                let path = entry.unwrap_or_else(|e| panic!("{e}")).path();
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
                 if path.is_dir() {
                     dirs.push(path);
                 } else if !path.ends_with("i18n.rs") {
@@ -199,7 +199,7 @@ mod tests {
         }
         let mut used = BTreeSet::new();
         for path in files {
-            let code = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{e}"));
+            let code = std::fs::read_to_string(&path).unwrap();
             for (i, _) in code.match_indices("t!(\"") {
                 if code[..i].ends_with(|c: char| c.is_alphanumeric() || c == '_') {
                     continue;

@@ -45,37 +45,29 @@ pub(crate) fn remove_all(cache: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
-    fn cache(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir()
-            .join(format!("cineo-stream-cache-{}", std::process::id()))
-            .join(name);
-        let _ = std::fs::remove_dir_all(&dir);
-        create_private_dir(&dir).unwrap_or_else(|e| panic!("{e}"));
-        dir
-    }
 
     #[test]
     fn leftover_torrents_are_deleted_and_nothing_else() {
-        let root = cache("leftover");
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
         let torrent = root.join("a".repeat(40));
-        create_private_dir(&torrent).unwrap_or_else(|e| panic!("{e}"));
-        std::fs::write(torrent.join("0"), b"data").unwrap_or_else(|e| panic!("{e}"));
+        create_private_dir(&torrent).unwrap();
+        std::fs::write(torrent.join("0"), b"data").unwrap();
         let dht = root.join("dht.json");
-        std::fs::write(&dht, b"{}").unwrap_or_else(|e| panic!("{e}"));
+        std::fs::write(&dht, b"{}").unwrap();
         let other = root.join("not-a-hash");
-        create_private_dir(&other).unwrap_or_else(|e| panic!("{e}"));
+        create_private_dir(&other).unwrap();
 
-        remove_all(&root).unwrap_or_else(|e| panic!("{e}"));
+        remove_all(root).unwrap();
         assert!(!torrent.exists());
         assert!(dht.exists() && other.exists(), "only info-hash directories");
     }
 
     #[test]
     fn a_missing_cache_or_torrent_is_fine() {
-        let root = cache("missing").join("nope");
-        remove_all(&root).unwrap_or_else(|e| panic!("{e}"));
-        remove_torrent(&root.join("b".repeat(40))).unwrap_or_else(|e| panic!("{e}"));
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("nope");
+        remove_all(&root).unwrap();
+        remove_torrent(&root.join("b".repeat(40))).unwrap();
     }
 }

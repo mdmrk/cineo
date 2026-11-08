@@ -27,6 +27,7 @@ use librqbit::{
     AddTorrent, AddTorrentOptions, CreateTorrentOptions, ListenerOptions, Session, SessionOptions,
     create_torrent,
 };
+use tempfile::TempDir;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use wiremock::matchers::{method, path, path_regex};
@@ -295,8 +296,26 @@ async fn serve(server: &MockServer, at: &str, body: Vec<u8>) {
         .await;
 }
 
-fn local_data_dir() -> tempdir::Dir {
-    let dir = tempdir::Dir::new();
+#[test]
+fn the_app_reports_the_workspace_version() {
+    let manifest =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml"))
+            .unwrap();
+    let workspace = manifest
+        .split("[workspace.package]")
+        .nth(1)
+        .and_then(|section| section.lines().find_map(|l| l.strip_prefix("version = ")))
+        .map(|v| v.trim_matches('"'))
+        .unwrap();
+    assert_eq!(version(), workspace);
+}
+
+fn scratch_dir() -> TempDir {
+    tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR")).unwrap()
+}
+
+fn local_data_dir() -> TempDir {
+    let dir = scratch_dir();
     let mut store = Store::open_in(dir.path()).unwrap();
     store.save_addons(&[]).unwrap();
     store
@@ -971,7 +990,7 @@ async fn changed_settings_reach_the_player_and_survive_a_restart_until_reset() {
 
 #[test]
 fn a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_reset() {
-    let dir = tempdir::Dir::new();
+    let dir = scratch_dir();
     Store::open_in(dir.path())
         .unwrap()
         .save_addons(&[])
@@ -1545,52 +1564,6 @@ async fn going_back_while_a_torrent_connects_stops_it() {
         assert!(players.requests.lock().unwrap().is_empty());
         drop(cineo);
     });
-}
-
-mod tempdir {
-    use std::path::{Path, PathBuf};
-    use std::sync::atomic::{AtomicU32, Ordering};
-
-    static NEXT: AtomicU32 = AtomicU32::new(0);
-
-    pub(super) struct Dir(PathBuf);
-
-    impl Dir {
-        pub(super) fn new() -> Self {
-            let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-                "cineo-android-{}-{}",
-                std::process::id(),
-                NEXT.fetch_add(1, Ordering::Relaxed)
-            ));
-            let _ = std::fs::remove_dir_all(&dir);
-            std::fs::create_dir_all(&dir).unwrap();
-            Self(dir)
-        }
-
-        pub(super) fn path(&self) -> &Path {
-            &self.0
-        }
-    }
-
-    impl Drop for Dir {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.0);
-        }
-    }
-}
-
-#[test]
-fn the_app_reports_the_workspace_version() {
-    let manifest =
-        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml"))
-            .unwrap();
-    let workspace = manifest
-        .split("[workspace.package]")
-        .nth(1)
-        .and_then(|section| section.lines().find_map(|l| l.strip_prefix("version = ")))
-        .map(|v| v.trim_matches('"'))
-        .unwrap();
-    assert_eq!(version(), workspace);
 }
 
 fn binge_streams(file: &str) -> Vec<u8> {
