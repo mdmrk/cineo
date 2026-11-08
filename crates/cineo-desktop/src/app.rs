@@ -201,6 +201,7 @@ pub(crate) struct CineoApp {
     media_keys: MediaKeys,
     scrolling: fastframe_scroll::Scrolling,
     titled_after: Option<String>,
+    power: fastframe_power::Power,
 }
 
 impl CineoApp {
@@ -212,6 +213,10 @@ impl CineoApp {
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
         let media_keys = MediaKeys::new(ctx.clone());
+        let power = {
+            let ctx = ctx.clone();
+            fastframe_power::Power::spawn(move || ctx.request_repaint())
+        };
         let torrents = Torrents::new(io.runtime.clone(), io.engine.clone());
         let mut app = Self {
             state: State::default(),
@@ -233,6 +238,7 @@ impl CineoApp {
             media_keys,
             scrolling: fastframe_scroll::Scrolling::default(),
             titled_after: None,
+            power,
         };
         for action in restore {
             app.dispatch(action);
@@ -599,6 +605,7 @@ impl eframe::App for CineoApp {
         for remote in self.media_keys.take() {
             self.remote(remote);
         }
+        answer_power_events(self.power.events(), || self.remote(Remote::Pause));
         let status = self.playback.as_ref().map(|e| e.player.status());
         self.keep_awake
             .set(status.as_ref().is_some_and(keeps_screen_awake));
@@ -679,6 +686,16 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     )]
     let volume = Percent::new(volume?.round().max(0.0) as u32);
     (settings.remember_volume && settings.volume != volume).then_some(volume)
+}
+
+fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMut()) {
+    use fastframe_power::Event;
+    for event in events {
+        if let Event::Suspending(ack) | Event::EndingSession(ack) = event {
+            pause();
+            ack.done();
+        }
+    }
 }
 
 fn window_title(playing: Option<&str>) -> String {
@@ -791,6 +808,23 @@ mod tests {
         };
         assert!(!keeps_screen_awake(&paused));
         assert!(!keeps_screen_awake(&Status::default()), "not loaded yet");
+    }
+
+    #[test]
+    fn a_suspend_or_session_end_pauses_and_is_answered() {
+        use fastframe_power::{Ack, Event};
+        let (suspend, end) = (Ack::default(), Ack::default());
+        let mut pauses = 0;
+        super::answer_power_events(
+            vec![
+                Event::Suspending(suspend.clone()),
+                Event::Resumed,
+                Event::EndingSession(end.clone()),
+            ],
+            || pauses += 1,
+        );
+        assert_eq!(pauses, 2, "waking up does not pause");
+        assert!(suspend.is_done() && end.is_done());
     }
 
     #[test]

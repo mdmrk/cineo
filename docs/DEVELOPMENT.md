@@ -504,7 +504,7 @@ Re-check them when adding.
 | `fastframe-now-playing` (git, tag; not on crates.io)                                   | 0.17.0                                                                                                                                 | Media keys and the desktop's media controls: MPRIS through `mpris-server` 0.10.0 on Linux, SMTC through `souvlaki` 0.8.3 on Windows (desktop, ADR-0031) | MIT (`mpris-server`: MPL-2.0)        |
 | `fastframe-instance` (git, tag; not on crates.io) | 0.17.0 | Hands a link from a new launch to the running window (desktop, ADR-0032) | MIT |
 | `fastframe-file` (git, tag; not on crates.io) | 0.17.0 | Replaces the bundled libmpv, the link registration entry and the torrent blocklist without leaving a half-written file (desktop, stream, ADR-0032) | MIT |
-| `fastframe-power` (git, tag; not on crates.io) | 0.17.0 | Blocks idle system sleep during playback (desktop, ADR-0032); the screen stays on through `zbus` and `keepawake` | MIT |
+| `fastframe-power` (git, tag; not on crates.io) | 0.17.0 | Blocks idle system sleep during playback and pauses before the computer sleeps (desktop, ADR-0032); the screen stays on through `zbus` and `keepawake` | MIT |
 | `fastframe-log` (git, tag; no default features) | 0.17.0 | Records panics in `panic.log` without their message (desktop, ADR-0032) | MIT |
 | `fastframe-emoji` (git, tag; not on crates.io) | 0.17.0 | Colour emoji in egui text (desktop, ADR-0033) | MIT |
 | `fastframe-fonts` (git, tag; no default features) | 0.17.0 | Installed fonts as fallbacks for other scripts (desktop, ADR-0033) | MIT |

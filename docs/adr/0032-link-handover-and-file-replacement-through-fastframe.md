@@ -35,7 +35,8 @@ that tag.
 - While a video plays, `keep_awake.rs` also holds a
   `fastframe_power::KeepAwake` against idle system sleep. The existing
   ScreenSaver inhibition and `keepawake` stay, because only they keep the
-  screen on.
+  screen on. `fastframe_power::Power` also pauses the video before the
+  computer sleeps or the session ends.
 - `panic_log.rs` records each panic in `<data dir>/panic.log` with
   `fastframe_log::log_panics` (time, version, thread and location, never the
   message), then runs the default hook so a terminal still shows it.
