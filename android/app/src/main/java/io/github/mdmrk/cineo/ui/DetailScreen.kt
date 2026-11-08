@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -87,16 +89,25 @@ fun DetailScreen(
     filters: StreamFilterActions,
 ) {
     val readyCount = detail.streams.sumOf { (it.items as? StreamItems.Ready)?.streams?.size ?: 0 }
+    val seasons = remember(detail.videos) {
+        detail.videos.mapNotNull { it.season?.toInt() }.distinct().sortedWith(compareBy({ it == 0 }, { it }))
+    }
+    var pickedSeason by rememberSaveable(detail.id) { mutableStateOf<Int?>(null) }
+    val season = pickedSeason
+        ?: detail.videos.firstOrNull { it.id == detail.selectedVideo }?.season?.toInt()
+        ?: seasons.firstOrNull()
+    val episodes = remember(detail.videos, season) {
+        detail.videos.filter { season == null || it.season?.toInt() == season }
+    }
     Box(Modifier.fillMaxSize().background(Brand.Background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item(key = "header") { Header(detail, images) }
-            item(key = "actions") { Actions(resume, onResume) }
+            section("actions") { Actions(resume, onResume) }
             if (detail.meta is MetaStatus.Failed) {
-                item(key = "meta-failed") {
+                section("meta-failed") {
                     Text(
                         problemText((detail.meta as MetaStatus.Failed).problem),
                         color = Brand.Danger,
@@ -105,16 +116,19 @@ fun DetailScreen(
                 }
             }
             if (detail.videos.size > 1) {
-                item(key = "episodes") { Episodes(detail, images, onSelectVideo) }
+                section("episodes") { EpisodesHeader(seasons, season) { pickedSeason = it } }
+                itemsIndexed(episodes, key = { index, _ -> "episode-$season-$index" }) { _, video ->
+                    Episode(video, video.id == detail.selectedVideo, images) { onSelectVideo(video.id) }
+                }
             }
-            item(key = "streams-title") {
+            section("streams-title") {
                 RowHeader(stringResource(R.string.where_to_watch), null)
             }
             if (readyCount > 1) {
-                item(key = "stream-filters") { StreamFilters(detail, filters) }
+                section("stream-filters") { StreamFilters(detail, filters) }
             }
             if (detail.streams.isEmpty()) {
-                item(key = "no-streams") {
+                section("no-streams") {
                     Text(
                         stringResource(R.string.streams_unavailable),
                         color = Brand.TextDim,
@@ -123,7 +137,7 @@ fun DetailScreen(
                 }
             }
             detail.streams.forEachIndexed { groupIndex, group ->
-                item(key = "group-$groupIndex") {
+                section("group-$groupIndex") {
                     Text(
                         group.addonName,
                         style = MaterialTheme.typography.labelLarge,
@@ -133,9 +147,9 @@ fun DetailScreen(
                 }
                 when (val items = group.items) {
                     is StreamItems.Loading -> items(2, key = { "loading-$groupIndex-$it" }) {
-                        Placeholder(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(64.dp).clip(Rounded))
+                        Placeholder(Modifier.padding(top = SectionGap).padding(horizontal = 16.dp).fillMaxWidth().height(64.dp).clip(Rounded))
                     }
-                    is StreamItems.Failed -> item(key = "failed-$groupIndex") {
+                    is StreamItems.Failed -> section("failed-$groupIndex") {
                         Text(
                             problemText(items.problem),
                             color = Brand.TextDim,
@@ -144,7 +158,7 @@ fun DetailScreen(
                     }
                     is StreamItems.Ready -> {
                         if (items.streams.isEmpty()) {
-                            item(key = "empty-$groupIndex") {
+                            section("empty-$groupIndex") {
                                 Text(
                                     stringResource(R.string.streams_empty),
                                     color = Brand.TextDim,
@@ -153,7 +167,7 @@ fun DetailScreen(
                             }
                         }
                         if (items.streams.isNotEmpty() && items.order.isEmpty() && items.hidden.toInt() < items.streams.size) {
-                            item(key = "no-match-$groupIndex") {
+                            section("no-match-$groupIndex") {
                                 Text(
                                     stringResource(R.string.streams_no_match),
                                     color = Brand.TextDim,
@@ -162,12 +176,14 @@ fun DetailScreen(
                             }
                         }
                         items(items.order, key = { "stream-$groupIndex-$it" }) { index ->
-                            StreamCard(items.streams[index.toInt()], group.addonName) {
-                                onPlay(groupIndex.toUInt(), index)
+                            Box(Modifier.padding(top = SectionGap)) {
+                                StreamCard(items.streams[index.toInt()], group.addonName) {
+                                    onPlay(groupIndex.toUInt(), index)
+                                }
                             }
                         }
                         if (items.hidden > 0u) {
-                            item(key = "hidden-$groupIndex") {
+                            section("hidden-$groupIndex") {
                                 Text(
                                     stringResource(R.string.streams_hidden, items.hidden.toInt()),
                                     style = MaterialTheme.typography.bodySmall,
@@ -195,6 +211,12 @@ fun DetailScreen(
             }
         }
     }
+}
+
+private val SectionGap = 20.dp
+
+private fun LazyListScope.section(key: String, content: @Composable () -> Unit) {
+    item(key = key) { Box(Modifier.padding(top = SectionGap)) { content() } }
 }
 
 @Composable
@@ -317,18 +339,15 @@ private fun Actions(resume: LibraryItemView?, onResume: () -> Unit) {
 }
 
 @Composable
-private fun Episodes(detail: DetailView, images: Images, onSelectVideo: (String) -> Unit) {
-    val seasons = detail.videos.mapNotNull { it.season?.toInt() }.distinct().sortedWith(compareBy({ it == 0 }, { it }))
-    val selectedSeason = detail.videos.firstOrNull { it.id == detail.selectedVideo }?.season?.toInt()
-    var season by rememberSaveable(detail.id) { mutableStateOf(selectedSeason ?: seasons.firstOrNull()) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun EpisodesHeader(seasons: List<Int>, season: Int?, onSeason: (Int) -> Unit) {
+    Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         RowHeader(stringResource(R.string.episodes), null)
         if (seasons.size > 1) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(seasons) { number ->
                     FilterChip(
                         selected = number == season,
-                        onClick = { season = number },
+                        onClick = { onSeason(number) },
                         label = {
                             Text(
                                 if (number == 0) stringResource(R.string.specials)
@@ -342,9 +361,6 @@ private fun Episodes(detail: DetailView, images: Images, onSelectVideo: (String)
                     )
                 }
             }
-        }
-        detail.videos.filter { season == null || it.season?.toInt() == season }.forEach { video ->
-            Episode(video, video.id == detail.selectedVideo, images) { onSelectVideo(video.id) }
         }
     }
 }

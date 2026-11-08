@@ -175,6 +175,10 @@ android {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose-stability.conf"))
+}
+
 androidComponents {
     onVariants { variant ->
         val libmpv = tasks.register<Libmpv>("libmpv${variant.name.replaceFirstChar { it.uppercase() }}") {

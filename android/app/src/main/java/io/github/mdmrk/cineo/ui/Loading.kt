@@ -166,8 +166,12 @@ private fun LoadingArt(title: String, logo: String?, images: Images) {
         animationSpec = infiniteRepeatable(tween(PULSE_PERIOD), RepeatMode.Restart),
         label = "pulse",
     )
-    val opacity = 0.25f + 0.75f * (0.5f - 0.5f * cos(phase * 2 * PI).toFloat())
-    Box(Modifier.fillMaxSize().graphicsLayer { alpha = opacity }, contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().graphicsLayer {
+            alpha = 0.25f + 0.75f * (0.5f - 0.5f * cos(phase * 2 * PI).toFloat())
+        },
+        contentAlignment = Alignment.Center,
+    ) {
         if (logo != null) {
             NetImage(
                 images,
