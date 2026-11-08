@@ -55,7 +55,7 @@ semver = "1.0.28"
 sys-locale = "0.3.2"
 serde_json = "1.0.154"
 thiserror = "2.0.21"
-zbus = { version = "6.2.1", default-features = false, features = ["default-rt", "service"] }
+zbus = { version = "5.19.0", default-features = false, features = ["async-io"] }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "time", "io-util", "sync"] }
 tokio-util = { version = "0.7.20", default-features = false, features = ["io"] }
 tracing = "0.1.44"
