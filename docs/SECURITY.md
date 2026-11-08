@@ -179,6 +179,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   video, raise the window and read the title shown in the player. Stream
   URLs and file paths are not exposed. The service goes away when playback
   ends.
+- While a video plays, the window title names it, so window lists, task
+  switchers and screen sharing can show it.
 - While a video plays, Cineo asks the session D-Bus
   `org.freedesktop.ScreenSaver` to keep the screen awake, and the desktop
   portal or logind to block idle sleep.

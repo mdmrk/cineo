@@ -200,6 +200,7 @@ pub(crate) struct CineoApp {
     keep_awake: KeepAwake,
     media_keys: MediaKeys,
     scrolling: fastframe_scroll::Scrolling,
+    titled_after: Option<String>,
 }
 
 impl CineoApp {
@@ -231,6 +232,7 @@ impl CineoApp {
             keep_awake: KeepAwake::new(),
             media_keys,
             scrolling: fastframe_scroll::Scrolling::default(),
+            titled_after: None,
         };
         for action in restore {
             app.dispatch(action);
@@ -606,6 +608,11 @@ impl eframe::App for CineoApp {
             .zip(status.filter(|s| s.loaded))
             .map(|(e, s)| (e.title.as_str(), s.paused));
         self.media_keys.set(shown);
+        let playing = self.playback.as_ref().map(|e| e.title.as_str());
+        if self.titled_after.as_deref() != playing {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(window_title(playing)));
+            self.titled_after = playing.map(str::to_owned);
+        }
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
@@ -666,6 +673,13 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     )]
     let volume = Percent::new(volume?.round().max(0.0) as u32);
     (settings.remember_volume && settings.volume != volume).then_some(volume)
+}
+
+fn window_title(playing: Option<&str>) -> String {
+    match playing.map(str::trim) {
+        Some(title) if !title.is_empty() => format!("Cineo - {title}"),
+        _ => "Cineo".to_owned(),
+    }
 }
 
 fn remote_command(remote: Remote, paused: bool) -> Option<PlayerCommand> {
@@ -768,6 +782,16 @@ mod tests {
         };
         assert!(!keeps_screen_awake(&paused));
         assert!(!keeps_screen_awake(&Status::default()), "not loaded yet");
+    }
+
+    #[test]
+    fn the_window_title_names_what_is_playing() {
+        assert_eq!(super::window_title(None), "Cineo");
+        assert_eq!(
+            super::window_title(Some("The Matrix")),
+            "Cineo - The Matrix"
+        );
+        assert_eq!(super::window_title(Some("  ")), "Cineo");
     }
 
     #[test]
