@@ -175,8 +175,9 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   manifest is never trusted (`addon_lists_install_listed_addons_and_mark_installed_ones`).
 - While a video plays, Cineo serves MPRIS (`org.mpris.MediaPlayer2.cineo.instance<pid>`)
   on the session D-Bus, so media keys and the desktop's media controls
-  work. Any process in the user's session can then play, pause or stop the
-  video, raise the window and read the title shown in the player. Stream
+  work. Any process in the user's session can then play, pause, stop or seek
+  the video, change its volume, raise the window, and read its title,
+  position and length. Stream
   URLs and file paths are not exposed. The service goes away when playback
   ends.
 - While a video plays, the window title names it, so window lists, task
@@ -193,7 +194,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   the message to stderr.
 - On Windows the media controls are the System Media Transport Controls
   of a hidden window Cineo creates for them at the first playback: they show
-  the title and accept play, pause and stop, and show as stopped after it.
+  the title and accept play, pause, stop, seek and volume, and show as
+  stopped after it.
   The screen is kept awake with `SetThreadExecutionState`, and links are
   registered under `HKCU\Software\Classes` with `reg.exe` (no
   administrator rights).

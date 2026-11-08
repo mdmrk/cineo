@@ -42,8 +42,9 @@ uses `fastframe-now-playing` on Linux and Windows.
   `Stopped`.
 - The bus name stays `org.mpris.MediaPlayer2.cineo.instance<pid>`, and the
   desktop entry is `cineo`.
-- The offered features do not change: play, pause, stop, raise and the
-  title. Next, previous and seek are off and quit is not offered.
+- The offered features did not change at first: play, pause, stop, raise
+  and the title. Amended 2026-11-08: seek, position, length and volume are
+  offered too. Next and previous are off and quit is not offered.
 
 ## Consequences
 - `mpris.rs`, `smtc.rs`, the `souvlaki` dependency and the window handle

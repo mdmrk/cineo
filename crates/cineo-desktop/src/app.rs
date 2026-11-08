@@ -24,7 +24,7 @@ use crate::brand;
 use crate::i18n::{self, Locale};
 use crate::images::{self, NetImageLoader};
 use crate::keep_awake::KeepAwake;
-use crate::media_keys::{MediaKeys, Remote};
+use crate::media_keys::{MediaKeys, Playing, Remote};
 use crate::player::{self, Controls, NextUp, Playback};
 use crate::theme;
 use crate::view::{self, Page, ViewState};
@@ -606,7 +606,13 @@ impl eframe::App for CineoApp {
             .playback
             .as_ref()
             .zip(status.filter(|s| s.loaded))
-            .map(|(e, s)| (e.title.as_str(), s.paused));
+            .map(|(e, s)| Playing {
+                title: e.title.as_str(),
+                paused: s.paused,
+                position_s: s.position_s,
+                duration_s: s.duration_s,
+                volume: if s.muted { 0.0 } else { s.volume },
+            });
         self.media_keys.set(shown);
         let playing = self.playback.as_ref().map(|e| e.title.as_str());
         if self.titled_after.as_deref() != playing {
@@ -688,6 +694,9 @@ fn remote_command(remote: Remote, paused: bool) -> Option<PlayerCommand> {
         Remote::Play if paused => Some(PlayerCommand::TogglePause),
         Remote::Pause if !paused => Some(PlayerCommand::TogglePause),
         Remote::Stop => Some(PlayerCommand::Stop),
+        Remote::SeekBy(seconds) => Some(PlayerCommand::SeekBy(seconds)),
+        Remote::SeekTo(seconds) => Some(PlayerCommand::SeekTo(seconds)),
+        Remote::SetVolume(percent) => Some(PlayerCommand::SetVolume(percent)),
         Remote::Play | Remote::Pause | Remote::Raise => None,
     }
 }
@@ -804,6 +813,18 @@ mod tests {
                 Some(PlayerCommand::Stop)
             );
             assert_eq!(remote_command(Remote::Raise, paused), None);
+            assert_eq!(
+                remote_command(Remote::SeekBy(-5.0), paused),
+                Some(PlayerCommand::SeekBy(-5.0))
+            );
+            assert_eq!(
+                remote_command(Remote::SeekTo(90.0), paused),
+                Some(PlayerCommand::SeekTo(90.0))
+            );
+            assert_eq!(
+                remote_command(Remote::SetVolume(50.0), paused),
+                Some(PlayerCommand::SetVolume(50.0))
+            );
         }
         assert_eq!(remote_command(Remote::Play, true), toggle);
         assert_eq!(remote_command(Remote::Play, false), None, "already playing");

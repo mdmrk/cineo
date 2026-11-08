@@ -346,16 +346,15 @@ Format:
 - Instead: text and scrolling follow fastframe's behavior, not egui's.
 - Exit: move to the egui release fastframe adopts.
 
-### Desktop: MPRIS covers play, pause and stop only
+### Desktop: MPRIS has no next or previous
 - Where: [media_keys.rs](../crates/cineo-desktop/src/media_keys.rs)
-- Gap: the MPRIS service offers play, pause, stop and raise, with the title
-  as metadata. It has no seek, position, volume, next or previous, and
-  nothing tests it against a real desktop or a real headset.
-- Why: media keys on headphones only needed play and pause.
-- Instead: next and previous do nothing, and the desktop shows no
-  progress bar for Cineo.
-- Exit: add `Position`, `Seek`, `SetPosition`, `Volume` and next episode,
-  and a test that talks to the service over a private bus.
+- Gap: the media controls offer play, pause, stop, raise, seek, position and
+  volume, with the title and length as metadata. They have no next or
+  previous, and nothing tests them against a real desktop or a real headset.
+- Why: next episode needs the player's next-up state in the controls.
+- Instead: next and previous are shown as unavailable.
+- Exit: add next episode, and a test that talks to the service over a
+  private bus.
 
 ### Android: the language follows the system only
 - Where: [res](../android/app/src/main/res) (`values-*/strings.xml`)
