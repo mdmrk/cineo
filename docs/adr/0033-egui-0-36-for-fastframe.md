@@ -47,6 +47,8 @@ that was what it took (2026-11-08). Nine fastframe 0.17.0 crates need egui
   threads. Reading the desktop's font settings blocks the window start
   briefly.
 - The dialog uses Cineo's translations, in the saved language.
+- Simplified Chinese, added later, relies on these fallbacks: no CJK font is
+  bundled, so a system without one draws it as boxes (TECHNICAL_DEBT.md).
 - eframe 0.36 always builds with the clipboard, which 0.37 made optional and
   Cineo had off. Copy and paste should be available (INFERRED, not tried), and two BSL-1.0 crates enter the
   Windows build (LEGAL.md).

@@ -719,6 +719,7 @@ fn ui_language_name(language: UiLanguage, system: Locale) -> Text {
         UiLanguage::German => Locale::German.endonym().into(),
         UiLanguage::French => Locale::French.endonym().into(),
         UiLanguage::BrazilianPortuguese => Locale::BrazilianPortuguese.endonym().into(),
+        UiLanguage::SimplifiedChinese => Locale::SimplifiedChinese.endonym().into(),
     }
 }
 
@@ -1201,6 +1202,7 @@ mod tests {
                 "Italiano",
                 "Português do Brasil",
                 "Русский",
+                "简体中文",
             ]
         );
         assert_eq!(

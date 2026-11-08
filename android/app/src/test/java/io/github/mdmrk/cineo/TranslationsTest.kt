@@ -9,7 +9,7 @@ import org.w3c.dom.Element
 
 class TranslationsTest {
     private val res = File("src/main/res")
-    private val locales = listOf("es", "b+es+419", "pt", "ru", "it", "de", "fr")
+    private val locales = listOf("es", "b+es+419", "pt", "ru", "it", "de", "fr", "zh")
     private val argument = Regex("""%(\d+\$[sd]|%)""")
 
     private fun read(folder: String): Map<String, List<String>> {

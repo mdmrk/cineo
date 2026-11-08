@@ -195,24 +195,27 @@ Format:
 - Exit: a type filter over the same `addonCatalogs`, and logos through the
   existing image loader.
 
-### Desktop UI: only Latin and Cyrillic, left-to-right UI languages
+### Desktop UI: no right-to-left UI languages, and Chinese needs an installed font
 - Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
   [assets/locales](../crates/cineo-desktop/assets/locales)
 - Gap: the UI is offered in English, Spanish (Spain and Latin America),
-  Russian, Italian, German, French and Brazilian Portuguese only. Portugal
-  gets Brazilian Portuguese.
-  Right-to-left languages and scripts outside the bundled fonts cannot be
-  added.
+  Russian, Italian, German, French, Brazilian Portuguese and Simplified
+  Chinese only. Portugal gets Brazilian Portuguese, and Traditional Chinese
+  systems get Simplified Chinese. Simplified Chinese was translated on
+  2026-11-08 and has not been reviewed by a native speaker.
+  Chinese glyphs are not bundled: without a CJK font installed, Chinese text,
+  and the name of the language in the picker, draw as boxes.
+  Right-to-left languages cannot be added.
   Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
   Counted messages are worded as "label: number" because the catalogs
   have no plural rules (ADR-0021).
   Technical details from IO layers stay in English inside a translated
   sentence.
 - Why: egui does not shape right-to-left text, the bundled fonts cover
-  Latin and Cyrillic only, and `rust-i18n` has neither plural rules nor
+  Latin and Cyrillic only (a CJK font would add megabytes), and `rust-i18n` has neither plural rules nor
   per-locale number formatting.
 - Instead: other system locales fall back to English.
-- Exit: bundle fonts for more scripts, wait for bidi support in egui, and
+- Exit: wait for bidi support in egui, and
   give IO errors typed kinds that the UI can word.
 
 ### Desktop UI: no app icon on Wayland
@@ -358,14 +361,14 @@ Format:
 
 ### Android: the language follows the system only
 - Where: [res](../android/app/src/main/res) (`values-*/strings.xml`)
-- Gap: the Android UI has the desktop's eight languages, but no Language
+- Gap: the Android UI has the desktop's nine languages, but no Language
   setting: Android picks the strings from the system language. Its texts
   are a copy of the desktop's translations (`crates/cineo-desktop/assets/locales/`)
   plus 24 strings and 2 plurals of its own, translated on 2026-11-05 and
   not reviewed by a native speaker; nothing keeps the two copies in step.
 - Why: the desktop's catalogs are compiled into the Rust UI; Android needs
   its own string resources.
-- Instead: a user whose system language is not one of the eight sees
+- Instead: a user whose system language is not one of the nine sees
   English. `TranslationsTest` checks that every language has every string
   with the same arguments as English.
 - Exit: an in-app language choice (`AppCompatDelegate` locales or Android

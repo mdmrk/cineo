@@ -13,10 +13,11 @@ pub enum Locale {
     German,
     French,
     BrazilianPortuguese,
+    SimplifiedChinese,
 }
 
 impl Locale {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::English,
         Self::Spanish,
         Self::LatinAmericanSpanish,
@@ -25,6 +26,7 @@ impl Locale {
         Self::German,
         Self::French,
         Self::BrazilianPortuguese,
+        Self::SimplifiedChinese,
     ];
 
     pub fn from_tag(tag: &str) -> Self {
@@ -47,6 +49,8 @@ impl Locale {
             Self::French
         } else if language.eq_ignore_ascii_case("pt") {
             Self::BrazilianPortuguese
+        } else if language.eq_ignore_ascii_case("zh") {
+            Self::SimplifiedChinese
         } else {
             Self::English
         }
@@ -67,6 +71,7 @@ impl Locale {
             UiLanguage::German => Self::German,
             UiLanguage::French => Self::French,
             UiLanguage::BrazilianPortuguese => Self::BrazilianPortuguese,
+            UiLanguage::SimplifiedChinese => Self::SimplifiedChinese,
         }
     }
 
@@ -80,6 +85,7 @@ impl Locale {
             Self::German => "Deutsch",
             Self::French => "Français",
             Self::BrazilianPortuguese => "Português do Brasil",
+            Self::SimplifiedChinese => "简体中文",
         }
     }
 
@@ -94,6 +100,7 @@ impl Locale {
             Self::German => include_str!("../assets/locales/de.toml"),
             Self::French => include_str!("../assets/locales/fr.toml"),
             Self::BrazilianPortuguese => include_str!("../assets/locales/pt-BR.toml"),
+            Self::SimplifiedChinese => include_str!("../assets/locales/zh-CN.toml"),
         }
     }
 
@@ -107,6 +114,7 @@ impl Locale {
             Self::German => "de",
             Self::French => "fr",
             Self::BrazilianPortuguese => "pt-BR",
+            Self::SimplifiedChinese => "zh-CN",
         }
     }
 }
@@ -246,6 +254,9 @@ mod tests {
         assert_eq!(t!("count-streams", count = 4), "Flux : 4");
         set(Locale::BrazilianPortuguese);
         assert_eq!(t!("page-settings"), "Configurações");
+        set(Locale::SimplifiedChinese);
+        assert_eq!(t!("page-settings"), "设置");
+        assert_eq!(t!("count-streams", count = 4), "片源：4");
         set(Locale::English);
         assert_eq!(
             t!("installed-addon", name = "Torrentio"),
@@ -273,6 +284,9 @@ mod tests {
         assert_eq!(Locale::from_tag("fr-CA"), Locale::French);
         assert_eq!(Locale::from_tag("pt-BR"), Locale::BrazilianPortuguese);
         assert_eq!(Locale::from_tag("pt_PT.UTF-8"), Locale::BrazilianPortuguese);
+        assert_eq!(Locale::from_tag("zh-CN"), Locale::SimplifiedChinese);
+        assert_eq!(Locale::from_tag("zh_TW.UTF-8"), Locale::SimplifiedChinese);
+        assert_eq!(Locale::from_tag("zh-Hant-HK"), Locale::SimplifiedChinese);
         assert_eq!(Locale::from_tag("en-US"), Locale::English);
         assert_eq!(Locale::from_tag("nl-NL"), Locale::English);
         assert_eq!(Locale::from_tag("C"), Locale::English);
