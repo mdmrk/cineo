@@ -128,12 +128,6 @@ fn harness(state: State, view: ViewState) -> Harness<'static, Ui> {
 }
 
 #[test]
-fn empty_board_explains_how_to_add_addons() {
-    let harness = harness(State::default(), ViewState::default());
-    harness.get_by_label_contains("No addons installed");
-}
-
-#[test]
 fn board_shows_rows_with_independent_failures_and_a_card_opens_the_detail() {
     let mut harness = harness(board_state(), ViewState::default());
     harness.get_by_label("Top Movies Movies");

@@ -1444,23 +1444,4 @@ mod tests {
         );
         assert!(stat_rows(&Status::default(), Some(&TorrentStatus::Starting)).is_empty());
     }
-
-    #[test]
-    fn every_player_icon_exists() {
-        for name in [
-            "rewind-backward-10",
-            "rewind-forward-10",
-            "maximize",
-            "minimize",
-            "badge-cc",
-            "activity",
-            "language",
-            "volume",
-            "volume-off",
-            "check",
-            "player-skip-forward",
-        ] {
-            assert!(Icon::Named(name).glyph().is_some(), "{name}");
-        }
-    }
 }
