@@ -124,10 +124,9 @@ impl StreamFacts {
             self.groups.resize_with(index + 1, GroupFacts::default);
         }
         let group = &mut self.groups[index];
-        let source = (streams.as_ptr().addr(), streams.len());
-        if group.source != Some(source) {
+        if group.source != streams {
             *group = GroupFacts {
-                source: Some(source),
+                source: streams.to_vec(),
                 streams: streams.iter().map(Facts::of).collect(),
                 ..GroupFacts::default()
             };
@@ -138,7 +137,7 @@ impl StreamFacts {
 
 #[derive(Debug, Clone, Default)]
 struct GroupFacts {
-    source: Option<(usize, usize)>,
+    source: Vec<Stream>,
     streams: Vec<Facts>,
     sorted_by: Option<StreamSort>,
     order: Vec<usize>,
@@ -3048,5 +3047,19 @@ mod tests {
         let (order, fresh) = facts.group(1, &second).sorted(StreamSort::Seeders);
         assert_eq!(order, [0]);
         assert_eq!(fresh[0].quality.map(|q| q.label()), Some("4K"));
+    }
+
+    #[test]
+    fn stream_facts_notice_new_streams_in_the_same_memory() {
+        let mut streams = [stream(Some("720p"), None)];
+        let mut facts = StreamFacts::default();
+        let quality = |facts: &mut StreamFacts, streams: &[Stream]| {
+            facts.group(0, streams).streams[0]
+                .quality
+                .map(|q| q.label())
+        };
+        assert_eq!(quality(&mut facts, &streams), Some("720p"));
+        streams[0] = stream(Some("4k"), None);
+        assert_eq!(quality(&mut facts, &streams), Some("4K"));
     }
 }
