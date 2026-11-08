@@ -1,0 +1,7 @@
+include = ["**/Cargo.toml", ".config/nextest.toml", ".clippy.toml", "rustfmt.toml", ".taplo.toml", "typos.toml"]
+exclude = ["target/**", "android/build/**", "android/app/build/**"]
+
+[formatting]
+align_entries = false
+column_width = 160
+indent_string = "    "

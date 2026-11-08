@@ -11,7 +11,10 @@ icon=$data_home/icons/hicolor/256x256/apps/cineo.png
 licenses=$data_home/doc/cineo
 
 say() { printf '%s\n' "$*"; }
-die() { say "error: $*" >&2; exit 1; }
+die() {
+  say "error: $*" >&2
+  exit 1
+}
 
 if [ "${1:-}" = "--uninstall" ]; then
   rm -f "$exe" "$desktop" "$icon"
@@ -40,8 +43,8 @@ say "Downloading Cineo ($version)..."
 for file in cineo-x86_64-linux cineo.png cineo-licenses.zip SHA256SUMS; do
   curl -fsSL --retry 3 -o "$tmp/$file" "$base/$file" || die "could not download $base/$file"
 done
-(cd "$tmp" && grep -E ' \*?(cineo-x86_64-linux|cineo\.png|cineo-licenses\.zip)$' SHA256SUMS | sha256sum -c --quiet -) \
-  || die "checksum mismatch; nothing was installed"
+(cd "$tmp" && grep -E ' \*?(cineo-x86_64-linux|cineo\.png|cineo-licenses\.zip)$' SHA256SUMS | sha256sum -c --quiet -) ||
+  die "checksum mismatch; nothing was installed"
 
 mkdir -p "$bin_dir" "$(dirname "$desktop")" "$(dirname "$icon")"
 install -m 755 "$tmp/cineo-x86_64-linux" "$exe.new"
@@ -52,7 +55,7 @@ if command -v unzip >/dev/null; then
   mkdir -p "$licenses"
   unzip -qj "$tmp/cineo-licenses.zip" -d "$licenses"
 fi
-cat > "$desktop" <<EOF
+cat >"$desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Cineo

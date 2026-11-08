@@ -4,8 +4,8 @@ cd "$(dirname "$0")/.."
 
 step() { printf '\n==> %s\n' "$*"; }
 
-step "rustfmt"
-cargo fmt --all -- --check
+step "format"
+scripts/fmt.sh --check
 
 step "clippy"
 cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -18,6 +18,9 @@ else
 fi
 
 if [[ "${1:-}" != "--quick" ]]; then
+  step "lint"
+  scripts/lint.sh
+
   step "docs"
   RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
 

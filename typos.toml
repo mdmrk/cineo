@@ -1,0 +1,18 @@
+[files]
+extend-exclude = [
+    "Cargo.lock",
+    "android/gradle/**",
+    "android/gradlew*",
+    "fastlane/**",
+    "crates/cineo-desktop/assets/locales/**",
+    "android/app/src/main/res/values-*/**",
+]
+
+[default.extend-words]
+fre = "fre"
+tha = "tha"
+strem = "strem"
+abd = "abd"
+
+[default]
+extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs", "[0-9a-f]{3,}…[0-9a-f]{3,}"]

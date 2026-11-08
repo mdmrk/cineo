@@ -18,8 +18,10 @@ holds the details it links to.
    `rustup toolchain install stable --component rustfmt,clippy`.
 2. Optional tools, which CI always runs:
    ```sh
-   cargo install --locked cargo-nextest cargo-deny
+   cargo install --locked cargo-nextest cargo-deny taplo-cli typos-cli cargo-machete
    ```
+   `shellcheck` and `shfmt` come from your package manager. `scripts/lint.sh`
+   and `scripts/fmt.sh` skip a missing tool locally and fail on it in CI.
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
    runtime (ADR-0014). On Windows, put a `libmpv-2.dll` next to the
    executable, or build with `--features bundled-libmpv` and
@@ -101,7 +103,8 @@ that setting.
 | -------------------- | ------------------------------------------------------------------------------------------- |
 | Everything CI checks | `scripts/check.sh` (`--quick` skips docs and deny)                                          |
 | Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
-| Format               | `cargo fmt --all`                                                                           |
+| Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
+| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, lockfile)                       |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
 | Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
 | One test             | `cargo test -p cineo-core some_name`                                                        |
@@ -596,6 +599,11 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | ------------- | ------- | ----------------------------------- |
 | cargo-nextest | 0.9.150 | CI test runner                      |
 | cargo-deny    | 0.20.2  | Licenses, advisories, bans, sources |
+| taplo         | 0.10.0  | TOML format and lint                |
+| typos         | 1.51.1  | Spell check of code and docs        |
+| cargo-machete | 0.9.2   | Unused dependencies                 |
+| shellcheck    | 0.11.0  | Shell script lint                   |
+| shfmt         | 3.14.1  | Shell script format                 |
 
 ## Releasing
 
@@ -616,8 +624,8 @@ it:
 The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
 `ci / check (android)`, `ci / build (linux)`, `ci / build (windows)`,
 `ci / build (android)` and `ci / publish`.
-`check (linux)` runs `scripts/check.sh` (fmt, clippy, nextest with the `ci`
-profile, docs, cargo-deny); `check (windows)` runs clippy and nextest on
+`check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`, clippy,
+nextest with the `ci` profile, `scripts/lint.sh`, docs, cargo-deny); `check (windows)` runs clippy and nextest on
 `windows-latest`. `build` builds `cineo-desktop` for Linux x86_64 and
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files

@@ -9,11 +9,11 @@ case "${1:-linux}" in
     mkdir -p dist/cineo-licenses
     cp LICENSE crates/cineo-desktop/assets/fonts/*-OFL.txt \
       crates/cineo-desktop/assets/licenses/LGPL-2.1.txt dist/cineo-licenses/
-    iconflow=$(cargo metadata --format-version 1 --locked \
-      | jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
+    iconflow=$(cargo metadata --format-version 1 --locked |
+      jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
     cp "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" dist/cineo-licenses/
     source scripts/libmpv-windows.env
-    cat > dist/cineo-licenses/libmpv.md <<EOT
+    cat >dist/cineo-licenses/libmpv.md <<EOT
 # libmpv (Windows build only)
 
 cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
@@ -48,12 +48,18 @@ EOT
     cp android/app/build/outputs/apk/release/app-release.apk "$apk"
     entries=$(unzip -Z1 "$apk")
     for required in assets/licenses/libmpv.md assets/licenses/mpv-LGPL-2.1.txt lib/arm64-v8a/libcineo_android.so; do
-      grep -qxF "$required" <<<"$entries" || { echo "$apk has no $required" >&2; exit 1; }
+      grep -qxF "$required" <<<"$entries" || {
+        echo "$apk has no $required" >&2
+        exit 1
+      }
     done
     for lib in libmpv.so libavcodec.so libavfilter.so libavformat.so libavutil.so libswresample.so libswscale.so; do
       shipped=$(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1)
-      grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" \
-        || { echo "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names" >&2; exit 1; }
+      grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" ||
+        {
+          echo "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names" >&2
+          exit 1
+        }
     done
     libs=$(mktemp -d)
     unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
@@ -70,9 +76,15 @@ EOT
         exit 1
       fi
       aligns=$(readelf -lW "$so" | awk '$1 == "LOAD" { print $NF }')
-      [[ -n $aligns ]] || { echo "$apk: $(basename "$so") has no LOAD segment" >&2; exit 1; }
+      [[ -n $aligns ]] || {
+        echo "$apk: $(basename "$so") has no LOAD segment" >&2
+        exit 1
+      }
       for align in $aligns; do
-        ((align >= 16384)) || { echo "$apk: $(basename "$so") has a LOAD segment aligned to $align, below 16 KB" >&2; exit 1; }
+        ((align >= 16384)) || {
+          echo "$apk: $(basename "$so") has a LOAD segment aligned to $align, below 16 KB" >&2
+          exit 1
+        }
       done
     done
     rm -rf "$libs"
@@ -96,8 +108,11 @@ PY
     IFS=. read -r major minor patch <<<"$version"
     expected=$((major * 10000 + minor * 100 + patch))
     badging=$("$build_tools/aapt2" dump badging "$apk" | head -n 1)
-    grep -qF "versionCode='$expected' versionName='$version'" <<<"$badging" \
-      || { echo "$apk: expected versionCode $expected and versionName $version, got: $badging" >&2; exit 1; }
+    grep -qF "versionCode='$expected' versionName='$version'" <<<"$badging" ||
+      {
+        echo "$apk: expected versionCode $expected and versionName $version, got: $badging" >&2
+        exit 1
+      }
     ;;
   *)
     echo "unknown platform: $1" >&2
