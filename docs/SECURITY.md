@@ -180,7 +180,8 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - While a video plays, Cineo asks the session D-Bus
   `org.freedesktop.ScreenSaver` to keep the screen awake.
 - On Windows the media controls are the System Media Transport Controls
-  of Cineo's window: they show the title and accept play, pause and stop.
+  of a hidden window Cineo creates for them at the first playback: they show
+  the title and accept play, pause and stop, and show as stopped after it.
   The screen is kept awake with `SetThreadExecutionState`, and links are
   registered under `HKCU\Software\Classes` with `reg.exe` (no
   administrator rights).

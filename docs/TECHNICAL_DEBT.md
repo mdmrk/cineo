@@ -336,7 +336,7 @@ Format:
   test it on the desktops Cineo targets.
 
 ### Desktop: MPRIS covers play, pause and stop only
-- Where: [mpris.rs](../crates/cineo-desktop/src/mpris.rs)
+- Where: [media_keys.rs](../crates/cineo-desktop/src/media_keys.rs)
 - Gap: the MPRIS service offers play, pause, stop and raise, with the title
   as metadata. It has no seek, position, volume, next or previous, and
   nothing tests it against a real desktop or a real headset.

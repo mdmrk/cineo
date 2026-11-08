@@ -55,6 +55,10 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   The same MPL-2.0 terms apply as for `option-ext`: ship the notice and
   point to the source. The Kotlin that `uniffi-bindgen` writes is
   generated from our crate and is built into the app.
+- Crate-scoped exception for MPRIS (2026-11-08, ADR-0031): `mpris-server`
+  0.10.0 is MPL-2.0. It reaches the Linux desktop build through
+  `fastframe-now-playing` (MIT), unmodified. The same MPL-2.0 terms apply as
+  for `option-ext`: ship the notice and point to the source.
 
 ## Android app dependencies
 The Android app (`android/`, ADR-0028) also uses Gradle dependencies,

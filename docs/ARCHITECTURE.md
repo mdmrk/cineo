@@ -174,7 +174,7 @@ in the crate that does the IO:
 | libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) |
 | Single-instance handover (desktop `instance`) | Unix socket | named pipe |
 | Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` |
-| Media keys (desktop `media_keys`) | MPRIS over `zbus` | SMTC via `souvlaki` |
+| Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` |
 | Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver` | `SetThreadExecutionState` via `keepawake` |
 
 `std::os::unix` and `std::os::windows` need a `cfg`.

@@ -65,8 +65,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         client: client.clone(),
         gl: None,
         display: None,
-        #[cfg(windows)]
-        window: None,
         engine: EngineOptions {
             allow_private_network,
             ..EngineOptions::new(options.cache_dir)
@@ -95,10 +93,6 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
             io.display = native_display(cc);
-            #[cfg(windows)]
-            {
-                io.window = native_window(cc);
-            }
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
             if let Err(err) = instance::listen(&data_dir, &io.runtime, move |link| {
                 let _ = tx.send(Msg::Link(link));
@@ -141,8 +135,6 @@ pub(crate) struct Io {
     pub(crate) client: AddonClient,
     pub(crate) gl: Option<ProcAddress>,
     pub(crate) display: Option<Display>,
-    #[cfg(windows)]
-    pub(crate) window: Option<isize>,
     pub(crate) engine: EngineOptions,
 }
 
@@ -150,15 +142,6 @@ fn native_display(cc: &eframe::CreationContext<'_>) -> Option<Display> {
     match cc.display_handle().ok()?.as_raw() {
         RawDisplayHandle::Wayland(handle) => Some(Display::Wayland(handle.display)),
         RawDisplayHandle::Xlib(handle) => handle.display.map(Display::X11),
-        _ => None,
-    }
-}
-
-#[cfg(windows)]
-fn native_window(cc: &eframe::CreationContext<'_>) -> Option<isize> {
-    use raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
-    match cc.window_handle().ok()?.as_raw() {
-        RawWindowHandle::Win32(handle) => Some(handle.hwnd.get()),
         _ => None,
     }
 }
@@ -214,10 +197,7 @@ impl CineoApp {
         store_tx: Sender<Effect>,
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
-        #[cfg(not(windows))]
         let media_keys = MediaKeys::new(ctx.clone());
-        #[cfg(windows)]
-        let media_keys = MediaKeys::new(ctx.clone(), io.window);
         let torrents = Torrents::new(io.runtime.clone(), io.engine.clone());
         let mut app = Self {
             state: State::default(),

@@ -27,6 +27,7 @@ allow = [
 ]
 exceptions = [
     { crate = "option-ext", allow = ["MPL-2.0"] },
+    { crate = "mpris-server", allow = ["MPL-2.0"] },
     { crate = "uniffi", allow = ["MPL-2.0"] },
     { crate = "uniffi_bindgen", allow = ["MPL-2.0"] },
     { crate = "uniffi_core", allow = ["MPL-2.0"] },
@@ -52,4 +53,4 @@ deny = [
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = ["https://github.com/mdmrk/rqbit"]
+allow-git = ["https://github.com/mdmrk/rqbit", "https://github.com/crmne/fastframe"]
