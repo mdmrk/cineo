@@ -355,23 +355,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             state.addons.retain(|a| a.transport != transport);
             addons_changed(state, true)
         }
-        Action::MoveAddon { from, to } => {
-            if from < state.addons.len() && to < state.addons.len() && from != to {
-                let addon = state.addons.remove(from);
-                state.addons.insert(to, addon);
-                let mut order = state.addons.iter().map(|a| a.transport.clone());
-                for slot in &mut state.installed {
-                    if state.addons.iter().any(|a| a.transport == *slot)
-                        && let Some(next) = order.next()
-                    {
-                        *slot = next;
-                    }
-                }
-                addons_changed(state, true)
-            } else {
-                Vec::new()
-            }
-        }
+        Action::MoveAddon { from, to } => move_addon(state, from, to),
         Action::LoadBoard => load_board(state),
         Action::LoadAddonLists => {
             state.addon_lists.get_or_insert_default();
@@ -426,35 +410,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             time_ms,
             duration_ms,
             now_ms,
-        } => {
-            if state
-                .playing
-                .as_ref()
-                .is_some_and(|p| p.meta_id == meta_id && p.video_id != video_id)
-            {
-                return Vec::new();
-            }
-            let mut effects = check_next(state, now_ms);
-            let mut stream = None;
-            if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_id == meta_id) {
-                playing.resumed = false;
-                stream = playing.stream.take();
-            }
-            let Some(item) = state.library.iter_mut().find(|i| i.id == meta_id) else {
-                return effects;
-            };
-            if stream.is_some() {
-                item.stream = stream;
-            }
-            item.video_id = video_id;
-            item.time_offset_ms = time_ms;
-            if duration_ms > 0 {
-                item.duration_ms = duration_ms;
-            }
-            item.updated_ms = now_ms;
-            effects.push(Effect::SaveLibraryItem(item.clone()));
-            effects
-        }
+        } => playback_progress(state, &meta_id, video_id, time_ms, duration_ms, now_ms),
         Action::PlaybackFailed(reason) => {
             state.subtitles.clear();
             playback_ended(state, Some(PlaybackFailure::Player(reason)))
@@ -480,18 +436,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             path,
             result,
         } => {
-            if let Some(group) = state
-                .subtitles
-                .iter_mut()
-                .find(|g| g.addon == addon && g.path.as_ref() == Some(&path))
-            {
-                group.subtitles = result
-                    .map(|mut subtitles| {
-                        dedup_by_url(&mut subtitles);
-                        subtitles
-                    })
-                    .into();
-            }
+            subtitles_loaded(state, &addon, &path, result);
             Vec::new()
         }
         Action::AcceptP2p => {
@@ -537,22 +482,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             Vec::new()
         }
         Action::SetFavorite { id, favorite } => set_favorite(state, id, favorite),
-        Action::RemoveFromLibrary(id) => {
-            if let Some(item) = state
-                .library
-                .iter_mut()
-                .find(|i| i.id == id && i.is_favorite())
-            {
-                item.video_id.clone_from(&item.id);
-                item.time_offset_ms = 0;
-                item.duration_ms = 0;
-                item.updated_ms = 0;
-                item.stream = None;
-                return vec![Effect::SaveLibraryItem(item.clone())];
-            }
-            state.library.retain(|i| i.id != id);
-            vec![Effect::DeleteLibraryItem(id)]
-        }
+        Action::RemoveFromLibrary(id) => remove_from_library(state, id),
         Action::ClearLibrary => {
             state.library.clear();
             vec![Effect::ClearLibrary]
@@ -584,19 +514,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             path,
             result,
         } => {
-            if let Some(list) = state
-                .addon_lists
-                .iter_mut()
-                .flatten()
-                .find(|l| l.target.addon == addon && l.target.path == path)
-            {
-                list.addons = result
-                    .map(|mut addons| {
-                        addons.sort_by_cached_key(|a| a.manifest.name.to_lowercase());
-                        addons
-                    })
-                    .into();
-            }
+            addon_list_loaded(state, &addon, &path, result);
             Vec::new()
         }
         Action::StreamsLoaded {
@@ -604,25 +522,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             path,
             result,
         } => {
-            if let Some(playing) = state.playing.as_mut().filter(|p| p.addon == addon)
-                && let Some(next) = playing
-                    .next
-                    .as_mut()
-                    .filter(|n| n.path.as_ref() == Some(&path))
-                && let Ok(streams) = &result
-            {
-                next.stream = streams
-                    .iter()
-                    .find(|s| s.binge_group.is_some() && s.binge_group == playing.binge_group)
-                    .cloned();
-            }
-            if let Some(group) = state.detail.as_mut().and_then(|d| {
-                d.streams
-                    .iter_mut()
-                    .find(|g| g.addon == addon && g.path == path)
-            }) {
-                group.streams = result.into();
-            }
+            streams_loaded(state, &addon, &path, result);
             Vec::new()
         }
         Action::TorrentReady { info_hash, url } => torrent_ready(state, &info_hash, url),
@@ -644,6 +544,145 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 Vec::new()
             }
         }
+    }
+}
+
+fn move_addon(state: &mut State, from: usize, to: usize) -> Vec<Effect> {
+    if from >= state.addons.len() || to >= state.addons.len() || from == to {
+        return Vec::new();
+    }
+    let addon = state.addons.remove(from);
+    state.addons.insert(to, addon);
+    let mut order = state.addons.iter().map(|a| a.transport.clone());
+    for slot in &mut state.installed {
+        if state.addons.iter().any(|a| a.transport == *slot)
+            && let Some(next) = order.next()
+        {
+            *slot = next;
+        }
+    }
+    addons_changed(state, true)
+}
+
+fn playback_progress(
+    state: &mut State,
+    meta_id: &str,
+    video_id: String,
+    time_ms: u64,
+    duration_ms: u64,
+    now_ms: u64,
+) -> Vec<Effect> {
+    if state
+        .playing
+        .as_ref()
+        .is_some_and(|p| p.meta_id == meta_id && p.video_id != video_id)
+    {
+        return Vec::new();
+    }
+    let mut effects = check_next(state, now_ms);
+    let mut stream = None;
+    if let Some(playing) = state.playing.as_mut().filter(|p| p.meta_id == meta_id) {
+        playing.resumed = false;
+        stream = playing.stream.take();
+    }
+    let Some(item) = state.library.iter_mut().find(|i| i.id == meta_id) else {
+        return effects;
+    };
+    if stream.is_some() {
+        item.stream = stream;
+    }
+    item.video_id = video_id;
+    item.time_offset_ms = time_ms;
+    if duration_ms > 0 {
+        item.duration_ms = duration_ms;
+    }
+    item.updated_ms = now_ms;
+    effects.push(Effect::SaveLibraryItem(item.clone()));
+    effects
+}
+
+fn subtitles_loaded(
+    state: &mut State,
+    addon: &TransportUrl,
+    path: &ResourcePath,
+    result: Result<Vec<Subtitle>, String>,
+) {
+    if let Some(group) = state
+        .subtitles
+        .iter_mut()
+        .find(|g| g.addon == *addon && g.path.as_ref() == Some(path))
+    {
+        group.subtitles = result
+            .map(|mut subtitles| {
+                dedup_by_url(&mut subtitles);
+                subtitles
+            })
+            .into();
+    }
+}
+
+fn remove_from_library(state: &mut State, id: String) -> Vec<Effect> {
+    if let Some(item) = state
+        .library
+        .iter_mut()
+        .find(|i| i.id == id && i.is_favorite())
+    {
+        item.video_id.clone_from(&item.id);
+        item.time_offset_ms = 0;
+        item.duration_ms = 0;
+        item.updated_ms = 0;
+        item.stream = None;
+        return vec![Effect::SaveLibraryItem(item.clone())];
+    }
+    state.library.retain(|i| i.id != id);
+    vec![Effect::DeleteLibraryItem(id)]
+}
+
+fn addon_list_loaded(
+    state: &mut State,
+    addon: &TransportUrl,
+    path: &ResourcePath,
+    result: Result<Vec<AddonDescriptor>, String>,
+) {
+    if let Some(list) = state
+        .addon_lists
+        .iter_mut()
+        .flatten()
+        .find(|l| l.target.addon == *addon && l.target.path == *path)
+    {
+        list.addons = result
+            .map(|mut addons| {
+                addons.sort_by_cached_key(|a| a.manifest.name.to_lowercase());
+                addons
+            })
+            .into();
+    }
+}
+
+fn streams_loaded(
+    state: &mut State,
+    addon: &TransportUrl,
+    path: &ResourcePath,
+    result: Result<Vec<Stream>, String>,
+) {
+    if let Some(playing) = state.playing.as_mut().filter(|p| p.addon == *addon)
+        && let Some(next) = playing
+            .next
+            .as_mut()
+            .filter(|n| n.path.as_ref() == Some(path))
+        && let Ok(streams) = &result
+    {
+        next.stream = streams
+            .iter()
+            .find(|s| s.binge_group.is_some() && s.binge_group == playing.binge_group)
+            .cloned();
+    }
+    if let Some(group) = state.detail.as_mut().and_then(|d| {
+        d.streams
+            .iter_mut()
+            .find(|g| g.addon == *addon && g.path == *path)
+    }) {
+        group.streams = result.into();
     }
 }
 
