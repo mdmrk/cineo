@@ -48,6 +48,7 @@ old one *Superseded by NNNN*.
 | [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted |
 | [0031](0031-media-controls-through-fastframe.md) | Media controls through fastframe-now-playing | Accepted |
 | [0032](0032-link-handover-and-file-replacement-through-fastframe.md) | Link handover, file replacement, system sleep and panic log through fastframe | Accepted |
+| [0033](0033-egui-0-36-for-fastframe.md) | egui 0.36.2 so that fastframe's egui crates can be used | Accepted |
 
 ## What we took from the reference projects
 

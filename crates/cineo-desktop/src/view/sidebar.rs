@@ -5,8 +5,8 @@ use crate::i18n::t;
 use crate::{brand, theme};
 use cineo_core::app::{Action, State};
 use eframe::egui::{
-    self, Align, Color32, CornerRadius, Frame, Layout, Margin, Mesh, Rect, Response, Role, Sense,
-    Stroke, TextFormat, Ui, WidgetInfo, pos2, text::LayoutJob, vec2,
+    self, Align, Color32, CornerRadius, Frame, Layout, Margin, Mesh, Rect, Response, Sense, Stroke,
+    TextFormat, Ui, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
 pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
@@ -91,7 +91,7 @@ fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
         let link = ui
             .add(egui::Link::new(job))
             .on_hover_text(t!("update-available-help"));
-        link.widget_info(|| WidgetInfo::labeled(Role::Link, true, &text));
+        link.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &text));
         if link.clicked() {
             ui.ctx()
                 .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
@@ -112,7 +112,7 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
     let rect = Rect::from_min_size(window.min + vec2(left, theme::LOGO_BLEED.y), size);
     let height = window.min.y + theme::NAV_TOP - ui.cursor().min.y;
     let (_, response) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Image, true, "Cineo"));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Image, true, "Cineo"));
     let sidebar = Rect::from_min_max(window.min, pos2(window.min.x + sidebar_width, window.max.y));
     let painter = ui
         .ctx()
@@ -169,7 +169,7 @@ const LOGO_FADE_ROWS: u32 = 24;
 fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response {
     let label = page.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(Role::Button, true, selected, &label));
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, &label));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()

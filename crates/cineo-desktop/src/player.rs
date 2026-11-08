@@ -4,7 +4,7 @@ use cineo_player::plain_text;
 use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Key, Label, Layout, Pos2, Rect,
-    Response, RichText, Role, Sense, Ui, UiBuilder, ViewportCommand, WidgetInfo, pos2, vec2,
+    Response, RichText, Sense, Ui, UiBuilder, ViewportCommand, WidgetInfo, WidgetType, pos2, vec2,
 };
 
 use url::Url;
@@ -161,7 +161,7 @@ pub fn show(
     track_activity(ui, controls, now);
     shortcuts(ui, status, settings, controls, now, &mut out);
 
-    let video = ui.interact(rect, ui.scope_id().with("video"), Sense::click());
+    let video = ui.interact(rect, ui.id().with("video"), Sense::click());
     if video.double_clicked() {
         toggle_fullscreen(ui);
         if std::mem::take(&mut controls.click_toggled_pause) {
@@ -311,7 +311,7 @@ fn shortcuts(
 }
 
 fn stats_id() -> egui::Id {
-    egui::Id::unique("player-stats")
+    egui::Id::new("player-stats")
 }
 
 fn stats_shown(ctx: &egui::Context) -> bool {
@@ -561,7 +561,7 @@ fn bottom_bar(
         pos2(bar.right() - margin, bar.top() + 50.0),
     );
     let controls_area = bar.with_min_y(seek.top() - SEEK_REACH_UP);
-    let _ = ui.interact(controls_area, ui.scope_id().with("bar"), Sense::click());
+    let _ = ui.interact(controls_area, ui.id().with("bar"), Sense::click());
     seek_bar(ui, seek, status, &mut controls.seek, now, out);
 
     let y = bar.bottom() - 26.0;
@@ -749,7 +749,7 @@ fn next_popup(
         ),
         size,
     );
-    egui::Area::new(ui.scope_id().with("next-video"))
+    egui::Area::new(ui.id().with("next-video"))
         .order(egui::Order::Foreground)
         .fixed_pos(card.min)
         .show(ui.ctx(), |ui| {
@@ -797,9 +797,9 @@ fn next_popup(
             let play = Rect::from_center_size(pos2(c.x, c.y + 18.0), egui::Vec2::splat(56.0));
             let label = t!("play");
             let response = ui
-                .interact(play, ui.scope_id().with("next-play"), Sense::click())
+                .interact(play, ui.id().with("next-play"), Sense::click())
                 .on_hover_cursor(CursorIcon::PointingHand);
-            response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
+            response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
             let grow = ui
                 .ctx()
                 .animate_bool_with_time(response.id, response.hovered(), 0.12);
@@ -883,7 +883,7 @@ fn seek_bar(
         pos2(rect.left(), rect.top() - SEEK_REACH_UP),
         pos2(rect.right(), rect.bottom() + SEEK_REACH_DOWN),
     );
-    let response = ui.interact(hit, ui.scope_id().with("seek"), Sense::click_and_drag());
+    let response = ui.interact(hit, ui.id().with("seek"), Sense::click_and_drag());
     let duration = status.duration_s;
     let seekable = duration > 0.0;
     let seconds_at =
@@ -948,7 +948,7 @@ fn volume_slider(
     now: f64,
     out: &mut Vec<PlayerCommand>,
 ) {
-    let response = ui.interact(rect, ui.scope_id().with("volume"), Sense::click_and_drag());
+    let response = ui.interact(rect, ui.id().with("volume"), Sense::click_and_drag());
     if let Some(pos) = response.interact_pointer_pos()
         && (response.dragged() || response.clicked())
     {
@@ -1043,7 +1043,7 @@ fn track_menu(
         ),
         vec2(width, height),
     );
-    egui::Area::new(ui.scope_id().with("track-menu"))
+    egui::Area::new(ui.id().with("track-menu"))
         .order(egui::Order::Foreground)
         .fixed_pos(menu.min)
         .show(ui.ctx(), |ui| {
@@ -1062,7 +1062,12 @@ fn track_menu(
                             );
                             let response = response.on_hover_cursor(CursorIcon::PointingHand);
                             response.widget_info(|| {
-                                WidgetInfo::selected(Role::RadioButton, true, selected, &label)
+                                WidgetInfo::selected(
+                                    WidgetType::RadioButton,
+                                    true,
+                                    selected,
+                                    &label,
+                                )
                             });
                             let painter = ui.painter();
                             if response.hovered() {
@@ -1123,12 +1128,8 @@ fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
         vec2(menu.width() - 8.0, row),
     );
     let label = t!("subtitle-style-menu");
-    let response = ui.interact(
-        item,
-        ui.scope_id().with("subtitle-style-row"),
-        Sense::hover(),
-    );
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
+    let response = ui.interact(item, ui.id().with("subtitle-style-row"), Sense::hover());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let painter = ui.painter();
     painter.hline(
         item.x_range().shrink(6.0),
@@ -1175,7 +1176,7 @@ fn style_panel(
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
-    egui::Area::new(ui.scope_id().with("subtitle-style"))
+    egui::Area::new(ui.id().with("subtitle-style"))
         .order(egui::Order::Foreground)
         .fixed_pos(panel.min)
         .show(ui.ctx(), |ui| {
@@ -1221,14 +1222,14 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
         let rect = Rect::from_min_size(pos2(left, strip.top()), vec2(width, strip.height()));
         let middle = step == 0;
         let enabled = !middle || ms != 0;
-        let response = ui.interact(rect, ui.scope_id().with(("delay", i)), Sense::click());
+        let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
         response.widget_info(|| {
             let label = if middle {
                 t!("delay-reset", delay = delay_label(ms))
             } else {
                 label.clone()
             };
-            WidgetInfo::labeled(Role::Button, enabled, label)
+            WidgetInfo::labeled(WidgetType::Button, enabled, label)
         });
         let hovered = enabled && response.hovered();
         if hovered {
@@ -1270,9 +1271,9 @@ fn track_label(track: &Track, number: usize) -> Text {
 
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui
-        .interact(rect, ui.scope_id().with(label), Sense::click())
+        .interact(rect, ui.id().with(label), Sense::click())
         .on_hover_cursor(CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     if response.hovered() {
         ui.painter().circle_filled(
             rect.center(),

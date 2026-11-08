@@ -58,7 +58,7 @@ fn cached<T: Clone + Send + Sync + 'static>(
     name: &str,
     make: impl FnOnce() -> Option<T>,
 ) -> Option<T> {
-    let id = egui::Id::unique(name);
+    let id = egui::Id::new(name);
     if let Some(value) = ctx.data(|d| d.get_temp::<T>(id)) {
         return Some(value);
     }
@@ -161,7 +161,7 @@ fn strip_frame(time: f64) -> usize {
 }
 
 pub(crate) fn grain(ctx: &egui::Context, size: [usize; 2]) -> TextureId {
-    let id = egui::Id::unique("cineo-grain");
+    let id = egui::Id::new("cineo-grain");
     if let Some((cached, texture)) =
         ctx.data(|d| d.get_temp::<([usize; 2], Arc<TextureHandle>)>(id))
         && cached == size

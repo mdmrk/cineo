@@ -13,8 +13,8 @@ use cineo_core::app::{
 };
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, Frame, Label, Margin, Rect, Response, RichText,
-    Role, Sense, Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, pos2,
-    text::LayoutJob, vec2,
+    Sense, Stroke, StrokeKind, TextEdit, TextFormat, Ui, UiBuilder, Vec2, WidgetInfo, WidgetType,
+    pos2, text::LayoutJob, vec2,
 };
 
 pub(super) fn detail_page(
@@ -170,7 +170,7 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
         )
     };
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -328,7 +328,8 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
     let height = 32.0;
     let (rect, response) =
         ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(Role::Button, ui.is_enabled(), selected, text));
+    response
+        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
         let hover = ui
             .ctx()
@@ -535,7 +536,7 @@ fn stream_group(
                     continue;
                 }
                 shown += 1;
-                let id = ui.scope_id().with(("stream", index, stream_index));
+                let id = ui.id().with(("stream", index, stream_index));
                 let width = ui.available_width();
                 if let Some(size) = offscreen_size(ui, id, width) {
                     ui.allocate_space(size);
@@ -672,7 +673,8 @@ fn stream_card(ui: &mut Ui, stream: &Stream) -> (bool, Rect) {
 fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
-        response.widget_info(|| WidgetInfo::labeled(Role::Button, ui.is_enabled(), t!("play")));
+        response
+            .widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), t!("play")));
         if ui.is_rect_visible(rect) {
             let hover = ui.ctx().animate_bool_with_time(
                 response.id,
@@ -731,7 +733,7 @@ fn quality_tags(ui: &mut Ui, quality: &Quality) {
 pub(super) fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: Stroke) {
     let galley = ui.painter().layout_job(caps(text, theme::tag(), ink));
     let (rect, response) = ui.allocate_exact_size(galley.size() + vec2(10.0, 2.0), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Label, true, galley.text()));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Label, true, galley.text()));
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
         let radius = CornerRadius::same(theme::RADIUS);

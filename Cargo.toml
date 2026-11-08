@@ -20,18 +20,23 @@ android_logger = { version = "0.15.1", default-features = false }
 anyhow = "1.0.104"
 bytes = "1.12.1"
 clap = { version = "4.6.7", features = ["derive"] }
-eframe = { version = "0.37.0", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit", "links"] }
+eframe = { version = "0.36.2", default-features = false, features = ["glow", "default_fonts", "x11", "wayland", "accesskit", "links"] }
 keepawake = { version = "0.6.1", default-features = false }
 log = "0.4.35"
 jni = { version = "0.22.4", default-features = false }
 iconflow = { version = "2.1.0", default-features = false, features = ["pack-tabler"] }
 etcetera = "0.11.0"
 fast_image_resize = "6.1.0"
+fastframe-emoji = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 fastframe-file = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-fonts = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0", default-features = false }
+fastframe-graphics = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 fastframe-instance = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 fastframe-log = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0", default-features = false }
 fastframe-now-playing = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 fastframe-power = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-scroll = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
+fastframe-text = { git = "https://github.com/crmne/fastframe", tag = "v0.17.0" }
 futures-util = { version = "0.3.34", default-features = false }
 getrandom = "0.4.3"
 http-body-util = "0.1.5"
@@ -58,7 +63,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 uniffi = "0.32.2"
 url = "2.5.8"
 
-egui_kittest = { version = "0.37.0", default-features = false }
+egui_kittest = { version = "0.36.2", default-features = false }
 tempfile = "3.27.0"
 wiremock = "0.6.5"
 

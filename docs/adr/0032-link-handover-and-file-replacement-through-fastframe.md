@@ -63,7 +63,7 @@ Other crates, as of v0.17.0:
   so atomic replacement adds nothing, and they are written on the UI thread,
   where a sync would stall the window.
 - `text`, `fonts`, `emoji`, `icons`, `theme`, `titlebar`, `scroll`, `shell`,
-  `graphics`: they need egui 0.36 or its `eframe`; Cineo is on 0.37.
+  `graphics`: they need egui 0.36. ADR-0033 lowered egui and decided these.
 - `i18n`: replacing rust-i18n (ADR-0021) means moving 336 call sites and
   every locale to PO files, for no user-visible gain.
 - `update`: needs Ed25519-signed releases and a change to the release

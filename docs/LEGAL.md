@@ -59,6 +59,14 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   0.10.0 is MPL-2.0. It reaches the Linux desktop build through
   `fastframe-now-playing` (MIT), unmodified. The same MPL-2.0 terms apply as
   for `option-ext`: ship the notice and point to the source.
+- Crate-scoped exception for fonts (2026-11-08, ADR-0033): `fastframe-fonts`
+  0.17.0 is `MIT AND OFL-1.1`, the OFL covering the Inter font in its
+  source. Cineo builds it without the `inter` feature, so that font is not
+  in the binary.
+- Crate-scoped exceptions for the Windows clipboard (2026-11-08, ADR-0033):
+  `clipboard-win` 5.4.3 and `error-code` 3.4.0 are BSL-1.0. eframe 0.36
+  always builds with the clipboard, through `arboard`. BSL-1.0 asks for no
+  notice in binary distributions.
 
 ## Android app dependencies
 The Android app (`android/`, ADR-0028) also uses Gradle dependencies,

@@ -4,8 +4,8 @@ use crate::i18n::t;
 use crate::{brand, theme};
 use eframe::egui::{
     self, Align, Button, Color32, CornerRadius, FontId, Frame, Label, Layout, Margin, Mesh, Modal,
-    Pos2, Rect, Response, RichText, Role, Sense, Spinner, Stroke, TextFormat, Ui, UiBuilder, Vec2,
-    WidgetInfo, pos2, text::LayoutJob, vec2,
+    Pos2, Rect, Response, RichText, Sense, Spinner, Stroke, TextFormat, Ui, UiBuilder, Vec2,
+    WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
 pub(crate) fn dialog(
@@ -17,7 +17,7 @@ pub(crate) fn dialog(
     accept: &str,
 ) -> Option<bool> {
     let mut answer = None;
-    let modal = Modal::new(egui::Id::unique(id))
+    let modal = Modal::new(egui::Id::new(id))
         .frame(
             Frame::new()
                 .fill(theme::PANEL)
@@ -119,7 +119,7 @@ pub(super) fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool
     let response = ui
         .interact(rect, field.id.with("clear"), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, t!("clear-field")));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, t!("clear-field")));
     let ink = if response.hovered() {
         theme::TEXT_BRIGHT
     } else {
@@ -182,7 +182,8 @@ pub(super) fn chip(ui: &mut Ui, text: &str, selected: bool) -> Response {
         .layout_no_wrap(text.to_owned(), theme::body(), ink);
     let size = galley.size() + vec2(24.0, 12.0);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response.widget_info(|| WidgetInfo::selected(Role::Button, ui.is_enabled(), selected, text));
+    response
+        .widget_info(|| WidgetInfo::selected(WidgetType::Button, ui.is_enabled(), selected, text));
     if ui.is_rect_visible(rect) {
         let fill = if selected {
             theme::TEXT_BRIGHT
@@ -249,8 +250,8 @@ pub(crate) fn paint_loading(ui: &Ui, center: Pos2, width: f32, tint: Color32) {
 }
 
 pub(super) fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
-    let response = ui.interact(rect, ui.scope_id().with(label), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
+    let response = ui.interact(rect, ui.id().with(label), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     let painter = ui.painter();
     let fill = if response.hovered() {
         theme::SURFACE_HOVER

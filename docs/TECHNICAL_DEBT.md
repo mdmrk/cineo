@@ -336,6 +336,16 @@ Format:
 - Exit: add the Wayland `idle-inhibit` protocol on the window surface, and
   test it on the desktops Cineo targets.
 
+### Desktop: egui is held at 0.36.2 for fastframe
+- Where: [Cargo.toml](../Cargo.toml) (ADR-0033)
+- Gap: Cineo is one egui release behind. It misses 0.37's accessibility
+  improvements and fixes. Emoji, other scripts and scrolling come from
+  fastframe instead, and that wiring, the font settings and the graphics
+  dialog (in English only) have no test on a real desktop.
+- Why: fastframe's egui crates need 0.36, and it has no move to 0.37 yet.
+- Instead: text and scrolling follow fastframe's behavior, not egui's.
+- Exit: move to the egui release fastframe adopts.
+
 ### Desktop: MPRIS covers play, pause and stop only
 - Where: [media_keys.rs](../crates/cineo-desktop/src/media_keys.rs)
 - Gap: the MPRIS service offers play, pause, stop and raise, with the title

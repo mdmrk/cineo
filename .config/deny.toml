@@ -28,6 +28,9 @@ allow = [
 exceptions = [
     { crate = "option-ext", allow = ["MPL-2.0"] },
     { crate = "mpris-server", allow = ["MPL-2.0"] },
+    { crate = "fastframe-fonts", allow = ["OFL-1.1"] },
+    { crate = "clipboard-win", allow = ["BSL-1.0"] },
+    { crate = "error-code", allow = ["BSL-1.0"] },
     { crate = "uniffi", allow = ["MPL-2.0"] },
     { crate = "uniffi_bindgen", allow = ["MPL-2.0"] },
     { crate = "uniffi_core", allow = ["MPL-2.0"] },

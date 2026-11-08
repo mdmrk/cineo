@@ -1,5 +1,8 @@
 use std::sync::LazyLock;
 
+use fastframe_fonts::system::Fallback;
+use fastframe_text::TextRendering;
+
 use eframe::egui::{
     self, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Margin, Stroke,
     TextStyle, Visuals,
@@ -154,8 +157,24 @@ fn fonts() -> FontDefinitions {
     fonts
 }
 
+fn desktop_fonts(rendering: &TextRendering, fallbacks: &[Fallback]) -> FontDefinitions {
+    let mut fonts = fonts();
+    for fallback in fallbacks {
+        let mut data = FontData::from_static(fallback.bytes);
+        data.index = fallback.index;
+        data.tweak.scale = fallback.scale;
+        data.tweak.y_offset_factor = fallback.y_offset_factor;
+        fonts.font_data.insert(fallback.name.clone(), data.into());
+        for family in fonts.families.values_mut() {
+            family.push(fallback.name.clone());
+        }
+    }
+    rendering.apply_to(&mut fonts);
+    fonts
+}
+
 fn applied_id() -> egui::Id {
-    egui::Id::unique("cineo-theme-applied")
+    egui::Id::new("cineo-theme-applied")
 }
 
 pub(crate) fn ensure(ctx: &egui::Context) -> bool {
@@ -167,9 +186,19 @@ pub(crate) fn ensure(ctx: &egui::Context) -> bool {
 }
 
 pub(crate) fn apply(ctx: &egui::Context) {
+    apply_with(ctx, fonts(), None);
+}
+
+pub(crate) fn apply_following_desktop(ctx: &egui::Context) {
+    let rendering = fastframe_text::detect();
+    let fonts = desktop_fonts(&rendering, fastframe_fonts::system::fallbacks());
+    apply_with(ctx, fonts, Some(&rendering));
+}
+
+fn apply_with(ctx: &egui::Context, fonts: FontDefinitions, rendering: Option<&TextRendering>) {
     ctx.data_mut(|d| d.insert_temp(applied_id(), ()));
     ctx.options_mut(|o| o.zoom_with_keyboard = false);
-    ctx.set_fonts(fonts());
+    ctx.set_fonts(fonts);
 
     let radius = CornerRadius::same(RADIUS);
     let mut visuals = Visuals::dark();
@@ -217,6 +246,9 @@ pub(crate) fn apply(ctx: &egui::Context) {
     visuals.widgets.active.fg_stroke = Stroke::new(1.0, TEXT_BRIGHT);
     visuals.widgets.open.fg_stroke = Stroke::new(1.0, TEXT_BRIGHT);
     ctx.set_visuals(visuals);
+    if let Some(rendering) = rendering {
+        ctx.all_styles_mut(|style| rendering.apply_to_visuals(&mut style.visuals));
+    }
 
     ctx.options_mut(|o| o.input_options.line_scroll_speed = WHEEL_LINE_POINTS);
 
@@ -245,6 +277,28 @@ pub(crate) fn apply(ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn installed_fonts_come_after_cineos_own() {
+        let fallback = Fallback {
+            name: "fallback-han".to_owned(),
+            bytes: b"",
+            index: 2,
+            scale: 1.1,
+            y_offset_factor: 0.25,
+        };
+        let fonts = desktop_fonts(&TextRendering::platform_default(), &[fallback]);
+        let proportional = &fonts.families[&FontFamily::Proportional];
+        assert_eq!(proportional.first().map(String::as_str), Some("inter"));
+        assert_eq!(
+            proportional.last().map(String::as_str),
+            Some("fallback-han")
+        );
+        let data = &fonts.font_data["fallback-han"];
+        assert_eq!(data.index, 2);
+        assert_eq!(data.tweak.scale, 1.1);
+        assert_eq!(data.tweak.y_offset_factor, 0.25);
+    }
 
     #[test]
     fn every_locale_has_glyphs_in_the_text_fonts() {

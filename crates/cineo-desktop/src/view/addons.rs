@@ -254,7 +254,7 @@ fn addon_lists(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
         Loadable::Ready(addons) => {
             let width = ui.available_width();
             for addon in addons {
-                let id = ui.scope_id().with(("listed", &addon.transport));
+                let id = ui.id().with(("listed", &addon.transport));
                 if let Some(size) = offscreen_size(ui, id, width) {
                     ui.add_space(size.y);
                     continue;

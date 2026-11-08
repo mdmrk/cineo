@@ -8,7 +8,7 @@ use cineo_core::addon::{MetaPreview, PosterShape};
 use cineo_core::app::{Action, LibraryItem, Loadable, Row};
 use eframe::egui::{
     self, Align, Button, Color32, CornerRadius, FontId, Image, Pos2, Rect, Response, RichText,
-    Role, ScrollArea, Sense, Stroke, StrokeKind, TextFormat, Ui, Vec2, WidgetInfo, pos2,
+    ScrollArea, Sense, Stroke, StrokeKind, TextFormat, Ui, Vec2, WidgetInfo, WidgetType, pos2,
     scroll_area::ScrollBarVisibility, style::ScrollAnimation, text::LayoutJob, vec2,
 };
 use url::Url;
@@ -102,7 +102,7 @@ pub(super) fn poster_strip(
         ),
     );
     let max_offset = (output.content_size.x - inner.width()).max(0.0);
-    let offset = output.state.clamped_offset().x;
+    let offset = output.state.offset.x;
     let hovered = ui.rect_contains_pointer(inner);
     let shown = ui
         .ctx()
@@ -130,7 +130,7 @@ fn pager(ui: &Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> R
         t!("scroll-left")
     };
     let response = ui.interact(rect, strip.with(right), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let fill = if response.hovered() {
         theme::SURFACE_HOVER
     } else {
@@ -279,9 +279,9 @@ fn card_button(
 ) -> bool {
     let rect = Rect::from_center_size(center, vec2(28.0, 28.0));
     let response = ui
-        .interact(rect, ui.scope_id().with((&item.id, role)), Sense::click())
+        .interact(rect, ui.id().with((&item.id, role)), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
     if shown > 0.0 && ui.is_rect_visible(rect) {
         let painter = ui.painter();
         let fill = if response.hovered() {
@@ -311,7 +311,7 @@ fn card(
 ) -> Response {
     let size = card_size(width, shape);
     let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(Role::Button, ui.is_enabled(), name));
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), name));
     if !ui.is_rect_visible(rect) {
         return response;
     }
@@ -423,7 +423,7 @@ pub(crate) fn paint_cover(
     let opacity = if fade_in {
         let ready = matches!(poll, Some(egui::load::TexturePoll::Ready { .. }));
         ui.ctx().animate_bool_with_time_and_easing(
-            egui::Id::unique(("cover-fade", src)),
+            egui::Id::new(("cover-fade", src)),
             ready,
             COVER_FADE,
             egui::emath::easing::cubic_out,

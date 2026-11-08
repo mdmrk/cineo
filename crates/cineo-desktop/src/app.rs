@@ -82,13 +82,20 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         viewport,
         ..Default::default()
     };
+    fastframe_emoji::EmojiSetup::default().install();
+    std::thread::spawn(fastframe_emoji::warm_up);
+    std::thread::spawn(|| {
+        fastframe_fonts::system::fallbacks();
+    });
     let handle = runtime.handle().clone();
     let (data_dir, link) = (options.data_dir, options.link);
     let result = eframe::run_native(
         "Cineo",
         native,
         Box::new(move |cc| {
-            theme::apply(&cc.egui_ctx);
+            theme::apply_following_desktop(&cc.egui_ctx);
+            cc.egui_ctx
+                .add_plugin(fastframe_emoji::EmojiPlugin::default());
             images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
@@ -111,6 +118,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             Ok(Box::new(app))
         }),
     );
+    if let Err(err) = &result
+        && fastframe_graphics::is_graphics_failure(err)
+    {
+        fastframe_graphics::Graphics::new("Cineo").explain(err);
+    }
     if writer.join().is_err() {
         error!("the store thread panicked");
     }
@@ -187,6 +199,7 @@ pub(crate) struct CineoApp {
     pending_link: Option<String>,
     keep_awake: KeepAwake,
     media_keys: MediaKeys,
+    scrolling: fastframe_scroll::Scrolling,
 }
 
 impl CineoApp {
@@ -217,6 +230,7 @@ impl CineoApp {
             pending_link: None,
             keep_awake: KeepAwake::new(),
             media_keys,
+            scrolling: fastframe_scroll::Scrolling::default(),
         };
         for action in restore {
             app.dispatch(action);
@@ -612,6 +626,7 @@ impl eframe::App for CineoApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.scrolling.apply(ui.ctx());
         i18n::set(Locale::resolve(
             self.state.settings.ui_language,
             self.view.system_locale,

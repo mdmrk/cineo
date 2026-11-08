@@ -182,6 +182,9 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - While a video plays, Cineo asks the session D-Bus
   `org.freedesktop.ScreenSaver` to keep the screen awake, and the desktop
   portal or logind to block idle sleep.
+- At start, Cineo reads the installed font files and runs `fc-match` to pick
+  fallback fonts and read the desktop's font settings. If no OpenGL window can
+  open it runs `zenity` or `kdialog`, when installed, to show why.
 - A panic appends one line to `<data dir>/panic.log` (mode 0600 on Unix):
   time, version, thread and source location, never the panic's message
   (`a_panic_is_recorded_without_its_message`). The default hook still prints
