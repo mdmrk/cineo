@@ -138,17 +138,11 @@ fn track_views(status: &Status, kind: TrackKind) -> Vec<TrackView> {
         .iter()
         .filter(|t| t.kind == kind && t.external_file.is_none())
         .zip(1..)
-        .map(|(track, number)| {
-            let parts: Vec<&str> = [track.lang.as_deref(), track.title.as_deref()]
-                .into_iter()
-                .flatten()
-                .collect();
-            TrackView {
-                id: track.id,
-                number,
-                label: (!parts.is_empty()).then(|| plain_text(&parts.join(" · "))),
-                selected: track.selected,
-            }
+        .map(|(track, number)| TrackView {
+            id: track.id,
+            number,
+            label: track.label(),
+            selected: track.selected,
         })
         .collect()
 }
@@ -203,12 +197,7 @@ impl PlayerStatsView {
             resolution: size(stats.width)
                 .zip(size(stats.height))
                 .map(|(width, height)| VideoSizeView { width, height }),
-            video_codec: status
-                .tracks
-                .iter()
-                .find(|t| t.kind == TrackKind::Video && t.selected)
-                .and_then(|t| t.codec.as_deref())
-                .map(plain_text),
+            video_codec: status.video_codec(),
             video_bits_per_sec: stats.video_bitrate.filter(|b| *b > 0.0),
             decoder: stats.hwdec.as_deref().map(|hwdec| match hwdec {
                 "no" => DecoderView::Software,

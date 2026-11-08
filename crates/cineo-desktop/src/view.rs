@@ -475,20 +475,10 @@ fn nav_item(ui: &mut Ui, page: Page, selected: bool, compact: bool) -> Response 
         } else {
             lerp_color(theme::TEXT_DIM, theme::TEXT_BRIGHT, hover)
         };
-        let icon_center = if compact {
-            rect.center()
+        if compact {
+            paint_icon(painter, page.icon(), rect.center(), 18.0, color);
         } else {
-            pos2(rect.min.x + 18.0, rect.center().y)
-        };
-        paint_icon(painter, page.icon(), icon_center, 18.0, color);
-        if !compact {
-            painter.text(
-                pos2(rect.min.x + 36.0, rect.center().y),
-                Align2::LEFT_CENTER,
-                label,
-                theme::nav(),
-                color,
-            );
+            paint_nav_label(painter, rect, page.icon(), 18.0, &label, color);
         }
     }
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -937,12 +927,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             let actions_width = buttons_width(ui, &labels) + ui.spacing().item_spacing.x * 2.0;
             addon_info(ui, &addon.transport, manifest, actions_width);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui
-                    .add(Button::new(
-                        RichText::new(t!("remove")).color(theme::DANGER),
-                    ))
-                    .clicked()
-                {
+                if remove_button(ui) {
                     out.push(Action::RemoveAddon(addon.transport.clone()));
                 }
                 if manifest.behavior_hints.configurable {
@@ -983,12 +968,7 @@ fn addons_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             );
             badge(ui, &t!("badge-unavailable"), theme::DANGER);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if ui
-                    .add(Button::new(
-                        RichText::new(t!("remove")).color(theme::DANGER),
-                    ))
-                    .clicked()
-                {
+                if remove_button(ui) {
                     out.push(Action::RemoveAddon(transport.clone()));
                 }
                 if ui.button(t!("retry")).clicked() {
@@ -1099,10 +1079,7 @@ fn addon_lists(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             let width = ui.available_width();
             for addon in addons {
                 let id = ui.scope_id().with(("listed", &addon.transport));
-                let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
-                if let Some(size) = known
-                    && !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, size))
-                {
+                if let Some(size) = offscreen_size(ui, id, width) {
                     ui.add_space(size.y);
                     continue;
                 }
@@ -1113,6 +1090,19 @@ fn addon_lists(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<A
             }
         }
     }
+}
+
+fn offscreen_size(ui: &Ui, id: egui::Id, width: f32) -> Option<Vec2> {
+    ui.data(|d| d.get_temp::<Vec2>(id))
+        .filter(|size| size.x == width)
+        .filter(|size| !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, *size)))
+}
+
+fn remove_button(ui: &mut Ui) -> bool {
+    ui.add(Button::new(
+        RichText::new(t!("remove")).color(theme::DANGER),
+    ))
+    .clicked()
 }
 
 fn listed_addon(
@@ -1670,10 +1660,7 @@ fn stream_group(
                 shown += 1;
                 let id = ui.scope_id().with(("stream", index, stream_index));
                 let width = ui.available_width();
-                let known = ui.data(|d| d.get_temp::<Vec2>(id)).filter(|s| s.x == width);
-                if let Some(size) = known
-                    && !ui.is_rect_visible(Rect::from_min_size(ui.cursor().min, size))
-                {
+                if let Some(size) = offscreen_size(ui, id, width) {
                     ui.allocate_space(size);
                     continue;
                 }
@@ -2588,6 +2575,25 @@ fn icon_family(name: &'static str) -> egui::FontFamily {
         families.push((name, family.clone()));
         family
     })
+}
+
+pub(crate) fn paint_nav_label(
+    painter: &egui::Painter,
+    rect: Rect,
+    icon: Icon,
+    icon_size: f32,
+    label: &str,
+    color: Color32,
+) {
+    let y = rect.center().y;
+    paint_icon(painter, icon, pos2(rect.min.x + 18.0, y), icon_size, color);
+    painter.text(
+        pos2(rect.min.x + 36.0, y),
+        Align2::LEFT_CENTER,
+        label,
+        theme::nav(),
+        color,
+    );
 }
 
 pub(crate) fn paint_icon(painter: &egui::Painter, icon: Icon, c: Pos2, size: f32, color: Color32) {

@@ -66,6 +66,16 @@ pub struct Track {
     pub codec: Option<String>,
 }
 
+impl Track {
+    pub fn label(&self) -> Option<String> {
+        let parts: Vec<&str> = [self.lang.as_deref(), self.title.as_deref()]
+            .into_iter()
+            .flatten()
+            .collect();
+        (!parts.is_empty()).then(|| crate::plain_text(&parts.join(" · ")))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Status {
     pub loaded: bool,
@@ -84,6 +94,14 @@ pub struct Status {
 impl Status {
     pub fn is_waiting(&self) -> bool {
         self.buffering || self.seeking
+    }
+
+    pub fn video_codec(&self) -> Option<String> {
+        self.tracks
+            .iter()
+            .find(|t| t.kind == TrackKind::Video && t.selected)
+            .and_then(|t| t.codec.as_deref())
+            .map(crate::plain_text)
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "fractions in 0..=1")]

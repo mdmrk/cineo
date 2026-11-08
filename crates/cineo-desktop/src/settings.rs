@@ -15,7 +15,7 @@ use crate::i18n::{Locale, Text, t};
 use crate::theme;
 use crate::view::{
     Icon, Page, ViewState, append_icon, compact, dialog, dim, lerp_color, page_title, paint_icon,
-    paint_loading, section,
+    paint_loading, paint_nav_label, section,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1119,20 +1119,7 @@ fn nav_item(ui: &mut Ui, part: Section, selected: bool) -> Response {
         } else {
             theme::TEXT_DIM
         };
-        paint_icon(
-            painter,
-            part.icon(),
-            pos2(rect.min.x + 18.0, rect.center().y),
-            16.0,
-            color,
-        );
-        painter.text(
-            pos2(rect.min.x + 36.0, rect.center().y),
-            Align2::LEFT_CENTER,
-            label,
-            theme::nav(),
-            color,
-        );
+        paint_nav_label(painter, rect, part.icon(), 16.0, &label, color);
     }
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }

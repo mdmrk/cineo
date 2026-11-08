@@ -355,12 +355,7 @@ fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(Text, Str
     if let (Some(width), Some(height)) = (stats.width, stats.height) {
         rows.push((t!("stats-resolution"), format!("{width:.0}×{height:.0}")));
     }
-    let codec = status
-        .tracks
-        .iter()
-        .find(|t| t.kind == TrackKind::Video && t.selected)
-        .and_then(|t| t.codec.as_deref())
-        .map(plain_text);
+    let codec = status.video_codec();
     let bitrate = stats
         .video_bitrate
         .filter(|b| *b > 0.0)
@@ -1268,15 +1263,9 @@ fn delay_label(ms: i32) -> String {
 }
 
 fn track_label(track: &Track, number: usize) -> Text {
-    let parts: Vec<&str> = [track.lang.as_deref(), track.title.as_deref()]
-        .into_iter()
-        .flatten()
-        .collect();
-    if parts.is_empty() {
-        t!("track", number = number)
-    } else {
-        plain_text(&parts.join(" · ")).into()
-    }
+    track
+        .label()
+        .map_or_else(|| t!("track", number = number), Into::into)
 }
 
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
