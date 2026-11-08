@@ -96,11 +96,18 @@ pub struct PlayerStatusView {
     pub duration_s: f64,
     pub paused: bool,
     pub waiting: bool,
+    pub cached: Vec<CachedSpanView>,
     pub stats: PlayerStatsView,
     pub audio: Vec<TrackView>,
     pub subtitles: Vec<TrackView>,
     pub subtitles_off: bool,
     pub addon_subtitles: Vec<AddonSubtitleView>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct CachedSpanView {
+    pub start: f32,
+    pub end: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -456,6 +463,10 @@ impl Cineo {
             duration_s: status.duration_s,
             paused: status.paused,
             waiting: status.is_waiting(),
+            cached: status
+                .cached_spans()
+                .map(|(start, end)| CachedSpanView { start, end })
+                .collect(),
             stats: PlayerStatsView::of(&status),
             audio: track_views(&status, TrackKind::Audio),
             subtitles: track_views(&status, TrackKind::Subtitle),

@@ -8,6 +8,7 @@ import android.os.SystemClock
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,6 +31,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -54,6 +57,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import io.github.mdmrk.cineo.rust.CachedSpanView
 import io.github.mdmrk.cineo.rust.NextView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -291,6 +295,7 @@ private fun Controls(
             SeekBar(
                 position = position,
                 duration = duration,
+                cached = status.cached,
                 onDrag = onSeekDrag,
                 onDone = onSeekDone,
             )
@@ -443,7 +448,7 @@ private fun clock(seconds: Double): String {
 }
 
 @Composable
-private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, onDone: () -> Unit) {
+private fun SeekBar(position: Float, duration: Float, cached: List<CachedSpanView>, onDrag: (Float) -> Unit, onDone: () -> Unit) {
     var width by remember { mutableIntStateOf(1) }
     val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
     val latestDuration by rememberUpdatedState(duration)
@@ -471,6 +476,15 @@ private fun SeekBar(position: Float, duration: Float, onDrag: (Float) -> Unit, o
             },
         contentAlignment = Alignment.CenterStart,
     ) {
+        Canvas(Modifier.fillMaxWidth().height(2.dp).offset(y = 5.dp)) {
+            cached.forEach {
+                drawRect(
+                    Color.White.copy(alpha = 0.6f),
+                    topLeft = Offset(it.start * size.width, 0f),
+                    size = Size((it.end - it.start) * size.width, size.height),
+                )
+            }
+        }
         Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)))
         Box(Modifier.fillMaxWidth(fraction).height(4.dp).clip(CircleShape).background(Brand.Accent))
         Box(

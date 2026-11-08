@@ -910,7 +910,7 @@ fn seek_bar(
     let radius = CornerRadius::same(3);
     let painter = ui.painter();
     painter.rect_filled(track, radius, Color32::from_white_alpha(60));
-    for (start, end) in cached_spans(status) {
+    for (start, end) in status.cached_spans() {
         let span = Rect::from_min_max(
             pos2(track.left() + track.width() * start, track.bottom() + 2.0),
             pos2(track.left() + track.width() * end, track.bottom() + 4.0),
@@ -943,18 +943,6 @@ fn seek_bar(
         }
         response.on_hover_cursor(CursorIcon::PointingHand);
     }
-}
-
-#[expect(clippy::cast_possible_truncation, reason = "fractions in 0..=1")]
-fn cached_spans(status: &Status) -> impl Iterator<Item = (f32, f32)> + '_ {
-    let duration = status.duration_s;
-    let fraction = move |s: f64| (s / duration).clamp(0.0, 1.0) as f32;
-    status
-        .cached
-        .iter()
-        .filter(move |_| duration > 0.0)
-        .map(move |&(start, end)| (fraction(start), fraction(end)))
-        .filter(|(start, end)| end > start)
 }
 
 fn volume_slider(
@@ -1382,20 +1370,6 @@ mod tests {
             controls.seek.value(),
             None,
             "nothing to hold without a duration"
-        );
-    }
-
-    #[test]
-    fn cached_ranges_become_fractions_of_the_duration() {
-        let mut status = Status {
-            cached: std::sync::Arc::from([(0.0, 25.0), (50.0, 150.0), (200.0, 300.0)]),
-            ..Status::default()
-        };
-        assert_eq!(cached_spans(&status).count(), 0, "no duration yet");
-        status.duration_s = 100.0;
-        assert_eq!(
-            cached_spans(&status).collect::<Vec<_>>(),
-            vec![(0.0, 0.25), (0.5, 1.0)]
         );
     }
 

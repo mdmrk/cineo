@@ -85,6 +85,17 @@ impl Status {
     pub fn is_waiting(&self) -> bool {
         self.buffering || self.seeking
     }
+
+    #[expect(clippy::cast_possible_truncation, reason = "fractions in 0..=1")]
+    pub fn cached_spans(&self) -> impl Iterator<Item = (f32, f32)> + '_ {
+        let duration = self.duration_s;
+        let fraction = move |s: f64| (s / duration).clamp(0.0, 1.0) as f32;
+        self.cached
+            .iter()
+            .filter(move |_| duration > 0.0)
+            .map(move |&(start, end)| (fraction(start), fraction(end)))
+            .filter(|(start, end)| end > start)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

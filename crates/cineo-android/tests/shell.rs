@@ -11,9 +11,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cineo_android::{
-    AddonListItems, AddonSubtitleView, AppView, Cineo, DecoderView, ImageError, InstallView,
-    MetaStatus, Playback, PlayerStatsView, Players, ProblemView, RowItems, SettingChange, Started,
-    StateListener, StreamItems, TorrentView, TrackView, VideoSizeView, version,
+    AddonListItems, AddonSubtitleView, AppView, CachedSpanView, Cineo, DecoderView, ImageError,
+    InstallView, MetaStatus, Playback, PlayerStatsView, Players, ProblemView, RowItems,
+    SettingChange, Started, StateListener, StreamItems, TorrentView, TrackView, VideoSizeView,
+    version,
 };
 use cineo_core::app::{PlayRequest, Resolution, StreamSort, SubtitleFont, Tier};
 use cineo_core::app::{Settings, TorrentStorage};
@@ -124,6 +125,7 @@ impl Playback for FakePlayback {
             loaded: true,
             position_s: 12.0,
             duration_s: 120.0,
+            cached: Arc::from([(0.0, 30.0), (60.0, 120.0)]),
             tracks: Arc::from([
                 Track {
                     id: 1,
@@ -558,6 +560,19 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
         let status = cineo.player_status().unwrap();
         assert!(status.loaded);
         assert_eq!(status.position_s, 12.0);
+        assert_eq!(
+            status.cached,
+            [
+                CachedSpanView {
+                    start: 0.0,
+                    end: 0.25
+                },
+                CachedSpanView {
+                    start: 0.5,
+                    end: 1.0
+                }
+            ]
+        );
         assert_eq!(
             status.stats,
             PlayerStatsView {

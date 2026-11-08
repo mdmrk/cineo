@@ -209,6 +209,20 @@ fn stats_take_mpv_values_and_drop_unavailable_ones() {
 }
 
 #[test]
+fn cached_ranges_become_fractions_of_the_duration() {
+    let mut status = Status {
+        cached: Arc::from([(0.0, 25.0), (50.0, 150.0), (200.0, 300.0)]),
+        ..Status::default()
+    };
+    assert_eq!(status.cached_spans().count(), 0, "no duration yet");
+    status.duration_s = 100.0;
+    assert_eq!(
+        status.cached_spans().collect::<Vec<_>>(),
+        vec![(0.0, 0.25), (0.5, 1.0)]
+    );
+}
+
+#[test]
 fn cached_ranges_come_from_the_seekable_ranges() {
     let json = r#"{"seekable-ranges":[{"start":0,"end":12.5},{"start":-1,"end":40},
         {"start":50,"end":50},{"start":"x","end":60},{"end":70}],"cache-end":40}"#;
