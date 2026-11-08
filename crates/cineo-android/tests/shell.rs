@@ -206,19 +206,50 @@ fn start_seeded(
     (cineo, views)
 }
 
-async fn movie_addon(server: &MockServer) -> String {
+async fn serve_manifest(server: &MockServer) {
     serve(
         server,
         "/cfg/manifest.json",
         fixture("addons/basic/manifest.json"),
     )
     .await;
+}
+
+async fn serve_movie(server: &MockServer) {
+    serve_manifest(server).await;
     serve(
         server,
         "/cfg/meta/movie/tt0000001.json",
         fixture("addons/basic/meta-movie.json"),
     )
     .await;
+}
+
+fn open_movie(cineo: &Cineo, views: &Receiver<AppView>, manifest: String) {
+    cineo.install_addon(manifest);
+    wait_for(views, |v| v.addons.len() == 1);
+    cineo.open_detail("movie".into(), "tt0000001".into());
+    wait_for(views, streams_ready);
+}
+
+fn play_a_minute_and_close(players: &FakePlayers) {
+    let events = players.events.lock().unwrap().take().unwrap();
+    events
+        .send(PlayerEvent::Progress {
+            time_ms: 60_000,
+            duration_ms: 120_000,
+        })
+        .unwrap();
+    events
+        .send(PlayerEvent::Closed {
+            time_ms: 61_000,
+            duration_ms: 120_000,
+        })
+        .unwrap();
+}
+
+async fn movie_addon(server: &MockServer) -> String {
+    serve_movie(server).await;
     serve(
         server,
         "/cfg/stream/movie/tt0000001.json",
@@ -281,12 +312,7 @@ fn local_data_dir() -> tempdir::Dir {
 #[tokio::test(flavor = "multi_thread")]
 async fn an_installed_addon_fills_the_board_and_is_back_after_a_restart() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
+    serve_manifest(&server).await;
     serve(
         &server,
         "/cfg/catalog/movie/top.json",
@@ -339,12 +365,7 @@ async fn an_installed_addon_fills_the_board_and_is_back_after_a_restart() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_second_install_of_the_same_addon_is_refused() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
+    serve_manifest(&server).await;
     let manifest = format!("{}/cfg/manifest.json", server.uri());
     let dir = local_data_dir();
 
@@ -398,12 +419,7 @@ async fn images_come_through_the_addon_client_and_its_limits() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_catalog_that_repeats_an_item_shows_it_once() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
+    serve_manifest(&server).await;
     let metas = serde_json::json!({ "metas": [
         { "id": "tt1", "type": "movie", "name": "First" },
         { "id": "tt2", "type": "movie", "name": "Second" },
@@ -466,10 +482,7 @@ async fn the_player_gets_only_what_it_draws_and_the_lists_come_back_when_it_clos
 
     tokio::task::block_in_place(|| {
         let (cineo, views) = start_with(dir.path(), &players);
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
 
         cineo.play(0, 0);
         let playing = wait_for(&views, |v| v.playback.is_some());
@@ -496,25 +509,7 @@ async fn the_player_gets_only_what_it_draws_and_the_lists_come_back_when_it_clos
 #[tokio::test(flavor = "multi_thread")]
 async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
-    serve(
-        &server,
-        "/cfg/meta/movie/tt0000001.json",
-        fixture("addons/basic/meta-movie.json"),
-    )
-    .await;
-    serve(
-        &server,
-        "/cfg/stream/movie/tt0000001.json",
-        fixture("addons/basic/streams-movie.json"),
-    )
-    .await;
-    let manifest = format!("{}/cfg/manifest.json", server.uri());
+    let manifest = movie_addon(&server).await;
     let dir = local_data_dir();
     let players = Arc::new(FakePlayers::default());
 
@@ -637,19 +632,7 @@ async fn a_stream_plays_on_the_surface_and_its_progress_reaches_the_library() {
                 "Stop"
             ]
         );
-        let events = players.events.lock().unwrap().take().unwrap();
-        events
-            .send(PlayerEvent::Progress {
-                time_ms: 60_000,
-                duration_ms: 120_000,
-            })
-            .unwrap();
-        events
-            .send(PlayerEvent::Closed {
-                time_ms: 61_000,
-                duration_ms: 120_000,
-            })
-            .unwrap();
+        play_a_minute_and_close(&players);
         wait_for(&views, |v| v.playback.is_none());
         assert!(cineo.player_status().is_none());
         drop(cineo);
@@ -676,10 +659,7 @@ async fn the_screen_answers_while_a_finished_player_is_released() {
 
     tokio::task::block_in_place(|| {
         let (cineo, views) = start_with(dir.path(), &players);
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
         cineo.play(0, 0);
         wait_for(&views, |v| v.playback.is_some());
 
@@ -807,25 +787,10 @@ async fn a_played_stream_resumes_where_it_stopped_after_a_restart() {
     tokio::task::block_in_place(|| {
         let players = Arc::new(FakePlayers::default());
         let (cineo, views) = start_with(dir.path(), &players);
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
         cineo.play(0, 0);
         wait_for(&views, |v| v.playback.is_some());
-        let events = players.events.lock().unwrap().take().unwrap();
-        events
-            .send(PlayerEvent::Progress {
-                time_ms: 60_000,
-                duration_ms: 120_000,
-            })
-            .unwrap();
-        events
-            .send(PlayerEvent::Closed {
-                time_ms: 61_000,
-                duration_ms: 120_000,
-            })
-            .unwrap();
+        play_a_minute_and_close(&players);
         let stopped = wait_for(&views, |v| {
             v.playback.is_none() && !v.continue_watching.is_empty()
         });
@@ -887,10 +852,7 @@ async fn a_favourite_stays_after_a_restart_until_it_is_unmarked_or_cleared() {
 
     tokio::task::block_in_place(|| {
         let (cineo, views) = start(dir.path());
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
         cineo.set_favorite("tt0000001".into(), true);
         let marked = wait_for(&views, |v| !v.favorites.is_empty());
         assert!(marked.detail.unwrap().favorite);
@@ -1240,12 +1202,7 @@ async fn addon_lists_offer_installs_and_configuration_links() {
         fixture("addons/basic/manifest-addon-lists.json"),
     )
     .await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
+    serve_manifest(&server).await;
     let base = server.uri();
     let basic: serde_json::Value =
         serde_json::from_slice(&fixture("addons/basic/manifest.json")).unwrap();
@@ -1310,18 +1267,7 @@ async fn addon_lists_offer_installs_and_configuration_links() {
 #[tokio::test(flavor = "multi_thread")]
 async fn streams_can_be_filtered_and_sorted_like_on_the_desktop() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
-    serve(
-        &server,
-        "/cfg/meta/movie/tt0000001.json",
-        fixture("addons/basic/meta-movie.json"),
-    )
-    .await;
+    serve_movie(&server).await;
     let streams = r#"{"streams":[
         {"name":"Fixture\n720p","description":"Film.720p.WEB 👤 5 💾 700 MB","url":"https://media.example/720.mp4"},
         {"name":"Fixture\n4k HDR","description":"Film.2160p.REMUX 👤 2 💾 15 GB","url":"https://media.example/4k.mkv"},
@@ -1486,18 +1432,7 @@ async fn seeder(dir: &Path) -> Seeder {
 }
 
 async fn torrent_addon(server: &MockServer, info_hash: &str) -> String {
-    serve(
-        server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
-    serve(
-        server,
-        "/cfg/meta/movie/tt0000001.json",
-        fixture("addons/basic/meta-movie.json"),
-    )
-    .await;
+    serve_movie(server).await;
     let streams =
         format!(r#"{{"streams":[{{"name":"Torrent","infoHash":"{info_hash}","fileIdx":0}}]}}"#);
     serve(
@@ -1519,10 +1454,7 @@ async fn a_torrent_stream_asks_once_then_plays_through_the_engine() {
     tokio::task::block_in_place(|| {
         let players = Arc::new(FakePlayers::default());
         let (cineo, views) = start_seeded(dir.path(), &players, vec![seeder.addr]);
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
         cineo.play(0, 0);
         wait_for(&views, |v| v.p2p_prompt);
         assert!(players.requests.lock().unwrap().is_empty());
@@ -1592,10 +1524,7 @@ async fn going_back_while_a_torrent_connects_stops_it() {
     tokio::task::block_in_place(|| {
         let players = Arc::new(FakePlayers::default());
         let (cineo, views) = start_with(dir.path(), &players);
-        cineo.install_addon(manifest);
-        wait_for(&views, |v| v.addons.len() == 1);
-        cineo.open_detail("movie".into(), "tt0000001".into());
-        wait_for(&views, streams_ready);
+        open_movie(&cineo, &views, manifest);
         cineo.play(0, 0);
         let connecting = wait_for(&views, |v| v.connecting.is_some());
         let art = connecting.connecting.clone().unwrap();
@@ -1674,12 +1603,7 @@ fn binge_streams(file: &str) -> Vec<u8> {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_player_offers_the_next_episode_and_plays_it_on_request() {
     let server = MockServer::start().await;
-    serve(
-        &server,
-        "/cfg/manifest.json",
-        fixture("addons/basic/manifest.json"),
-    )
-    .await;
+    serve_manifest(&server).await;
     serve(
         &server,
         "/cfg/meta/series/tt0000010.json",
