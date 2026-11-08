@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.SystemClock
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
@@ -81,14 +82,16 @@ import androidx.lifecycle.repeatOnLifecycle
 fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, cineo: Cineo) {
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
     var controls by remember { mutableStateOf(true) }
-    var dragging by remember { mutableStateOf<Float?>(null) }
+    var hold by remember { mutableStateOf(SeekHold()) }
     var stats by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                status = withContext(Dispatchers.Default) { cineo.playerStatus() }
+                val latest = withContext(Dispatchers.Default) { cineo.playerStatus() }
+                status = latest
+                if (latest != null) hold = hold.settle(latest.positionS, latest.waiting, SystemClock.elapsedRealtime())
                 delay(250)
             }
         }
@@ -131,11 +134,13 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
             Controls(
                 title = playback.art.title,
                 status = current,
-                position = dragging ?: current.positionS.toFloat(),
-                onSeekDrag = { dragging = it },
+                position = (hold.value ?: current.positionS).toFloat(),
+                onSeekDrag = { hold = hold.dragTo(it.toDouble()) },
                 onSeekDone = {
-                    dragging?.let { cineo.seekTo(it.toDouble()) }
-                    dragging = null
+                    hold.drag?.let {
+                        hold = hold.commit(it, SystemClock.elapsedRealtime())
+                        cineo.seekTo(it)
+                    }
                 },
                 onBack = { cineo.stopPlayback() },
                 onTogglePause = {
@@ -143,7 +148,10 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                     status = current.copy(paused = !current.paused)
                 },
                 seekStep = playback.seekStepS.toInt(),
-                onSeekBy = { cineo.seekBy(it.toDouble()) },
+                onSeekBy = {
+                    hold = hold.commitBy(it.toDouble(), current.positionS, current.durationS, SystemClock.elapsedRealtime())
+                    cineo.seekBy(it.toDouble())
+                },
                 onNext = playback.next?.let { { cineo.playNext() } },
                 onToggleStats = { stats = !stats },
                 onAudio = { cineo.selectAudio(it) },
