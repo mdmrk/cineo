@@ -183,7 +183,7 @@ Format:
 
 ### Addon lists: only lists of type `all`, no logos
 - Where: [plan.rs](../crates/cineo-core/src/app/plan.rs) (`addon_list_targets`),
-  [view.rs](../crates/cineo-desktop/src/view.rs) (`addon_lists`)
+  [addons.rs](../crates/cineo-desktop/src/view/addons.rs) (`addon_lists`)
 - Gap: `addonCatalogs` of other types (Cinemeta also has `movie`, `series`,
   `channel`, …) are not offered, there is no search in a list, and listed
   addons show no logo.
@@ -228,7 +228,7 @@ Format:
 - Exit: none; install with `install.sh`.
 
 ### Desktop UI: rows scroll sideways only with Shift, a touchpad or arrows
-- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`poster_strip`)
+- Where: [cards.rs](../crates/cineo-desktop/src/view/cards.rs) (`poster_strip`)
 - Gap: a plain mouse wheel over a poster row scrolls the page, not the row.
 - Why: egui gives the wheel to one scroll area; the page wins so vertical
   browsing never gets stuck on a row.
@@ -249,7 +249,7 @@ Format:
   unused for a while.
 
 ### Desktop UI: off-screen stream cards and listed addons are not in the accessibility tree
-- Where: [view.rs](../crates/cineo-desktop/src/view.rs) (`stream_group`,
+- Where: [view/](../crates/cineo-desktop/src/view) (`stream_group`,
   `addon_lists`)
 - Gap: stream cards and addon list rows outside the scrolled view are
   skipped, so screen readers see only the ones on screen.

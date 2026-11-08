@@ -182,13 +182,23 @@ mod tests {
     #[test]
     fn every_message_the_code_asks_for_exists() {
         let english = ids(Locale::English);
-        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/src");
-        let mut used = BTreeSet::new();
-        for file in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("{e}")) {
-            let path = file.unwrap_or_else(|e| panic!("{e}")).path();
-            if path.ends_with("i18n.rs") {
-                continue;
+        let mut dirs = vec![std::path::PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src"
+        ))];
+        let mut files = Vec::new();
+        while let Some(dir) = dirs.pop() {
+            for entry in std::fs::read_dir(dir).unwrap_or_else(|e| panic!("{e}")) {
+                let path = entry.unwrap_or_else(|e| panic!("{e}")).path();
+                if path.is_dir() {
+                    dirs.push(path);
+                } else if !path.ends_with("i18n.rs") {
+                    files.push(path);
+                }
             }
+        }
+        let mut used = BTreeSet::new();
+        for path in files {
             let code = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{e}"));
             for (i, _) in code.match_indices("t!(\"") {
                 if code[..i].ends_with(|c: char| c.is_alphanumeric() || c == '_') {
