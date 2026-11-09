@@ -433,6 +433,15 @@ Format:
 - Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
   becoming-noisy receiver, and a `MediaSession`.
 
+### Android: the rotate button does not last between torrent episodes
+- Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`rememberRotate`)
+- Gap: the chosen orientation is given back when the player leaves the
+  screen, which is inferred to include the connecting screen between two
+  torrent episodes, so the next one would start in the system's orientation.
+- Why: keeping it needs the choice to live above the player and the
+  connecting screen.
+- Exit: hold the orientation for the whole playback session, with a test.
+
 ### Android: no update check
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
 - Gap: releases carry the APK (ADR-0029), but the app never says that a

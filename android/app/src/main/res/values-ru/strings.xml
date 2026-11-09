@@ -193,6 +193,7 @@
     <string name="stats_software">Программный</string>
     <string name="stats_dropped">Пропущенные кадры</string>
     <string name="player_stats">Статистика потока</string>
+    <string name="player_rotate">Повернуть экран</string>
     <string name="player_subtitles">Субтитры</string>
     <string name="player_audio">Аудио</string>
     <string name="subtitles_off">Выкл.</string>

@@ -199,6 +199,7 @@
     <string name="stats_software">软件</string>
     <string name="stats_dropped">丢帧</string>
     <string name="player_stats">串流统计</string>
+    <string name="player_rotate">旋转屏幕</string>
     <string name="player_subtitles">字幕</string>
     <string name="player_audio">音频</string>
     <string name="subtitles_off">关闭</string>

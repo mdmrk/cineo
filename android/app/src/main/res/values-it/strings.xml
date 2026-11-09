@@ -193,6 +193,7 @@
     <string name="stats_software">Software</string>
     <string name="stats_dropped">Fotogrammi persi</string>
     <string name="player_stats">Statistiche dello streaming</string>
+    <string name="player_rotate">Ruota schermo</string>
     <string name="player_subtitles">Sottotitoli</string>
     <string name="player_audio">Audio</string>
     <string name="subtitles_off">Disattivati</string>

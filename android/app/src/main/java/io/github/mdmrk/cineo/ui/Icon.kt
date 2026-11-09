@@ -34,6 +34,7 @@ enum class Icon(val regular: Char?, val filled: Char?) {
     MAGNET('\uebe7', '\ue29a'),
     INFO_CIRCLE('\ueabd', '\ue24e'),
     ACTIVITY('\ue00b', null),
+    DEVICE_MOBILE_ROTATED('\ue77a', null),
     BADGE_CC('\ue172', '\ue05b'),
     LANGUAGE('\ueb03', null),
     PLAYER_SKIP_FORWARD('\ueedb', '\ue2ed');

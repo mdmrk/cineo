@@ -202,6 +202,7 @@
     <string name="stats_software">Software</string>
     <string name="stats_dropped">Dropped frames</string>
     <string name="player_stats">Streaming stats</string>
+    <string name="player_rotate">Rotate screen</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_audio">Audio</string>
     <string name="subtitles_off">Off</string>

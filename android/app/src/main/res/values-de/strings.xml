@@ -193,6 +193,7 @@
     <string name="stats_software">Software</string>
     <string name="stats_dropped">Verworfene Frames</string>
     <string name="player_stats">Streaming-Statistik</string>
+    <string name="player_rotate">Bildschirm drehen</string>
     <string name="player_subtitles">Untertitel</string>
     <string name="player_audio">Audio</string>
     <string name="subtitles_off">Aus</string>

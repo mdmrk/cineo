@@ -1,6 +1,7 @@
 package io.github.mdmrk.cineo.ui
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -114,6 +115,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
     }
     BackHandler { cineo.stopPlayback() }
     FullScreen()
+    val onRotate = rememberRotate()
     Box(
         Modifier
             .fillMaxSize()
@@ -158,6 +160,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                 },
                 onNext = playback.next?.let { { cineo.playNext() } },
                 onToggleStats = { stats = !stats },
+                onRotate = onRotate,
                 onAudio = { cineo.selectAudio(it) },
                 onSubtitle = { cineo.selectSubtitle(it) },
                 onAddonSubtitle = { cineo.selectAddonSubtitle(it) },
@@ -202,6 +205,7 @@ private fun Controls(
     onSeekBy: (Int) -> Unit,
     onNext: (() -> Unit)?,
     onToggleStats: () -> Unit,
+    onRotate: () -> Unit,
     onAudio: (Long) -> Unit,
     onSubtitle: (Long?) -> Unit,
     onAddonSubtitle: (String) -> Unit,
@@ -243,6 +247,9 @@ private fun Controls(
             val statsLabel = stringResource(R.string.player_stats)
             IconButton(onClick = onToggleStats, modifier = Modifier.semantics { contentDescription = statsLabel }) {
                 CineoIcon(Icon.ACTIVITY, tint = Color.White)
+            }
+            IconButton(onClick = onRotate) {
+                CineoIcon(Icon.DEVICE_MOBILE_ROTATED, tint = Color.White, label = stringResource(R.string.player_rotate))
             }
         }
         Row(
@@ -423,6 +430,18 @@ private fun FullScreen() {
         insets?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         insets?.hide(WindowInsetsCompat.Type.systemBars())
         onDispose { insets?.show(WindowInsetsCompat.Type.systemBars()) }
+    }
+}
+
+@Composable
+private fun rememberRotate(): () -> Unit {
+    val view = LocalView.current
+    val activity = view.context as? android.app.Activity
+    DisposableEffect(activity) {
+        onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+    }
+    return remember(view, activity) {
+        { activity?.requestedOrientation = rotatedOrientation(view.resources.configuration.orientation) }
     }
 }
 
