@@ -5,7 +5,7 @@
 )]
 
 use cineo_core::addon::{
-    ContentType, Manifest, MetaPreview, ResourceName, ResourcePath, SourceKind, TransportUrl,
+    ContentType, Manifest, Meta, MetaPreview, ResourceName, ResourcePath, SourceKind, TransportUrl,
     parse_addon_catalog_response, parse_catalog_response, parse_manifest, parse_meta_response,
     parse_stream_response, parse_subtitles_response,
 };
@@ -76,6 +76,38 @@ fn load_failed(transport: &str) -> Action {
         result: Err("HTTP 503".into()),
         origin: ManifestOrigin::Restore,
     }
+}
+
+fn movie_meta() -> Meta {
+    parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value
+}
+
+fn ask_movie(state: &mut State) -> Vec<Effect> {
+    update(
+        state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    )
+}
+
+fn open_movie(state: &mut State) -> Vec<Effect> {
+    let effects = ask_movie(state);
+    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
+        panic!("{effects:?}");
+    };
+    update(
+        state,
+        Action::MetaLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(Box::new(movie_meta())),
+        },
+    )
 }
 
 fn retried(action: Action) -> Action {
@@ -575,14 +607,7 @@ fn retry_asks_again_for_the_addons_whose_manifest_failed() {
 #[test]
 fn retry_asks_again_for_a_failed_detail_and_its_failed_streams() {
     let (mut state, _) = restored();
-    let mut effects = update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
+    let mut effects = ask_movie(&mut state);
     let first = effects.clone();
     while let [Effect::FetchMeta { addon, path }] = effects.as_slice() {
         effects = update(
@@ -609,9 +634,7 @@ fn retry_asks_again_for_a_failed_detail_and_its_failed_streams() {
     let [Effect::FetchMeta { addon, path }] = first.as_slice() else {
         panic!("{first:?}");
     };
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
+    let meta = movie_meta();
     let streams = update(
         &mut state,
         Action::MetaLoaded {
@@ -662,14 +685,7 @@ fn retry_asks_again_for_a_failed_detail_and_its_failed_streams() {
 #[test]
 fn retry_leaves_a_detail_no_addon_can_answer() {
     let mut state = State::default();
-    update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
+    ask_movie(&mut state);
 
     assert!(update(&mut state, Action::RetryFailed).is_empty());
     assert!(matches!(
@@ -696,28 +712,7 @@ fn a_recovered_addon_joins_the_streams_of_the_open_detail() {
     let mut state = restore(&[BASIC, STREAMS]);
     update(&mut state, loaded(BASIC, "basic/manifest.json"));
     update(&mut state, load_failed(STREAMS));
-    let effects = update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
-    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
-        panic!("{effects:?}");
-    };
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
-    let before = update(
-        &mut state,
-        Action::MetaLoaded {
-            addon: addon.clone(),
-            path: path.clone(),
-            result: Ok(Box::new(meta)),
-        },
-    );
+    let before = open_movie(&mut state);
     assert_eq!(before.len(), 1, "only the addon that loaded is asked");
 
     update(&mut state, Action::RetryFailed);
@@ -756,14 +751,7 @@ fn a_recovered_addon_joins_the_current_search() {
 fn a_detail_without_addons_is_asked_for_once_they_recover() {
     let mut state = restore(&[BASIC]);
     update(&mut state, load_failed(BASIC));
-    update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
+    ask_movie(&mut state);
     assert!(matches!(
         state.detail.as_ref().unwrap().meta,
         Loadable::Failed(Problem::NoMetaAddon)
@@ -781,42 +769,10 @@ fn a_detail_without_addons_is_asked_for_once_they_recover() {
     assert!(state.detail.as_ref().unwrap().meta.is_loading());
 }
 
-fn open_movie(state: &mut State) -> Vec<Effect> {
-    let effects = update(
-        state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
-    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
-        panic!("{effects:?}");
-    };
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
-    update(
-        state,
-        Action::MetaLoaded {
-            addon: addon.clone(),
-            path: path.clone(),
-            result: Ok(Box::new(meta)),
-        },
-    )
-}
-
 #[test]
 fn an_addon_restored_late_answers_a_detail_opened_before_it() {
     let mut state = restore(&[BASIC]);
-    update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
+    ask_movie(&mut state);
 
     let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
 
@@ -903,21 +859,12 @@ fn search_asks_only_catalogs_that_support_search() {
 #[test]
 fn meta_falls_back_to_the_next_addon_then_movie_streams_load_from_all() {
     let (mut state, _) = restored();
-    let effects = update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
+    let effects = ask_movie(&mut state);
     let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
         panic!("{effects:?}");
     };
     assert_eq!(addon, &url(BASIC));
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
+    let meta = movie_meta();
     let effects = update(
         &mut state,
         Action::MetaLoaded {
@@ -1010,17 +957,8 @@ fn meta_failure_tries_the_next_candidate() {
 
 fn detail_with_streams() -> State {
     let (mut state, _) = restored();
-    update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
+    ask_movie(&mut state);
+    let meta = movie_meta();
     let (addon, path) = state.detail.as_ref().unwrap().meta_request.clone().unwrap();
     update(
         &mut state,
@@ -1878,17 +1816,8 @@ fn subtitle_request_without_hints_has_no_extras() {
     ] {
         update(&mut state, loaded(transport, file));
     }
-    update(
-        &mut state,
-        Action::OpenDetail {
-            content_type: ty("movie"),
-            id: "tt0000001".into(),
-            preview: None,
-        },
-    );
-    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
-        .unwrap()
-        .value;
+    ask_movie(&mut state);
+    let meta = movie_meta();
     let (addon, path) = state.detail.as_ref().unwrap().meta_request.clone().unwrap();
     update(
         &mut state,
