@@ -19,7 +19,90 @@ use crate::image_disk::ImageDisk;
 pub(crate) const MAX_IMAGE_SIDE: u32 = 4096;
 const SIZE_HEADROOM: f32 = 2.0;
 
+const TEXTURE_BUDGET: usize = 256 * 1024 * 1024;
+const PROTECTED_PASSES: u64 = 2;
+
 type Entry = Poll<Result<Arc<ColorImage>, String>>;
+type SharedTextures = Arc<Mutex<Textures>>;
+
+#[derive(Debug, Clone, Copy)]
+struct Held {
+    bytes: usize,
+    painted: Option<u64>,
+}
+
+#[derive(Debug, Default)]
+struct Textures {
+    held: HashMap<String, Held>,
+}
+
+impl Textures {
+    fn decoded(&mut self, uri: String, [width, height]: [usize; 2]) {
+        let bytes = width.saturating_mul(height).saturating_mul(16) / 3;
+        self.held.insert(
+            uri,
+            Held {
+                bytes,
+                painted: None,
+            },
+        );
+    }
+
+    fn take_over_budget(&mut self, pass: u64, budget: usize) -> Vec<String> {
+        let painted = self
+            .held
+            .iter()
+            .filter_map(|(uri, held)| Some((uri.clone(), held.painted?, held.bytes)))
+            .collect();
+        let evicted = over_budget(painted, pass, budget);
+        for uri in &evicted {
+            self.held.remove(uri);
+        }
+        evicted
+    }
+}
+
+fn over_budget(mut held: Vec<(String, u64, usize)>, pass: u64, budget: usize) -> Vec<String> {
+    let mut total: usize = held.iter().map(|&(_, _, bytes)| bytes).sum();
+    held.sort_by_key(|&(_, painted, _)| painted);
+    let mut evicted = Vec::new();
+    for (uri, painted, bytes) in held {
+        if total <= budget || painted + PROTECTED_PASSES > pass {
+            break;
+        }
+        total -= bytes;
+        evicted.push(uri);
+    }
+    evicted
+}
+
+fn textures_id() -> egui::Id {
+    egui::Id::new("cineo-image-textures")
+}
+
+pub(crate) fn painted(ctx: &egui::Context, uri: &str) {
+    let Some(textures) = ctx.data(|d| d.get_temp::<SharedTextures>(textures_id())) else {
+        return;
+    };
+    let pass = ctx.cumulative_pass_nr();
+    if let Some(held) = textures.lock().held.get_mut(uri) {
+        held.painted = Some(pass);
+    }
+}
+
+pub(crate) fn evict(ctx: &egui::Context) {
+    evict_over(ctx, ctx.cumulative_pass_nr(), TEXTURE_BUDGET);
+}
+
+fn evict_over(ctx: &egui::Context, pass: u64, budget: usize) {
+    let Some(textures) = ctx.data(|d| d.get_temp::<SharedTextures>(textures_id())) else {
+        return;
+    };
+    let evicted = textures.lock().take_over_budget(pass, budget);
+    for uri in evicted {
+        ctx.forget_image(&uri);
+    }
+}
 
 pub(crate) struct NetImageLoader {
     client: AddonClient,
@@ -27,6 +110,7 @@ pub(crate) struct NetImageLoader {
     cache: Arc<Mutex<HashMap<String, Entry>>>,
     decoders: Arc<Semaphore>,
     disk: ImageDisk,
+    textures: SharedTextures,
 }
 
 impl NetImageLoader {
@@ -44,6 +128,7 @@ impl NetImageLoader {
             cache: Arc::default(),
             decoders: Arc::new(Semaphore::new(cores)),
             disk,
+            textures: Arc::default(),
         }
     }
 }
@@ -99,6 +184,8 @@ impl Fetch {
 
 pub(crate) fn install(ctx: &egui::Context, loader: NetImageLoader) {
     ctx.options_mut(|o| o.reduce_texture_memory = true);
+    let textures = Arc::clone(&loader.textures);
+    ctx.data_mut(|d| d.insert_temp(textures_id(), textures));
     ctx.add_image_loader(Arc::new(loader));
 }
 
@@ -130,6 +217,7 @@ impl ImageLoader for NetImageLoader {
         drop(cache);
 
         let cache = Arc::clone(&self.cache);
+        let textures = Arc::clone(&self.textures);
         let ctx = ctx.clone();
         let uri = uri.to_owned();
         let origin = url.origin().ascii_serialization();
@@ -145,6 +233,9 @@ impl ImageLoader for NetImageLoader {
             let result = fetch.image().await;
             if let Err(err) = &result {
                 tracing::debug!(%origin, %err, "image not loaded");
+            }
+            if let Ok(image) = &result {
+                textures.lock().decoded(uri.clone(), image.size);
             }
             let result = result.map(Arc::new);
             cache.lock().insert(uri, Poll::Ready(result));
@@ -289,6 +380,74 @@ mod tests {
             .unwrap();
         assert!(matches!(poll, egui::load::TexturePoll::Ready { .. }));
         assert!(cache.lock().is_empty());
+    }
+
+    fn held(entries: &[(&str, u64, usize)]) -> Vec<(String, u64, usize)> {
+        entries
+            .iter()
+            .map(|&(uri, painted, bytes)| (uri.to_owned(), painted, bytes))
+            .collect()
+    }
+
+    #[test]
+    fn nothing_is_evicted_within_the_budget() {
+        let entries = held(&[("a", 1, 10), ("b", 2, 10)]);
+        assert!(over_budget(entries, 100, 20).is_empty());
+    }
+
+    #[test]
+    fn the_least_recently_painted_go_first_and_only_until_it_fits() {
+        let entries = held(&[("newest", 30, 10), ("oldest", 10, 10), ("middle", 20, 10)]);
+        assert_eq!(over_budget(entries, 100, 20), vec!["oldest"]);
+    }
+
+    #[test]
+    fn what_is_on_screen_is_never_evicted_even_over_the_budget() {
+        let entries = held(&[("old", 10, 10), ("on screen", 99, 10), ("now", 100, 10)]);
+        assert_eq!(over_budget(entries, 100, 0), vec!["old"]);
+    }
+
+    #[test]
+    fn an_evicted_image_loses_its_texture_and_loads_again() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let client = AddonClient::new(cineo_net::NetPolicy::default()).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let loader =
+            NetImageLoader::new(client, runtime.handle().clone(), ImageDisk::new(dir.path()));
+        let (cache, textures) = (Arc::clone(&loader.cache), Arc::clone(&loader.textures));
+        let uri = "https://img.example/poster.png";
+        let image = ColorImage::filled([2, 2], egui::Color32::WHITE);
+        textures.lock().decoded(uri.to_owned(), image.size);
+        cache
+            .lock()
+            .insert(uri.to_owned(), Poll::Ready(Ok(Arc::new(image))));
+        let ctx = egui::Context::default();
+        install(&ctx, loader);
+        let load = || ctx.try_load_texture(uri, egui::TextureOptions::LINEAR, SizeHint::default());
+        assert!(matches!(load(), Ok(egui::load::TexturePoll::Ready { .. })));
+        assert!(
+            textures.lock().held.contains_key(uri),
+            "dropping the decoded copy keeps its size"
+        );
+        painted(&ctx, uri);
+        evict_over(&ctx, 100, usize::MAX);
+        assert!(matches!(load(), Ok(egui::load::TexturePoll::Ready { .. })));
+        evict_over(&ctx, 100, 0);
+        assert!(textures.lock().held.is_empty());
+        assert!(matches!(
+            load(),
+            Ok(egui::load::TexturePoll::Pending { .. })
+        ));
+    }
+
+    #[test]
+    fn an_image_that_was_never_painted_is_not_counted() {
+        let mut textures = Textures::default();
+        textures.decoded("unpainted".to_owned(), [100, 100]);
+        assert!(textures.take_over_budget(100, 0).is_empty());
+        assert!(textures.held.contains_key("unpainted"));
     }
 
     const HINT: SizeHint = SizeHint::Size {

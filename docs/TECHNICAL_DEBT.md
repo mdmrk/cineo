@@ -153,15 +153,6 @@ Format:
   `cineo doctor` covers the database.
 - Exit: a diagnostics page.
 
-### Desktop: image cache is unbounded for a session
-- Where: [images.rs](../crates/cineo-desktop/src/images.rs)
-- Gap: decoded images (downscaled to about twice their display size) stay
-  in memory until exit.
-- Why: egui decides when to forget images; a size-bounded cache was not
-  needed for normal browsing.
-- Instead: memory grows with the number of distinct posters viewed.
-- Exit: an LRU cap on `NetImageLoader` images.
-
 ### Desktop: the image cache has no controls
 - Where: [image_disk.rs](../crates/cineo-desktop/src/image_disk.rs)
 - Gap: there is no button to clear it, its 30 days and 256 MiB were not
@@ -249,16 +240,16 @@ Format:
 - Exit: none planned; this is the intended behavior unless users ask
   otherwise.
 
-### Desktop UI: image textures are never evicted
-- Where: [images.rs](../crates/cineo-desktop/src/images.rs)
-- Gap: every poster and backdrop shown stays on the GPU until the app
-  quits; egui's texture cache only drops unused sizes of SVGs.
-- Why: eviction needs to know which images were drawn recently, which
-  egui does not expose to image loaders.
-- Instead: GPU memory grows with the number of distinct images seen in a
-  session (the RAM copy is dropped after upload).
-- Exit: track the image URIs painted each frame and `forget_image` those
-  unused for a while.
+### Desktop UI: the texture budget is an estimate
+- Where: [images.rs](../crates/cineo-desktop/src/images.rs) (`TEXTURE_BUDGET`)
+- Gap: covers past 256 MiB of textures are forgotten, least recently
+  painted first. That value was not measured, and the size is computed
+  from the decoded image with a mipmap chain, not asked from the GPU.
+  The player's logo is drawn elsewhere and is not counted. A cover that was
+  forgotten and comes back fades in again.
+- Why: egui does not report texture memory to image loaders.
+- Instead: what is on screen is always kept, even over the budget.
+- Exit: measure a long session and set the budget from it.
 
 ### Desktop UI: off-screen stream cards and listed addons are not in the accessibility tree
 - Where: [view/](../crates/cineo-desktop/src/view) (`stream_group`,

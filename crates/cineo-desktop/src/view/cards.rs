@@ -415,6 +415,7 @@ pub(crate) fn paint_cover(
     focus_y: f32,
     fade_in: bool,
 ) {
+    crate::images::painted(ui.ctx(), src);
     let image = Image::new(src)
         .corner_radius(radius)
         .texture_options(IMAGE_FILTER)

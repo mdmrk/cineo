@@ -677,6 +677,7 @@ impl eframe::App for CineoApp {
             self.wake_retry.woke(Instant::now());
         }
         self.retry_after_waking(ctx);
+        images::evict(ctx);
         let status = self.playback.as_ref().map(|e| e.player.status());
         self.keep_awake
             .set(status.as_ref().is_some_and(keeps_screen_awake));
