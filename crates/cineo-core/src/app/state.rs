@@ -798,6 +798,8 @@ fn addons_changed(state: &mut State, save: bool) -> Vec<Effect> {
     }
     effects.extend(refresh_board(state));
     effects.extend(refresh_addon_lists(state, false));
+    effects.extend(refresh_search(state));
+    effects.extend(refresh_detail(state));
     effects
 }
 
@@ -1070,12 +1072,7 @@ fn manifest_loaded(
                     .count();
                 state.addons.insert(at, addon);
             }
-            let mut effects = addons_changed(state, install);
-            if origin == ManifestOrigin::Retry {
-                effects.extend(refresh_search(state));
-                effects.extend(refresh_detail(state));
-            }
-            effects
+            addons_changed(state, install)
         }
         Err(err) => {
             match origin {

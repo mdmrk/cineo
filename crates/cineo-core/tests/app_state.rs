@@ -754,6 +754,111 @@ fn a_detail_without_addons_is_asked_for_once_they_recover() {
     assert!(state.detail.as_ref().unwrap().meta.is_loading());
 }
 
+fn open_movie(state: &mut State) -> Vec<Effect> {
+    let effects = update(
+        state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
+        panic!("{effects:?}");
+    };
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value;
+    update(
+        state,
+        Action::MetaLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(Box::new(meta)),
+        },
+    )
+}
+
+#[test]
+fn an_addon_restored_late_answers_a_detail_opened_before_it() {
+    let mut state = restore(&[BASIC]);
+    update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::FetchMeta { .. })),
+        "{effects:?}"
+    );
+    assert!(state.detail.as_ref().unwrap().meta.is_loading());
+}
+
+#[test]
+fn an_addon_restored_late_joins_the_current_search() {
+    let mut state = restore(&[BASIC, STREAMS]);
+    update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    assert!(update(&mut state, Action::Search("matrix".into())).is_empty());
+
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+
+    assert_eq!(state.search.len(), 1);
+    assert!(effects.iter().any(
+        |e| matches!(e, Effect::FetchCatalog { path, .. } if *path == state.search[0].target.path)
+    ));
+}
+
+#[test]
+fn a_removed_addon_leaves_the_current_search() {
+    let (mut state, _) = restored();
+    update(&mut state, Action::Search("matrix".into()));
+    assert_eq!(state.search.len(), 1);
+
+    update(&mut state, Action::RemoveAddon(url(BASIC)));
+
+    assert!(state.search.is_empty());
+}
+
+#[test]
+fn a_removed_addon_leaves_the_streams_of_the_open_detail() {
+    let (mut state, _) = restored();
+    open_movie(&mut state);
+    assert_eq!(state.detail.as_ref().unwrap().streams.len(), 2);
+
+    update(&mut state, Action::RemoveAddon(url(STREAMS)));
+
+    let streams = &state.detail.as_ref().unwrap().streams;
+    assert_eq!(streams.len(), 1);
+    assert_eq!(streams[0].addon, url(BASIC));
+}
+
+#[test]
+fn moving_an_addon_reorders_the_open_streams_without_asking_again() {
+    let (mut state, _) = restored();
+    open_movie(&mut state);
+
+    let effects = update(&mut state, Action::MoveAddon { from: 0, to: 1 });
+
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::FetchStreams { .. })),
+        "{effects:?}"
+    );
+    assert_eq!(
+        state.detail.as_ref().unwrap().streams[0].addon,
+        url(STREAMS)
+    );
+}
+
 #[test]
 fn search_asks_only_catalogs_that_support_search() {
     let (mut state, _) = restored();
