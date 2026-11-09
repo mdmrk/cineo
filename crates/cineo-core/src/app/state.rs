@@ -839,7 +839,7 @@ fn retry_failed(state: &mut State) -> Vec<Effect> {
     }
     let addons = &state.addons;
     if let Some(detail) = state.detail.as_mut() {
-        effects.extend(retry_meta(addons, detail));
+        effects.extend(request_meta(addons, detail));
         for group in &mut detail.streams {
             if matches!(group.streams, Loadable::Failed(_)) {
                 group.streams = Loadable::Loading;
@@ -853,7 +853,7 @@ fn retry_failed(state: &mut State) -> Vec<Effect> {
     effects
 }
 
-fn retry_meta(addons: &[InstalledAddon], detail: &mut Detail) -> Option<Effect> {
+fn request_meta(addons: &[InstalledAddon], detail: &mut Detail) -> Option<Effect> {
     if !matches!(detail.meta, Loadable::Failed(_)) {
         return None;
     }
@@ -873,31 +873,33 @@ fn refresh_detail(state: &mut State) -> Vec<Effect> {
     let Some(detail) = state.detail.as_mut() else {
         return Vec::new();
     };
-    let mut effects: Vec<Effect> = retry_meta(addons, detail).into_iter().collect();
-    let Some(video_id) = detail.selected_video.clone() else {
-        return effects;
-    };
-    let mut old = std::mem::take(&mut detail.streams);
-    detail.streams = plan::stream_targets(addons, &detail.content_type, &video_id)
-        .into_iter()
-        .map(
-            |(addon, path)| match old.iter().position(|g| g.addon == addon && g.path == path) {
-                Some(index) => old.swap_remove(index),
-                None => {
-                    effects.push(Effect::FetchStreams {
-                        addon: addon.clone(),
-                        path: path.clone(),
-                    });
-                    StreamGroup {
-                        addon_name: addon_name(addons, &addon),
-                        addon,
-                        path,
-                        streams: Loadable::Loading,
-                    }
-                }
-            },
-        )
-        .collect();
+    let mut effects: Vec<Effect> = request_meta(addons, detail).into_iter().collect();
+    if let Some(video_id) = detail.selected_video.clone() {
+        effects.extend(refresh_streams(addons, detail, &video_id));
+    }
+    effects
+}
+
+fn refresh_streams(addons: &[InstalledAddon], detail: &mut Detail, video_id: &str) -> Vec<Effect> {
+    let targets = plan::stream_targets(addons, &detail.content_type, video_id);
+    let mut effects = Vec::new();
+    detail.streams = reconcile(
+        std::mem::take(&mut detail.streams),
+        targets,
+        |group, (addon, path)| group.addon == *addon && group.path == *path,
+        |(addon, path)| {
+            effects.push(Effect::FetchStreams {
+                addon: addon.clone(),
+                path: path.clone(),
+            });
+            StreamGroup {
+                addon_name: addon_name(addons, &addon),
+                addon,
+                path,
+                streams: Loadable::Loading,
+            }
+        },
+    );
     effects
 }
 
@@ -918,50 +920,62 @@ fn refresh_board(state: &mut State) -> Vec<Effect> {
     effects
 }
 
-fn kept_rows(mut old: Vec<Row>, targets: Vec<CatalogTarget>) -> (Vec<Row>, Vec<Effect>) {
+fn kept_rows(old: Vec<Row>, targets: Vec<CatalogTarget>) -> (Vec<Row>, Vec<Effect>) {
     let mut effects = Vec::new();
-    let rows = targets
-        .into_iter()
-        .map(|target| match old.iter().position(|r| r.target == target) {
-            Some(index) => old.swap_remove(index),
-            None => {
-                effects.push(fetch_catalog(&target));
-                Row {
-                    target,
-                    items: Loadable::Loading,
-                }
+    let rows = reconcile(
+        old,
+        targets,
+        |row, target| row.target == *target,
+        |target| {
+            effects.push(fetch_catalog(&target));
+            Row {
+                target,
+                items: Loadable::Loading,
             }
-        })
-        .collect();
+        },
+    );
     (rows, effects)
 }
 
+fn reconcile<T, K>(
+    mut old: Vec<T>,
+    targets: Vec<K>,
+    same: impl Fn(&T, &K) -> bool,
+    mut create: impl FnMut(K) -> T,
+) -> Vec<T> {
+    targets
+        .into_iter()
+        .map(
+            |target| match old.iter().position(|item| same(item, &target)) {
+                Some(index) => old.swap_remove(index),
+                None => create(target),
+            },
+        )
+        .collect()
+}
+
 fn refresh_addon_lists(state: &mut State, retry: bool) -> Vec<Effect> {
-    let Some(mut old) = state.addon_lists.take() else {
+    let Some(old) = state.addon_lists.take() else {
         return Vec::new();
     };
     let mut effects = Vec::new();
-    let lists = plan::addon_list_targets(&state.addons)
-        .into_iter()
-        .map(|target| {
-            let kept = old.iter().position(|l| {
-                l.target == target && !(retry && matches!(l.addons, Loadable::Failed(_)))
+    let lists = reconcile(
+        old,
+        plan::addon_list_targets(&state.addons),
+        |list, target| {
+            list.target == *target && !(retry && matches!(list.addons, Loadable::Failed(_)))
+        },
+        |target| {
+            effects.push(Effect::FetchAddonList {
+                addon: target.addon.clone(),
+                path: target.path.clone(),
             });
-            match kept {
-                Some(index) => old.swap_remove(index),
-                None => {
-                    effects.push(Effect::FetchAddonList {
-                        addon: target.addon.clone(),
-                        path: target.path.clone(),
-                    });
-                    AddonList {
-                        target,
-                        addons: Loadable::Loading,
-                    }
-                }
+            AddonList {
+                target,
+                addons: Loadable::Loading,
             }
-        })
-        .collect();
+        },
+    );
     state.addon_lists = Some(lists);
     effects
 }
@@ -1168,24 +1182,10 @@ fn select_video(state: &mut State, video_id: String) -> Vec<Effect> {
     let Some(detail) = state.detail.as_mut() else {
         return Vec::new();
     };
-    detail.streams = plan::stream_targets(addons, &detail.content_type, &video_id)
-        .into_iter()
-        .map(|(addon, path)| StreamGroup {
-            addon_name: addon_name(addons, &addon),
-            addon,
-            path,
-            streams: Loadable::Loading,
-        })
-        .collect();
+    detail.streams.clear();
+    let effects = refresh_streams(addons, detail, &video_id);
     detail.selected_video = Some(video_id);
-    detail
-        .streams
-        .iter()
-        .map(|g| Effect::FetchStreams {
-            addon: g.addon.clone(),
-            path: g.path.clone(),
-        })
-        .collect()
+    effects
 }
 
 fn set_favorite(state: &mut State, id: String, favorite: bool) -> Vec<Effect> {
@@ -1238,25 +1238,17 @@ fn open_detail(
     id: String,
     preview: Option<MetaPreview>,
 ) -> Vec<Effect> {
-    let mut candidates = plan::meta_candidates(&state.addons, &content_type, &id);
-    let first = (!candidates.is_empty()).then(|| candidates.remove(0));
-    state.detail = Some(Detail {
-        meta: if first.is_some() {
-            Loadable::Loading
-        } else {
-            Loadable::Failed(Problem::NoMetaAddon)
-        },
+    let detail = state.detail.insert(Detail {
+        meta: Loadable::Failed(Problem::NoMetaAddon),
         content_type,
         id,
         preview,
-        meta_fallbacks: candidates,
-        meta_request: first.clone(),
+        meta_fallbacks: Vec::new(),
+        meta_request: None,
         selected_video: None,
         streams: Vec::new(),
     });
-    first
-        .map(|(addon, path)| vec![Effect::FetchMeta { addon, path }])
-        .unwrap_or_default()
+    request_meta(&state.addons, detail).into_iter().collect()
 }
 
 enum Source {
