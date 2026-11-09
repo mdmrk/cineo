@@ -39,6 +39,9 @@ if need cargo-machete "cargo install --locked cargo-machete"; then
   cargo machete --with-metadata
 fi
 
+step "doc references"
+scripts/check-docs.sh
+
 step "lockfile"
 cargo metadata --locked --format-version 1 >/dev/null
 
