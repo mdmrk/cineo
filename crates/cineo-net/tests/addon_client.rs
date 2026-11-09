@@ -218,7 +218,6 @@ async fn answer_once_then_go_silent(mut socket: TcpStream, body: Vec<u8>) {
     socket.write_all(head.as_bytes()).await.unwrap();
     socket.write_all(&body).await.unwrap();
     std::future::pending::<()>().await;
-    drop(socket);
 }
 
 #[tokio::test]

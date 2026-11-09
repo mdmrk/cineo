@@ -527,14 +527,7 @@ fn retry_asks_again_for_search_rows_that_failed() {
 
 #[test]
 fn retry_asks_again_for_the_addons_whose_manifest_failed() {
-    let mut state = State::default();
-    update(
-        &mut state,
-        Action::Restore {
-            addons: vec![url(BASIC), url(STREAMS)],
-            library: Vec::new(),
-        },
-    );
+    let mut state = restore(&[BASIC, STREAMS]);
     update(&mut state, load_failed(BASIC));
 
     let effects = update(&mut state, Action::RetryFailed);
@@ -660,14 +653,7 @@ fn retry_leaves_a_detail_no_addon_can_answer() {
 
 #[test]
 fn an_automatic_retry_that_fails_again_raises_no_notice() {
-    let mut state = State::default();
-    update(
-        &mut state,
-        Action::Restore {
-            addons: vec![url(BASIC)],
-            library: Vec::new(),
-        },
-    );
+    let mut state = restore(&[BASIC]);
     update(&mut state, load_failed(BASIC));
     assert!(state.notice.is_some(), "the first failure is reported");
     update(&mut state, Action::DismissNotice);
@@ -680,14 +666,7 @@ fn an_automatic_retry_that_fails_again_raises_no_notice() {
 
 #[test]
 fn a_recovered_addon_joins_the_streams_of_the_open_detail() {
-    let mut state = State::default();
-    update(
-        &mut state,
-        Action::Restore {
-            addons: vec![url(BASIC), url(STREAMS)],
-            library: Vec::new(),
-        },
-    );
+    let mut state = restore(&[BASIC, STREAMS]);
     update(&mut state, loaded(BASIC, "basic/manifest.json"));
     update(&mut state, load_failed(STREAMS));
     let effects = update(
@@ -731,14 +710,7 @@ fn a_recovered_addon_joins_the_streams_of_the_open_detail() {
 
 #[test]
 fn a_recovered_addon_joins_the_current_search() {
-    let mut state = State::default();
-    update(
-        &mut state,
-        Action::Restore {
-            addons: vec![url(BASIC), url(STREAMS)],
-            library: Vec::new(),
-        },
-    );
+    let mut state = restore(&[BASIC, STREAMS]);
     update(&mut state, load_failed(BASIC));
     update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
     assert!(update(&mut state, Action::Search("matrix".into())).is_empty());
@@ -755,14 +727,7 @@ fn a_recovered_addon_joins_the_current_search() {
 
 #[test]
 fn a_detail_without_addons_is_asked_for_once_they_recover() {
-    let mut state = State::default();
-    update(
-        &mut state,
-        Action::Restore {
-            addons: vec![url(BASIC)],
-            library: Vec::new(),
-        },
-    );
+    let mut state = restore(&[BASIC]);
     update(&mut state, load_failed(BASIC));
     update(
         &mut state,

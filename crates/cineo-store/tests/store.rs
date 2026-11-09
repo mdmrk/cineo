@@ -183,15 +183,19 @@ fn apply_runs_persistence_effects_and_ignores_others() {
     assert!(store.library().unwrap().is_empty());
 }
 
-#[test]
-fn v1_fixture_database_opens_and_invalid_rows_are_skipped() {
-    let dir = temp_dir("v1");
-    let path = dir.join(DB_FILE);
-    let sql = String::from_utf8(fixture("store/v1.sql")).unwrap();
+fn database_from_fixture(version: &str) -> PathBuf {
+    let path = temp_dir(version).join(DB_FILE);
+    let sql = String::from_utf8(fixture(&format!("store/{version}.sql"))).unwrap();
     rusqlite::Connection::open(&path)
         .unwrap()
         .execute_batch(&sql)
         .unwrap();
+    path
+}
+
+#[test]
+fn v1_fixture_database_opens_and_invalid_rows_are_skipped() {
+    let path = database_from_fixture("v1");
 
     let store = Store::open(&path).unwrap();
     assert_eq!(
@@ -213,13 +217,7 @@ fn v1_fixture_database_opens_and_invalid_rows_are_skipped() {
 
 #[test]
 fn v4_fixture_database_keeps_streams_favorites_and_settings() {
-    let dir = temp_dir("v4");
-    let path = dir.join(DB_FILE);
-    let sql = String::from_utf8(fixture("store/v4.sql")).unwrap();
-    rusqlite::Connection::open(&path)
-        .unwrap()
-        .execute_batch(&sql)
-        .unwrap();
+    let path = database_from_fixture("v4");
 
     let store = Store::open(&path).unwrap();
     assert_eq!(user_version(&path), SCHEMA_VERSION);
