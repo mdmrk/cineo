@@ -87,6 +87,7 @@ import androidx.lifecycle.repeatOnLifecycle
 fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, cineo: Cineo) {
     var status by remember { mutableStateOf<PlayerStatusView?>(null) }
     var controls by remember { mutableStateOf(true) }
+    var started by remember { mutableStateOf(false) }
     var hold by remember { mutableStateOf(SeekHold()) }
     var stats by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
@@ -96,13 +97,14 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
             while (true) {
                 val latest = withContext(Dispatchers.Default) { cineo.playerStatus() }
                 status = latest
+                started = playerStarted(started, latest?.loaded == true, latest?.waiting == true)
                 if (latest != null) hold = hold.settle(latest.positionS, latest.waiting, SystemClock.elapsedRealtime())
                 delay(250)
             }
         }
     }
-    LaunchedEffect(controls, status?.paused, menu) {
-        if (controls && !menu && status?.paused == false) {
+    LaunchedEffect(controls, status?.paused, menu, started) {
+        if (controls && started && !menu && status?.paused == false) {
             delay(playback.hideControlsMs.toLong())
             controls = false
         }
@@ -120,7 +122,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
         Modifier
             .fillMaxSize()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                controls = !controls
+                if (started) controls = !controls
             },
     ) {
         AndroidView(
@@ -133,10 +135,21 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
             modifier = Modifier.fillMaxSize(),
         )
         val current = status
-        if (current == null || !current.loaded || current.waiting) {
-            LoadingBackdrop(playback.art, images, firstLoad = current == null || !current.loaded)
+        if (!started) {
+            Box(Modifier.fillMaxSize()) {
+                LoadingBackdrop(playback.art, images, firstLoad = true)
+                IconButton(
+                    onClick = { cineo.stopPlayback() },
+                    modifier = Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(8.dp),
+                ) {
+                    CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back))
+                }
+            }
         }
-        if (controls && current != null) {
+        if (started && current?.waiting == true) {
+            LoadingBackdrop(playback.art, images, firstLoad = false)
+        }
+        if (controls && started && current != null) {
             Controls(
                 title = playback.art.title,
                 status = current,
