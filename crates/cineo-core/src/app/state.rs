@@ -862,13 +862,17 @@ fn request_meta(addons: &[InstalledAddon], detail: &mut Detail) -> Option<Effect
     if !detail.meta.is_failed() {
         return None;
     }
-    let mut candidates = plan::meta_candidates(addons, &detail.content_type, &detail.id);
-    if candidates.is_empty() {
+    detail.meta_fallbacks = plan::meta_candidates(addons, &detail.content_type, &detail.id);
+    let effect = next_meta(detail)?;
+    detail.meta = Loadable::Loading;
+    Some(effect)
+}
+
+fn next_meta(detail: &mut Detail) -> Option<Effect> {
+    if detail.meta_fallbacks.is_empty() {
         return None;
     }
-    let (addon, path) = candidates.remove(0);
-    detail.meta = Loadable::Loading;
-    detail.meta_fallbacks = candidates;
+    let (addon, path) = detail.meta_fallbacks.remove(0);
     detail.meta_request = Some((addon.clone(), path.clone()));
     Some(Effect::FetchMeta { addon, path })
 }
@@ -1163,17 +1167,14 @@ fn meta_loaded(
                 None => Vec::new(),
             }
         }
-        Err(err) => {
-            if detail.meta_fallbacks.is_empty() {
+        Err(err) => match next_meta(detail) {
+            Some(effect) => vec![effect],
+            None => {
                 detail.meta = Loadable::Failed(Problem::Request(err));
                 detail.meta_request = None;
                 Vec::new()
-            } else {
-                let (addon, path) = detail.meta_fallbacks.remove(0);
-                detail.meta_request = Some((addon.clone(), path.clone()));
-                vec![Effect::FetchMeta { addon, path }]
             }
-        }
+        },
     }
 }
 
