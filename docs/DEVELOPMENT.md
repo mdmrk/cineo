@@ -101,10 +101,10 @@ that setting.
 
 | Task                 | Command                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------- |
-| Everything CI checks | `scripts/check.sh` (`--quick` skips docs and deny)                                          |
+| Everything CI checks | `scripts/check.sh` (`--quick` skips lint, docs and deny)                                        |
 | Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
 | Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
-| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, lockfile)                       |
+| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, doc references, lockfile)                       |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
 | Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
 | One test             | `cargo test -p cineo-core some_name`                                                        |
@@ -170,8 +170,8 @@ updated `Cargo.lock`.
   that only cause churn.
 - `#[allow(...)]` needs a `reason = "…"`. `#[expect(...)]` is
   preferred when the lint should fire.
-- `unsafe_code = "forbid"`, except in two modules of `cineo-player` (see [SECURITY.md](SECURITY.md) for the
-  exception process).
+- `unsafe_code = "forbid"`, except in the modules listed in [SECURITY.md](SECURITY.md), which also
+  describes the exception process.
 
 ### New stable Rust releases (ADR-0025)
 
@@ -198,16 +198,14 @@ first test needs it.
 | Protocol fixtures   | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures                                                                                                                      | always                             |
 | Network integration | `crates/cineo-net/tests/`                    | local mock HTTP server (`wiremock`)                                                                                                | always                             |
 | Persistence         | `crates/cineo-store/tests/`                  | temp-dir SQLite, fixture DBs per schema version                                                                                    | always                             |
-| Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: nightly/manual |
+| Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: manual         |
 | Android UI logic    | `android/app/src/test/`                      | JUnit 4 on the JVM (`./gradlew testDebugUnitTest`)                                                                                 | always (check (android))           |
 | E2E                 | `crates/cineo-cli/tests/`                    | built binary (`CARGO_BIN_EXE_cineo`) + mock addon                                                                                  | always                             |
-| Live addons         | `scripts/` (manual)                          | real public addons                                                                                                                 | never in CI (flaky, external)      |
 
 ### Rules
 
 - **Name tests after the behavior**:
-  `full_resource_without_types_matches_nothing`, not `test_parse_3`. For
-  protocol tests, link the matching ADDON_PROTOCOL.md section in a comment.
+  `quirky_streams_drop_bad_sources_and_unsafe_headers`, not `test_parse_3`.
 - **Fixtures, not inline JSON**, for anything representing a real protocol
   document. Inline JSON is fine for one-field edge cases.
 - **No network in automated tests.** Mock servers bind loopback, and tests
@@ -475,9 +473,9 @@ Use a fresh `--data-dir` and `--cache-dir` so the P2P notice appears.
 Updates are manual (`cargo update`, then `scripts/check.sh`); there is
 no Dependabot, so no bot branches.
 
-Every direct dependency gets a row **when it is added**. Research
-snapshot: crates.io, 2026-10-06. Versions are the latest stable at that date.
-Re-check them when adding.
+Every direct dependency gets a row **when it is added**, with the version
+in `Cargo.toml`; `scripts/check-docs.sh` fails otherwise. Research the
+current version when adding one.
 
 ### In use
 
@@ -485,19 +483,19 @@ Re-check them when adding.
 | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | `percent-encoding`                                                                     | 2.3.2                                                                                                                                  | `encodeURIComponent` path encoding (core)                                                                                                       | MIT/Apache                           |
 | `semver`                                                                               | 1.0.28                                                                                                                                 | Manifest `version` (core), release versions (core, net, desktop)                                                                                | MIT/Apache                           |
-| `serde_json`                                                                           | 1.0.151                                                                                                                                | JSON documents (core)                                                                                                                           | MIT/Apache                           |
+| `serde_json`                                                                           | 1.0.154                                                                                                                                | JSON documents (core)                                                                                                                           | MIT/Apache                           |
 | `thiserror`                                                                            | 2.0.21                                                                                                                                 | Library errors                                                                                                                                  | MIT/Apache                           |
 | `url`                                                                                  | 2.5.8                                                                                                                                  | URLs (core, net)                                                                                                                                | MIT/Apache                           |
 | `reqwest`                                                                              | 0.13.5                                                                                                                                 | Addon HTTP client (net)                                                                                                                         | MIT/Apache                           |
-| `tokio`                                                                                | 1.53.2                                                                                                                                 | Async runtime (net, shells)                                                                                                                     | MIT                                  |
+| `tokio`                                                                                | 1.54.1                                                                                                                                 | Async runtime (net, shells)                                                                                                                     | MIT                                  |
 | `tracing` / `tracing-subscriber`                                                       | 0.1.44 / 0.3.23                                                                                                                        | Logging                                                                                                                                         | MIT                                  |
 | `anyhow`                                                                               | 1.0.104                                                                                                                                | Shell errors (cli)                                                                                                                              | MIT/Apache                           |
 | `clap`                                                                                 | 4.6.7                                                                                                                                  | CLI arguments (cli)                                                                                                                             | MIT/Apache                           |
 | `wiremock` (dev)                                                                       | 0.6.5                                                                                                                                  | Mock addon servers in tests                                                                                                                     | MIT/Apache                           |
 | `tempfile` (dev)                                                                       | 3.27.0                                                                                                                                 | Temporary directories removed after each test                                                                                                   | MIT/Apache                           |
-| `rusqlite` (`bundled`, no default features)                                            | 0.40.2                                                                                                                                 | SQLite database (store)                                                                                                                         | MIT; bundled SQLite is public domain |
+| `rusqlite` (`bundled`, no default features)                                            | 0.41.1                                                                                                                                 | SQLite database (store)                                                                                                                         | MIT; bundled SQLite is public domain |
 | `etcetera`                                                                             | 0.11.0                                                                                                                                 | XDG data and cache directories (store)                                                                                                          | MIT/Apache                           |
-| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`; no default features) | 0.36.2 (ADR-0033)                                                                                                                                 | Desktop window and egui (desktop, ADR-0011)                                                                                                     | MIT/Apache                           |
+| `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`, `links`; no default features) | 0.36.2 (ADR-0033)                                                                                                                                 | Desktop window and egui (desktop, ADR-0011)                                                                                                     | MIT/Apache                           |
 | `iconflow` (`pack-tabler` only; no default features)                                   | 2.1.0                                                                                                                                  | Tabler icon font and codepoints for the desktop UI (desktop)                                                                                    | MIT; Tabler font MIT                 |
 | `image` (`jpeg`, `png`, `webp` only)                                                   | 0.25.10                                                                                                                                | Image header checks and decoding (desktop)                                                                                                      | MIT/Apache                           |
 | `fast_image_resize` (default features)                                                 | 6.1.0                                                                                                                                  | SIMD downscaling of posters and backdrops (desktop)                                                                                             | MIT/Apache                           |
@@ -518,7 +516,7 @@ Re-check them when adding.
 | `hyper` (`server`, `http1`) / `hyper-util` (`tokio`) / `http-body-util`                | 1.12.0 / 0.1.21 / 0.1.5                                                                                                                | Loopback HTTP server for the player (stream)                                                                                                    | MIT                                  |
 | `bytes`                                                                                | 1.12.1                                                                                                                                 | Response bodies (stream)                                                                                                                        | MIT                                  |
 | `futures-util` (no default features)                                                   | 0.3.34                                                                                                                                 | Stream adapters for bodies (stream)                                                                                                             | MIT/Apache                           |
-| `tokio-util` (`io`)                                                                    | 0.7.19                                                                                                                                 | `ReaderStream` from a torrent file reader (stream)                                                                                              | MIT                                  |
+| `tokio-util` (`io`)                                                                    | 0.7.20                                                                                                                                 | `ReaderStream` from a torrent file reader (stream)                                                                                              | MIT                                  |
 | `getrandom`                                                                            | 0.4.3                                                                                                                                  | Per-session path token and proxy password (stream)                                                                                              | MIT/Apache                           |
 | `rust-i18n`                                                                            | 4.2.4                                                                                                                                  | UI message catalogs, embedded at compile time (desktop, ADR-0021)                                                                               | MIT                                  |
 | `sys-locale`                                                                           | 0.3.2                                                                                                                                  | The OS locale for the default UI language (desktop)                                                                                             | MIT/Apache                           |
@@ -527,6 +525,8 @@ Re-check them when adding.
 | `uniffi` (`cli` only with the `bindgen` feature)                                       | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
 | `jni` (no default features; Android only)                                              | 0.22.4                                                                                                                                 | The one JNI entry point that hands the app `Context` to the TLS verifier (android)                                                              | MIT/Apache                           |
 | `rustls-platform-verifier` (Android only)                                              | 0.7.1, already in the tree through reqwest                                                                                             | `android::init_with_env` for Android's certificate verifier (android)                                                                           | MIT/Apache                           |
+| `android_logger` (no default features; Android only) | 0.15.1 | Sends logs to logcat (android) | MIT/Apache |
+| `log` (Android only) | 0.4.35 | Maximum level for `android_logger`; `tracing` forwards to it through its `log` feature (android) | MIT/Apache |
 
 `tokio` features `io-util` and `sync` serve the mpv player; `process` was
 dropped with the external mpv player (2026-10-07). The player uses
@@ -555,25 +555,15 @@ other peers" setting. It adds no dependency (`disable-upload = []`); it
 compiles the `SessionOptions::disable_upload` switch, which stops
 advertising pieces and drops a peer that asks for one anyway.
 
-2026-10-07: `librqbit` comes from the owner's fork (`[patch.crates-io]`
-in the root `Cargo.toml`, a git source allowed in `.config/deny.toml`),
-pinned to a commit of branch `fix/urgent-piece-helpers`: upstream `main`
-plus our streaming patch (ADR-0016). Since 2026-10-09 the pin is on
-branch `feat/stream-window`, which adds the stream window (ADR-0019) on
-top of it, and since 2026-10-15 the lookahead setter of ADR-0023
-(`5ff9afda`), and a fix so a peer helping with an urgent piece never
-steals that same piece (`032c4a93`). `0415a234` merges upstream `main`
-into it (2026-10-15), and `7b7b4dfb` lets a zero lookahead stop stream
-downloads (ADR-0023); `b815c324` only drops comments and a no-op line.
-Since 2026-11-01 the dependency tracks branch `main` of the fork, which
-is upstream `main` (9.1.0) with `feat/stream-window` merged in
-(`19dfd1fc`). Since `57b643b6` a peer helping with an urgent piece
-requests its chunks from the end, and no peer requests a chunk that
-already arrived. `b1745a32` adds `SessionOptions.http_proxy_url`, a
-proxy for the HTTP client only, and `87ea5b88` filters peer addresses by
-the blocklist before metadata is asked for (ADR-0026). To update: merge upstream `main` into the fork's `main`,
-push, and run `cargo update -p librqbit`. Dropping the fork once upstream
-releases the patch is the goal.
+`librqbit` comes from branch `main` of the owner's fork (`[patch.crates-io]`
+in the root `Cargo.toml`, a git source allowed in `.config/deny.toml`,
+ADR-0016): upstream `main` (9.1.0) plus our streaming patches. Those add the
+urgent-piece helpers, the stream window (ADR-0019), the lookahead setter
+(ADR-0023), `SessionOptions.http_proxy_url` and filtering peer addresses by
+the blocklist before metadata is asked for (ADR-0026). To update: merge
+upstream `main` into the fork's `main`, push, and run
+`cargo update -p librqbit`. Dropping the fork once upstream releases the
+patch is the goal.
 
 UI polish (2026-10-07): not crates, but bundled assets. `cineo-desktop`
 embeds Inter 4.1 (Regular and SemiBold) and DM Serif Display (Regular, used only by the subtitle preview),
@@ -711,7 +701,7 @@ Every release has these files, with the same names in every release so that
 
 ### Prerelease builds
 
-Every push to `main` builds a prerelease once both checks pass, except a push
+Every push to `main` builds a prerelease once the checks pass, except a push
 whose head commit starts with `chore(release):`; that commit gets the real
 release from its tag instead. It deletes the previous `prerelease` GitHub
 release and its tag and recreates both at the pushed commit.

@@ -68,7 +68,7 @@ old one *Superseded by NNNN*.
 | Analytics module | **Reject** | No telemetry |
 | Private account API + library sync | **Reject** | Not public; cloud sync not planned for now (owner decision 2026-10-06) |
 | 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
-| Watched bitfield encoding | **Defer** | Revisit with series progress (M4) |
+| Watched bitfield encoding | **Defer** | Revisit with series progress |
 | MSRV CI job | **Reject** | We are an application built with the latest stable Rust (ADR-0025) |
 
 ### stremio-web (GPL-2.0): ideas only, no code
@@ -82,7 +82,7 @@ old one *Superseded by NNNN*.
 - Anti-pattern rejected: the UI can send arbitrary `mpv-command`s.
 
 ### AnyPS5 (GPL-2.0): process ideas only
-- Kept: the small `docs/user` and `docs/dev` split; a compatibility table that
+- Kept: a compatibility table that
   marks unknowns explicitly; a technical-debt log whose entries say what
   fails, why and what happens instead; fail loudly with no silent stubs;
   Conventional Commits; AI-assistance disclosure in PRs; least-privilege

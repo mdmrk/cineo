@@ -163,7 +163,7 @@ Format:
   30 days after it was downloaded.
 - Exit: a "clear cache" action in Settings, and revalidation with `ETag`.
 
-### Desktop: private networks are a launch flag only
+### Desktop: private networks are allowed for every addon or none
 - Where: [main.rs](../crates/cineo-desktop/src/main.rs)
 - Gap: self-hosted addons need `--allow-private-network` or the "Allow
   local network addresses" setting, which applies to every addon; there
@@ -546,15 +546,14 @@ Format:
 ### Android: only some settings
 - Where: [SettingsScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/SettingsScreen.kt),
   [shell.rs](../crates/cineo-android/src/shell.rs) (`SettingChange`)
-- Gap: Android shows hardware decoding, seek step, watched-at, audio and
-  subtitle language, local network addresses, clear history and reset.
-  Subtitle style, audio output, volume, binge watching and the torrent
-  settings are not shown.
-- Why: the matching features (subtitle picking, next episode, torrents)
-  are not on Android yet.
+- Gap: Android has no setting for the short seek step, Escape leaving
+  fullscreen, remembering the volume, audio output or passthrough,
+  interface scale, start page, interface language or the update check.
+- Why: they were not brought over; some have no matching feature on
+  Android (no Escape key, no update check).
 - Instead: those settings keep their saved values, and reset still
   resets them.
-- Exit: add each one with its feature.
+- Exit: add each one that applies, with its feature.
 
 ### Android: an addon subtitle is saved while the player lock is held
 - Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`subtitle_fetched`)

@@ -16,7 +16,7 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
   player (libmpv), storage and the streaming engine, and each has its own
   safety policy.
 - **Shells** wire everything together and present state: the desktop GUI,
-  and a CLI for debugging addons.
+  the Android shell, and a CLI for debugging addons.
 
 ```mermaid
 flowchart TB
@@ -35,11 +35,11 @@ flowchart TB
   CORE[cineo-core<br/>pure domain + protocol]
   CLI --> CORE
   GUI --> CORE
-  CLI --> NET & PLAYER & STORE
+  CLI --> NET & STORE
   GUI --> NET & PLAYER & STORE & STREAM
   KT --> AND
   AND --> CORE
-  AND --> NET & STORE
+  AND --> NET & PLAYER & STORE & STREAM
   NET --> CORE
   PLAYER --> CORE
   STORE --> CORE
@@ -155,7 +155,9 @@ In `cineo-desktop`:
   `PlaybackProgress` actions.
 - Images: `images::NetImageLoader` (an egui `ImageLoader`) fetches through
   `cineo-net`, then decodes and downscales on the tokio blocking pool, at
-  most one image per CPU core at a time.
+  most one image per CPU core at a time. Downloaded images are kept in
+  `<cache dir>/images` (`image_disk`), and textures past a budget are
+  forgotten, least recently painted first.
 - Text (ADR-0017, ADR-0021): `rust-i18n` embeds the
   `assets/locales/*.toml` catalogs at compile time, and `i18n::t!` looks
   messages up in the thread-local locale. The locale is set from the
@@ -212,8 +214,8 @@ sequenceDiagram
 ```
 
 - `Effect` is a plain **enum (data)**, for example
-  `FetchCatalog{addon, path}`, `Persist(LibraryItem)` or
-  `Player(PlayerCommand)`. Effects are not boxed futures, so reducers can be
+  `FetchCatalog{addon, path}`, `SaveLibraryItem(LibraryItem)` or
+  `Play(PlayRequest)`. Effects are not boxed futures, so reducers can be
   tested by asserting on returned effects.
 - Request identity: each fetch effect carries the `ResourcePath`, and late
   responses for stale requests are dropped by comparing it.
@@ -261,8 +263,9 @@ See [DEVELOPMENT.md](DEVELOPMENT.md#testing):
 - The core is tested with fixtures and pure assertions.
 - IO crates are tested against local mocks (HTTP mock server, local
   torrent seeder, temporary SQLite); real-libmpv tests are opt-in.
-- Shells get end-to-end tests: the CLI binary against a mock addon, and the
-  desktop views headlessly with `egui_kittest`.
+- Shells get end-to-end tests: the CLI binary against a mock addon, the
+  desktop views headlessly with `egui_kittest`, and the Android shell
+  through its Rust API (`crates/cineo-android/tests/`).
 
 ## Deep links (ADR-0018)
 
