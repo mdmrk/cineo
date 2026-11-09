@@ -1,8 +1,9 @@
-use std::fs::{DirBuilder, File, OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 use std::sync::Mutex;
 
+use cineo_store::create_private_dir;
 use tracing::Subscriber;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
@@ -82,14 +83,6 @@ fn open_log(data_dir: &Path) -> io::Result<File> {
         std::env::consts::ARCH,
     )?;
     Ok(file)
-}
-
-pub(crate) fn create_private_dir(dir: &Path) -> io::Result<()> {
-    let mut builder = DirBuilder::new();
-    builder.recursive(true);
-    #[cfg(unix)]
-    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
-    builder.create(dir)
 }
 
 #[cfg(test)]

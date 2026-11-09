@@ -3,8 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use cineo_net::MAX_IMAGE_BYTES;
-
-use crate::logging::create_private_dir;
+use cineo_store::create_private_dir;
 
 const MAX_AGE: Duration = Duration::from_secs(30 * 24 * 60 * 60);
 const MAX_BYTES: u64 = 256 * 1024 * 1024;

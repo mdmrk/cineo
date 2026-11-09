@@ -276,7 +276,7 @@ fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'s
     }))
 }
 
-fn create_private_dir(dir: &Path) -> std::io::Result<()> {
+pub fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
     #[cfg(unix)]
