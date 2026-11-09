@@ -7,7 +7,8 @@
 use std::path::{Path, PathBuf};
 
 use cineo_core::addon::{
-    ContentType, TransportUrl, parse_manifest, parse_meta_response, parse_stream_response,
+    ContentType, StreamSource, TransportUrl, parse_manifest, parse_meta_response,
+    parse_stream_response,
 };
 use cineo_core::app::{
     Action, Effect, Language, LibraryItem, Percent, SeekStep, Settings, State, WatchedAt,
@@ -208,6 +209,78 @@ fn v1_fixture_database_opens_and_invalid_rows_are_skipped() {
     assert_eq!(library[1].time_offset_ms, 600_000);
     assert_eq!(user_version(&path), SCHEMA_VERSION);
     assert_eq!(store.settings().unwrap(), Settings::default());
+}
+
+#[test]
+fn v4_fixture_database_keeps_streams_favorites_and_settings() {
+    let dir = temp_dir("v4");
+    let path = dir.join(DB_FILE);
+    let sql = String::from_utf8(fixture("store/v4.sql")).unwrap();
+    rusqlite::Connection::open(&path)
+        .unwrap()
+        .execute_batch(&sql)
+        .unwrap();
+
+    let store = Store::open(&path).unwrap();
+    assert_eq!(user_version(&path), SCHEMA_VERSION);
+    assert_eq!(
+        store.addons().unwrap(),
+        vec![
+            addon("https://first.example/path/manifest.json?token=x"),
+            addon("https://second.example/manifest.json"),
+        ]
+    );
+
+    let library = store.library().unwrap();
+    let ids: Vec<_> = library.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(ids, vec!["tt0000003", "tt0000002", "tt0000001"]);
+
+    assert_eq!(library[0].stream, None, "unreadable stream dropped");
+    assert_eq!(library[0].favorited, None, "negative order ignored");
+
+    assert_eq!(library[1].favorited, None);
+    let torrent = library[1].stream.as_ref().unwrap();
+    assert_eq!(torrent.addon, addon("https://second.example/manifest.json"));
+    let StreamSource::Torrent {
+        info_hash,
+        file_idx,
+        sources,
+    } = &torrent.stream.source
+    else {
+        panic!("expected a torrent: {:?}", torrent.stream.source)
+    };
+    assert_eq!(
+        info_hash.as_str(),
+        "0123456789abcdef0123456789abcdef01234567"
+    );
+    assert_eq!(*file_idx, Some(2));
+    assert_eq!(sources, &["tracker:udp://tracker.example:1337"]);
+
+    assert_eq!(library[2].favorited, Some(3));
+    let saved = library[2].stream.as_ref().unwrap();
+    assert_eq!(saved.title, "First Example");
+    assert_eq!(
+        saved.logo,
+        Some(Url::parse("https://img.example/logo.png").unwrap())
+    );
+    assert_eq!(saved.background, None, "non-http background dropped");
+    assert_eq!(saved.stream.name.as_deref(), Some("1080p"));
+    assert_eq!(
+        saved.stream.source,
+        StreamSource::Url(Url::parse("https://media.example/v/1.mp4").unwrap())
+    );
+
+    assert_eq!(
+        store.settings().unwrap(),
+        Settings {
+            p2p_enabled: false,
+            p2p_acknowledged: true,
+            subtitle_language: Language::from_code("spa"),
+            seek_step: SeekStep::S30,
+            volume: Percent::new(40),
+            ..Settings::default()
+        }
+    );
 }
 
 #[test]

@@ -12,3 +12,4 @@ Rules:
 | File | Schema version | Notes |
 |------|----------------|-------|
 | `v1.sql` | 1 | Two addons out of insertion order; a valid item, an item with a non-http poster, and items with a negative time and an empty content type (to be skipped) |
+| `v4.sql` | 4 | First released schema (`v0.1.0`). Items with a URL stream, a torrent stream and an unreadable stream, a negative favorite order, and an empty content type (to be skipped); settings with an unreadable value and a retired key |
