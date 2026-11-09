@@ -83,7 +83,7 @@ async fn main() -> ExitCode {
     }
 }
 
-#[allow(clippy::print_stderr)]
+#[allow(clippy::print_stderr, reason = "the CLI reports its error on stderr")]
 fn eprintln_error(err: &anyhow::Error) {
     eprintln!("error: {err:#}");
 }

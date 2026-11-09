@@ -1,4 +1,4 @@
-#![allow(unsafe_code)]
+#![allow(unsafe_code, reason = "JNI entry point; ADR-0028, docs/SECURITY.md")]
 
 use std::ptr::NonNull;
 use std::sync::{Mutex, PoisonError};
