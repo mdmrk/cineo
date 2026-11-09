@@ -270,6 +270,18 @@ Format:
   the window is shown again, and then it pauses.
 - Exit: react to the window event directly.
 
+### Desktop: failed loads are retried only after waking
+- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`WakeRetry`)
+- Gap: failed loads are asked for again once, 5 s after the computer wakes.
+  That delay was not measured, and a network slower to return leaves them
+  failed. Losing and regaining the network without sleeping is not noticed.
+  Waking is reported on Linux and Windows only by `fastframe-power`, and
+  no test runs on a real sleep.
+- Why: the desktop gets a wake event, but no network-change event on Linux.
+- Instead: they stay failed until they are next requested, at the latest
+  on the next start.
+- Exit: a network-change signal per platform, with retries while it is down.
+
 ### Deep links: plain second launches
 - Where: [instance.rs](../crates/cineo-desktop/src/instance.rs)
 - Gap: a second launch without a link still opens a second window.

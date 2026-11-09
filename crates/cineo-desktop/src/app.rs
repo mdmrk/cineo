@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, PoisonError};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Context as _;
 use cineo_core::app::{
@@ -193,6 +193,37 @@ impl Drop for Embedded {
     }
 }
 
+const RETRY_AFTER_WAKING: Duration = Duration::from_secs(5);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WakePoll {
+    Idle,
+    Wait(Duration),
+    Retry,
+}
+
+#[derive(Debug, Default)]
+struct WakeRetry {
+    at: Option<Instant>,
+}
+
+impl WakeRetry {
+    fn woke(&mut self, now: Instant) {
+        self.at = Some(now + RETRY_AFTER_WAKING);
+    }
+
+    fn poll(&mut self, now: Instant) -> WakePoll {
+        let Some(at) = self.at else {
+            return WakePoll::Idle;
+        };
+        if now < at {
+            return WakePoll::Wait(at - now);
+        }
+        self.at = None;
+        WakePoll::Retry
+    }
+}
+
 pub(crate) struct CineoApp {
     state: State,
     view: ViewState,
@@ -211,6 +242,7 @@ pub(crate) struct CineoApp {
     scrolling: fastframe_scroll::Scrolling,
     titled_after: Option<String>,
     power: fastframe_power::Power,
+    wake_retry: WakeRetry,
 }
 
 impl CineoApp {
@@ -248,6 +280,7 @@ impl CineoApp {
             scrolling: fastframe_scroll::Scrolling::default(),
             titled_after: None,
             power,
+            wake_retry: WakeRetry::default(),
         };
         for action in restore {
             app.dispatch(action);
@@ -462,6 +495,19 @@ impl CineoApp {
         embedded.minimized = minimized;
     }
 
+    fn retry_after_waking(&mut self, ctx: &egui::Context) {
+        match self.wake_retry.poll(Instant::now()) {
+            WakePoll::Idle => {}
+            WakePoll::Wait(left) => ctx.request_repaint_after(left),
+            WakePoll::Retry => {
+                if let Err(err) = self.io.client.reset_connections() {
+                    warn!(%err, "the HTTP connections were not reset");
+                }
+                self.dispatch(Action::RetryFailed);
+            }
+        }
+    }
+
     fn remote(&self, remote: Remote) {
         if remote == Remote::Raise {
             self.ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
@@ -614,7 +660,10 @@ impl eframe::App for CineoApp {
         for remote in self.media_keys.take() {
             self.remote(remote);
         }
-        answer_power_events(self.power.events(), || self.remote(Remote::Pause));
+        if answer_power_events(self.power.events(), || self.remote(Remote::Pause)) {
+            self.wake_retry.woke(Instant::now());
+        }
+        self.retry_after_waking(ctx);
         let status = self.playback.as_ref().map(|e| e.player.status());
         self.keep_awake
             .set(status.as_ref().is_some_and(keeps_screen_awake));
@@ -699,14 +748,19 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
     (settings.remember_volume && settings.volume != volume).then_some(volume)
 }
 
-fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMut()) {
+fn answer_power_events(events: Vec<fastframe_power::Event>, mut pause: impl FnMut()) -> bool {
     use fastframe_power::Event;
+    let mut woke = false;
     for event in events {
-        if let Event::Suspending(ack) | Event::EndingSession(ack) = event {
-            pause();
-            ack.done();
+        match event {
+            Event::Suspending(ack) | Event::EndingSession(ack) => {
+                pause();
+                ack.done();
+            }
+            Event::Resumed => woke = true,
         }
     }
+    woke
 }
 
 fn graphics_dialog(trouble: &fastframe_graphics::Trouble<'_>) -> fastframe_graphics::Dialog {
@@ -882,7 +936,7 @@ mod tests {
         use fastframe_power::{Ack, Event};
         let (suspend, end) = (Ack::default(), Ack::default());
         let mut pauses = 0;
-        super::answer_power_events(
+        let woke = super::answer_power_events(
             vec![
                 Event::Suspending(suspend.clone()),
                 Event::Resumed,
@@ -892,6 +946,48 @@ mod tests {
         );
         assert_eq!(pauses, 2, "waking up does not pause");
         assert!(suspend.is_done() && end.is_done());
+        assert!(woke);
+    }
+
+    #[test]
+    fn going_to_sleep_alone_is_not_waking_up() {
+        use fastframe_power::{Ack, Event};
+        let woke = super::answer_power_events(vec![Event::Suspending(Ack::default())], || {});
+        assert!(!woke);
+    }
+
+    #[test]
+    fn failed_loads_are_retried_once_the_network_has_had_time_to_return() {
+        let mut retry = super::WakeRetry::default();
+        let woke = std::time::Instant::now();
+        assert_eq!(retry.poll(woke), super::WakePoll::Idle);
+        retry.woke(woke);
+        assert_eq!(
+            retry.poll(woke),
+            super::WakePoll::Wait(super::RETRY_AFTER_WAKING)
+        );
+        assert_eq!(
+            retry.poll(woke + super::RETRY_AFTER_WAKING),
+            super::WakePoll::Retry
+        );
+        assert_eq!(
+            retry.poll(woke + super::RETRY_AFTER_WAKING),
+            super::WakePoll::Idle,
+            "one retry per wake"
+        );
+    }
+
+    #[test]
+    fn a_second_wake_restarts_the_wait() {
+        let mut retry = super::WakeRetry::default();
+        let first = std::time::Instant::now();
+        retry.woke(first);
+        let second = first + super::RETRY_AFTER_WAKING / 2;
+        retry.woke(second);
+        assert_eq!(
+            retry.poll(first + super::RETRY_AFTER_WAKING),
+            super::WakePoll::Wait(super::RETRY_AFTER_WAKING / 2)
+        );
     }
 
     #[test]
