@@ -4,11 +4,15 @@
     reason = "test helpers panic on purpose"
 )]
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, ExtraValue, ResourcePath, TransportUrl};
 use cineo_core::app::{Action, Effect};
 use cineo_net::{AddonClient, BlockReason, FetchError, NetPolicy, fetch_task};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -162,6 +166,59 @@ async fn slow_addon_times_out() {
         .await
         .unwrap_err();
     assert!(matches!(err, FetchError::Timeout), "got {err:?}");
+}
+
+#[tokio::test]
+async fn a_reset_stops_using_connections_that_went_silent() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let body = fixture("addons/basic/manifest.json");
+    let accepted = Arc::new(AtomicUsize::new(0));
+    let server = {
+        let accepted = Arc::clone(&accepted);
+        tokio::spawn(async move {
+            loop {
+                let (socket, _) = listener.accept().await.unwrap();
+                let body = body.clone();
+                accepted.fetch_add(1, Ordering::SeqCst);
+                tokio::spawn(answer_once_then_go_silent(socket, body));
+            }
+        })
+    };
+    let client = AddonClient::new(NetPolicy {
+        timeout: Duration::from_millis(500),
+        ..local_policy()
+    })
+    .unwrap();
+    let other = client.clone();
+    let addon = TransportUrl::parse(&format!("http://{address}/manifest.json")).unwrap();
+
+    client.fetch_manifest(&addon).await.unwrap();
+    client.reset_connections().unwrap();
+    other.fetch_manifest(&addon).await.unwrap();
+
+    assert_eq!(accepted.load(Ordering::SeqCst), 2);
+    server.abort();
+}
+
+async fn answer_once_then_go_silent(mut socket: TcpStream, body: Vec<u8>) {
+    let mut seen = Vec::new();
+    let mut chunk = [0; 1024];
+    while !seen.windows(4).any(|w| w == b"\r\n\r\n") {
+        let read = socket.read(&mut chunk).await.unwrap();
+        if read == 0 {
+            return;
+        }
+        seen.extend_from_slice(&chunk[..read]);
+    }
+    let head = format!(
+        "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n",
+        body.len()
+    );
+    socket.write_all(head.as_bytes()).await.unwrap();
+    socket.write_all(&body).await.unwrap();
+    std::future::pending::<()>().await;
+    drop(socket);
 }
 
 #[tokio::test]

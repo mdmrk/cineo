@@ -126,6 +126,7 @@ pub struct State {
     pub installed: Vec<TransportUrl>,
     pub addons: Vec<InstalledAddon>,
     pub addons_loading: Vec<TransportUrl>,
+    pub addons_retrying: Vec<TransportUrl>,
     pub install: Option<Loadable<String>>,
     pub addon_lists: Option<Vec<AddonList>>,
     pub board: Vec<Row>,
@@ -184,6 +185,7 @@ pub enum Action {
         to: usize,
     },
     LoadBoard,
+    RetryFailed,
     LoadAddonLists,
     OpenDiscover {
         addon: TransportUrl,
@@ -357,6 +359,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::MoveAddon { from, to } => move_addon(state, from, to),
         Action::LoadBoard => load_board(state),
+        Action::RetryFailed => retry_failed(state),
         Action::LoadAddonLists => {
             state.addon_lists.get_or_insert_default();
             refresh_addon_lists(state, true)
@@ -817,10 +820,107 @@ fn load_board(state: &mut State) -> Vec<Effect> {
     effects
 }
 
+fn retry_failed(state: &mut State) -> Vec<Effect> {
+    let addons: Vec<TransportUrl> = state.unavailable_addons().into_iter().cloned().collect();
+    state.addons_loading.extend(addons.iter().cloned());
+    state.addons_retrying.extend(addons.iter().cloned());
+    let mut effects: Vec<Effect> = addons
+        .into_iter()
+        .map(|transport| Effect::FetchManifest {
+            transport,
+            install: false,
+        })
+        .collect();
+    for row in state.board.iter_mut().chain(state.search.iter_mut()) {
+        if matches!(row.items, Loadable::Failed(_)) {
+            row.items = Loadable::Loading;
+            effects.push(fetch_catalog(&row.target));
+        }
+    }
+    let addons = &state.addons;
+    if let Some(detail) = state.detail.as_mut() {
+        effects.extend(retry_meta(addons, detail));
+        for group in &mut detail.streams {
+            if matches!(group.streams, Loadable::Failed(_)) {
+                group.streams = Loadable::Loading;
+                effects.push(Effect::FetchStreams {
+                    addon: group.addon.clone(),
+                    path: group.path.clone(),
+                });
+            }
+        }
+    }
+    effects
+}
+
+fn retry_meta(addons: &[InstalledAddon], detail: &mut Detail) -> Option<Effect> {
+    if !matches!(detail.meta, Loadable::Failed(_)) {
+        return None;
+    }
+    let mut candidates = plan::meta_candidates(addons, &detail.content_type, &detail.id);
+    if candidates.is_empty() {
+        return None;
+    }
+    let (addon, path) = candidates.remove(0);
+    detail.meta = Loadable::Loading;
+    detail.meta_fallbacks = candidates;
+    detail.meta_request = Some((addon.clone(), path.clone()));
+    Some(Effect::FetchMeta { addon, path })
+}
+
+fn refresh_detail(state: &mut State) -> Vec<Effect> {
+    let addons = &state.addons;
+    let Some(detail) = state.detail.as_mut() else {
+        return Vec::new();
+    };
+    let mut effects: Vec<Effect> = retry_meta(addons, detail).into_iter().collect();
+    let Some(video_id) = detail.selected_video.clone() else {
+        return effects;
+    };
+    let mut old = std::mem::take(&mut detail.streams);
+    detail.streams = plan::stream_targets(addons, &detail.content_type, &video_id)
+        .into_iter()
+        .map(
+            |(addon, path)| match old.iter().position(|g| g.addon == addon && g.path == path) {
+                Some(index) => old.swap_remove(index),
+                None => {
+                    effects.push(Effect::FetchStreams {
+                        addon: addon.clone(),
+                        path: path.clone(),
+                    });
+                    StreamGroup {
+                        addon_name: addon_name(addons, &addon),
+                        addon,
+                        path,
+                        streams: Loadable::Loading,
+                    }
+                }
+            },
+        )
+        .collect();
+    effects
+}
+
+fn refresh_search(state: &mut State) -> Vec<Effect> {
+    if state.search_query.is_empty() {
+        return Vec::new();
+    }
+    let targets = plan::search_targets(&state.addons, &state.search_query);
+    let effects;
+    (state.search, effects) = kept_rows(std::mem::take(&mut state.search), targets);
+    effects
+}
+
 fn refresh_board(state: &mut State) -> Vec<Effect> {
-    let mut old = std::mem::take(&mut state.board);
+    let targets = plan::board_targets(&state.addons);
+    let effects;
+    (state.board, effects) = kept_rows(std::mem::take(&mut state.board), targets);
+    effects
+}
+
+fn kept_rows(mut old: Vec<Row>, targets: Vec<CatalogTarget>) -> (Vec<Row>, Vec<Effect>) {
     let mut effects = Vec::new();
-    state.board = plan::board_targets(&state.addons)
+    let rows = targets
         .into_iter()
         .map(|target| match old.iter().position(|r| r.target == target) {
             Some(index) => old.swap_remove(index),
@@ -833,7 +933,7 @@ fn refresh_board(state: &mut State) -> Vec<Effect> {
             }
         })
         .collect();
-    effects
+    (rows, effects)
 }
 
 fn refresh_addon_lists(state: &mut State, retry: bool) -> Vec<Effect> {
@@ -918,6 +1018,8 @@ fn manifest_loaded(
 ) -> Vec<Effect> {
     let was_loading = state.addons_loading.contains(transport);
     state.addons_loading.retain(|t| t != transport);
+    let retried = state.addons_retrying.contains(transport);
+    state.addons_retrying.retain(|t| t != transport);
     if !install && !was_loading {
         return Vec::new();
     }
@@ -950,12 +1052,17 @@ fn manifest_loaded(
                     .count();
                 state.addons.insert(at, addon);
             }
-            addons_changed(state, install)
+            let mut effects = addons_changed(state, install);
+            if retried {
+                effects.extend(refresh_search(state));
+                effects.extend(refresh_detail(state));
+            }
+            effects
         }
         Err(err) => {
             if install {
                 state.install = Some(Loadable::Failed(Problem::Request(err)));
-            } else {
+            } else if !retried {
                 state.notice = Some(Notice::AddonUnavailable(err));
             }
             Vec::new()

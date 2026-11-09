@@ -232,6 +232,7 @@ enum Msg {
         url: Url,
         result: Result<Vec<u8>, String>,
     },
+    NetworkUsable,
     Shutdown,
 }
 
@@ -328,6 +329,10 @@ impl Cineo {
 
     pub fn set_stream_sort(&self, sort: StreamSort) {
         self.filter(FilterChange::Sort(sort));
+    }
+
+    pub fn network_usable(&self) {
+        self.post(Msg::NetworkUsable);
     }
 
     pub fn load_addon_lists(&self) {
@@ -711,6 +716,12 @@ impl Shell {
                 FilterChange::Addon(addon) => self.filter.addon = addon,
                 FilterChange::Sort(sort) => self.filter.sort = sort,
             },
+            Msg::NetworkUsable => {
+                if let Err(err) = self.client.reset_connections() {
+                    warn!(%err, "the HTTP connections were not reset");
+                }
+                self.dispatch(Action::RetryFailed);
+            }
             Msg::Shutdown => return false,
         }
         true

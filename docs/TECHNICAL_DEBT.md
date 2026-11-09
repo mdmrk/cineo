@@ -433,6 +433,21 @@ Format:
 - Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
   becoming-noisy receiver, and a `MediaSession`.
 
+### Android: what the automatic retry leaves out
+- Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`retry_failed`),
+  [NetworkWatch.kt](../android/app/src/main/java/io/github/mdmrk/cineo/NetworkWatch.kt),
+  [Images.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/Images.kt)
+- Gap: failed Discover pages, addon lists and posters are not asked for
+  again, and a request still on its way when the network returns is not
+  retried if it then fails. Every usable network rebuilds the HTTP client on
+  the shell thread, even after a short absence, which drops healthy
+  connections. The timeouts after hours in the background were not
+  reproduced; the fix was tested with a silent connection in `cineo-net` and
+  with Wi-Fi off on a phone.
+- Why: the report was about addons, the home screen and the detail page.
+- Exit: retry those loads too, and renew connections only after a minimum
+  time away or a real network change, with tests.
+
 ### Android: the rotate button does not last between torrent episodes
 - Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`rememberRotate`)
 - Gap: the chosen orientation is given back when the player leaves the

@@ -61,6 +61,22 @@ private fun TorrentForeground(active: Boolean) {
 }
 
 class MainActivity : ComponentActivity() {
+    private val network by lazy {
+        NetworkWatch(this) {
+            ((application as CineoApplication).started as? Started.Running)?.cineo?.networkUsable()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        network.start()
+    }
+
+    override fun onStop() {
+        network.stop()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),

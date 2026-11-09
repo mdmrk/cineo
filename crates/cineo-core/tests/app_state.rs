@@ -433,6 +433,340 @@ fn catalog_results_fill_matching_rows_and_stale_ones_are_dropped() {
 }
 
 #[test]
+fn retry_asks_again_only_for_the_rows_that_failed() {
+    let (mut state, _) = restored();
+    let failed = state.board[0].target.clone();
+    let ready = state.board[1].target.clone();
+    update(
+        &mut state,
+        Action::CatalogLoaded {
+            addon: failed.addon.clone(),
+            path: failed.path.clone(),
+            result: Err("request timed out".into()),
+        },
+    );
+    update(
+        &mut state,
+        Action::CatalogLoaded {
+            addon: ready.addon,
+            path: ready.path,
+            result: Ok(catalog_items()),
+        },
+    );
+
+    let effects = update(&mut state, Action::RetryFailed);
+
+    assert_eq!(
+        effects,
+        vec![Effect::FetchCatalog {
+            addon: failed.addon,
+            path: failed.path,
+        }]
+    );
+    assert!(state.board[0].items.is_loading());
+    assert_eq!(state.board[1].items.ready().map(Vec::len), Some(2));
+    assert!(
+        update(&mut state, Action::RetryFailed).is_empty(),
+        "a row already on its way is not asked for twice"
+    );
+}
+
+#[test]
+fn retry_asks_again_for_search_rows_that_failed() {
+    let (mut state, _) = restored();
+    let effects = update(&mut state, Action::Search("matrix".into()));
+    let [Effect::FetchCatalog { addon, path }] = effects.as_slice() else {
+        panic!("{effects:?}");
+    };
+    let (addon, path) = (addon.clone(), path.clone());
+    update(
+        &mut state,
+        Action::CatalogLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Err("request timed out".into()),
+        },
+    );
+    let board: Vec<_> = state.board.iter().map(|r| r.target.clone()).collect();
+    for target in board {
+        update(
+            &mut state,
+            Action::CatalogLoaded {
+                addon: target.addon,
+                path: target.path,
+                result: Ok(catalog_items()),
+            },
+        );
+    }
+
+    let effects = update(&mut state, Action::RetryFailed);
+
+    assert_eq!(effects, vec![Effect::FetchCatalog { addon, path }]);
+    assert!(state.search[0].items.is_loading());
+}
+
+#[test]
+fn retry_asks_again_for_the_addons_whose_manifest_failed() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![url(BASIC), url(STREAMS)],
+            library: Vec::new(),
+        },
+    );
+    update(&mut state, load_failed(BASIC));
+
+    let effects = update(&mut state, Action::RetryFailed);
+
+    assert_eq!(
+        effects,
+        vec![Effect::FetchManifest {
+            transport: url(BASIC),
+            install: false,
+        }],
+        "the addon still loading is not asked for twice"
+    );
+    assert!(state.addons_loading.contains(&url(BASIC)));
+    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    assert_eq!(state.addons.len(), 1);
+}
+
+#[test]
+fn retry_asks_again_for_a_failed_detail_and_its_failed_streams() {
+    let (mut state, _) = restored();
+    let mut effects = update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    let first = effects.clone();
+    while let [Effect::FetchMeta { addon, path }] = effects.as_slice() {
+        effects = update(
+            &mut state,
+            Action::MetaLoaded {
+                addon: addon.clone(),
+                path: path.clone(),
+                result: Err("request timed out".into()),
+            },
+        );
+    }
+    assert!(matches!(
+        state.detail.as_ref().unwrap().meta,
+        Loadable::Failed(Problem::Request(_))
+    ));
+
+    assert_eq!(update(&mut state, Action::RetryFailed), first);
+    assert!(state.detail.as_ref().unwrap().meta.is_loading());
+    assert!(
+        update(&mut state, Action::RetryFailed).is_empty(),
+        "a detail already on its way is not asked for twice"
+    );
+
+    let [Effect::FetchMeta { addon, path }] = first.as_slice() else {
+        panic!("{first:?}");
+    };
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value;
+    let streams = update(
+        &mut state,
+        Action::MetaLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(Box::new(meta)),
+        },
+    );
+    let [
+        Effect::FetchStreams {
+            addon: failed_addon,
+            path: failed_path,
+        },
+        Effect::FetchStreams {
+            addon: ready_addon,
+            path: ready_path,
+        },
+    ] = streams.as_slice()
+    else {
+        panic!("{streams:?}");
+    };
+    update(
+        &mut state,
+        Action::StreamsLoaded {
+            addon: failed_addon.clone(),
+            path: failed_path.clone(),
+            result: Err("request timed out".into()),
+        },
+    );
+    update(
+        &mut state,
+        Action::StreamsLoaded {
+            addon: ready_addon.clone(),
+            path: ready_path.clone(),
+            result: Ok(Vec::new()),
+        },
+    );
+
+    assert_eq!(
+        update(&mut state, Action::RetryFailed),
+        vec![Effect::FetchStreams {
+            addon: failed_addon.clone(),
+            path: failed_path.clone(),
+        }]
+    );
+}
+
+#[test]
+fn retry_leaves_a_detail_no_addon_can_answer() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+
+    assert!(update(&mut state, Action::RetryFailed).is_empty());
+    assert!(matches!(
+        state.detail.as_ref().unwrap().meta,
+        Loadable::Failed(Problem::NoMetaAddon)
+    ));
+}
+
+#[test]
+fn an_automatic_retry_that_fails_again_raises_no_notice() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![url(BASIC)],
+            library: Vec::new(),
+        },
+    );
+    update(&mut state, load_failed(BASIC));
+    assert!(state.notice.is_some(), "the first failure is reported");
+    update(&mut state, Action::DismissNotice);
+
+    update(&mut state, Action::RetryFailed);
+    update(&mut state, load_failed(BASIC));
+
+    assert_eq!(state.notice, None);
+}
+
+#[test]
+fn a_recovered_addon_joins_the_streams_of_the_open_detail() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![url(BASIC), url(STREAMS)],
+            library: Vec::new(),
+        },
+    );
+    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    update(&mut state, load_failed(STREAMS));
+    let effects = update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    let [Effect::FetchMeta { addon, path }] = effects.as_slice() else {
+        panic!("{effects:?}");
+    };
+    let meta = parse_meta_response(&fixture("basic/meta-movie.json"))
+        .unwrap()
+        .value;
+    let before = update(
+        &mut state,
+        Action::MetaLoaded {
+            addon: addon.clone(),
+            path: path.clone(),
+            result: Ok(Box::new(meta)),
+        },
+    );
+    assert_eq!(before.len(), 1, "only the addon that loaded is asked");
+
+    update(&mut state, Action::RetryFailed);
+    let effects = update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+
+    let asked: Vec<_> = effects
+        .iter()
+        .filter(|e| matches!(e, Effect::FetchStreams { .. }))
+        .collect();
+    assert_eq!(asked.len(), 1, "{effects:?}");
+    assert!(matches!(asked[0], Effect::FetchStreams { addon, .. } if *addon == url(STREAMS)));
+    assert_eq!(state.detail.as_ref().unwrap().streams.len(), 2);
+}
+
+#[test]
+fn a_recovered_addon_joins_the_current_search() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![url(BASIC), url(STREAMS)],
+            library: Vec::new(),
+        },
+    );
+    update(&mut state, load_failed(BASIC));
+    update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    assert!(update(&mut state, Action::Search("matrix".into())).is_empty());
+
+    update(&mut state, Action::RetryFailed);
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+
+    assert_eq!(state.search.len(), 1);
+    assert!(state.search[0].items.is_loading());
+    assert!(effects.iter().any(
+        |e| matches!(e, Effect::FetchCatalog { path, .. } if *path == state.search[0].target.path)
+    ));
+}
+
+#[test]
+fn a_detail_without_addons_is_asked_for_once_they_recover() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::Restore {
+            addons: vec![url(BASIC)],
+            library: Vec::new(),
+        },
+    );
+    update(&mut state, load_failed(BASIC));
+    update(
+        &mut state,
+        Action::OpenDetail {
+            content_type: ty("movie"),
+            id: "tt0000001".into(),
+            preview: None,
+        },
+    );
+    assert!(matches!(
+        state.detail.as_ref().unwrap().meta,
+        Loadable::Failed(Problem::NoMetaAddon)
+    ));
+
+    update(&mut state, Action::RetryFailed);
+    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::FetchMeta { .. })),
+        "{effects:?}"
+    );
+    assert!(state.detail.as_ref().unwrap().meta.is_loading());
+}
+
+#[test]
 fn search_asks_only_catalogs_that_support_search() {
     let (mut state, _) = restored();
     let effects = update(&mut state, Action::Search("  matrix ".into()));

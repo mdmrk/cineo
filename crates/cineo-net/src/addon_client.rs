@@ -1,7 +1,7 @@
 use std::error::Error as StdError;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, PoisonError, RwLock};
 
 use cineo_core::addon::{
     AddonDescriptor, CatalogResponse, Manifest, ManifestError, Meta, ResourcePath, ResponseError,
@@ -23,7 +23,7 @@ const USER_AGENT: &str = concat!("Cineo/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Clone)]
 pub struct AddonClient {
-    http: reqwest::Client,
+    http: Arc<RwLock<reqwest::Client>>,
     policy: Arc<NetPolicy>,
 }
 
@@ -53,33 +53,21 @@ pub enum FetchError {
 impl AddonClient {
     pub fn new(policy: NetPolicy) -> Result<Self, FetchError> {
         let policy = Arc::new(policy);
-        let redirect_policy = {
-            let policy = Arc::clone(&policy);
-            redirect::Policy::custom(move |attempt| {
-                let hops = attempt.previous().len().saturating_sub(1);
-                let from = attempt.previous().last().cloned();
-                let checked = match &from {
-                    Some(from) => policy.check_redirect(from, attempt.url(), hops),
-                    None => policy.check_url(attempt.url()),
-                };
-                match checked {
-                    Ok(()) => attempt.follow(),
-                    Err(reason) => attempt.error(reason),
-                }
-            })
-        };
-        let http = reqwest::Client::builder()
-            .user_agent(USER_AGENT)
-            .timeout(policy.timeout)
-            .connect_timeout(policy.connect_timeout)
-            .redirect(redirect_policy)
-            .no_proxy()
-            .dns_resolver(Arc::new(PolicyResolver {
-                policy: Arc::clone(&policy),
-            }))
-            .build()
-            .map_err(|err| FetchError::Transport(error_chain(&err)))?;
+        let http = Arc::new(RwLock::new(build_http(&policy)?));
         Ok(Self { http, policy })
+    }
+
+    pub fn reset_connections(&self) -> Result<(), FetchError> {
+        let fresh = build_http(&self.policy)?;
+        *self.http.write().unwrap_or_else(PoisonError::into_inner) = fresh;
+        Ok(())
+    }
+
+    fn http(&self) -> reqwest::Client {
+        self.http
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     pub async fn fetch_manifest(
@@ -198,7 +186,7 @@ impl AddonClient {
     ) -> Result<Vec<u8>, FetchError> {
         self.policy.check_url(&url)?;
         let mut response = self
-            .http
+            .http()
             .get(url)
             .header(reqwest::header::ACCEPT, accept)
             .send()
@@ -228,6 +216,35 @@ impl AddonClient {
         debug!(bytes = body.len(), "response body received");
         Ok(body)
     }
+}
+
+fn build_http(policy: &Arc<NetPolicy>) -> Result<reqwest::Client, FetchError> {
+    let redirect_policy = {
+        let policy = Arc::clone(policy);
+        redirect::Policy::custom(move |attempt| {
+            let hops = attempt.previous().len().saturating_sub(1);
+            let from = attempt.previous().last().cloned();
+            let checked = match &from {
+                Some(from) => policy.check_redirect(from, attempt.url(), hops),
+                None => policy.check_url(attempt.url()),
+            };
+            match checked {
+                Ok(()) => attempt.follow(),
+                Err(reason) => attempt.error(reason),
+            }
+        })
+    };
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .timeout(policy.timeout)
+        .connect_timeout(policy.connect_timeout)
+        .redirect(redirect_policy)
+        .no_proxy()
+        .dns_resolver(Arc::new(PolicyResolver {
+            policy: Arc::clone(policy),
+        }))
+        .build()
+        .map_err(|err| FetchError::Transport(error_chain(&err)))
 }
 
 #[derive(Debug)]

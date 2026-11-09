@@ -1176,6 +1176,38 @@ async fn an_addon_that_no_longer_loads_is_listed_and_can_be_removed() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_usable_network_asks_again_for_what_failed() {
+    let server = MockServer::start().await;
+    serve_manifest(&server).await;
+    let manifest = format!("{}/cfg/manifest.json", server.uri());
+    let dir = local_data_dir();
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start(dir.path());
+        cineo.install_addon(manifest);
+        wait_for(&views, |v| {
+            !v.board.is_empty()
+                && v.board
+                    .iter()
+                    .all(|r| matches!(r.items, RowItems::Failed { .. }))
+        });
+
+        tokio::runtime::Handle::current().block_on(serve(
+            &server,
+            "/cfg/catalog/movie/top.json",
+            fixture("addons/basic/catalog-movie-top.json"),
+        ));
+        cineo.network_usable();
+
+        wait_for(&views, |v| {
+            v.board
+                .iter()
+                .any(|r| matches!(r.items, RowItems::Ready { .. }))
+        });
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_search_fills_rows_from_search_catalogs_and_opens_its_results() {
     let server = MockServer::start().await;
     let manifest = movie_addon(&server).await;
