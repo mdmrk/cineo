@@ -6,22 +6,34 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 
-class UsableNetwork(private val onUsable: () -> Unit) {
+private const val RENEW_AFTER_MS = 90_000L
+
+class UsableNetwork(private val clock: () -> Long, private val onUsable: (renew: Boolean) -> Unit) {
     private var network: Long? = null
     private var validated = false
+    private var stoppedAt: Long? = null
+
+    fun stopped() {
+        stoppedAt = clock()
+    }
 
     fun changed(network: Long?, validated: Boolean) {
-        val better = network != null && (network != this.network || (validated && !this.validated))
+        val away = stoppedAt
+        val moved = network != this.network
+        val better = network != null && (moved || away != null || (validated && !this.validated))
+        val renew = moved || (away != null && clock() - away >= RENEW_AFTER_MS)
         this.network = network
         this.validated = network != null && validated
-        if (better) onUsable()
+        if (network != null) stoppedAt = null
+        if (better) onUsable(renew)
     }
 }
 
-class NetworkWatch(context: Context, onUsable: () -> Unit) : ConnectivityManager.NetworkCallback() {
+class NetworkWatch(context: Context, onUsable: (renew: Boolean) -> Unit) : ConnectivityManager.NetworkCallback() {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
-    private val usable = UsableNetwork(onUsable)
+    private val usable = UsableNetwork(SystemClock::elapsedRealtime, onUsable)
 
     fun start() {
         connectivity.registerDefaultNetworkCallback(this, Handler(Looper.getMainLooper()))
@@ -29,7 +41,7 @@ class NetworkWatch(context: Context, onUsable: () -> Unit) : ConnectivityManager
 
     fun stop() {
         connectivity.unregisterNetworkCallback(this)
-        usable.changed(null, false)
+        usable.stopped()
     }
 
     override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {

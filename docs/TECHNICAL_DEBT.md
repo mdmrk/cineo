@@ -439,14 +439,14 @@ Format:
   [Images.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/Images.kt)
 - Gap: failed Discover pages and posters are not asked for
   again, and a request still on its way when the network returns is not
-  retried if it then fails. Every usable network rebuilds the HTTP client on
-  the shell thread, even after a short absence, which drops healthy
-  connections. The timeouts after hours in the background were not
+  retried if it then fails. Errors that cannot recover, such as a 404, are
+  asked for again too, on every return to the app. Connections are kept after
+  less than 90 s away on the same network; that value follows reqwest's pool
+  idle timeout and was not measured. The timeouts after hours in the background were not
   reproduced; the fix was tested with a silent connection in `cineo-net` and
   with Wi-Fi off on a phone.
 - Why: the report was about addons, the home screen and the detail page.
-- Exit: retry those loads too, and renew connections only after a minimum
-  time away or a real network change, with tests.
+- Exit: retry those loads too, and only errors that can recover, with tests.
 
 ### Android: the rotate button does not last between torrent episodes
 - Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`rememberRotate`)

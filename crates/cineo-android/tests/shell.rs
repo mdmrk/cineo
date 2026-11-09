@@ -1179,6 +1179,15 @@ async fn an_addon_that_no_longer_loads_is_listed_and_can_be_removed() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_usable_network_asks_again_for_what_failed() {
+    asks_again_for_what_failed(true).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_usable_network_that_keeps_its_connections_asks_again_too() {
+    asks_again_for_what_failed(false).await;
+}
+
+async fn asks_again_for_what_failed(renew: bool) {
     let server = MockServer::start().await;
     serve_manifest(&server).await;
     let manifest = format!("{}/cfg/manifest.json", server.uri());
@@ -1199,7 +1208,7 @@ async fn a_usable_network_asks_again_for_what_failed() {
             "/cfg/catalog/movie/top.json",
             fixture("addons/basic/catalog-movie-top.json"),
         ));
-        cineo.network_usable();
+        cineo.network_usable(renew);
 
         wait_for(&views, |v| {
             v.board

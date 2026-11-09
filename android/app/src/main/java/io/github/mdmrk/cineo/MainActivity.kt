@@ -62,7 +62,7 @@ private fun TorrentForeground(active: Boolean) {
 
 class MainActivity : ComponentActivity() {
     private val network by lazy {
-        NetworkWatch(this) { cineo?.networkUsable() }
+        NetworkWatch(this) { renew -> cineo?.networkUsable(renew) }
     }
 
     private val cineo get() = (application as CineoApplication).cineo

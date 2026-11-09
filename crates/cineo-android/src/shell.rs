@@ -233,7 +233,9 @@ enum Msg {
         url: Url,
         result: Result<Vec<u8>, String>,
     },
-    NetworkUsable,
+    NetworkUsable {
+        renew: bool,
+    },
     LeftApp,
     Shutdown,
 }
@@ -337,8 +339,8 @@ impl Cineo {
         self.post(Msg::LeftApp);
     }
 
-    pub fn network_usable(&self) {
-        self.post(Msg::NetworkUsable);
+    pub fn network_usable(&self, renew: bool) {
+        self.post(Msg::NetworkUsable { renew });
     }
 
     pub fn load_addon_lists(&self) {
@@ -722,8 +724,8 @@ impl Shell {
                 FilterChange::Addon(addon) => self.filter.addon = addon,
                 FilterChange::Sort(sort) => self.filter.sort = sort,
             },
-            Msg::NetworkUsable => {
-                if let Err(err) = self.client.reset_connections() {
+            Msg::NetworkUsable { renew } => {
+                if renew && let Err(err) = self.client.reset_connections() {
                     warn!(%err, "the HTTP connections were not reset");
                 }
                 self.dispatch(Action::RetryFailed);
