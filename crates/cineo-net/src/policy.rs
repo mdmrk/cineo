@@ -40,7 +40,7 @@ pub enum BlockReason {
 }
 
 impl NetPolicy {
-    pub fn check_url(&self, url: &Url) -> Result<(), BlockReason> {
+    pub(crate) fn check_url(&self, url: &Url) -> Result<(), BlockReason> {
         if !matches!(url.scheme(), "http" | "https") {
             return Err(BlockReason::Scheme(url.scheme().to_owned()));
         }
@@ -64,7 +64,7 @@ impl NetPolicy {
         }
     }
 
-    pub fn check_ip(&self, ip: IpAddr) -> Result<(), BlockReason> {
+    pub(crate) fn check_ip(&self, ip: IpAddr) -> Result<(), BlockReason> {
         if self.allow_private_networks || is_public_ip(ip) {
             Ok(())
         } else {
@@ -72,7 +72,12 @@ impl NetPolicy {
         }
     }
 
-    pub fn check_redirect(&self, from: &Url, to: &Url, hops: usize) -> Result<(), BlockReason> {
+    pub(crate) fn check_redirect(
+        &self,
+        from: &Url,
+        to: &Url,
+        hops: usize,
+    ) -> Result<(), BlockReason> {
         if hops >= self.max_redirects {
             return Err(BlockReason::TooManyRedirects(self.max_redirects));
         }

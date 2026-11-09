@@ -29,7 +29,7 @@ impl Locale {
         Self::SimplifiedChinese,
     ];
 
-    pub fn from_tag(tag: &str) -> Self {
+    pub(crate) fn from_tag(tag: &str) -> Self {
         let tag = tag.split(['.', '@']).next().unwrap_or_default();
         let mut subtags = tag.split(['-', '_']);
         let language = subtags.next().unwrap_or_default();
@@ -75,7 +75,7 @@ impl Locale {
         }
     }
 
-    pub fn endonym(self) -> &'static str {
+    pub(crate) fn endonym(self) -> &'static str {
         match self {
             Self::English => "English",
             Self::Spanish => "Español de España",

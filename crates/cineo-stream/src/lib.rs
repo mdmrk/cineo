@@ -10,4 +10,4 @@ mod storage;
 mod torrents;
 
 pub use engine::{Engine, EngineOptions, StreamError};
-pub use torrents::{PlayerFeed, Torrents, engine_options};
+pub use torrents::{PlayerFeed, Torrents};

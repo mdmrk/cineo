@@ -99,7 +99,7 @@ impl Facts {
         }
     }
 
-    pub fn quality_rank(&self) -> Option<u64> {
+    pub(crate) fn quality_rank(&self) -> Option<u64> {
         let worse = Resolution::ALL.len() - self.quality?.resolution as usize;
         u64::try_from(worse).ok()
     }

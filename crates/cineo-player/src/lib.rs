@@ -4,7 +4,7 @@ pub mod subtitles;
 mod text;
 mod tracker;
 
-pub use actions::{EventActions, event_actions, forward_events};
+pub use actions::forward_events;
 pub use text::plain_text;
 
 #[derive(Debug, Clone, PartialEq)]

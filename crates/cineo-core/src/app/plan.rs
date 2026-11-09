@@ -15,7 +15,7 @@ pub fn board_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
         .collect()
 }
 
-pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarget> {
+pub(crate) fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarget> {
     catalogs(addons, |c| {
         c.extra.iter().any(|e| e.name == "search")
             && c.extra.iter().all(|e| !e.is_required || e.name == "search")
@@ -28,7 +28,7 @@ pub fn search_targets(addons: &[InstalledAddon], query: &str) -> Vec<CatalogTarg
     .collect()
 }
 
-pub fn addon_list_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
+pub(crate) fn addon_list_targets(addons: &[InstalledAddon]) -> Vec<CatalogTarget> {
     addons
         .iter()
         .flat_map(|addon| {
@@ -62,7 +62,7 @@ pub(super) fn catalogs(
     })
 }
 
-pub fn meta_candidates(
+pub(crate) fn meta_candidates(
     addons: &[InstalledAddon],
     content_type: &ContentType,
     id: &str,
@@ -70,7 +70,7 @@ pub fn meta_candidates(
     targets(addons, ResourceName::Meta, content_type, id)
 }
 
-pub fn stream_targets(
+pub(crate) fn stream_targets(
     addons: &[InstalledAddon],
     content_type: &ContentType,
     video_id: &str,
@@ -78,7 +78,7 @@ pub fn stream_targets(
     targets(addons, ResourceName::Stream, content_type, video_id)
 }
 
-pub fn subtitle_targets(
+pub(crate) fn subtitle_targets(
     addons: &[InstalledAddon],
     content_type: &ContentType,
     video_id: &str,

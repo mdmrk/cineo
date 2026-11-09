@@ -89,7 +89,7 @@ impl AddonClient {
             .await
     }
 
-    pub async fn fetch_addon_list(
+    pub(crate) async fn fetch_addon_list(
         &self,
         addon: &TransportUrl,
         path: &ResourcePath,

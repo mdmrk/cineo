@@ -220,7 +220,7 @@ async fn open_torrent(
     })
 }
 
-pub fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
+pub(crate) fn engine_options(base: &EngineOptions, settings: &Settings) -> EngineOptions {
     EngineOptions {
         dht: base.dht && settings.torrent_dht,
         upload: settings.torrent_upload,

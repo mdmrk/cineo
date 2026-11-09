@@ -40,7 +40,7 @@ impl<T> Loadable<T> {
         matches!(self, Self::Loading)
     }
 
-    pub fn is_failed(&self) -> bool {
+    pub(crate) fn is_failed(&self) -> bool {
         matches!(self, Self::Failed(_))
     }
 }

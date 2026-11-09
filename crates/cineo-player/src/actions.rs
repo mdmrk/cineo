@@ -6,12 +6,12 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use crate::PlayerEvent;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EventActions {
+pub(crate) struct EventActions {
     pub actions: Vec<Action>,
     pub last: bool,
 }
 
-pub fn event_actions(
+pub(crate) fn event_actions(
     event: PlayerEvent,
     meta_id: &str,
     video_id: &str,

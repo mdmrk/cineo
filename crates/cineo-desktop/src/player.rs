@@ -445,7 +445,7 @@ fn toggle_fullscreen(ui: &Ui) {
     ui.ctx().send_viewport_cmd(ViewportCommand::Fullscreen(on));
 }
 
-pub fn leave_fullscreen(ctx: &egui::Context) {
+pub(crate) fn leave_fullscreen(ctx: &egui::Context) {
     if is_fullscreen(ctx) {
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
     }

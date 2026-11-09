@@ -13,10 +13,7 @@ pub use language::Language;
 pub use library::{LibraryItem, SavedStream, continue_watching};
 pub use link::{DiscoverLink, LinkError, Route, parse_link};
 pub use message::{Notice, PlaybackFailure, Problem};
-pub use plan::{
-    CatalogTarget, addon_list_targets, board_targets, meta_candidates, search_targets,
-    stream_targets, subtitle_targets,
-};
+pub use plan::{CatalogTarget, board_targets};
 pub use release::{LATEST_RELEASE_URL, ReleaseError, parse_release, release_page};
 pub use settings::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,

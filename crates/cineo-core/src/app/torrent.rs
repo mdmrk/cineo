@@ -12,7 +12,7 @@ pub struct TorrentRequest {
 }
 
 impl TorrentRequest {
-    pub fn from_stream(stream: &Stream) -> Option<Self> {
+    pub(crate) fn from_stream(stream: &Stream) -> Option<Self> {
         let StreamSource::Torrent {
             info_hash,
             file_idx,
@@ -159,7 +159,7 @@ impl Default for Lookahead {
 }
 
 impl Lookahead {
-    pub const FULL_S: u64 = 120;
+    pub(crate) const FULL_S: u64 = 120;
     pub const RESUME_S: u64 = 100;
 
     pub fn update(&mut self, buffered_s: u64, size: u64, duration_ms: u64) -> Option<u64> {
