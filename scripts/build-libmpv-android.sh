@@ -92,7 +92,7 @@ mkdir -p "$build/openssl"
 (
   cd "$build/openssl"
   ANDROID_NDK_ROOT=$ndk "$src/openssl/Configure" android-arm64 \
-    "-D__ANDROID_API__=$ANDROID_API" --prefix="$prefix" --libdir=lib \
+    "-D__ANDROID_API__=$ANDROID_API" -Wno-macro-redefined --prefix="$prefix" --libdir=lib \
     no-shared no-tests no-apps no-docs no-module >/dev/null
   make -j"$jobs" build_libs >/dev/null
   make install_dev >/dev/null
