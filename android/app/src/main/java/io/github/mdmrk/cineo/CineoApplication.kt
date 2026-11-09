@@ -1,5 +1,6 @@
 package io.github.mdmrk.cineo
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.util.Log
 import io.github.mdmrk.cineo.rust.AppView
@@ -32,6 +33,7 @@ class CineoApplication : Application() {
         }
     }
 
+    @SuppressLint("ResourceType")
     private fun subtitleFontDir(): File {
         val dir = filesDir.resolve("fonts")
         try {
