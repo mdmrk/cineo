@@ -340,6 +340,33 @@ fn listed_addons_are_sorted_by_name() {
 }
 
 #[test]
+fn retry_asks_again_for_addon_lists_that_failed() {
+    let mut state = restore(&[LISTS]);
+    update(&mut state, loaded(LISTS, "basic/manifest-addon-lists.json"));
+    update(&mut state, Action::LoadAddonLists);
+    update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("official"),
+            result: Ok(Vec::new()),
+        },
+    );
+    update(
+        &mut state,
+        Action::AddonListLoaded {
+            addon: url(LISTS),
+            path: addon_list_path("community"),
+            result: Err("HTTP 500".into()),
+        },
+    );
+
+    let effects = update(&mut state, Action::RetryFailed);
+
+    assert_eq!(fetched_addon_lists(&effects), vec!["community"]);
+}
+
+#[test]
 fn addon_lists_follow_the_installed_addons() {
     let mut state = restore(&[BASIC]);
     update(&mut state, Action::LoadAddonLists);

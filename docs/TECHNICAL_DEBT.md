@@ -437,7 +437,7 @@ Format:
 - Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`retry_failed`),
   [NetworkWatch.kt](../android/app/src/main/java/io/github/mdmrk/cineo/NetworkWatch.kt),
   [Images.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/Images.kt)
-- Gap: failed Discover pages, addon lists and posters are not asked for
+- Gap: failed Discover pages and posters are not asked for
   again, and a request still on its way when the network returns is not
   retried if it then fails. Every usable network rebuilds the HTTP client on
   the shell thread, even after a short absence, which drops healthy

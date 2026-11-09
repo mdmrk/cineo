@@ -844,6 +844,7 @@ fn retry_failed(state: &mut State) -> Vec<Effect> {
             effects.push(fetch_catalog(&row.target));
         }
     }
+    effects.extend(refresh_addon_lists(state, true));
     let addons = &state.addons;
     if let Some(detail) = state.detail.as_mut() {
         effects.extend(request_meta(addons, detail));
