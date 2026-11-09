@@ -4,18 +4,14 @@ import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -69,14 +65,8 @@ private fun Stat(icon: Icon, value: String, label: String) {
 @Composable
 fun ConnectingScreen(art: ArtView, torrent: TorrentView?, images: Images, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        LoadingBackdrop(art, images, firstLoad = true)
-        Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
-            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
-                CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back))
-            }
-            TorrentStats(torrent, Modifier.align(Alignment.TopEnd).padding(top = 10.dp))
-        }
+    LoadingWithBack(art, images, onBack) {
+        TorrentStats(torrent, Modifier.align(Alignment.TopEnd).padding(top = 10.dp))
     }
 }
 

@@ -15,6 +15,8 @@ class CineoApplication : Application() {
     lateinit var started: Started
         private set
 
+    val cineo: Cineo? get() = (started as? Started.Running)?.cineo
+
     override fun onCreate() {
         super.onCreate()
         Native.init(this)

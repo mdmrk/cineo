@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
         NetworkWatch(this) { cineo?.networkUsable() }
     }
 
-    private val cineo get() = ((application as CineoApplication).started as? Started.Running)?.cineo
+    private val cineo get() = (application as CineoApplication).cineo
 
     override fun onStart() {
         super.onStart()

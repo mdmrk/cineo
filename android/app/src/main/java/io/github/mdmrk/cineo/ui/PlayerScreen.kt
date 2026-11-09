@@ -136,15 +136,7 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
         )
         val current = status
         if (!started) {
-            Box(Modifier.fillMaxSize()) {
-                LoadingBackdrop(playback.art, images, firstLoad = true)
-                IconButton(
-                    onClick = { cineo.stopPlayback() },
-                    modifier = Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(8.dp),
-                ) {
-                    CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back))
-                }
-            }
+            LoadingWithBack(playback.art, images, onBack = { cineo.stopPlayback() })
         }
         if (started && current?.waiting == true) {
             LoadingBackdrop(playback.art, images, firstLoad = false)

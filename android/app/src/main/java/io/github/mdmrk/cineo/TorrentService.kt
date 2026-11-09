@@ -28,7 +28,7 @@ class TorrentService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        ((application as CineoApplication).started as? Started.Running)?.cineo?.stopPlayback()
+        (application as CineoApplication).cineo?.stopPlayback()
         stopSelf()
     }
 

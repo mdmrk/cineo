@@ -9,13 +9,17 @@ import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +40,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -153,6 +158,24 @@ fun LoadingBackdrop(art: ArtView?, images: Images, firstLoad: Boolean, modifier:
         when {
             firstLoad && (art?.logo != null || title.isNotEmpty()) -> LoadingArt(title, art?.logo, images)
             else -> CineoLoading(width = PlayerLoadingWidth, tint = Brand.TextBright)
+        }
+    }
+}
+
+@Composable
+fun LoadingWithBack(
+    art: ArtView?,
+    images: Images,
+    onBack: () -> Unit,
+    overlay: @Composable BoxScope.() -> Unit = {},
+) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        LoadingBackdrop(art, images, firstLoad = true)
+        Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.TopStart)) {
+                CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back))
+            }
+            overlay()
         }
     }
 }
