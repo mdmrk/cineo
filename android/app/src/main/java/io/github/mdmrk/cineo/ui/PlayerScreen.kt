@@ -9,6 +9,7 @@ import android.os.SystemClock
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -429,8 +430,9 @@ private class PlaybackFocus(context: Context, private val onLoss: () -> Unit) :
 @Composable
 private fun FullScreen() {
     val view = LocalView.current
+    val activity = LocalActivity.current
     DisposableEffect(view) {
-        val window = (view.context as? android.app.Activity)?.window
+        val window = activity?.window
         val insets = window?.let { WindowCompat.getInsetsController(it, view) }
         insets?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         insets?.hide(WindowInsetsCompat.Type.systemBars())
@@ -441,13 +443,11 @@ private fun FullScreen() {
 @Composable
 private fun rememberRotate(): () -> Unit {
     val view = LocalView.current
-    val activity = view.context as? android.app.Activity
+    val activity = LocalActivity.current
     DisposableEffect(activity) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
-    return remember(view, activity) {
-        { activity?.requestedOrientation = rotatedOrientation(view.resources.configuration.orientation) }
-    }
+    return { activity?.requestedOrientation = rotatedOrientation(view.resources.configuration.orientation) }
 }
 
 private class SurfaceCallback(private val cineo: Cineo) : SurfaceHolder.Callback {
