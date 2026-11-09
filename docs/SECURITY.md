@@ -280,9 +280,8 @@ The exceptions are `cineo-player` (ADR-0014) and `cineo-android`
 Only these modules allow it: `embedded::ffi` (libmpv bindings) and
 `embedded::render` (the OpenGL renderer) in `cineo-player`, and `native`
 (the JNI entry point for the TLS verifier) in `cineo-android`. These tables
-do not inherit the root `[workspace.lints]`: a lint added to the root must
-be added to them too if it should apply there, and both already list
-fewer than the root.
+are copies of the root `[workspace.lints]` with only `unsafe_code` changed;
+a lint added to the root must be added to them too.
 
 ## Reporting a vulnerability
 

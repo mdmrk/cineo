@@ -143,11 +143,11 @@ mod tests {
         assert_eq!(tracker.on(Input::Buffered(f64::NAN), t0).event, buffered(0));
     }
 
-    fn progress(time_ms: u64, duration_ms: u64) -> Option<PlayerEvent> {
-        Some(PlayerEvent::Progress {
+    fn progress(time_ms: u64, duration_ms: u64) -> PlayerEvent {
+        PlayerEvent::Progress {
             time_ms,
             duration_ms,
-        })
+        }
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
         );
         assert_eq!(
             tracker.on(Input::TimePos(1.5), t0).event,
-            progress(1500, 600_000)
+            Some(progress(1500, 600_000))
         );
         assert_eq!(
             tracker
@@ -173,7 +173,7 @@ mod tests {
             tracker
                 .on(Input::TimePos(7.0), t0 + PROGRESS_INTERVAL)
                 .event,
-            progress(7000, 600_000)
+            Some(progress(7000, 600_000))
         );
     }
 
