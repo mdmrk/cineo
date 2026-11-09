@@ -9,8 +9,9 @@ use cineo_core::addon::{
     parse_catalog_response, parse_manifest, parse_meta_response, parse_stream_response,
 };
 use cineo_core::app::{
-    Action, DownloadLimit, Effect, InterfaceScale, Language, LibraryItem, SeekStep, Setting,
-    Settings, StartPage, State, SubtitleColor, SubtitleSize, TorrentPort, UiLanguage, update,
+    Action, DownloadLimit, Effect, InterfaceScale, Language, LibraryItem, ManifestOrigin, SeekStep,
+    Setting, Settings, StartPage, State, SubtitleColor, SubtitleSize, TorrentPort, UiLanguage,
+    update,
 };
 use cineo_desktop::i18n::Locale;
 use cineo_desktop::view::{Page, ViewState, show};
@@ -44,7 +45,7 @@ fn board_state() -> State {
         Action::ManifestLoaded {
             transport: addon,
             result: Ok(Box::new(manifest)),
-            install: false,
+            origin: ManifestOrigin::Restore,
         },
     );
     for effect in effects {
@@ -452,7 +453,7 @@ fn addons_that_failed_to_load_can_be_retried_or_removed() {
         Action::ManifestLoaded {
             transport: down.clone(),
             result: Err("HTTP 503".into()),
-            install: false,
+            origin: ManifestOrigin::Restore,
         },
     );
     let view = ViewState {
@@ -492,7 +493,7 @@ fn addon_lists_install_listed_addons_and_mark_installed_ones() {
                     .unwrap()
                     .value,
             )),
-            install: false,
+            origin: ManifestOrigin::Restore,
         },
     );
     update(
@@ -500,7 +501,7 @@ fn addon_lists_install_listed_addons_and_mark_installed_ones() {
         Action::ManifestLoaded {
             transport: subs,
             result: Err("HTTP 503".into()),
-            install: false,
+            origin: ManifestOrigin::Restore,
         },
     );
     update(&mut state, Action::LoadAddonLists);

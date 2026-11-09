@@ -11,8 +11,8 @@ use cineo_core::addon::{
     parse_stream_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Percent, SeekStep, Settings, State, WatchedAt,
-    continue_watching, update,
+    Action, Effect, Language, LibraryItem, ManifestOrigin, Percent, SeekStep, Settings, State,
+    WatchedAt, continue_watching, update,
 };
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
 use url::Url;
@@ -170,7 +170,7 @@ fn apply_runs_persistence_effects_and_ignores_others() {
         !store
             .apply(&Effect::FetchManifest {
                 transport: a.clone(),
-                install: false
+                origin: ManifestOrigin::Restore
             })
             .unwrap()
     );
@@ -394,14 +394,14 @@ fn start_app(store: &Store) -> State {
         },
     );
     for effect in effects {
-        if let Effect::FetchManifest { transport, install } = effect {
+        if let Effect::FetchManifest { transport, origin } = effect {
             let manifest = parse_manifest(&fixture("addons/basic/manifest.json")).unwrap();
             update(
                 &mut state,
                 Action::ManifestLoaded {
                     transport,
                     result: Ok(Box::new(manifest.value)),
-                    install,
+                    origin,
                 },
             );
         }

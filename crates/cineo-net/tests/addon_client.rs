@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, ExtraValue, ResourcePath, TransportUrl};
-use cineo_core::app::{Action, Effect};
+use cineo_core::app::{Action, Effect, ManifestOrigin};
 use cineo_net::{AddonClient, BlockReason, FetchError, NetPolicy, fetch_task};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -381,19 +381,19 @@ async fn fetch_effects_come_back_as_their_loaded_actions() {
 
     let effect = Effect::FetchManifest {
         transport: addon.clone(),
-        install: true,
+        origin: ManifestOrigin::Install,
     };
     let action = fetch_task(&client, effect).unwrap().await;
     let Action::ManifestLoaded {
         transport,
         result,
-        install,
+        origin,
     } = action
     else {
         panic!("expected ManifestLoaded, got {action:?}");
     };
     assert_eq!(transport, addon);
-    assert!(install);
+    assert_eq!(origin, ManifestOrigin::Install);
     assert_eq!(result.unwrap().id, "org.cineo.fixture.basic");
 
     let path = ResourcePath::catalog(ContentType::new("movie").unwrap(), "top");

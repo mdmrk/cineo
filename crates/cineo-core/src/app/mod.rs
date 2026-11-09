@@ -26,8 +26,8 @@ pub use settings::{
     WatchedAt,
 };
 pub use state::{
-    Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest,
-    Playing, Row, State, StreamGroup, SubtitleGroup, find_subtitle, update,
+    Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, ManifestOrigin,
+    NextVideo, PlayRequest, Playing, Row, State, StreamGroup, SubtitleGroup, find_subtitle, update,
 };
 pub use streams::{
     Facts as StreamFacts, Quality, Resolution, StreamSort, Tier, matcher as stream_matcher,

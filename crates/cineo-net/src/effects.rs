@@ -1,7 +1,7 @@
 use std::future::Future;
 
 use cineo_core::addon::{ResourcePath, TransportUrl};
-use cineo_core::app::{Action, Effect};
+use cineo_core::app::{Action, Effect, ManifestOrigin};
 use cineo_core::diagnostics::Parsed;
 use tracing::debug;
 use url::Url;
@@ -11,7 +11,7 @@ use crate::{AddonClient, FetchError};
 enum Fetch {
     Manifest {
         transport: TransportUrl,
-        install: bool,
+        origin: ManifestOrigin,
     },
     Catalog(TransportUrl, ResourcePath),
     AddonList(TransportUrl, ResourcePath),
@@ -26,7 +26,7 @@ pub fn fetch_task(
     effect: Effect,
 ) -> Option<impl Future<Output = Action> + Send + 'static> {
     let fetch = match effect {
-        Effect::FetchManifest { transport, install } => Fetch::Manifest { transport, install },
+        Effect::FetchManifest { transport, origin } => Fetch::Manifest { transport, origin },
         Effect::FetchCatalog { addon, path } => Fetch::Catalog(addon, path),
         Effect::FetchAddonList { addon, path } => Fetch::AddonList(addon, path),
         Effect::FetchMeta { addon, path } => Fetch::Meta(addon, path),
@@ -48,12 +48,12 @@ pub fn fetch_task(
 
 async fn run(client: &AddonClient, fetch: Fetch) -> Action {
     match fetch {
-        Fetch::Manifest { transport, install } => {
+        Fetch::Manifest { transport, origin } => {
             let result = fetched(client.fetch_manifest(&transport).await).map(Box::new);
             Action::ManifestLoaded {
                 transport,
                 result,
-                install,
+                origin,
             }
         }
         Fetch::Catalog(addon, path) => {

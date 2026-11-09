@@ -1,7 +1,9 @@
 #![allow(clippy::unwrap_used, reason = "test helpers panic on purpose")]
 
 use cineo_core::addon::{ContentType, ResourcePath, TransportUrl};
-use cineo_core::app::{Action, DiscoverLink, Effect, LinkError, Route, State, parse_link, update};
+use cineo_core::app::{
+    Action, DiscoverLink, Effect, LinkError, ManifestOrigin, Route, State, parse_link, update,
+};
 
 fn addon(url: &str) -> TransportUrl {
     TransportUrl::parse(url).unwrap()
@@ -79,7 +81,7 @@ fn an_install_link_installs_nothing_until_accepted() {
         effects,
         vec![Effect::FetchManifest {
             transport: addon("https://addon.example/manifest.json"),
-            install: true,
+            origin: ManifestOrigin::Install,
         }]
     );
 }

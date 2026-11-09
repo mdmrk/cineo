@@ -10,9 +10,9 @@ use cineo_core::addon::{
     parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, Lookahead, Notice, PlaybackFailure, Problem,
-    SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest, TorrentStatus,
-    TorrentStorage, WatchedAt, continue_watching, find_subtitle, update,
+    Action, Effect, Language, LibraryItem, Loadable, Lookahead, ManifestOrigin, Notice,
+    PlaybackFailure, Problem, SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest,
+    TorrentStatus, TorrentStorage, WatchedAt, continue_watching, find_subtitle, update,
 };
 
 fn player_failed(reason: &str, pick_another: bool) -> Notice {
@@ -66,7 +66,7 @@ fn loaded(transport: &str, fixture_path: &str) -> Action {
     Action::ManifestLoaded {
         transport: url(transport),
         result: Ok(manifest(fixture_path)),
-        install: false,
+        origin: ManifestOrigin::Restore,
     }
 }
 
@@ -74,7 +74,21 @@ fn load_failed(transport: &str) -> Action {
     Action::ManifestLoaded {
         transport: url(transport),
         result: Err("HTTP 503".into()),
-        install: false,
+        origin: ManifestOrigin::Restore,
+    }
+}
+
+fn retried(action: Action) -> Action {
+    let Action::ManifestLoaded {
+        transport, result, ..
+    } = action
+    else {
+        panic!("{action:?}");
+    };
+    Action::ManifestLoaded {
+        transport,
+        result,
+        origin: ManifestOrigin::Retry,
     }
 }
 
@@ -177,7 +191,10 @@ fn an_addon_that_fails_to_load_stays_installed() {
     assert!(
         matches!(
             effects.as_slice(),
-            [Effect::FetchManifest { install: true, .. }]
+            [Effect::FetchManifest {
+                origin: ManifestOrigin::Install,
+                ..
+            }]
         ),
         "an unavailable addon can be retried"
     );
@@ -186,7 +203,7 @@ fn an_addon_that_fails_to_load_stays_installed() {
         Action::ManifestLoaded {
             transport: url(OTHER),
             result: Ok(manifest("basic/manifest.json")),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     assert_eq!(state.installed, vec![url(OTHER), url(STREAMS)]);
@@ -333,7 +350,7 @@ fn addon_lists_follow_the_installed_addons() {
         Action::ManifestLoaded {
             transport: url(LISTS),
             result: Ok(manifest("basic/manifest-addon-lists.json")),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     assert_eq!(fetched_addon_lists(&effects), vec!["official", "community"]);
@@ -379,14 +396,17 @@ fn install_validates_and_rejects_duplicates() {
     );
     assert!(matches!(
         effects.as_slice(),
-        [Effect::FetchManifest { install: true, .. }]
+        [Effect::FetchManifest {
+            origin: ManifestOrigin::Install,
+            ..
+        }]
     ));
     let effects = update(
         &mut state,
         Action::ManifestLoaded {
             transport: url("https://new.example/manifest.json"),
             result: Err("HTTP 404".into()),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     assert!(effects.is_empty());
@@ -523,12 +543,12 @@ fn retry_asks_again_for_the_addons_whose_manifest_failed() {
         effects,
         vec![Effect::FetchManifest {
             transport: url(BASIC),
-            install: false,
+            origin: ManifestOrigin::Retry,
         }],
         "the addon still loading is not asked for twice"
     );
     assert!(state.addons_loading.contains(&url(BASIC)));
-    update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    update(&mut state, retried(loaded(BASIC, "basic/manifest.json")));
     assert_eq!(state.addons.len(), 1);
 }
 
@@ -653,7 +673,7 @@ fn an_automatic_retry_that_fails_again_raises_no_notice() {
     update(&mut state, Action::DismissNotice);
 
     update(&mut state, Action::RetryFailed);
-    update(&mut state, load_failed(BASIC));
+    update(&mut state, retried(load_failed(BASIC)));
 
     assert_eq!(state.notice, None);
 }
@@ -695,7 +715,10 @@ fn a_recovered_addon_joins_the_streams_of_the_open_detail() {
     assert_eq!(before.len(), 1, "only the addon that loaded is asked");
 
     update(&mut state, Action::RetryFailed);
-    let effects = update(&mut state, loaded(STREAMS, "basic/manifest-streams.json"));
+    let effects = update(
+        &mut state,
+        retried(loaded(STREAMS, "basic/manifest-streams.json")),
+    );
 
     let asked: Vec<_> = effects
         .iter()
@@ -721,7 +744,7 @@ fn a_recovered_addon_joins_the_current_search() {
     assert!(update(&mut state, Action::Search("matrix".into())).is_empty());
 
     update(&mut state, Action::RetryFailed);
-    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    let effects = update(&mut state, retried(loaded(BASIC, "basic/manifest.json")));
 
     assert_eq!(state.search.len(), 1);
     assert!(state.search[0].items.is_loading());
@@ -755,7 +778,7 @@ fn a_detail_without_addons_is_asked_for_once_they_recover() {
     ));
 
     update(&mut state, Action::RetryFailed);
-    let effects = update(&mut state, loaded(BASIC, "basic/manifest.json"));
+    let effects = update(&mut state, retried(loaded(BASIC, "basic/manifest.json")));
 
     assert!(
         effects
@@ -858,7 +881,7 @@ fn meta_failure_tries_the_next_candidate() {
             Action::ManifestLoaded {
                 transport: url(t),
                 result: Ok(manifest("basic/manifest.json")),
-                install: false,
+                origin: ManifestOrigin::Restore,
             },
         );
     }
@@ -1690,7 +1713,7 @@ fn playing_asks_subtitle_addons_with_the_stream_hints() {
         Action::ManifestLoaded {
             transport: url(SUBS),
             result: Ok(manifest("basic/manifest-subtitles.json")),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     let effects = update(
@@ -2010,7 +2033,7 @@ fn an_addon_that_needs_configuration_is_configured_not_installed() {
         Action::ManifestLoaded {
             transport: transport.clone(),
             result: Ok(manifest(true)),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     assert!(effects.is_empty());
@@ -2028,7 +2051,7 @@ fn an_addon_that_needs_configuration_is_configured_not_installed() {
         Action::ManifestLoaded {
             transport: transport.clone(),
             result: Ok(manifest(false)),
-            install: true,
+            origin: ManifestOrigin::Install,
         },
     );
     assert_eq!(state.installed, vec![transport]);

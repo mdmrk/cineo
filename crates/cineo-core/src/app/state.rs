@@ -126,7 +126,6 @@ pub struct State {
     pub installed: Vec<TransportUrl>,
     pub addons: Vec<InstalledAddon>,
     pub addons_loading: Vec<TransportUrl>,
-    pub addons_retrying: Vec<TransportUrl>,
     pub install: Option<Loadable<String>>,
     pub addon_lists: Option<Vec<AddonList>>,
     pub board: Vec<Row>,
@@ -235,7 +234,7 @@ pub enum Action {
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
-        install: bool,
+        origin: ManifestOrigin,
     },
     CatalogLoaded {
         addon: TransportUrl,
@@ -276,11 +275,18 @@ pub enum Action {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ManifestOrigin {
+    Restore,
+    Install,
+    Retry,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     FetchManifest {
         transport: TransportUrl,
-        install: bool,
+        origin: ManifestOrigin,
     },
     FetchCatalog {
         addon: TransportUrl,
@@ -323,7 +329,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 .into_iter()
                 .map(|transport| Effect::FetchManifest {
                     transport,
-                    install: false,
+                    origin: ManifestOrigin::Restore,
                 })
                 .collect()
         }
@@ -343,7 +349,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 state.install = Some(Loadable::Loading);
                 vec![Effect::FetchManifest {
                     transport,
-                    install: true,
+                    origin: ManifestOrigin::Install,
                 }]
             }
             Err(err) => {
@@ -497,8 +503,8 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::ManifestLoaded {
             transport,
             result,
-            install,
-        } => manifest_loaded(state, &transport, result, install),
+            origin,
+        } => manifest_loaded(state, &transport, result, origin),
         Action::CatalogLoaded {
             addon,
             path,
@@ -823,12 +829,11 @@ fn load_board(state: &mut State) -> Vec<Effect> {
 fn retry_failed(state: &mut State) -> Vec<Effect> {
     let addons: Vec<TransportUrl> = state.unavailable_addons().into_iter().cloned().collect();
     state.addons_loading.extend(addons.iter().cloned());
-    state.addons_retrying.extend(addons.iter().cloned());
     let mut effects: Vec<Effect> = addons
         .into_iter()
         .map(|transport| Effect::FetchManifest {
             transport,
-            install: false,
+            origin: ManifestOrigin::Retry,
         })
         .collect();
     for row in state.board.iter_mut().chain(state.search.iter_mut()) {
@@ -1028,12 +1033,11 @@ fn manifest_loaded(
     state: &mut State,
     transport: &TransportUrl,
     result: Result<Box<Manifest>, String>,
-    install: bool,
+    origin: ManifestOrigin,
 ) -> Vec<Effect> {
+    let install = origin == ManifestOrigin::Install;
     let was_loading = state.addons_loading.contains(transport);
     state.addons_loading.retain(|t| t != transport);
-    let retried = state.addons_retrying.contains(transport);
-    state.addons_retrying.retain(|t| t != transport);
     if !install && !was_loading {
         return Vec::new();
     }
@@ -1067,17 +1071,21 @@ fn manifest_loaded(
                 state.addons.insert(at, addon);
             }
             let mut effects = addons_changed(state, install);
-            if retried {
+            if origin == ManifestOrigin::Retry {
                 effects.extend(refresh_search(state));
                 effects.extend(refresh_detail(state));
             }
             effects
         }
         Err(err) => {
-            if install {
-                state.install = Some(Loadable::Failed(Problem::Request(err)));
-            } else if !retried {
-                state.notice = Some(Notice::AddonUnavailable(err));
+            match origin {
+                ManifestOrigin::Install => {
+                    state.install = Some(Loadable::Failed(Problem::Request(err)));
+                }
+                ManifestOrigin::Restore => {
+                    state.notice = Some(Notice::AddonUnavailable(err));
+                }
+                ManifestOrigin::Retry => {}
             }
             Vec::new()
         }
