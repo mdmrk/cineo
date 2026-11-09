@@ -62,10 +62,10 @@ private fun TorrentForeground(active: Boolean) {
 
 class MainActivity : ComponentActivity() {
     private val network by lazy {
-        NetworkWatch(this) {
-            ((application as CineoApplication).started as? Started.Running)?.cineo?.networkUsable()
-        }
+        NetworkWatch(this) { cineo?.networkUsable() }
     }
+
+    private val cineo get() = ((application as CineoApplication).started as? Started.Running)?.cineo
 
     override fun onStart() {
         super.onStart()
@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         network.stop()
+        if (!isChangingConfigurations) cineo?.leftApp()
         super.onStop()
     }
 

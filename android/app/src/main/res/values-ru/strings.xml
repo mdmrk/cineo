@@ -248,6 +248,8 @@
     </plurals>
     <string name="binge_watching">Автоматически включать следующую серию</string>
     <string name="binge_watching_help">Когда серия заканчивается, следующая запускается из того же аддона или открывается список её потоков.</string>
+    <string name="pause_on_leave">Пауза при выходе из приложения</string>
+    <string name="pause_on_leave_help">Видео ставится на паузу, когда приложение уходит в фон или гаснет экран.</string>
     <string name="next_notice">Уведомление о следующей серии</string>
     <string name="next_notice_help">За сколько до конца предлагается следующая серия.</string>
     <string name="next_notice_off">Выкл.</string>

@@ -49,6 +49,7 @@ pub struct SettingsView {
     pub p2p_enabled: bool,
     pub hide_controls: ChoiceView,
     pub binge_watching: ToggleView,
+    pub pause_on_minimize: ToggleView,
     pub next_video_notice: ChoiceView,
     pub subtitle_size: RangeView,
     pub subtitle_font: ChoiceView,
@@ -508,6 +509,7 @@ fn settings(settings: &Settings) -> SettingsView {
             Setting::HideControls,
         ),
         binge_watching: toggle(settings.binge_watching, Setting::BingeWatching),
+        pause_on_minimize: toggle(settings.pause_on_minimize, Setting::PauseOnMinimize),
         next_video_notice: choice(
             settings.next_video_notice,
             NextVideoNotice::ALL,

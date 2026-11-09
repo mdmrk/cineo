@@ -983,6 +983,7 @@ async fn changed_settings_reach_the_player_and_survive_a_restart_until_reset() {
         saved,
         Settings {
             torrent_storage: TorrentStorage::Disk4096,
+            pause_on_minimize: true,
             ..Settings::default()
         }
     );
@@ -999,6 +1000,7 @@ fn a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_rese
     let (cineo, views) = start(dir.path());
     let first = wait_for(&views, |_| true).settings;
     assert_eq!(first.torrent_storage.value, "disk");
+    assert!(first.pause_on_minimize.on);
     cineo.change_setting(SettingChange::Value {
         key: "torrent_storage".into(),
         value: "ram-512".into(),
@@ -1204,6 +1206,63 @@ async fn a_usable_network_asks_again_for_what_failed() {
                 .iter()
                 .any(|r| matches!(r.items, RowItems::Ready { .. }))
         });
+    });
+}
+
+fn shell_caught_up(cineo: &Cineo, views: &Receiver<AppView>) {
+    for on in ["true", "false"] {
+        cineo.change_setting(SettingChange::Value {
+            key: "subtitle_bold".into(),
+            value: on.into(),
+        });
+        wait_for(views, |v| v.settings.subtitle_bold.on.to_string() == on);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn leaving_the_app_pauses_the_video_unless_turned_off() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+    let pauses = || {
+        players
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| *c == "SetPause(true)")
+            .count()
+    };
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        cineo.change_setting(SettingChange::Value {
+            key: "pause_on_minimize".into(),
+            value: "true".into(),
+        });
+        wait_for(&views, |v| v.settings.pause_on_minimize.on);
+        open_movie(&cineo, &views, manifest);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+
+        cineo.left_app();
+        shell_caught_up(&cineo, &views);
+        assert_eq!(pauses(), 1);
+
+        cineo.change_setting(SettingChange::Value {
+            key: "pause_on_minimize".into(),
+            value: "false".into(),
+        });
+        wait_for(&views, |v| !v.settings.pause_on_minimize.on);
+        cineo.left_app();
+        shell_caught_up(&cineo, &views);
+        assert_eq!(pauses(), 1);
+
+        cineo.stop_playback();
+        play_a_minute_and_close(&players);
+        wait_for(&views, |v| v.playback.is_none());
+        drop(cineo);
     });
 }
 

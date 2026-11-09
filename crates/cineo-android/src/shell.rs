@@ -128,6 +128,7 @@ pub struct AddonSubtitleView {
 fn phone_settings() -> Settings {
     Settings {
         torrent_storage: TorrentStorage::Disk4096,
+        pause_on_minimize: true,
         ..Settings::default()
     }
 }
@@ -233,6 +234,7 @@ enum Msg {
         result: Result<Vec<u8>, String>,
     },
     NetworkUsable,
+    LeftApp,
     Shutdown,
 }
 
@@ -329,6 +331,10 @@ impl Cineo {
 
     pub fn set_stream_sort(&self, sort: StreamSort) {
         self.filter(FilterChange::Sort(sort));
+    }
+
+    pub fn left_app(&self) {
+        self.post(Msg::LeftApp);
     }
 
     pub fn network_usable(&self) {
@@ -721,6 +727,13 @@ impl Shell {
                     warn!(%err, "the HTTP connections were not reset");
                 }
                 self.dispatch(Action::RetryFailed);
+            }
+            Msg::LeftApp => {
+                if self.state.settings.pause_on_minimize
+                    && let Some(playback) = &lock(&self.screen).playback
+                {
+                    playback.send(PlayerCommand::SetPause(true));
+                }
             }
             Msg::Shutdown => return false,
         }

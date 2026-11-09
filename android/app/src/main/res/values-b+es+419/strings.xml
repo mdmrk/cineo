@@ -246,6 +246,8 @@
     </plurals>
     <string name="binge_watching">Reproducir el siguiente episodio automáticamente</string>
     <string name="binge_watching_help">Al terminar un episodio, se reproduce el siguiente del mismo add-on o se abren sus fuentes.</string>
+    <string name="pause_on_leave">Pausar al salir de la app</string>
+    <string name="pause_on_leave_help">El video se pausa cuando la app pasa a segundo plano o se apaga la pantalla.</string>
     <string name="next_notice">Aviso del siguiente episodio</string>
     <string name="next_notice_help">Cuánto antes del final se ofrece el siguiente episodio.</string>
     <string name="next_notice_off">Desactivado</string>

@@ -122,6 +122,13 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                     set,
                 )
                 Divider()
+                Switch(
+                    stringResource(R.string.pause_on_leave),
+                    stringResource(R.string.pause_on_leave_help),
+                    settings.pauseOnMinimize,
+                    set,
+                )
+                Divider()
                 Choice(
                     stringResource(R.string.next_notice),
                     stringResource(R.string.next_notice_help),

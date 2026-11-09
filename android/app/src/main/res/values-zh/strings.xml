@@ -242,6 +242,8 @@
     <string name="streams_hidden">已隐藏的种子片源：%1$d（设置中已关闭点对点）</string>
     <string name="binge_watching">自动播放下一集</string>
     <string name="binge_watching_help">一集结束后，从同一插件播放下一集，或打开其片源列表。</string>
+    <string name="pause_on_leave">离开应用时暂停</string>
+    <string name="pause_on_leave_help">应用转入后台或屏幕关闭时暂停视频。</string>
     <string name="next_notice">下一集提示</string>
     <string name="next_notice_help">在结束前多久提示下一集。</string>
     <string name="next_notice_off">关闭</string>
