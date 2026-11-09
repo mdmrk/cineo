@@ -116,7 +116,8 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   any local process, but a request must first present the 64-digit random
   token in `<data dir>\instance\instance.key`, so any process that can read
   the user's profile can send a link. A request of at most 16 KiB is read,
-  and it is handled like any other link.
+  and it is handled like any other link. The one other request, `raise`,
+  only brings the window forward.
 - Registering Cineo for `stremio://` and `cineo://` is opt-in from Settings
   and per user only.
 

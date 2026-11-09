@@ -26,9 +26,7 @@ fn main() -> ExitCode {
     let data_dir = cli.data_dir.clone().or_else(cineo_store::default_data_dir);
     if let Some(dir) = &data_dir {
         cineo_desktop::panic_log::record_panics(dir);
-        if let Some(link) = &cli.link
-            && cineo_desktop::instance::forward(dir, link)
-        {
+        if cineo_desktop::instance::forward(dir, cli.link.as_deref()) {
             return ExitCode::SUCCESS;
         }
     }

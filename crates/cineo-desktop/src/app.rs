@@ -104,8 +104,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             io.gl.clone_from(&cc.get_proc_address);
             io.display = native_display(cc);
             let (tx, ctx) = (results_tx.clone(), cc.egui_ctx.clone());
-            if !instance::listen(&data_dir, move |link| {
-                let _ = tx.send(Msg::Link(link));
+            if !instance::listen(&data_dir, move |request| {
+                let _ = tx.send(match request {
+                    instance::Request::Raise => Msg::Raise,
+                    instance::Request::Link(link) => Msg::Link(link),
+                });
                 ctx.request_repaint();
             }) {
                 warn!("links from other launches will not reach this window");
@@ -146,6 +149,7 @@ pub(crate) enum Msg {
         result: Result<Vec<u8>, String>,
     },
     Link(String),
+    Raise,
     LinksRegistered(Result<(), String>),
     TextRendering(fastframe_text::TextRendering),
     TextScale(f32),
@@ -691,6 +695,10 @@ impl eframe::App for CineoApp {
                 Msg::SubtitleFetched { url, result } => self.subtitle_fetched(&url, result),
                 Msg::Link(link) => {
                     self.pending_link = Some(link);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                }
+                Msg::Raise => {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
                 Msg::LinksRegistered(result) => self.view.links_registered = Some(result),

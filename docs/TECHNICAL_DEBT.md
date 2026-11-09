@@ -282,13 +282,6 @@ Format:
   on the next start.
 - Exit: a network-change signal per platform, with retries while it is down.
 
-### Deep links: plain second launches
-- Where: [instance.rs](../crates/cineo-desktop/src/instance.rs)
-- Gap: a second launch without a link still opens a second window.
-- Why: only links needed a handover.
-- Instead: second windows share the database.
-- Exit: hand plain launches to the running window too, which raises it.
-
 ### Windows: nothing has run on a Windows machine
 - Where: every `cfg(windows)` path (ADR-0027)
 - Gap: CI compiles and tests on `windows-latest`, and the app starts under

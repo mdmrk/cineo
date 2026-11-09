@@ -28,8 +28,12 @@ that tag.
 - `instance.rs` uses `Slot::at(<data dir>/instance, "cineo")`. A launch with
   a link sends it and exits if the running copy answers. The first copy
   claims the slot when its window starts and keeps the lock until it exits.
-- A later launch without a link claims with `ping`, which is never treated
-  as a link, then keeps running as it did before (TECHNICAL_DEBT.md).
+- A later launch without a link sends `raise` and exits if the running copy
+  answers (changed 2026-11-09; until then it opened a second window). Its
+  command-line flags are ignored, as a link's launch always was. Copies with
+  different `--data-dir` values use different slots. If two launches start
+  before either claims the slot, the one that loses claims with `ping`,
+  which is never a request, and keeps its window.
 - `libmpv.rs`, the Linux `register.rs` entry and the torrent blocklist in
   `cineo-stream` use `fastframe_file::write`.
 - While a video plays, `keep_awake.rs` also holds a
