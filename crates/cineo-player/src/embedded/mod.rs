@@ -183,6 +183,15 @@ const SURFACE_OPTIONS: &[(&str, &str)] = &[
     ("vf", "format=fmt=yuv420p"),
 ];
 
+const SURFACE_SUBTITLE_FONT: &str = "Inter";
+
+fn surface_font_options(fonts_dir: &str) -> [(&str, &str); 2] {
+    [
+        ("sub-fonts-dir", fonts_dir),
+        ("sub-font", SURFACE_SUBTITLE_FONT),
+    ]
+}
+
 #[derive(Debug)]
 enum Output {
     Render(Video),
@@ -308,8 +317,17 @@ impl Player {
     pub fn start_on_surface(
         request: &PlayRequest,
         notify: Arc<dyn Fn() + Send + Sync>,
+        fonts_dir: &Path,
     ) -> Result<(Self, mpsc::UnboundedReceiver<PlayerEvent>), PlayerError> {
-        let (player, _, events) = Self::start_with(request, notify, Output::Surface, &[])?;
+        let fonts_dir = fonts_dir
+            .to_str()
+            .ok_or_else(|| PlayerError::Libmpv("the fonts folder is not a UTF-8 path".into()))?;
+        let (player, _, events) = Self::start_with(
+            request,
+            notify,
+            Output::Surface,
+            &surface_font_options(fonts_dir),
+        )?;
         Ok((player, events))
     }
 
@@ -374,6 +392,11 @@ impl Player {
         let preferences = preferences
             .iter()
             .map(|(name, value)| (*name, value.as_str()));
+        for (name, value) in style_options(&request.settings) {
+            if let Err(err) = core.set_option(name, &value) {
+                warn!(option = name, %err, "subtitle style option not applied");
+            }
+        }
         for (name, value) in OPTIONS
             .iter()
             .copied()
@@ -388,11 +411,6 @@ impl Player {
                 result => {
                     result.map_err(|err| PlayerError::Libmpv(format!("option {name}: {err}")))?;
                 }
-            }
-        }
-        for (name, value) in style_options(&request.settings) {
-            if let Err(err) = core.set_option(name, &value) {
-                warn!(option = name, %err, "subtitle style option not applied");
             }
         }
         core.initialize().map_err(fail)?;

@@ -91,6 +91,32 @@ fn surface_playback_starts_without_video_output_decodes_through_the_ndk_and_draw
 }
 
 #[test]
+fn surface_subtitles_are_drawn_with_the_font_in_the_given_folder() {
+    assert_eq!(
+        surface_font_options("/data/fonts"),
+        [("sub-fonts-dir", "/data/fonts"), ("sub-font", "Inter")]
+    );
+}
+
+#[test]
+#[ignore = "needs libmpv"]
+fn real_libmpv_accepts_the_surface_font_options_over_a_chosen_font() {
+    let (url, _heads) = serve(wav(1));
+    let request = PlayRequest {
+        settings: Settings {
+            subtitle_font: SubtitleFont::Serif,
+            ..Settings::default()
+        },
+        ..request(&url)
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let mut options = AUDIO_ONLY.to_vec();
+    options.extend(surface_font_options(dir.path().to_str().unwrap()));
+    let started = Player::start_with(&request, Arc::new(|| {}), Output::None, &options);
+    assert!(started.is_ok(), "mpv accepts the surface font options");
+}
+
+#[test]
 fn commands_are_built_from_typed_values() {
     let args = |c| command_args(c).map(|v| v.join(" "));
     assert_eq!(

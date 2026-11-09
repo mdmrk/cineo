@@ -290,6 +290,7 @@ impl Cineo {
     pub fn new(
         data_dir: &str,
         cache_dir: &str,
+        fonts_dir: &str,
         listener: Arc<dyn StateListener>,
     ) -> Result<Arc<Self>, StartError> {
         let cache_dir = PathBuf::from(cache_dir);
@@ -299,7 +300,9 @@ impl Cineo {
             cache_dir.join("subtitles"),
             engine,
             listener,
-            Arc::new(Mpv),
+            Arc::new(Mpv {
+                fonts_dir: PathBuf::from(fonts_dir),
+            }),
         )
     }
 
@@ -983,7 +986,9 @@ mod tests {
             tx,
             store_tx,
             listener: Arc::new(Ignore),
-            players: Arc::new(Mpv),
+            players: Arc::new(Mpv {
+                fonts_dir: std::env::temp_dir(),
+            }),
             screen: Arc::default(),
             subtitle_dir: std::env::temp_dir(),
             torrents: Torrents::new(

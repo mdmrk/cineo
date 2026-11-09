@@ -428,6 +428,21 @@ Format:
 - Exit: the style controls and the delay buttons on Android, sending the
   same `PlayerCommand`s as the desktop.
 
+### Android: subtitles are drawn with one font
+- Where: [mod.rs](../crates/cineo-player/src/embedded/mod.rs)
+  (`surface_font_options`),
+  [SubtitleFont.kt](../android/app/src/main/java/io/github/mdmrk/cineo/SubtitleFont.kt)
+- Gap: every subtitle is drawn with Inter, so the Sans, Serif and Mono
+  choice in Settings has no effect on Android, and scripts Inter does not
+  cover (Chinese, Japanese, Korean, Arabic, Hebrew, Thai, Hindi and
+  others) do not show. Fonts embedded in a video file are still used.
+- Why: our libass has no fontconfig and no Android font provider, so it
+  only knows the fonts it is given; loading `/system/fonts` through
+  `sub-fonts-dir` would read every file into memory.
+- Instead: Inter covers Latin, Greek and Cyrillic.
+- Exit: a libass font provider for Android, or a font for the subtitle's
+  language picked from the system fonts.
+
 ### Android: audio focus is only taken and given up
 - Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`PlaybackFocus`)
 - Gap: playback pauses when another app takes the audio focus, but does not

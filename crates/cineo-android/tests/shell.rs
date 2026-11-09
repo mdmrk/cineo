@@ -47,6 +47,7 @@ fn start(dir: &Path) -> (Arc<Cineo>, Receiver<AppView>) {
     let cineo = Cineo::new(
         dir.to_str().unwrap(),
         dir.join("cache").to_str().unwrap(),
+        dir.join("fonts").to_str().unwrap(),
         Arc::new(Views(Mutex::new(tx))),
     )
     .unwrap();

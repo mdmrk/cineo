@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use cineo_core::app::PlayRequest;
@@ -23,11 +23,13 @@ pub trait Players: Send + Sync + std::fmt::Debug {
 }
 
 #[derive(Debug)]
-pub(crate) struct Mpv;
+pub(crate) struct Mpv {
+    pub(crate) fonts_dir: PathBuf,
+}
 
 impl Players for Mpv {
     fn start(&self, request: &PlayRequest) -> Result<Started, PlayerError> {
-        let (player, events) = Player::start_on_surface(request, Arc::new(|| {}))?;
+        let (player, events) = Player::start_on_surface(request, Arc::new(|| {}), &self.fonts_dir)?;
         Ok((Box::new(OwnThreadDrop(Some(player))), events))
     }
 }
