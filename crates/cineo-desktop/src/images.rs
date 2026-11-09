@@ -14,6 +14,8 @@ use image::{DynamicImage, ImageDecoder};
 use tokio::sync::Semaphore;
 use url::Url;
 
+use crate::image_disk::ImageDisk;
+
 pub(crate) const MAX_IMAGE_SIDE: u32 = 4096;
 const SIZE_HEADROOM: f32 = 2.0;
 
@@ -24,19 +26,74 @@ pub(crate) struct NetImageLoader {
     runtime: tokio::runtime::Handle,
     cache: Arc<Mutex<HashMap<String, Entry>>>,
     decoders: Arc<Semaphore>,
+    disk: ImageDisk,
 }
 
 impl NetImageLoader {
     const ID: &'static str = egui::generate_loader_id!(NetImageLoader);
 
-    pub(crate) fn new(client: AddonClient, runtime: tokio::runtime::Handle) -> Self {
+    pub(crate) fn new(
+        client: AddonClient,
+        runtime: tokio::runtime::Handle,
+        disk: ImageDisk,
+    ) -> Self {
         let cores = std::thread::available_parallelism().map_or(2, usize::from);
         Self {
             client,
             runtime,
             cache: Arc::default(),
             decoders: Arc::new(Semaphore::new(cores)),
+            disk,
         }
+    }
+}
+
+struct Fetch {
+    client: AddonClient,
+    runtime: tokio::runtime::Handle,
+    decoders: Arc<Semaphore>,
+    disk: ImageDisk,
+    url: Url,
+    hint: SizeHint,
+}
+
+impl Fetch {
+    async fn image(self) -> Result<ColorImage, String> {
+        if let Some(image) = self.cached().await {
+            return Ok(image);
+        }
+        let bytes = self
+            .client
+            .fetch_image(&self.url, MAX_IMAGE_BYTES)
+            .await
+            .map_err(|err| err.to_string())?;
+        let _slot = self.decoders.acquire().await;
+        let (disk, key, hint) = (self.disk, self.url.to_string(), self.hint);
+        self.runtime
+            .spawn_blocking(move || {
+                let image = decode(&bytes, hint)?;
+                disk.write(&key, &bytes);
+                Ok(image)
+            })
+            .await
+            .unwrap_or_else(|err| Err(err.to_string()))
+    }
+
+    async fn cached(&self) -> Option<ColorImage> {
+        let _slot = self.decoders.acquire().await;
+        let (disk, key, hint) = (self.disk.clone(), self.url.to_string(), self.hint);
+        self.runtime
+            .spawn_blocking(move || {
+                let bytes = disk.read(&key)?;
+                let image = decode(&bytes, hint);
+                if image.is_err() {
+                    disk.remove(&key);
+                }
+                image.ok()
+            })
+            .await
+            .ok()
+            .flatten()
     }
 }
 
@@ -72,25 +129,22 @@ impl ImageLoader for NetImageLoader {
         cache.insert(uri.to_owned(), Poll::Pending);
         drop(cache);
 
-        let client = self.client.clone();
         let cache = Arc::clone(&self.cache);
         let ctx = ctx.clone();
         let uri = uri.to_owned();
-        let runtime = self.runtime.clone();
-        let decoders = Arc::clone(&self.decoders);
+        let origin = url.origin().ascii_serialization();
+        let fetch = Fetch {
+            client: self.client.clone(),
+            runtime: self.runtime.clone(),
+            decoders: Arc::clone(&self.decoders),
+            disk: self.disk.clone(),
+            url,
+            hint: size_hint,
+        };
         self.runtime.spawn(async move {
-            let result = match client.fetch_image(&url, MAX_IMAGE_BYTES).await {
-                Ok(bytes) => {
-                    let _slot = decoders.acquire().await;
-                    runtime
-                        .spawn_blocking(move || decode(&bytes, size_hint))
-                        .await
-                        .unwrap_or_else(|err| Err(err.to_string()))
-                }
-                Err(err) => Err(err.to_string()),
-            };
+            let result = fetch.image().await;
             if let Err(err) = &result {
-                tracing::debug!(origin = %url.origin().ascii_serialization(), %err, "image not loaded");
+                tracing::debug!(%origin, %err, "image not loaded");
             }
             let result = result.map(Arc::new);
             cache.lock().insert(uri, Poll::Ready(result));
@@ -194,6 +248,11 @@ fn checked_decoder(bytes: &[u8]) -> Result<impl ImageDecoder + '_, String> {
 mod tests {
     #![allow(clippy::unwrap_used, reason = "test assertions")]
 
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
+
     use super::*;
 
     fn check_dimensions(bytes: &[u8]) -> Result<(), String> {
@@ -214,7 +273,9 @@ mod tests {
             .build()
             .unwrap();
         let client = AddonClient::new(cineo_net::NetPolicy::default()).unwrap();
-        let loader = NetImageLoader::new(client, runtime.handle().clone());
+        let dir = tempfile::tempdir().unwrap();
+        let loader =
+            NetImageLoader::new(client, runtime.handle().clone(), ImageDisk::new(dir.path()));
         let cache = Arc::clone(&loader.cache);
         let uri = "https://img.example/poster.png";
         let image = ColorImage::filled([2, 2], egui::Color32::WHITE);
@@ -228,6 +289,115 @@ mod tests {
             .unwrap();
         assert!(matches!(poll, egui::load::TexturePoll::Ready { .. }));
         assert!(cache.lock().is_empty());
+    }
+
+    const HINT: SizeHint = SizeHint::Size {
+        width: 2,
+        height: 2,
+        maintain_aspect_ratio: true,
+    };
+
+    struct Rig {
+        runtime: tokio::runtime::Runtime,
+        ctx: egui::Context,
+        dir: tempfile::TempDir,
+    }
+
+    impl Rig {
+        fn new() -> Self {
+            Self {
+                runtime: tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(2)
+                    .enable_all()
+                    .build()
+                    .unwrap(),
+                ctx: egui::Context::default(),
+                dir: tempfile::tempdir().unwrap(),
+            }
+        }
+
+        fn disk(&self) -> ImageDisk {
+            ImageDisk::new(self.dir.path())
+        }
+
+        fn serve(&self, body: Vec<u8>) -> (String, Arc<AtomicUsize>) {
+            let listener = self
+                .runtime
+                .block_on(TcpListener::bind("127.0.0.1:0"))
+                .unwrap();
+            let address = listener.local_addr().unwrap();
+            let served = Arc::new(AtomicUsize::new(0));
+            let count = Arc::clone(&served);
+            self.runtime.spawn(async move {
+                loop {
+                    let (mut socket, _) = listener.accept().await.unwrap();
+                    count.fetch_add(1, Ordering::SeqCst);
+                    let mut request = [0; 1024];
+                    let _ = socket.read(&mut request).await;
+                    let head = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    );
+                    socket.write_all(head.as_bytes()).await.unwrap();
+                    socket.write_all(&body).await.unwrap();
+                }
+            });
+            (format!("http://{address}/poster.png"), served)
+        }
+
+        fn load(&self, uri: &str, allow_private_networks: bool) -> Result<[usize; 2], String> {
+            let client = AddonClient::new(cineo_net::NetPolicy {
+                allow_private_networks,
+                ..cineo_net::NetPolicy::default()
+            })
+            .unwrap();
+            let loader = NetImageLoader::new(client, self.runtime.handle().clone(), self.disk());
+            for _ in 0..500 {
+                match loader.load(&self.ctx, uri, HINT) {
+                    Ok(ImagePoll::Ready { image }) => return Ok(image.size),
+                    Ok(ImagePoll::Pending { .. }) => {
+                        std::thread::sleep(std::time::Duration::from_millis(10));
+                    }
+                    Err(err) => return Err(err.to_string()),
+                }
+            }
+            panic!("the image never finished loading");
+        }
+    }
+
+    #[test]
+    fn an_image_on_disk_needs_no_network() {
+        let rig = Rig::new();
+        let uri = "http://127.0.0.1:9/poster.png";
+        rig.disk().write(uri, &png(4, 4));
+        assert_eq!(rig.load(uri, false), Ok([4, 4]));
+    }
+
+    #[test]
+    fn a_fetched_image_is_saved_and_the_next_start_asks_nobody() {
+        let rig = Rig::new();
+        let (uri, served) = rig.serve(png(4, 4));
+        assert_eq!(rig.load(&uri, true), Ok([4, 4]));
+        assert_eq!(rig.load(&uri, true), Ok([4, 4]));
+        assert_eq!(served.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn what_does_not_decode_is_not_saved() {
+        let rig = Rig::new();
+        let (uri, _) = rig.serve(b"not an image".to_vec());
+        assert!(rig.load(&uri, true).is_err());
+        assert_eq!(rig.disk().read(&uri), None);
+    }
+
+    #[test]
+    fn a_corrupt_file_is_replaced_from_the_network() {
+        let rig = Rig::new();
+        let (uri, served) = rig.serve(png(4, 4));
+        rig.disk().write(&uri, b"corrupt");
+        assert_eq!(rig.load(&uri, true), Ok([4, 4]));
+        assert_eq!(served.load(Ordering::SeqCst), 1);
+        assert_eq!(rig.disk().read(&uri), Some(png(4, 4)));
     }
 
     #[test]

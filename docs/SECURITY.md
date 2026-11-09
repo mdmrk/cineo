@@ -136,6 +136,15 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 
 - All paths are derived from the XDG data and cache directories. Addon data never
   forms a path; ids are stored as data, never used as file names.
+- The desktop keeps downloaded images in `<cache dir>/images` (mode 0700,
+  files 0600, `cached_images_are_private`), named by a hash of the URL so no
+  addon data or token forms a path
+  (`an_image_comes_back_under_a_name_that_hides_its_url`). They are fetched
+  through `cineo-net`, saved only after decoding, and decoded again with the
+  same limits on every read (`what_does_not_decode_is_not_saved`,
+  `a_corrupt_file_is_replaced_from_the_network`). A cached image is shown
+  without a request, so it stays visible after its address stops being
+  allowed. Entries go after 30 days or beyond 256 MiB.
 - SQLite queries use bound parameters only (`hostile_ids_are_stored_as_data`).
 - The data directory is created with mode `0700`, because the
   library and the addon URLs are private (`data_directory_is_private_to_the_user`).

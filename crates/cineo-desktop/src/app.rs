@@ -22,6 +22,7 @@ use tracing::{debug, error, warn};
 
 use crate::brand;
 use crate::i18n::{self, Locale};
+use crate::image_disk::ImageDisk;
 use crate::images::{self, NetImageLoader};
 use crate::keep_awake::KeepAwake;
 use crate::media_keys::{MediaKeys, Playing, Remote};
@@ -58,6 +59,11 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         ..NetPolicy::default()
     })?;
     let settings = Action::RestoreSettings(saved);
+    let image_disk = ImageDisk::new(&options.cache_dir);
+    {
+        let image_disk = image_disk.clone();
+        runtime.spawn_blocking(move || image_disk.trim());
+    }
     let (results_tx, results_rx) = channel();
     let (store_tx, writer) =
         spawn_store_writer(store, results_tx.clone()).context("cannot start the store thread")?;
@@ -99,7 +105,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             follow_desktop_text(rendering, text_scale, &results_tx, &cc.egui_ctx);
             cc.egui_ctx
                 .add_plugin(fastframe_emoji::EmojiPlugin::default());
-            images::install(&cc.egui_ctx, NetImageLoader::new(client, handle));
+            images::install(
+                &cc.egui_ctx,
+                NetImageLoader::new(client, handle, image_disk),
+            );
             let mut io = io;
             io.gl.clone_from(&cc.get_proc_address);
             io.display = native_display(cc);

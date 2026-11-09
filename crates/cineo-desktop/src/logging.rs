@@ -84,7 +84,7 @@ fn open_log(data_dir: &Path) -> io::Result<File> {
     Ok(file)
 }
 
-fn create_private_dir(dir: &Path) -> io::Result<()> {
+pub(crate) fn create_private_dir(dir: &Path) -> io::Result<()> {
     let mut builder = DirBuilder::new();
     builder.recursive(true);
     #[cfg(unix)]

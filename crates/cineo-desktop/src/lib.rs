@@ -1,6 +1,7 @@
 mod app;
 mod brand;
 pub mod i18n;
+mod image_disk;
 mod images;
 pub mod instance;
 mod keep_awake;

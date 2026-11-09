@@ -162,6 +162,16 @@ Format:
 - Instead: memory grows with the number of distinct posters viewed.
 - Exit: an LRU cap on `NetImageLoader` images.
 
+### Desktop: the image cache has no controls
+- Where: [image_disk.rs](../crates/cineo-desktop/src/image_disk.rs)
+- Gap: there is no button to clear it, its 30 days and 256 MiB were not
+  measured and cannot be changed, it ignores the server's cache headers, and
+  it is trimmed only at start, so one session can pass the limit.
+- Why: the first slice only stops downloading the same posters every run.
+- Instead: delete `<cache dir>/images`; a changed poster shows at most
+  30 days after it was downloaded.
+- Exit: a "clear cache" action in Settings, and revalidation with `ETag`.
+
 ### Desktop: private networks are a launch flag only
 - Where: [main.rs](../crates/cineo-desktop/src/main.rs)
 - Gap: self-hosted addons need `--allow-private-network` or the "Allow
