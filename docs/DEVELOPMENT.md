@@ -636,7 +636,8 @@ after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
 provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
 named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
-`.github/actions/setup-android`. `build (android)` restores libmpv from the cache (keyed by
+`.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
+`check (android)` fills first and tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
 the hash of the script and its `.env`, never on tags) and runs
 `scripts/release-android.sh`: it builds libmpv if needed, a signed
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that

@@ -63,7 +63,10 @@ jobs:
     steps:
       - *checkout
       - run: rustup toolchain install stable --profile minimal --component clippy --target aarch64-linux-android && rustup default stable
-      - *rust-cache
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          shared-key: android
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: ./.github/actions/setup-android
       - run: cargo ndk -t arm64-v8a -P 26 clippy -p cineo-android --locked -- -D warnings
       - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
@@ -93,8 +96,7 @@ jobs:
     steps:
       - *checkout
       - run: rustup toolchain install stable --profile minimal && rustup default stable
-      - &rust-cache-untagged
-        uses: Swatinem/rust-cache@v2.9.3
+      - uses: Swatinem/rust-cache@v2.9.3
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -129,7 +131,11 @@ jobs:
     steps:
       - *checkout
       - run: rustup toolchain install stable --profile minimal --target aarch64-linux-android && rustup default stable
-      - *rust-cache-untagged
+      - uses: Swatinem/rust-cache@v2.9.3
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          shared-key: android
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: ./.github/actions/setup-android
       - id: libmpv
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
