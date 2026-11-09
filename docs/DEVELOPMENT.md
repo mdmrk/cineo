@@ -287,7 +287,10 @@ subsystem logs and how to diagnose it.
 - GUI: `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
   `RUST_LOG` rules. libmpv's own messages use the target `libmpv`: its
   errors are always shown, its warnings (about the media, some on every
-  frame) only with `-v`. There is no log file or diagnostics view
+  frame) only with `-v`. Each run also writes `<data dir>/cineo.log` and
+  keeps the run before it as `cineo.previous.log`. By default that file
+  holds Cineo's warnings and other crates' errors only; `-v`, `-vv` and
+  `RUST_LOG` widen it too. There is no diagnostics view
   ([TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)).
 
 #### Span conventions

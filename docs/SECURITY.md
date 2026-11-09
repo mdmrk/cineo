@@ -192,6 +192,13 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   time, version, thread and source location, never the panic's message
   (`a_panic_is_recorded_without_its_message`). The default hook still prints
   the message to stderr.
+- Each run writes `<data dir>/cineo.log` (mode 0600 on Unix) and keeps one
+  earlier run (`each_run_starts_a_log_and_keeps_the_one_before`). At the
+  default level it holds Cineo's warnings and other crates' errors, without
+  the info spans that name resources and info hashes
+  (`by_default_the_file_keeps_cineo_warnings_and_nothing_about_what_is_watched`,
+  `by_default_other_crates_only_reach_the_file_with_errors`). `-v`, `-vv` or
+  `RUST_LOG` add them; such a log shows what was watched.
 - On Windows the media controls are the System Media Transport Controls
   of a hidden window Cineo creates for them at the first playback: they show
   the title and accept play, pause, stop, seek and volume, and show as

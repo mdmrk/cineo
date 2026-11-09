@@ -5,7 +5,6 @@ use std::process::ExitCode;
 
 use anyhow::Context;
 use clap::Parser;
-use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Parser)]
 #[command(name = "cineo-desktop", version, about = "Cineo media center")]
@@ -24,19 +23,17 @@ struct Cli {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let default = match cli.verbose {
-        0 => "warn",
-        1 => {
-            "cineo_desktop=debug,cineo_core=debug,cineo_net=debug,cineo_player=debug,cineo_store=debug,cineo_stream=debug,info"
+    let data_dir = cli.data_dir.clone().or_else(cineo_store::default_data_dir);
+    if let Some(dir) = &data_dir {
+        cineo_desktop::panic_log::record_panics(dir);
+        if let Some(link) = &cli.link
+            && cineo_desktop::instance::forward(dir, link)
+        {
+            return ExitCode::SUCCESS;
         }
-        _ => "trace",
-    };
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default));
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .with_writer(std::io::stderr)
-        .init();
-    match start(cli) {
+    }
+    cineo_desktop::logging::init(cli.verbose, data_dir.as_deref());
+    match start(cli, data_dir) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             tracing::error!("{err:#}");
@@ -45,21 +42,12 @@ fn main() -> ExitCode {
     }
 }
 
-fn start(cli: Cli) -> anyhow::Result<()> {
-    let data_dir = cli
-        .data_dir
-        .or_else(cineo_store::default_data_dir)
-        .context("no home directory; pass --data-dir")?;
+fn start(cli: Cli, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
+    let data_dir = data_dir.context("no home directory; pass --data-dir")?;
     let cache_dir = cli
         .cache_dir
         .or_else(cineo_store::default_cache_dir)
         .unwrap_or_else(|| data_dir.join("cache"));
-    cineo_desktop::panic_log::record_panics(&data_dir);
-    if let Some(link) = &cli.link
-        && cineo_desktop::instance::forward(&data_dir, link)
-    {
-        return Ok(());
-    }
     cineo_desktop::libmpv::install(&cache_dir);
     cineo_desktop::run(cineo_desktop::Options {
         data_dir,

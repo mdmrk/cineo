@@ -145,14 +145,13 @@ Format:
   away and Cineo starts fresh.
 - Exit: a GUI prompt that renames the file aside and starts fresh.
 
-### Desktop: no log file or diagnostics view
-- Where: [main.rs](../crates/cineo-desktop/src/main.rs)
-- Gap: logs go to stderr only; there is no log file and no diagnostics
-  view.
-- Why: it would add a dependency (`tracing-appender`) and a page.
-- Instead: start `cineo-desktop -v` from a terminal; `cineo doctor` covers
-  the database.
-- Exit: a log file in `$XDG_STATE_HOME/cineo`, plus a diagnostics page.
+### Desktop: no diagnostics view
+- Where: [logging.rs](../crates/cineo-desktop/src/logging.rs)
+- Gap: there is no page that shows the log or the state of the app.
+- Why: it would be a new page.
+- Instead: `<data dir>/cineo.log` holds the warnings of each run;
+  `cineo doctor` covers the database.
+- Exit: a diagnostics page.
 
 ### Desktop: image cache is unbounded for a session
 - Where: [images.rs](../crates/cineo-desktop/src/images.rs)

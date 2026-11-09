@@ -5,6 +5,7 @@ mod images;
 pub mod instance;
 mod keep_awake;
 pub mod libmpv;
+pub mod logging;
 mod media_keys;
 pub mod panic_log;
 pub mod player;
