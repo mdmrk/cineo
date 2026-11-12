@@ -4,10 +4,12 @@ use std::path::Path;
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 
+use super::events::{apply_stat, parse_cached_ranges, parse_tracks, replace_shared};
+use super::ffi::Value;
 use super::*;
 use cineo_core::app::{
-    SubtitleBackground, SubtitleColor, SubtitleOpacity, SubtitleOutline, SubtitlePosition,
-    SubtitleSize,
+    AudioOutput, Language, SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity,
+    SubtitleOutline, SubtitlePosition, SubtitleSize,
 };
 
 const AUDIO_ONLY: &[(&str, &str)] = &[("ao", "null"), ("vo", "null")];
