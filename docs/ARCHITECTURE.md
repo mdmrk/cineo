@@ -111,7 +111,7 @@ The core's `Effect::Play(PlayRequest)` starts playback. `cineo-player`
 (`embedded::Player`) loads libmpv at runtime, and libmpv draws into the
 desktop window through the OpenGL render API. The desktop shell draws the
 video in an egui paint callback over the whole window and its own controls
-on top (`cineo-desktop/src/player.rs`). The controls send typed
+on top (`cineo-desktop/src/player/`). The controls send typed
 `PlayerCommand`s; a `Status` snapshot (position, pause, volume, tracks)
 feeds them. Without libmpv, playback fails with a message saying so.
 `cineo-player` looks for `libmpv.so.2` and `libmpv.so` in the executable's

@@ -37,7 +37,7 @@ Format:
   compute the OpenSubtitles hash in `cineo-stream`.
 
 ### Embedded player: subtitles under the controls
-- Where: [player.rs](../crates/cineo-desktop/src/player.rs)
+- Where: [player/mod.rs](../crates/cineo-desktop/src/player/mod.rs)
 - Gap: subtitles stay at their position while the controls are shown and
   can sit under the bottom bar.
 - Why: moving subtitles needs a `sub-margin-y` change tied to the
@@ -54,7 +54,7 @@ Format:
   Wayland and X11.
 
 ### Embedded player: GL thread assumption
-- Where: [app.rs](../crates/cineo-desktop/src/app.rs)
+- Where: [app/mod.rs](../crates/cineo-desktop/src/app/mod.rs)
 - Gap: the renderer is created and freed inside eframe's `logic`/`ui`/
   `on_exit`, which assumes the window's GL context is current there
   (INFERRED from eframe's single-window glow integration). A test build
@@ -82,7 +82,7 @@ Format:
   address filter.
 
 ### Streaming engine: a cancelled open can leave a torrent running
-- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`start_torrent`),
+- Where: [app/mod.rs](../crates/cineo-desktop/src/app/mod.rs) (`start_torrent`),
   [engine.rs](../crates/cineo-stream/src/engine.rs) (`open`, `stop`)
 - Gap: a stop or a new start cancels an `open` still in progress. If that
   happens after librqbit added the torrent, the torrent stays in the
@@ -264,7 +264,7 @@ Format:
 - Exit: report skipped rows to AccessKit with their remembered rect.
 
 ### Player settings: pause on minimize depends on frames while minimized
-- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`pause_on_minimize`)
+- Where: [app/playback.rs](../crates/cineo-desktop/src/app/playback.rs) (`pause_on_minimize`)
 - Gap: the check runs in eframe's `logic`, once per frame. Whether frames
   still run while the window is minimized is UNKNOWN per compositor
   (Wayland compositors may stop them).
@@ -274,7 +274,7 @@ Format:
 - Exit: react to the window event directly.
 
 ### Desktop: failed loads are retried only after waking
-- Where: [app.rs](../crates/cineo-desktop/src/app.rs) (`WakeRetry`)
+- Where: [app/mod.rs](../crates/cineo-desktop/src/app/mod.rs) (`WakeRetry`)
 - Gap: failed loads are asked for again once, 5 s after the computer wakes.
   That delay was not measured, and a network slower to return leaves them
   failed. Losing and regaining the network without sleeping is not noticed.

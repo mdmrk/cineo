@@ -1,22 +1,28 @@
 use cineo_core::app::{
     Action, AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice,
-    PeerLimit, SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, SubtitleBackground,
-    SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize,
-    TorrentPort, TorrentStorage, UiLanguage, UploadLimit, WatchedAt,
+    PeerLimit, SeekStep, Setting, Settings, ShortSeekStep, StartPage, State, TorrentStorage,
+    UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
-    self, Align, Align2, Color32, CornerRadius, FontFamily, FontId, Label, Layout, Popup,
-    PopupCloseBehavior, Rect, Response, RichText, ScrollArea, Sense, TextEdit, TextFormat, Ui,
-    UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
+    self, Align, CornerRadius, Label, Layout, Rect, Response, RichText, ScrollArea, Sense,
+    TextFormat, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
 };
 
 use crate::brand;
 use crate::i18n::{Locale, Text, t};
 use crate::theme;
 use crate::view::{
-    Icon, Page, ViewState, append_icon, compact, dialog, dim, lerp_color, page_title, paint_icon,
-    paint_loading, paint_nav_label, section,
+    Icon, Page, ViewState, append_icon, compact, dialog, dim, page_title, paint_loading,
+    paint_nav_label, section,
 };
+
+mod subtitles;
+mod widgets;
+
+pub(crate) use subtitles::subtitle_controls;
+use subtitles::subtitle_style;
+pub(crate) use widgets::row;
+use widgets::{pick, port_field, select, switch};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Section {
@@ -80,7 +86,6 @@ pub enum Confirm {
 }
 
 const NAV_WIDTH: f32 = 168.0;
-const CONTROL_WIDTH: f32 = 220.0;
 
 pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let jump = view.settings_jump.take();
@@ -422,201 +427,6 @@ fn body(
     }
 }
 
-fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
-    preview(ui, s);
-    ui.add_space(theme::GAP);
-    subtitle_controls(ui, s, out);
-}
-
-pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
-    let size = s.subtitle_size;
-    number(
-        ui,
-        out,
-        &t!("subtitle-size"),
-        "",
-        size.get(),
-        (SubtitleSize::MIN, SubtitleSize::MAX, 5),
-        |v| Setting::SubtitleSize(SubtitleSize::new(v)),
-    );
-    pick(
-        ui,
-        out,
-        &t!("subtitle-font"),
-        "",
-        s.subtitle_font,
-        SubtitleFont::ALL,
-        font_name,
-        Setting::SubtitleFont,
-    );
-    switch(
-        ui,
-        out,
-        &t!("subtitle-bold"),
-        "",
-        s.subtitle_bold,
-        Setting::SubtitleBold,
-    );
-    pick(
-        ui,
-        out,
-        &t!("subtitle-color"),
-        "",
-        s.subtitle_color,
-        SubtitleColor::ALL,
-        color_name,
-        Setting::SubtitleColor,
-    );
-    let opacity = s.subtitle_opacity;
-    number(
-        ui,
-        out,
-        &t!("subtitle-opacity"),
-        "",
-        opacity.get(),
-        (SubtitleOpacity::MIN, SubtitleOpacity::MAX, 5),
-        |v| Setting::SubtitleOpacity(SubtitleOpacity::new(v)),
-    );
-    pick(
-        ui,
-        out,
-        &t!("subtitle-outline"),
-        &t!("subtitle-outline-help"),
-        s.subtitle_outline,
-        SubtitleOutline::ALL,
-        outline_name,
-        Setting::SubtitleOutline,
-    );
-    pick(
-        ui,
-        out,
-        &t!("subtitle-background"),
-        "",
-        s.subtitle_background,
-        SubtitleBackground::ALL,
-        background_name,
-        Setting::SubtitleBackground,
-    );
-    let position = s.subtitle_position;
-    number(
-        ui,
-        out,
-        &t!("subtitle-raise"),
-        &t!("subtitle-raise-help"),
-        position.get(),
-        (SubtitlePosition::MIN, SubtitlePosition::MAX, 1),
-        |v| Setting::SubtitlePosition(SubtitlePosition::new(v)),
-    );
-    switch(
-        ui,
-        out,
-        &t!("subtitle-keep-styles"),
-        &t!("subtitle-keep-styles-help"),
-        s.keep_subtitle_styles,
-        Setting::KeepSubtitleStyles,
-    );
-}
-
-fn preview(ui: &mut Ui, s: &Settings) {
-    let width = ui.available_width();
-    let (rect, _) = ui.allocate_exact_size(vec2(width, 150.0), Sense::hover());
-    if !ui.is_rect_visible(rect) {
-        return;
-    }
-    let painter = ui.painter();
-    painter.rect_filled(
-        rect,
-        CornerRadius::same(theme::RADIUS),
-        Color32::from_gray(24),
-    );
-    let family = match (s.subtitle_font, s.subtitle_bold) {
-        (SubtitleFont::Sans, false) => FontFamily::Proportional,
-        (SubtitleFont::Sans, true) => theme::strong_family(),
-        (SubtitleFont::Serif, _) => theme::serif_family(),
-        (SubtitleFont::Mono, _) => FontFamily::Monospace,
-    };
-    #[expect(clippy::cast_precision_loss, reason = "a percentage")]
-    let scale = s.subtitle_size.get() as f32 / 100.0;
-    #[expect(clippy::cast_precision_loss, reason = "a percentage")]
-    let raise = s.subtitle_position.get() as f32 / 100.0;
-    let [r, g, b] = s.subtitle_color.rgb();
-    let alpha = u8::try_from(s.subtitle_opacity.get() * 255 / 100).unwrap_or(u8::MAX);
-    let ink = Color32::from_rgba_unmultiplied(r, g, b, alpha);
-    let galley = painter.layout_no_wrap(
-        t!("subtitle-preview").into_owned(),
-        FontId::new(22.0 * scale, family),
-        ink,
-    );
-    let bottom = rect.bottom() - 14.0 - rect.height() * raise;
-    let pos = pos2(
-        rect.center().x - galley.size().x / 2.0,
-        bottom - galley.size().y,
-    );
-    let text_rect = Rect::from_min_size(pos, galley.size());
-    if let Some([r, g, b]) = s.subtitle_background.rgb() {
-        painter.rect_filled(
-            text_rect.expand(4.0),
-            0.0,
-            Color32::from_rgba_unmultiplied(r, g, b, 0xCC),
-        );
-    } else if let Some([r, g, b]) = s.subtitle_outline.rgb() {
-        let outline = Color32::from_rgb(r, g, b);
-        for (dx, dy) in [
-            (-1.5, 0.0),
-            (1.5, 0.0),
-            (0.0, -1.5),
-            (0.0, 1.5),
-            (-1.0, -1.0),
-            (1.0, 1.0),
-            (-1.0, 1.0),
-            (1.0, -1.0),
-        ] {
-            painter.galley_with_override_text_color(pos + vec2(dx, dy), galley.clone(), outline);
-        }
-    }
-    painter.galley(pos, galley, ink);
-    painter.text(
-        rect.left_top() + vec2(10.0, 8.0),
-        Align2::LEFT_TOP,
-        t!("subtitle-preview-badge"),
-        theme::caption(),
-        theme::TEXT_FAINT,
-    );
-}
-
-fn font_name(font: SubtitleFont) -> Text {
-    match font {
-        SubtitleFont::Sans => t!("font-sans"),
-        SubtitleFont::Serif => t!("font-serif"),
-        SubtitleFont::Mono => t!("font-mono"),
-    }
-}
-
-fn color_name(color: SubtitleColor) -> Text {
-    match color {
-        SubtitleColor::White => t!("color-white"),
-        SubtitleColor::Yellow => t!("color-yellow"),
-        SubtitleColor::Cyan => t!("color-cyan"),
-        SubtitleColor::Green => t!("color-green"),
-    }
-}
-
-fn outline_name(outline: SubtitleOutline) -> Text {
-    match outline {
-        SubtitleOutline::Black => t!("outline-black"),
-        SubtitleOutline::Gray => t!("outline-gray"),
-        SubtitleOutline::None => t!("outline-none"),
-    }
-}
-
-fn background_name(background: SubtitleBackground) -> Text {
-    match background {
-        SubtitleBackground::None => t!("background-none"),
-        SubtitleBackground::Black => t!("background-black"),
-        SubtitleBackground::Gray => t!("background-gray"),
-    }
-}
-
 fn torrents(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
     switch(
         ui,
@@ -791,152 +601,6 @@ fn seconds(count: f64) -> Text {
     t!("seconds", count = count)
 }
 
-fn switch(
-    ui: &mut Ui,
-    out: &mut Vec<Action>,
-    title: &str,
-    help: &str,
-    on: bool,
-    setting: fn(bool) -> Setting,
-) {
-    row(ui, title, help, |ui| {
-        if toggle(ui, title, on) {
-            out.push(Action::ChangeSetting(setting(!on)));
-        }
-    });
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one call per setting reads best flat"
-)]
-fn pick<T: Copy + PartialEq>(
-    ui: &mut Ui,
-    out: &mut Vec<Action>,
-    title: &str,
-    help: &str,
-    current: T,
-    options: &[T],
-    name: impl Fn(T) -> Text,
-    setting: fn(T) -> Setting,
-) {
-    row(ui, title, help, |ui| {
-        if let Some(value) = select(ui, title, current, || options.iter().copied(), name) {
-            out.push(Action::ChangeSetting(setting(value)));
-        }
-    });
-}
-
-fn number(
-    ui: &mut Ui,
-    out: &mut Vec<Action>,
-    title: &str,
-    help: &str,
-    value: u32,
-    range: (u32, u32, u32),
-    setting: fn(u32) -> Setting,
-) {
-    row(ui, title, help, |ui| {
-        if let Some(value) = slider(ui, title, value, range) {
-            out.push(Action::ChangeSetting(setting(value)));
-        }
-    });
-}
-
-#[expect(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    reason = "small whole numbers within the range"
-)]
-fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32)) -> Option<u32> {
-    let width = ui.available_width().min(CONTROL_WIDTH);
-    let (rect, response) = ui.allocate_exact_size(vec2(width, 30.0), Sense::click_and_drag());
-    response.widget_info(|| WidgetInfo::slider(ui.is_enabled(), f64::from(value), label));
-    let track = Rect::from_min_max(
-        pos2(rect.min.x + 8.0, rect.center().y - 2.0),
-        pos2(rect.max.x - 60.0, rect.center().y + 2.0),
-    );
-    let mut new = value;
-    if let Some(pointer) = response.interact_pointer_pos() {
-        let t = ((pointer.x - track.min.x) / track.width()).clamp(0.0, 1.0);
-        let raw = min as f32 + t * (max - min) as f32;
-        new = ((raw / step as f32).round() as u32 * step).clamp(min, max);
-    }
-    if response.has_focus() {
-        let (down, up) = ui.input(|i| {
-            (
-                i.key_pressed(egui::Key::ArrowLeft) || i.key_pressed(egui::Key::ArrowDown),
-                i.key_pressed(egui::Key::ArrowRight) || i.key_pressed(egui::Key::ArrowUp),
-            )
-        });
-        if down {
-            new = new.saturating_sub(step).max(min);
-        }
-        if up {
-            new = (new + step).min(max);
-        }
-    }
-    if ui.is_rect_visible(rect) {
-        let painter = ui.painter();
-        let t = (new - min) as f32 / (max - min) as f32;
-        let knob = pos2(egui::lerp(track.x_range(), t), track.center().y);
-        painter.rect_filled(track, CornerRadius::same(2), theme::SURFACE_HOVER);
-        painter.rect_filled(
-            Rect::from_min_max(track.min, pos2(knob.x, track.max.y)),
-            CornerRadius::same(2),
-            theme::ACCENT,
-        );
-        let knob_color = if response.hovered() || response.dragged() || response.has_focus() {
-            theme::TEXT_BRIGHT
-        } else {
-            theme::TEXT
-        };
-        painter.circle_filled(knob, 7.0, knob_color);
-        painter.text(
-            pos2(rect.max.x, rect.center().y),
-            Align2::RIGHT_CENTER,
-            format!("{new} %"),
-            theme::body(),
-            theme::TEXT_BRIGHT,
-        );
-    }
-    response.on_hover_cursor(egui::CursorIcon::PointingHand);
-    (new != value).then_some(new)
-}
-
-fn port_field(ui: &mut Ui, label: &str, port: TorrentPort) -> Option<TorrentPort> {
-    let id = egui::Id::new("torrent-port");
-    let draft = id.with("draft");
-    let mut text = ui
-        .data(|d| d.get_temp::<String>(draft))
-        .unwrap_or_else(|| port.get().to_string());
-    let response = ui.add(
-        TextEdit::singleline(&mut text)
-            .id(id)
-            .char_limit(5)
-            .desired_width(80.0),
-    );
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::TextEdit, ui.is_enabled(), label));
-    let mut chosen = None;
-    if response.lost_focus() {
-        chosen = text
-            .trim()
-            .parse::<u32>()
-            .ok()
-            .filter(|v| (TorrentPort::MIN..=TorrentPort::MAX).contains(v))
-            .map(TorrentPort::new)
-            .filter(|new| *new != port);
-        ui.data_mut(|d| d.remove::<String>(draft));
-    } else if response.has_focus() {
-        let digits: String = text.chars().filter(char::is_ascii_digit).collect();
-        ui.data_mut(|d| d.insert_temp(draft, digits));
-    } else {
-        ui.data_mut(|d| d.remove::<String>(draft));
-    }
-    chosen
-}
-
 fn sort_key(name: &str) -> String {
     name.chars()
         .flat_map(char::to_lowercase)
@@ -978,118 +642,6 @@ fn language(
             out.push(Action::ChangeSetting(setting(value)));
         }
     });
-}
-
-pub(crate) fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
-    let width = ui.available_width();
-    let control_width = CONTROL_WIDTH.min(width * 0.45);
-    let text_width = (width - control_width - 24.0).max(0.0);
-    ui.horizontal_top(|ui| {
-        ui.vertical(|ui| {
-            ui.set_width(text_width);
-            let galley = ui.painter().layout(
-                title.to_owned(),
-                theme::strong(),
-                theme::TEXT_BRIGHT,
-                text_width,
-            );
-            let (rect, _) = ui.allocate_exact_size(galley.size(), Sense::hover());
-            ui.painter().galley(rect.min, galley, theme::TEXT_BRIGHT);
-            if !help.is_empty() {
-                ui.add(Label::new(dim(help).small()).wrap());
-            }
-        });
-        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
-            ui.set_width(control_width);
-            control(ui);
-        });
-    });
-    ui.add_space(theme::GAP);
-}
-
-fn toggle(ui: &mut Ui, label: &str, on: bool) -> bool {
-    let (rect, response) = ui.allocate_exact_size(vec2(40.0, 22.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
-    if ui.is_rect_visible(rect) {
-        let t = ui
-            .ctx()
-            .animate_bool_with_time(response.id, on, theme::ANIM);
-        let track = Rect::from_center_size(rect.center(), vec2(40.0, 20.0));
-        let painter = ui.painter();
-        painter.rect_filled(
-            track,
-            CornerRadius::same(10),
-            lerp_color(theme::SURFACE_HOVER, theme::ACCENT, t),
-        );
-        let knob_x = egui::lerp(track.min.x + 10.0..=track.max.x - 10.0, t);
-        painter.circle_filled(
-            pos2(knob_x, track.center().y),
-            7.0,
-            lerp_color(theme::TEXT_DIM, theme::ON_ACCENT, t),
-        );
-    }
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .clicked()
-}
-
-fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
-    ui: &mut Ui,
-    label: &str,
-    current: T,
-    options: impl FnOnce() -> I,
-    name: impl Fn(T) -> Text,
-) -> Option<T> {
-    let (rect, response) = ui.allocate_exact_size(
-        vec2(ui.available_width().min(CONTROL_WIDTH), 30.0),
-        Sense::click(),
-    );
-    response.widget_info(|| {
-        let mut info = WidgetInfo::labeled(WidgetType::ComboBox, ui.is_enabled(), label);
-        info.current_text_value = Some(name(current).into_owned());
-        info
-    });
-    if ui.is_rect_visible(rect) {
-        let painter = ui.painter();
-        let fill = if response.hovered() {
-            theme::SURFACE_HOVER
-        } else {
-            theme::SURFACE
-        };
-        painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-        painter.text(
-            pos2(rect.min.x + 10.0, rect.center().y),
-            Align2::LEFT_CENTER,
-            name(current),
-            theme::body(),
-            theme::TEXT_BRIGHT,
-        );
-        paint_icon(
-            painter,
-            Icon::ChevronDown,
-            pos2(rect.max.x - 16.0, rect.center().y),
-            16.0,
-            theme::TEXT_DIM,
-        );
-    }
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
-    let mut picked = None;
-    Popup::from_toggle_button_response(&response)
-        .width(rect.width())
-        .layout(Layout::top_down_justified(Align::Min))
-        .close_behavior(PopupCloseBehavior::CloseOnClick)
-        .show(|ui| {
-            ui.set_min_width(ui.available_width());
-            ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                for option in options() {
-                    let selected = option == current;
-                    if ui.selectable_label(selected, name(option)).clicked() && !selected {
-                        picked = Some(option);
-                    }
-                }
-            });
-        });
-    picked
 }
 
 fn nav_item(ui: &mut Ui, part: Section, selected: bool) -> Response {

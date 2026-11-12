@@ -1,5 +1,5 @@
 use cineo_core::app::{Action, SeekStep, Settings, TorrentStatus};
-use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
+use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::plain_text;
 use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
@@ -9,10 +9,15 @@ use eframe::egui::{
 
 use url::Url;
 
-use crate::i18n::{Text, t};
-use crate::settings::subtitle_controls;
+mod stats;
+mod tracks;
+
+use stats::{stat_rows, stats_overlay, stats_shown, toggle_stats_shown};
+use tracks::{style_panel, style_rect, track_menu};
+
+use crate::i18n::t;
 use crate::theme;
-use crate::view::{IMAGE_FILTER, Icon, dim, gradient, paint_cover, paint_icon, paint_loading};
+use crate::view::{IMAGE_FILTER, Icon, gradient, paint_cover, paint_icon, paint_loading};
 
 const VOLUME_STEP: f64 = 5.0;
 const BAR_HEIGHT: f32 = 96.0;
@@ -21,9 +26,6 @@ const LOGO_MAX: egui::Vec2 = vec2(560.0, 200.0);
 const LOADING_WIDTH: f32 = 176.0;
 const LOADING_BACKDROP_TINT: Color32 = Color32::from_gray(70);
 const PULSE_PERIOD: f64 = 1.6;
-const MENU_MAX_HEIGHT: f32 = 320.0;
-const STYLE_WIDTH: f32 = 420.0;
-const STYLE_MAX_HEIGHT: f32 = 520.0;
 const STYLE_GAP: f32 = 8.0;
 const AUTO_NEXT_S: f64 = 10.0;
 const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
@@ -106,12 +108,6 @@ impl Controls {
     pub fn take_next(&mut self) -> bool {
         std::mem::take(&mut self.next_requested)
     }
-}
-
-enum Entry {
-    Track(Option<i64>),
-    Addon(Url),
-    Empty,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -307,132 +303,6 @@ fn shortcuts(
     }
     if toggle_stats {
         toggle_stats_shown(ui.ctx());
-    }
-}
-
-fn stats_id() -> egui::Id {
-    egui::Id::new("player-stats")
-}
-
-fn stats_shown(ctx: &egui::Context) -> bool {
-    ctx.data(|d| d.get_temp(stats_id())).unwrap_or(false)
-}
-
-fn toggle_stats_shown(ctx: &egui::Context) {
-    let shown = !stats_shown(ctx);
-    ctx.data_mut(|d| d.insert_temp(stats_id(), shown));
-}
-
-fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec<(Text, String)> {
-    let mut rows = Vec::new();
-    if let Some(TorrentStatus::Streaming {
-        peers,
-        download_bytes_per_sec,
-        downloaded,
-        size,
-    }) = torrent
-    {
-        #[expect(clippy::cast_precision_loss, reason = "display only")]
-        let (rate, done, total) = (
-            *download_bytes_per_sec as f64,
-            *downloaded as f64,
-            *size as f64,
-        );
-        rows.push((t!("stats-download"), format!("{}/s", bytes(rate))));
-        rows.push((t!("stats-peers"), peers.to_string()));
-        rows.push((
-            t!("stats-downloaded"),
-            t!("stats-of", done = bytes(done), total = bytes(total)).into_owned(),
-        ));
-    }
-    let stats = &status.stats;
-    if let Some(speed) = stats.cache_speed {
-        rows.push((t!("stats-network"), format!("{}/s", bytes(speed))));
-    }
-    if let Some(seconds) = stats.cache_s {
-        rows.push((t!("stats-buffered"), format!("{seconds:.0} s")));
-    }
-    if let (Some(width), Some(height)) = (stats.width, stats.height) {
-        rows.push((t!("stats-resolution"), format!("{width:.0}×{height:.0}")));
-    }
-    let codec = status.video_codec();
-    let bitrate = stats
-        .video_bitrate
-        .filter(|b| *b > 0.0)
-        .map(|b| format!("{:.1} Mb/s", b / 1_000_000.0));
-    let video: Vec<String> = codec.into_iter().chain(bitrate).collect();
-    if !video.is_empty() {
-        rows.push((t!("stats-video"), video.join(" · ")));
-    }
-    if let Some(hwdec) = &stats.hwdec {
-        let decoder = if hwdec == "no" {
-            t!("stats-software").into_owned()
-        } else {
-            plain_text(hwdec)
-        };
-        rows.push((t!("stats-decoder"), decoder));
-    }
-    if let Some(dropped) = stats.dropped_frames {
-        rows.push((t!("stats-dropped"), format!("{dropped:.0}")));
-    }
-    rows
-}
-
-fn bytes(count: f64) -> String {
-    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
-    let mut value = count.max(0.0);
-    let mut unit = 0;
-    while value >= 1024.0 && unit < UNITS.len() - 1 {
-        value /= 1024.0;
-        unit += 1;
-    }
-    if unit == 0 {
-        format!("{value:.0} {}", UNITS[unit])
-    } else {
-        format!("{value:.1} {}", UNITS[unit])
-    }
-}
-
-fn stats_overlay(ui: &Ui, rect: Rect, rows: &[(Text, String)]) {
-    if rows.is_empty() {
-        return;
-    }
-    let painter = ui.painter();
-    let font = theme::body();
-    let row_height = 20.0;
-    let pad = 12.0;
-    let layout = |text: &str, color| painter.layout_no_wrap(text.to_owned(), font.clone(), color);
-    let labels: Vec<_> = rows
-        .iter()
-        .map(|(l, _)| layout(l, theme::TEXT_DIM))
-        .collect();
-    let values: Vec<_> = rows
-        .iter()
-        .map(|(_, v)| layout(v, theme::TEXT_BRIGHT))
-        .collect();
-    let label_width = labels.iter().map(|g| g.size().x).fold(0.0, f32::max);
-    let value_width = values.iter().map(|g| g.size().x).fold(0.0, f32::max);
-    #[expect(clippy::cast_precision_loss, reason = "a handful of rows")]
-    let size = vec2(
-        label_width + 16.0 + value_width + 2.0 * pad,
-        rows.len() as f32 * row_height + 2.0 * pad,
-    );
-    let panel = Rect::from_min_size(rect.min + vec2(24.0, 80.0), size);
-    painter.rect_filled(
-        panel,
-        CornerRadius::same(theme::RADIUS),
-        Color32::from_black_alpha(170),
-    );
-    let mut y = panel.top() + pad + row_height / 2.0;
-    for (label, value) in labels.into_iter().zip(values) {
-        let x = panel.left() + pad;
-        painter.galley(pos2(x, y - label.size().y / 2.0), label, theme::TEXT_DIM);
-        painter.galley(
-            pos2(x + label_width + 16.0, y - value.size().y / 2.0),
-            value,
-            theme::TEXT_BRIGHT,
-        );
-        y += row_height;
     }
 }
 
@@ -855,18 +725,6 @@ fn left_label(ui: &mut Ui, rect: Rect, label: Label) {
     );
 }
 
-fn paint_elided(painter: &egui::Painter, rect: Rect, text: &str, color: Color32) -> bool {
-    let mut job = egui::text::LayoutJob::simple_singleline(text.to_owned(), theme::body(), color);
-    job.wrap.max_width = rect.width().max(1.0);
-    job.wrap.max_rows = 1;
-    job.wrap.break_anywhere = true;
-    let galley = painter.layout_job(job);
-    let elided = galley.elided;
-    let y = rect.center().y - galley.size().y / 2.0;
-    painter.galley(pos2(rect.left(), y), galley, color);
-    elided
-}
-
 fn toggle(menu: Option<TrackKind>, kind: TrackKind) -> Option<TrackKind> {
     (menu != Some(kind)).then_some(kind)
 }
@@ -987,288 +845,6 @@ fn volume_slider(
     }
 }
 
-fn track_menu(
-    ui: &Ui,
-    anchor: Rect,
-    status: &Status,
-    addon_subtitles: &[AddonSubtitle],
-    kind: TrackKind,
-    controls: &mut Controls,
-    out: &mut Vec<PlayerCommand>,
-) -> (Rect, bool) {
-    let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
-    let mut entries: Vec<(Entry, Text, bool)> = Vec::new();
-    if kind == TrackKind::Subtitle {
-        entries.push((
-            Entry::Track(None),
-            t!("subtitles-off"),
-            !tracks.iter().any(|t| t.selected),
-        ));
-    }
-    entries.extend(
-        tracks
-            .iter()
-            .filter(|t| t.external_file.is_none())
-            .enumerate()
-            .map(|(i, t)| (Entry::Track(Some(t.id)), track_label(t, i + 1), t.selected)),
-    );
-    entries.extend(addon_subtitles.iter().map(|s| {
-        let source = s.label.as_deref().unwrap_or(&s.addon_name);
-        (
-            Entry::Addon(s.url.clone()),
-            plain_text(&format!("{} · {source}", s.lang)).into(),
-            s.selected,
-        )
-    }));
-    if entries.is_empty() {
-        entries.push((Entry::Empty, t!("no-audio-tracks"), false));
-    }
-    let row = 30.0;
-    let width = 240.0;
-    #[expect(clippy::cast_precision_loss, reason = "a short list")]
-    let content = entries.len() as f32 * row;
-    let room = (anchor.top() - ui.max_rect().top() - 24.0).max(row);
-    let footer = if kind == TrackKind::Subtitle {
-        row + 4.0
-    } else {
-        0.0
-    };
-    let list = content.min(MENU_MAX_HEIGHT).min(room);
-    let height = list + footer + 8.0;
-    let mut style_hovered = false;
-    let menu = Rect::from_min_size(
-        pos2(
-            (anchor.right() - width).max(ui.max_rect().left() + 8.0),
-            anchor.top() - 8.0 - height,
-        ),
-        vec2(width, height),
-    );
-    egui::Area::new(ui.id().with("track-menu"))
-        .order(egui::Order::Foreground)
-        .fixed_pos(menu.min)
-        .show(ui.ctx(), |ui| {
-            ui.painter()
-                .rect_filled(menu, CornerRadius::same(theme::RADIUS), theme::PANEL);
-            ui.scope_builder(UiBuilder::new().max_rect(menu.shrink(4.0)), |ui| {
-                egui::ScrollArea::vertical()
-                    .max_height(list)
-                    .auto_shrink(false)
-                    .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = 0.0;
-                        for (id, label, selected) in entries {
-                            let (item, response) = ui.allocate_exact_size(
-                                vec2(ui.available_width(), row),
-                                Sense::click(),
-                            );
-                            let response = response.on_hover_cursor(CursorIcon::PointingHand);
-                            response.widget_info(|| {
-                                WidgetInfo::selected(
-                                    WidgetType::RadioButton,
-                                    true,
-                                    selected,
-                                    &label,
-                                )
-                            });
-                            let painter = ui.painter();
-                            if response.hovered() {
-                                painter.rect_filled(
-                                    item,
-                                    CornerRadius::same(theme::RADIUS),
-                                    theme::SURFACE_HOVER,
-                                );
-                            }
-                            if selected {
-                                paint_icon(
-                                    painter,
-                                    Icon::Named("check"),
-                                    pos2(item.left() + 14.0, item.center().y),
-                                    16.0,
-                                    theme::ACCENT,
-                                );
-                            }
-                            let color = if selected {
-                                theme::TEXT_BRIGHT
-                            } else {
-                                theme::TEXT
-                            };
-                            let text = item
-                                .with_min_x(item.left() + 30.0)
-                                .with_max_x(item.right() - 8.0);
-                            let response = if paint_elided(painter, text, &label, color) {
-                                response.on_hover_text(&*label)
-                            } else {
-                                response
-                            };
-                            if response.clicked() {
-                                match id {
-                                    Entry::Track(id) if kind == TrackKind::Subtitle => {
-                                        out.push(PlayerCommand::SetSubtitle(id));
-                                    }
-                                    Entry::Track(id @ Some(_)) => {
-                                        out.push(PlayerCommand::SetAudio(id));
-                                    }
-                                    Entry::Addon(url) => controls.addon_request = Some(url),
-                                    Entry::Track(None) | Entry::Empty => continue,
-                                }
-                                controls.menu = None;
-                            }
-                        }
-                    });
-            });
-            if footer > 0.0 {
-                style_hovered = style_row(ui, menu, row, controls.style_open);
-            }
-        });
-    (menu, style_hovered)
-}
-
-fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
-    let item = Rect::from_min_size(
-        pos2(menu.left() + 4.0, menu.bottom() - 4.0 - row),
-        vec2(menu.width() - 8.0, row),
-    );
-    let label = t!("subtitle-style-menu");
-    let response = ui.interact(item, ui.id().with("subtitle-style-row"), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
-    let painter = ui.painter();
-    painter.hline(
-        item.x_range().shrink(6.0),
-        item.top() - 2.0,
-        egui::Stroke::new(1.0, theme::RULE),
-    );
-    if open || response.hovered() {
-        painter.rect_filled(
-            item,
-            CornerRadius::same(theme::RADIUS),
-            theme::SURFACE_HOVER,
-        );
-    }
-    paint_icon(
-        painter,
-        Icon::ChevronLeft,
-        pos2(item.left() + 14.0, item.center().y),
-        16.0,
-        theme::TEXT,
-    );
-    painter.text(
-        pos2(item.left() + 30.0, item.center().y),
-        Align2::LEFT_CENTER,
-        &label,
-        theme::body(),
-        theme::TEXT,
-    );
-    response.hovered()
-}
-
-fn style_rect(ui: &Ui, menu: Rect) -> Rect {
-    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(ui.max_rect().top() + 24.0);
-    let left = (menu.left() - STYLE_GAP - STYLE_WIDTH).max(ui.max_rect().left() + 8.0);
-    Rect::from_min_max(
-        pos2(left, top),
-        pos2(menu.left() - STYLE_GAP, menu.bottom()),
-    )
-}
-
-fn style_panel(
-    ui: &Ui,
-    panel: Rect,
-    settings: &Settings,
-    controls: &mut Controls,
-    out: &mut Vec<PlayerCommand>,
-) {
-    egui::Area::new(ui.id().with("subtitle-style"))
-        .order(egui::Order::Foreground)
-        .fixed_pos(panel.min)
-        .show(ui.ctx(), |ui| {
-            ui.painter()
-                .rect_filled(panel, CornerRadius::same(theme::RADIUS), theme::PANEL);
-            ui.scope_builder(UiBuilder::new().max_rect(panel.shrink(16.0)), |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink(false)
-                    .show(ui, |ui| {
-                        delay(ui, controls, out);
-                        subtitle_controls(ui, settings, &mut controls.settings);
-                    });
-            });
-        });
-}
-
-fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
-    let ms = controls.subtitle_delay_ms;
-    ui.horizontal(|ui| {
-        ui.label(
-            RichText::new(t!("delay"))
-                .font(theme::strong())
-                .color(theme::TEXT_BRIGHT),
-        );
-        ui.label(dim(&t!("delay-help")).small());
-    });
-    ui.add_space(6.0);
-    let cells = [
-        (-1000, "−1 s", t!("subtitles-earlier", amount = "1 s")),
-        (-100, "−0.1 s", t!("subtitles-earlier", amount = "0.1 s")),
-        (0, "", Text::Borrowed("")),
-        (100, "+0.1 s", t!("subtitles-later", amount = "0.1 s")),
-        (1000, "+1 s", t!("subtitles-later", amount = "1 s")),
-    ];
-    let gap = 4.0;
-    let (strip, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
-    #[expect(clippy::cast_precision_loss, reason = "five cells")]
-    let width = (strip.width() - gap * (cells.len() - 1) as f32) / cells.len() as f32;
-    let mut next = ms;
-    for (i, (step, text, label)) in cells.into_iter().enumerate() {
-        #[expect(clippy::cast_precision_loss, reason = "five cells")]
-        let left = strip.left() + i as f32 * (width + gap);
-        let rect = Rect::from_min_size(pos2(left, strip.top()), vec2(width, strip.height()));
-        let middle = step == 0;
-        let enabled = !middle || ms != 0;
-        let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
-        response.widget_info(|| {
-            let label = if middle {
-                t!("delay-reset", delay = delay_label(ms))
-            } else {
-                label.clone()
-            };
-            WidgetInfo::labeled(WidgetType::Button, enabled, label)
-        });
-        let hovered = enabled && response.hovered();
-        if hovered {
-            ui.ctx().set_cursor_icon(CursorIcon::PointingHand);
-        }
-        let fill = if hovered {
-            theme::SURFACE_HOVER
-        } else {
-            theme::SURFACE
-        };
-        let painter = ui.painter();
-        painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), fill);
-        let (text, font, color) = if middle {
-            (delay_label(ms), theme::strong(), theme::TEXT_BRIGHT)
-        } else {
-            (text.to_owned(), theme::body(), theme::TEXT)
-        };
-        painter.text(rect.center(), Align2::CENTER_CENTER, text, font, color);
-        if enabled && response.clicked() {
-            next = if middle { 0 } else { ms + step };
-        }
-    }
-    ui.add_space(theme::GAP);
-    if next != ms {
-        controls.subtitle_delay_ms = next;
-        out.push(PlayerCommand::SetSubtitleDelay(f64::from(next) / 1000.0));
-    }
-}
-
-fn delay_label(ms: i32) -> String {
-    format!("{:+.1} s", f64::from(ms) / 1000.0)
-}
-
-fn track_label(track: &Track, number: usize) -> Text {
-    track
-        .label()
-        .map_or_else(|| t!("track", number = number), Into::into)
-}
-
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui
         .interact(rect, ui.id().with(label), Sense::click())
@@ -1371,78 +947,5 @@ mod tests {
         assert_eq!(clock(3725.0, 7200.0), "1:02:05");
         assert_eq!(clock(f64::NAN, 10.0), "0:00");
         assert_eq!(clock(-5.0, 10.0), "0:00");
-    }
-
-    #[test]
-    fn track_labels_use_language_and_title() {
-        let track = |lang: Option<&str>, title: Option<&str>| Track {
-            id: 1,
-            kind: TrackKind::Audio,
-            title: title.map(str::to_owned),
-            lang: lang.map(str::to_owned),
-            selected: false,
-            external_file: None,
-            codec: None,
-        };
-        assert_eq!(
-            track_label(&track(Some("eng"), Some("Commentary")), 1),
-            "eng · Commentary"
-        );
-        assert_eq!(track_label(&track(None, None), 2), "Track 2");
-        assert_eq!(track_label(&track(Some("a\nb"), None), 1), "a b");
-    }
-
-    #[test]
-    fn byte_counts_scale_to_readable_units() {
-        assert_eq!(bytes(512.0), "512 B");
-        assert_eq!(bytes(1536.0), "1.5 KB");
-        assert_eq!(bytes(2.5 * 1024.0 * 1024.0), "2.5 MB");
-        assert_eq!(bytes(3.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0), "3072.0 GB");
-    }
-
-    #[test]
-    fn stats_show_torrent_and_player_figures_that_exist() {
-        let status = Status {
-            tracks: [Track {
-                id: 1,
-                kind: TrackKind::Video,
-                title: None,
-                lang: None,
-                selected: true,
-                external_file: None,
-                codec: Some("hevc".into()),
-            }]
-            .into(),
-            stats: cineo_player::embedded::Stats {
-                cache_speed: Some(1024.0 * 1024.0),
-                width: Some(1920.0),
-                height: Some(1080.0),
-                video_bitrate: Some(5_200_000.0),
-                hwdec: Some("no".into()),
-                ..Default::default()
-            },
-            ..Status::default()
-        };
-        let torrent = TorrentStatus::Streaming {
-            peers: 12,
-            download_bytes_per_sec: 2 * 1024 * 1024,
-            downloaded: 512 * 1024 * 1024,
-            size: 1024 * 1024 * 1024,
-        };
-        let rows = stat_rows(&status, Some(&torrent));
-        let values: Vec<&str> = rows.iter().map(|(_, v)| v.as_str()).collect();
-        assert_eq!(
-            values,
-            [
-                "2.0 MB/s",
-                "12",
-                &t!("stats-of", done = "512.0 MB", total = "1.0 GB"),
-                "1.0 MB/s",
-                "1920×1080",
-                "hevc · 5.2 Mb/s",
-                &t!("stats-software"),
-            ]
-        );
-        assert!(stat_rows(&Status::default(), Some(&TorrentStatus::Starting)).is_empty());
     }
 }
