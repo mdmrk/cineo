@@ -1,15 +1,21 @@
 use std::collections::HashSet;
 
-use cineo_core::addon::{
-    AddonDescriptor, Meta, MetaPreview, PosterShape, SourceKind, Stream, TransportUrl, Video,
-};
+use cineo_core::addon::{AddonDescriptor, MetaPreview, PosterShape, SourceKind, TransportUrl};
 use cineo_core::app::{
-    AddonList, CatalogTarget, Detail, DownloadLimit, HideControls, InstalledAddon, Language,
-    LibraryItem, Loadable, NextVideoNotice, Notice, PeerLimit, PlayRequest, PlaybackFailure,
-    Problem, Ranged, Resolution, Row, SeekStep, Setting, Settings, State, StreamFacts, StreamGroup,
-    StreamSort, SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOutline, Tier,
-    TorrentStatus, TorrentStorage, UploadLimit, WatchedAt, continue_watching, stream_matcher,
+    AddonList, CatalogTarget, HideControls, InstalledAddon, LibraryItem, Loadable, NextVideoNotice,
+    Notice, PlayRequest, PlaybackFailure, Problem, Row, State, TorrentStatus, continue_watching,
 };
+
+mod detail;
+mod settings;
+
+use detail::detail;
+pub use detail::{
+    DetailView, MetaStatus, QualityView, StreamFilterView, StreamGroupView, StreamItems,
+    StreamView, VideoView,
+};
+use settings::settings;
+pub use settings::{ChoiceView, RangeView, SettingsView, ToggleView};
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct AppView {
@@ -33,63 +39,6 @@ pub struct AppView {
     pub notice: Option<NoticeView>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct SettingsView {
-    pub hardware_decoding: bool,
-    pub seek_step_s: u32,
-    pub seek_steps_s: Vec<u32>,
-    pub audio_language: Option<String>,
-    pub subtitle_language: Option<String>,
-    pub languages: Vec<String>,
-    pub secondary_audio_language: Option<String>,
-    pub secondary_subtitle_language: Option<String>,
-    pub watched_at_percent: u32,
-    pub watched_at_choices: Vec<u32>,
-    pub allow_private_network: bool,
-    pub p2p_enabled: bool,
-    pub hide_controls: ChoiceView,
-    pub binge_watching: ToggleView,
-    pub pause_on_minimize: ToggleView,
-    pub next_video_notice: ChoiceView,
-    pub subtitle_size: RangeView,
-    pub subtitle_font: ChoiceView,
-    pub subtitle_bold: ToggleView,
-    pub subtitle_color: ChoiceView,
-    pub subtitle_opacity: RangeView,
-    pub subtitle_outline: ChoiceView,
-    pub subtitle_background: ChoiceView,
-    pub subtitle_position: RangeView,
-    pub keep_subtitle_styles: ToggleView,
-    pub torrent_upload: ToggleView,
-    pub torrent_storage: ChoiceView,
-    pub download_limit: ChoiceView,
-    pub upload_limit: ChoiceView,
-    pub peer_limit: ChoiceView,
-    pub torrent_dht: ToggleView,
-    pub torrent_port: RangeView,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct ChoiceView {
-    pub key: String,
-    pub value: String,
-    pub options: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct ToggleView {
-    pub key: String,
-    pub on: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct RangeView {
-    pub key: String,
-    pub value: u32,
-    pub min: u32,
-    pub max: u32,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum TorrentView {
     Starting,
@@ -99,27 +48,6 @@ pub enum TorrentView {
         downloaded: u64,
         size: u64,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct DetailView {
-    pub id: String,
-    pub name: Option<String>,
-    pub favorite: bool,
-    pub poster: Option<String>,
-    pub background: Option<String>,
-    pub logo: Option<String>,
-    pub description: Option<String>,
-    pub release_info: Option<String>,
-    pub runtime: Option<String>,
-    pub genres: Vec<String>,
-    pub imdb_rating: Option<String>,
-    pub meta: MetaStatus,
-    pub videos: Vec<VideoView>,
-    pub selected_video: Option<String>,
-    pub streams: Vec<StreamGroupView>,
-    pub qualities: Vec<Resolution>,
-    pub filter: StreamFilterView,
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -132,92 +60,6 @@ pub struct LibraryItemView {
     pub favorite: bool,
     pub played: bool,
     pub resumable: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
-pub enum MetaStatus {
-    Loading,
-    Ready,
-    Failed { problem: ProblemView },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct VideoView {
-    pub id: String,
-    pub title: String,
-    pub season: Option<u32>,
-    pub episode: Option<u32>,
-    pub released: Option<String>,
-    pub thumbnail: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct StreamGroupView {
-    pub addon_name: String,
-    pub items: StreamItems,
-}
-
-#[uniffi::remote(Enum)]
-pub enum StreamSort {
-    AddonOrder,
-    Quality,
-    Seeders,
-    Size,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
-pub struct StreamFilterView {
-    pub query: String,
-    pub quality: Option<Resolution>,
-    pub addon: Option<u32>,
-    pub sort: StreamSort,
-}
-
-#[uniffi::remote(Enum)]
-pub enum Resolution {
-    Uhd,
-    Qhd,
-    FullHd,
-    Hd,
-    Sd,
-    Cam,
-}
-
-#[uniffi::remote(Enum)]
-pub enum Tier {
-    Ultra,
-    High,
-    Standard,
-    Low,
-    Cam,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct QualityView {
-    pub resolution: Resolution,
-    pub tier: Tier,
-    pub flags: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
-pub enum StreamItems {
-    Loading,
-    Ready {
-        streams: Vec<StreamView>,
-        order: Vec<u32>,
-        hidden: u32,
-    },
-    Failed {
-        problem: ProblemView,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct StreamView {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub kind: SourceKind,
-    pub quality: Option<QualityView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -488,107 +330,6 @@ fn fill_browsing(view: &mut AppView, state: &State, filter: &StreamFilterView) {
         .map(|d| detail(d, &state.library, filter, state.settings.p2p_enabled));
 }
 
-fn settings(settings: &Settings) -> SettingsView {
-    let code = |language: Option<Language>| language.map(|l| l.code().to_owned());
-    SettingsView {
-        hardware_decoding: settings.hardware_decoding,
-        seek_step_s: settings.seek_step.whole_seconds(),
-        seek_steps_s: SeekStep::ALL.iter().map(|s| s.whole_seconds()).collect(),
-        audio_language: code(settings.audio_language),
-        subtitle_language: code(settings.subtitle_language),
-        languages: Language::all().map(|l| l.code().to_owned()).collect(),
-        secondary_audio_language: code(settings.secondary_audio_language),
-        secondary_subtitle_language: code(settings.secondary_subtitle_language),
-        watched_at_percent: settings.watched_at.percent(),
-        watched_at_choices: WatchedAt::ALL.iter().map(|w| w.percent()).collect(),
-        allow_private_network: settings.allow_private_network,
-        p2p_enabled: settings.p2p_enabled,
-        hide_controls: choice(
-            settings.hide_controls,
-            HideControls::ALL,
-            Setting::HideControls,
-        ),
-        binge_watching: toggle(settings.binge_watching, Setting::BingeWatching),
-        pause_on_minimize: toggle(settings.pause_on_minimize, Setting::PauseOnMinimize),
-        next_video_notice: choice(
-            settings.next_video_notice,
-            NextVideoNotice::ALL,
-            Setting::NextVideoNotice,
-        ),
-        subtitle_size: range(settings.subtitle_size, Setting::SubtitleSize),
-        subtitle_font: choice(
-            settings.subtitle_font,
-            SubtitleFont::ALL,
-            Setting::SubtitleFont,
-        ),
-        subtitle_bold: toggle(settings.subtitle_bold, Setting::SubtitleBold),
-        subtitle_color: choice(
-            settings.subtitle_color,
-            SubtitleColor::ALL,
-            Setting::SubtitleColor,
-        ),
-        subtitle_opacity: range(settings.subtitle_opacity, Setting::SubtitleOpacity),
-        subtitle_outline: choice(
-            settings.subtitle_outline,
-            SubtitleOutline::ALL,
-            Setting::SubtitleOutline,
-        ),
-        subtitle_background: choice(
-            settings.subtitle_background,
-            SubtitleBackground::ALL,
-            Setting::SubtitleBackground,
-        ),
-        subtitle_position: range(settings.subtitle_position, Setting::SubtitlePosition),
-        keep_subtitle_styles: toggle(settings.keep_subtitle_styles, Setting::KeepSubtitleStyles),
-        torrent_upload: toggle(settings.torrent_upload, Setting::TorrentUpload),
-        torrent_storage: choice(
-            settings.torrent_storage,
-            TorrentStorage::ALL,
-            Setting::TorrentStorage,
-        ),
-        download_limit: choice(
-            settings.download_limit,
-            DownloadLimit::ALL,
-            Setting::DownloadLimit,
-        ),
-        upload_limit: choice(
-            settings.upload_limit,
-            UploadLimit::ALL,
-            Setting::UploadLimit,
-        ),
-        peer_limit: choice(settings.peer_limit, PeerLimit::ALL, Setting::PeerLimit),
-        torrent_dht: toggle(settings.torrent_dht, Setting::TorrentDht),
-        torrent_port: range(settings.torrent_port, Setting::TorrentPort),
-    }
-}
-
-fn choice<T: Copy>(current: T, all: &[T], wrap: fn(T) -> Setting) -> ChoiceView {
-    ChoiceView {
-        key: wrap(current).key().to_owned(),
-        value: wrap(current).value(),
-        options: all.iter().map(|&option| wrap(option).value()).collect(),
-    }
-}
-
-fn toggle(on: bool, wrap: fn(bool) -> Setting) -> ToggleView {
-    ToggleView {
-        key: wrap(on).key().to_owned(),
-        on,
-    }
-}
-
-fn range<const MIN: u32, const MAX: u32>(
-    current: Ranged<MIN, MAX>,
-    wrap: fn(Ranged<MIN, MAX>) -> Setting,
-) -> RangeView {
-    RangeView {
-        key: wrap(current).key().to_owned(),
-        value: current.get(),
-        min: MIN,
-        max: MAX,
-    }
-}
-
 fn hide_controls_ms(hide: HideControls) -> u32 {
     let ms = std::time::Duration::from_secs_f64(hide.seconds()).as_millis();
     u32::try_from(ms).unwrap_or(u32::MAX)
@@ -621,160 +362,6 @@ fn library_item(item: &LibraryItem) -> LibraryItemView {
         favorite: item.is_favorite(),
         played: item.was_played(),
         resumable: item.stream.is_some(),
-    }
-}
-
-fn detail(
-    detail: &Detail,
-    library: &[LibraryItem],
-    filter: &StreamFilterView,
-    p2p_enabled: bool,
-) -> DetailView {
-    let meta = detail.meta.ready();
-    let facts: Vec<Option<Vec<StreamFacts>>> = detail
-        .streams
-        .iter()
-        .map(|g| {
-            g.streams
-                .ready()
-                .map(|s| s.iter().map(StreamFacts::of).collect())
-        })
-        .collect();
-    let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
-    let text = |pick: fn(&MetaPreview) -> Option<&String>| preview.and_then(pick).cloned();
-    let url = |pick: fn(&MetaPreview) -> Option<&url::Url>| {
-        preview.and_then(pick).map(ToString::to_string)
-    };
-    DetailView {
-        id: detail.id.clone(),
-        name: preview.map(|p| p.name.clone()),
-        favorite: library.iter().any(|i| i.id == detail.id && i.is_favorite()),
-        poster: url(|p| p.poster.as_ref()),
-        background: url(|p| p.background.as_ref()),
-        logo: url(|p| p.logo.as_ref()),
-        description: text(|p| p.description.as_ref()),
-        release_info: text(|p| p.release_info.as_ref()),
-        runtime: meta.and_then(|m: &Meta| m.runtime.clone()),
-        genres: preview.map(|p| p.genres.clone()).unwrap_or_default(),
-        imdb_rating: text(|p| p.imdb_rating.as_ref()),
-        meta: match &detail.meta {
-            Loadable::Loading => MetaStatus::Loading,
-            Loadable::Ready(_) => MetaStatus::Ready,
-            Loadable::Failed(problem) => MetaStatus::Failed {
-                problem: problem_view(problem),
-            },
-        },
-        videos: meta
-            .map(|m| m.videos.iter().map(video).collect())
-            .unwrap_or_default(),
-        selected_video: detail.selected_video.clone(),
-        streams: detail
-            .streams
-            .iter()
-            .zip(&facts)
-            .enumerate()
-            .map(|(index, (group, facts))| {
-                stream_group(index, group, facts.as_deref(), filter, p2p_enabled)
-            })
-            .collect(),
-        qualities: qualities(&detail.streams, &facts, p2p_enabled),
-        filter: filter.clone(),
-    }
-}
-
-fn qualities(
-    groups: &[StreamGroup],
-    facts: &[Option<Vec<StreamFacts>>],
-    p2p_enabled: bool,
-) -> Vec<Resolution> {
-    let mut shown: Vec<Resolution> = groups
-        .iter()
-        .zip(facts)
-        .filter_map(|(group, facts)| group.streams.ready().zip(facts.as_ref()))
-        .flat_map(|(streams, facts)| streams.iter().zip(facts))
-        .filter(|(stream, _)| p2p_enabled || !stream.source.is_p2p())
-        .filter_map(|(_, facts)| facts.quality.map(|q| q.resolution))
-        .collect();
-    shown.sort_unstable();
-    shown.dedup();
-    shown
-}
-
-fn video(video: &Video) -> VideoView {
-    VideoView {
-        id: video.id.clone(),
-        title: video.title.clone(),
-        season: video.season,
-        episode: video.episode,
-        released: video.released.as_deref().map(day),
-        thumbnail: video.thumbnail.as_ref().map(ToString::to_string),
-    }
-}
-
-fn day(released: &str) -> String {
-    let date = released.split('T').next().unwrap_or(released);
-    let is_day = date.len() == 10
-        && date.bytes().enumerate().all(|(i, b)| {
-            if i == 4 || i == 7 {
-                b == b'-'
-            } else {
-                b.is_ascii_digit()
-            }
-        });
-    if is_day { date } else { released }.to_owned()
-}
-
-fn stream_group(
-    index: usize,
-    group: &StreamGroup,
-    facts: Option<&[StreamFacts]>,
-    filter: &StreamFilterView,
-    p2p_enabled: bool,
-) -> StreamGroupView {
-    StreamGroupView {
-        addon_name: group.addon_name.clone(),
-        items: match (&group.streams, facts) {
-            (Loadable::Loading, _) | (Loadable::Ready(_), None) => StreamItems::Loading,
-            (Loadable::Ready(streams), Some(facts)) => {
-                let matches = stream_matcher(&filter.query, filter.quality);
-                let other_addon = filter.addon.is_some_and(|a| a as usize != index);
-                let mut hidden = 0;
-                let order = filter
-                    .sort
-                    .order(facts)
-                    .into_iter()
-                    .filter(|&i| {
-                        if !p2p_enabled && streams[i].source.is_p2p() {
-                            hidden += 1;
-                            return false;
-                        }
-                        !other_addon && matches(&facts[i])
-                    })
-                    .filter_map(|i| u32::try_from(i).ok())
-                    .collect();
-                StreamItems::Ready {
-                    streams: streams.iter().zip(facts).map(stream).collect(),
-                    order,
-                    hidden,
-                }
-            }
-            (Loadable::Failed(problem), _) => StreamItems::Failed {
-                problem: problem_view(problem),
-            },
-        },
-    }
-}
-
-fn stream((stream, facts): (&Stream, &StreamFacts)) -> StreamView {
-    StreamView {
-        name: stream.name.clone(),
-        description: stream.description.clone(),
-        kind: stream.source.kind(),
-        quality: facts.quality.map(|q| QualityView {
-            resolution: q.resolution,
-            tier: q.tier(),
-            flags: q.flags.iter().map(|f| (*f).to_owned()).collect(),
-        }),
     }
 }
 
@@ -919,18 +506,5 @@ fn notice_view(notice: &Notice) -> NoticeView {
         },
         Notice::StoreClosed => NoticeView::StoreClosed,
         Notice::InvalidLink => NoticeView::InvalidLink,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::day;
-
-    #[test]
-    fn release_times_show_only_their_day() {
-        assert_eq!(day("2025-07-14T04:00:00.000Z"), "2025-07-14");
-        assert_eq!(day("2025-07-14"), "2025-07-14");
-        assert_eq!(day("July 2025"), "July 2025");
-        assert_eq!(day("2025T"), "2025T");
     }
 }
