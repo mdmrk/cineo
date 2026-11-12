@@ -154,9 +154,9 @@ In `cineo-desktop`:
   most one image per CPU core at a time. Downloaded images are kept in
   `<cache dir>/images` (`image_disk`), and textures past a budget are
   forgotten, least recently painted first.
-- Text (ADR-0017, ADR-0021): `rust-i18n` embeds the
-  `assets/locales/*.toml` catalogs at compile time, and `i18n::t!` looks
-  messages up in the thread-local locale. The locale is set from the
+- Text (ADR-0017, ADR-0021, ADR-0034): `build.rs` compiles the gettext
+  catalogs `assets/i18n/*.po` with `fastframe-i18n`, and `i18n::t!` and
+  `i18n::pt!` look the English text up in the thread-local locale. The locale is set from the
   `ui_language` setting every frame. Core returns `Problem` and `Notice` values, never prose.
 
 ### Platform integration

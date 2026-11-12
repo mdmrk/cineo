@@ -9,7 +9,7 @@ use eframe::egui::{
 
 use url::Url;
 
-use crate::i18n::{Text, t};
+use crate::i18n::{Text, pt, t};
 use crate::settings::subtitle_controls;
 use crate::theme;
 use crate::view::{Icon, dim, paint_icon};
@@ -52,7 +52,7 @@ pub(super) fn track_menu(
     if kind == TrackKind::Subtitle {
         entries.push((
             Entry::Track(None),
-            t!("subtitles-off"),
+            pt!("subtitles-off", "Off"),
             !tracks.iter().any(|t| t.selected),
         ));
     }
@@ -72,7 +72,7 @@ pub(super) fn track_menu(
         )
     }));
     if entries.is_empty() {
-        entries.push((Entry::Empty, t!("no-audio-tracks"), false));
+        entries.push((Entry::Empty, t!("No audio tracks"), false));
     }
     let row = 30.0;
     let width = 240.0;
@@ -178,7 +178,7 @@ fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
         pos2(menu.left() + 4.0, menu.bottom() - 4.0 - row),
         vec2(menu.width() - 8.0, row),
     );
-    let label = t!("subtitle-style-menu");
+    let label = t!("Style and delay");
     let response = ui.interact(item, ui.id().with("subtitle-style-row"), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
     let painter = ui.painter();
@@ -248,19 +248,31 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
     let ms = controls.subtitle_delay_ms;
     ui.horizontal(|ui| {
         ui.label(
-            RichText::new(t!("delay"))
+            RichText::new(t!("Delay"))
                 .font(theme::strong())
                 .color(theme::TEXT_BRIGHT),
         );
-        ui.label(dim(&t!("delay-help")).small());
+        ui.label(dim(&t!("This video only.")).small());
     });
     ui.add_space(6.0);
     let cells = [
-        (-1000, "−1 s", t!("subtitles-earlier", amount = "1 s")),
-        (-100, "−0.1 s", t!("subtitles-earlier", amount = "0.1 s")),
+        (
+            -1000,
+            "−1 s",
+            t!("Subtitles {amount} earlier", amount = "1 s"),
+        ),
+        (
+            -100,
+            "−0.1 s",
+            t!("Subtitles {amount} earlier", amount = "0.1 s"),
+        ),
         (0, "", Text::Borrowed("")),
-        (100, "+0.1 s", t!("subtitles-later", amount = "0.1 s")),
-        (1000, "+1 s", t!("subtitles-later", amount = "1 s")),
+        (
+            100,
+            "+0.1 s",
+            t!("Subtitles {amount} later", amount = "0.1 s"),
+        ),
+        (1000, "+1 s", t!("Subtitles {amount} later", amount = "1 s")),
     ];
     let gap = 4.0;
     let (strip, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
@@ -276,7 +288,7 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
         let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
         response.widget_info(|| {
             let label = if middle {
-                t!("delay-reset", delay = delay_label(ms))
+                t!("Subtitle delay {delay}, reset", delay = delay_label(ms))
             } else {
                 label.clone()
             };
@@ -317,7 +329,7 @@ fn delay_label(ms: i32) -> String {
 fn track_label(track: &Track, number: usize) -> Text {
     track
         .label()
-        .map_or_else(|| t!("track", number = number), Into::into)
+        .map_or_else(|| t!("Track {number}", number = number), Into::into)
 }
 
 #[cfg(test)]

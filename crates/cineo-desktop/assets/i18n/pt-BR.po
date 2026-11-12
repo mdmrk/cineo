@@ -1,0 +1,1496 @@
+# Portuguese (Brazil) translations for Cineo.
+msgid ""
+msgstr ""
+"Project-Id-Version: Cineo\n"
+"Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
+"POT-Creation-Date: 2026-11-12 20:59+0100\n"
+"PO-Revision-Date: 2026-11-12 00:00+0000\n"
+"Last-Translator: Cineo contributors\n"
+"Language-Team: Cineo contributors\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: crates/cineo-desktop/src/app/mod.rs:524
+#, rust-format
+msgid ""
+"On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
+"OpenCL, OpenGL & Vulkan Compatibility Pack. Install or repair it from the "
+"Microsoft Store, then open Cineo again.\n"
+"\n"
+"Details: {details}\n"
+"\n"
+"Open its Microsoft Store page?"
+msgstr ""
+"No Windows on ARM, o OpenGL que o Cineo usa para desenhar vem do pacote "
+"OpenCL, OpenGL & Vulkan Compatibility Pack da Microsoft. Instale ou repare o "
+"pacote pela Microsoft Store e abra o Cineo novamente.\n"
+"\n"
+"Detalhes: {details}\n"
+"\n"
+"Abrir a página dele na Microsoft Store?"
+
+#: crates/cineo-desktop/src/app/mod.rs:528
+msgid ""
+"Install your graphics card's driver, from its maker or from Windows Update, "
+"then open Cineo again. Remote Desktop and virtual machines need 3D "
+"acceleration turned on."
+msgstr ""
+"Instale o driver da sua placa de vídeo, pelo fabricante ou pelo Windows "
+"Update, e abra o Cineo novamente. A Área de Trabalho Remota e as máquinas "
+"virtuais precisam da aceleração 3D ativada."
+
+#: crates/cineo-desktop/src/app/mod.rs:532
+msgid ""
+"Install your graphics card's driver or Mesa, then open Cineo again. Remote "
+"sessions and virtual machines need 3D acceleration turned on."
+msgstr ""
+"Instale o driver da sua placa de vídeo ou o Mesa e abra o Cineo novamente. "
+"Sessões remotas e máquinas virtuais precisam da aceleração 3D ativada."
+
+#: crates/cineo-desktop/src/app/mod.rs:535
+#, rust-format
+msgid ""
+"Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
+"this computer only has basic graphics.\n"
+"\n"
+"{remedy}\n"
+"\n"
+"Details: {details}"
+msgstr ""
+"O Cineo precisa do driver gráfico para desenhar a janela (OpenGL 2 ou mais "
+"recente), e este computador só tem gráficos básicos.\n"
+"\n"
+"{remedy}\n"
+"\n"
+"Detalhes: {details}"
+
+#: crates/cineo-desktop/src/app/mod.rs:538
+msgid "Cineo cannot open its window"
+msgstr "O Cineo não consegue abrir a janela"
+
+#: crates/cineo-desktop/src/app/mod.rs:540
+msgid "Open Microsoft Store"
+msgstr "Abrir a Microsoft Store"
+
+#: crates/cineo-desktop/src/app/mod.rs:541
+msgid "Close"
+msgstr "Fechar"
+
+#: crates/cineo-desktop/src/i18n.rs:200
+msgid "Arabic"
+msgstr "Árabe"
+
+#: crates/cineo-desktop/src/i18n.rs:201
+msgid "Bulgarian"
+msgstr "Búlgaro"
+
+#: crates/cineo-desktop/src/i18n.rs:202
+msgid "Catalan"
+msgstr "Catalão"
+
+#: crates/cineo-desktop/src/i18n.rs:203
+msgid "Chinese"
+msgstr "Chinês"
+
+#: crates/cineo-desktop/src/i18n.rs:204
+msgid "Croatian"
+msgstr "Croata"
+
+#: crates/cineo-desktop/src/i18n.rs:205
+msgid "Czech"
+msgstr "Tcheco"
+
+#: crates/cineo-desktop/src/i18n.rs:206
+msgid "Danish"
+msgstr "Dinamarquês"
+
+#: crates/cineo-desktop/src/i18n.rs:207
+msgid "Dutch"
+msgstr "Holandês"
+
+#: crates/cineo-desktop/src/i18n.rs:208
+msgid "English"
+msgstr "Inglês"
+
+#: crates/cineo-desktop/src/i18n.rs:209
+msgid "Finnish"
+msgstr "Finlandês"
+
+#: crates/cineo-desktop/src/i18n.rs:210
+msgid "French"
+msgstr "Francês"
+
+#: crates/cineo-desktop/src/i18n.rs:211
+msgid "German"
+msgstr "Alemão"
+
+#: crates/cineo-desktop/src/i18n.rs:212
+msgid "Greek"
+msgstr "Grego"
+
+#: crates/cineo-desktop/src/i18n.rs:213
+msgid "Hebrew"
+msgstr "Hebraico"
+
+#: crates/cineo-desktop/src/i18n.rs:214
+msgid "Hindi"
+msgstr "Hindi"
+
+#: crates/cineo-desktop/src/i18n.rs:215
+msgid "Hungarian"
+msgstr "Húngaro"
+
+#: crates/cineo-desktop/src/i18n.rs:216
+msgid "Indonesian"
+msgstr "Indonésio"
+
+#: crates/cineo-desktop/src/i18n.rs:217
+msgid "Italian"
+msgstr "Italiano"
+
+#: crates/cineo-desktop/src/i18n.rs:218
+msgid "Japanese"
+msgstr "Japonês"
+
+#: crates/cineo-desktop/src/i18n.rs:219
+msgid "Korean"
+msgstr "Coreano"
+
+#: crates/cineo-desktop/src/i18n.rs:220
+msgid "Norwegian"
+msgstr "Norueguês"
+
+#: crates/cineo-desktop/src/i18n.rs:221
+msgid "Persian"
+msgstr "Persa"
+
+#: crates/cineo-desktop/src/i18n.rs:222
+msgid "Polish"
+msgstr "Polonês"
+
+#: crates/cineo-desktop/src/i18n.rs:223
+msgid "Portuguese"
+msgstr "Português"
+
+#: crates/cineo-desktop/src/i18n.rs:224
+msgid "Romanian"
+msgstr "Romeno"
+
+#: crates/cineo-desktop/src/i18n.rs:225
+msgid "Russian"
+msgstr "Russo"
+
+#: crates/cineo-desktop/src/i18n.rs:226
+msgid "Serbian"
+msgstr "Sérvio"
+
+#: crates/cineo-desktop/src/i18n.rs:227
+msgid "Spanish"
+msgstr "Espanhol"
+
+#: crates/cineo-desktop/src/i18n.rs:228
+msgid "Swedish"
+msgstr "Sueco"
+
+#: crates/cineo-desktop/src/i18n.rs:229
+msgid "Thai"
+msgstr "Tailandês"
+
+#: crates/cineo-desktop/src/i18n.rs:230
+msgid "Turkish"
+msgstr "Turco"
+
+#: crates/cineo-desktop/src/i18n.rs:231
+msgid "Ukrainian"
+msgstr "Ucraniano"
+
+#: crates/cineo-desktop/src/i18n.rs:232
+msgid "Vietnamese"
+msgstr "Vietnamita"
+
+#: crates/cineo-desktop/src/i18n.rs:411 crates/cineo-desktop/src/view/mod.rs:61
+#: crates/cineo-desktop/src/view/pages.rs:207
+msgid "Library"
+msgstr "Biblioteca"
+
+#: crates/cineo-desktop/src/i18n.rs:412 crates/cineo-desktop/src/i18n.rs:420
+#: crates/cineo-desktop/src/view/pages.rs:215
+#: crates/cineo-desktop/src/view/pages.rs:222
+#, rust-format
+msgid "Titles: {count}"
+msgstr "Títulos: {count}"
+
+#: crates/cineo-desktop/src/i18n.rs:416 crates/cineo-desktop/src/i18n.rs:418
+#: crates/cineo-desktop/src/i18n.rs:429 crates/cineo-desktop/src/i18n.rs:431
+#: crates/cineo-desktop/src/settings/mod.rs:123
+#: crates/cineo-desktop/src/view/mod.rs:63
+msgid "Settings"
+msgstr "Configurações"
+
+#: crates/cineo-desktop/src/i18n.rs:423
+#: crates/cineo-desktop/src/settings/mod.rs:621
+#, rust-format
+msgid "{percent} % played"
+msgstr "{percent} % reproduzido"
+
+#: crates/cineo-desktop/src/i18n.rs:425
+#: crates/cineo-desktop/src/view/detail.rs:756
+#, rust-format
+msgid "Season {number}"
+msgstr "Temporada {number}"
+
+#: crates/cineo-desktop/src/i18n.rs:427 crates/cineo-desktop/src/i18n.rs:432
+#: crates/cineo-desktop/src/view/detail.rs:513
+#, rust-format
+msgid "Streams: {count}"
+msgstr "Streams: {count}"
+
+#: crates/cineo-desktop/src/i18n.rs:435
+#: crates/cineo-desktop/src/view/addons.rs:77
+#, rust-format
+msgid "Installed {name}"
+msgstr "{name} instalado"
+
+#: crates/cineo-desktop/src/i18n.rs:438
+#: crates/cineo-desktop/src/settings/mod.rs:634
+#, rust-format
+msgid "{count} s"
+msgstr "{count} s"
+
+#: crates/cineo-desktop/src/player/bars.rs:38
+#: crates/cineo-desktop/src/view/detail.rs:68
+msgid "Back"
+msgstr "Voltar"
+
+#: crates/cineo-desktop/src/player/bars.rs:94
+#: crates/cineo-desktop/src/player/bars.rs:310
+#: crates/cineo-desktop/src/view/detail.rs:683
+msgid "Play"
+msgstr "Reproduzir"
+
+#: crates/cineo-desktop/src/player/bars.rs:96
+msgid "Pause"
+msgstr "Pausar"
+
+#: crates/cineo-desktop/src/player/bars.rs:106
+#: crates/cineo-desktop/src/player/bars.rs:288
+msgid "Next episode"
+msgstr "Próximo episódio"
+
+#: crates/cineo-desktop/src/player/bars.rs:116
+#, rust-format
+msgid "Seek back {seconds} seconds"
+msgstr "Voltar {seconds} segundos"
+
+#: crates/cineo-desktop/src/player/bars.rs:126
+#, rust-format
+msgid "Seek forward {seconds} seconds"
+msgstr "Avançar {seconds} segundos"
+
+#: crates/cineo-desktop/src/player/bars.rs:151
+msgid "Exit fullscreen"
+msgstr "Sair da tela cheia"
+
+#: crates/cineo-desktop/src/player/bars.rs:153
+#: crates/cineo-desktop/src/settings/mod.rs:721
+msgid "Fullscreen"
+msgstr "Tela cheia"
+
+#: crates/cineo-desktop/src/player/bars.rs:162
+msgid "Streaming stats"
+msgstr "Estatísticas de streaming"
+
+#: crates/cineo-desktop/src/player/bars.rs:169
+#: crates/cineo-desktop/src/settings/mod.rs:58
+msgid "Subtitles"
+msgstr "Legendas"
+
+#: crates/cineo-desktop/src/player/bars.rs:173
+#: crates/cineo-desktop/src/settings/mod.rs:59
+msgid "Audio"
+msgstr "Áudio"
+
+#: crates/cineo-desktop/src/player/bars.rs:186
+msgid "Unmute"
+msgstr "Ativar som"
+
+#: crates/cineo-desktop/src/player/bars.rs:188
+msgid "Mute"
+msgstr "Silenciar"
+
+#: crates/cineo-desktop/src/player/bars.rs:286
+#, rust-format
+msgid "Next episode in {seconds} s"
+msgstr "Próximo episódio em {seconds} s"
+
+#: crates/cineo-desktop/src/player/bars.rs:338
+#: crates/cineo-desktop/src/view/mod.rs:349
+msgid "Dismiss"
+msgstr "Fechar"
+
+#: crates/cineo-desktop/src/player/bars.rs:401
+msgid "Position"
+msgstr "Posição"
+
+#: crates/cineo-desktop/src/player/bars.rs:468
+msgid "Volume"
+msgstr "Volume"
+
+#: crates/cineo-desktop/src/player/stats.rs:37
+msgid "Download"
+msgstr "Download"
+
+#: crates/cineo-desktop/src/player/stats.rs:38
+msgid "Peers"
+msgstr "Peers"
+
+#: crates/cineo-desktop/src/player/stats.rs:40
+msgid "Downloaded"
+msgstr "Baixado"
+
+#: crates/cineo-desktop/src/player/stats.rs:42
+#: crates/cineo-desktop/src/player/stats.rs:190
+#, rust-format
+msgid "{done} of {total}"
+msgstr "{done} de {total}"
+
+#: crates/cineo-desktop/src/player/stats.rs:51
+msgid "Network"
+msgstr "Rede"
+
+#: crates/cineo-desktop/src/player/stats.rs:54
+msgid "Buffered"
+msgstr "Em buffer"
+
+#: crates/cineo-desktop/src/player/stats.rs:57
+msgid "Resolution"
+msgstr "Resolução"
+
+#: crates/cineo-desktop/src/player/stats.rs:66
+msgid "Video"
+msgstr "Vídeo"
+
+#: crates/cineo-desktop/src/player/stats.rs:70
+#: crates/cineo-desktop/src/player/stats.rs:194
+msgid "Software"
+msgstr "Software"
+
+#: crates/cineo-desktop/src/player/stats.rs:74
+msgid "Decoder"
+msgstr "Decodificador"
+
+#: crates/cineo-desktop/src/player/stats.rs:77
+msgid "Dropped frames"
+msgstr "Quadros perdidos"
+
+#: crates/cineo-desktop/src/player/tracks.rs:55
+msgctxt "subtitles-off"
+msgid "Off"
+msgstr "Desativadas"
+
+#: crates/cineo-desktop/src/player/tracks.rs:75
+msgid "No audio tracks"
+msgstr "Nenhuma faixa de áudio"
+
+#: crates/cineo-desktop/src/player/tracks.rs:181
+msgid "Style and delay"
+msgstr "Estilo e atraso"
+
+#: crates/cineo-desktop/src/player/tracks.rs:251
+msgid "Delay"
+msgstr "Atraso"
+
+#: crates/cineo-desktop/src/player/tracks.rs:255
+msgid "This video only."
+msgstr "Somente este vídeo."
+
+#: crates/cineo-desktop/src/player/tracks.rs:262
+#: crates/cineo-desktop/src/player/tracks.rs:267
+#, rust-format
+msgid "Subtitles {amount} earlier"
+msgstr "Legendas {amount} antes"
+
+#: crates/cineo-desktop/src/player/tracks.rs:273
+#: crates/cineo-desktop/src/player/tracks.rs:275
+#, rust-format
+msgid "Subtitles {amount} later"
+msgstr "Legendas {amount} depois"
+
+#: crates/cineo-desktop/src/player/tracks.rs:291
+#, rust-format
+msgid "Subtitle delay {delay}, reset"
+msgstr "Atraso das legendas {delay}, redefinir"
+
+#: crates/cineo-desktop/src/player/tracks.rs:332
+#, rust-format
+msgid "Track {number}"
+msgstr "Faixa {number}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:55
+msgid "Interface"
+msgstr "Interface"
+
+#: crates/cineo-desktop/src/settings/mod.rs:56
+msgid "Player"
+msgstr "Player"
+
+#: crates/cineo-desktop/src/settings/mod.rs:57
+msgid "Languages"
+msgstr "Idiomas"
+
+#: crates/cineo-desktop/src/settings/mod.rs:60
+msgid "Torrents"
+msgstr "Torrents"
+
+#: crates/cineo-desktop/src/settings/mod.rs:61
+msgid "Data"
+msgstr "Dados"
+
+#: crates/cineo-desktop/src/settings/mod.rs:62
+msgid "Keyboard"
+msgstr "Teclado"
+
+#: crates/cineo-desktop/src/settings/mod.rs:63
+msgid "About"
+msgstr "Sobre"
+
+#: crates/cineo-desktop/src/settings/mod.rs:180
+msgid "Language"
+msgstr "Idioma"
+
+#: crates/cineo-desktop/src/settings/mod.rs:181
+msgid "The language of Cineo's menus and messages."
+msgstr "O idioma dos menus e mensagens do Cineo."
+
+#: crates/cineo-desktop/src/settings/mod.rs:190
+msgid "Interface size"
+msgstr "Tamanho da interface"
+
+#: crates/cineo-desktop/src/settings/mod.rs:191
+msgid "Makes text, posters and controls larger or smaller."
+msgstr "Aumenta ou diminui texto, pôsteres e controles."
+
+#: crates/cineo-desktop/src/settings/mod.rs:200
+msgid "Start page"
+msgstr "Página inicial"
+
+#: crates/cineo-desktop/src/settings/mod.rs:201
+msgid "Shown when Cineo opens."
+msgstr "Exibida quando o Cineo abre."
+
+#: crates/cineo-desktop/src/settings/mod.rs:209
+msgid "Open stremio:// and cineo:// links"
+msgstr "Abrir links stremio:// e cineo://"
+
+#: crates/cineo-desktop/src/settings/mod.rs:211
+msgid ""
+"Links to addons and pages open in Cineo. Stremio stops receiving stremio:// "
+"links."
+msgstr ""
+"Links para complementos e páginas abrem no Cineo. O Stremio deixa de receber "
+"links stremio://."
+
+#: crates/cineo-desktop/src/settings/mod.rs:216
+msgid "Use Cineo"
+msgstr "Usar o Cineo"
+
+#: crates/cineo-desktop/src/settings/mod.rs:220
+msgid "Done"
+msgstr "Pronto"
+
+#: crates/cineo-desktop/src/settings/mod.rs:221
+#, rust-format
+msgid "Failed: {detail}"
+msgstr "Falhou: {detail}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:233
+msgid "Hardware decoding"
+msgstr "Decodificação por hardware"
+
+#: crates/cineo-desktop/src/settings/mod.rs:235
+msgid ""
+"Lets the graphics card decode video, which saves power. Turn it off if "
+"videos show artifacts or a black picture."
+msgstr ""
+"Deixa a placa de vídeo decodificar o vídeo, o que economiza energia. "
+"Desative se os vídeos mostrarem artefatos ou uma imagem preta."
+
+#: crates/cineo-desktop/src/settings/mod.rs:243
+msgid "Seek step"
+msgstr "Salto"
+
+#: crates/cineo-desktop/src/settings/mod.rs:244
+msgid "How far ←/→ and the seek buttons jump."
+msgstr "Quanto ←/→ e os botões de salto avançam ou voltam."
+
+#: crates/cineo-desktop/src/settings/mod.rs:253
+msgid "Short seek step"
+msgstr "Salto curto"
+
+#: crates/cineo-desktop/src/settings/mod.rs:254
+msgid "How far Shift+←/→ jump."
+msgstr "Quanto Shift+←/→ avançam ou voltam."
+
+#: crates/cineo-desktop/src/settings/mod.rs:263
+msgid "Hide controls after"
+msgstr "Ocultar controles após"
+
+#: crates/cineo-desktop/src/settings/mod.rs:264
+msgid "Without mouse or key input while playing."
+msgstr "Sem uso do mouse ou do teclado durante a reprodução."
+
+#: crates/cineo-desktop/src/settings/mod.rs:273
+msgid "Esc leaves fullscreen first"
+msgstr "Esc sai primeiro da tela cheia"
+
+#: crates/cineo-desktop/src/settings/mod.rs:274
+msgid "When off, Esc leaves the player at once."
+msgstr "Desativado, Esc sai do player imediatamente."
+
+#: crates/cineo-desktop/src/settings/mod.rs:281
+msgid "Pause when minimized"
+msgstr "Pausar ao minimizar"
+
+#: crates/cineo-desktop/src/settings/mod.rs:289
+msgid "Remember volume"
+msgstr "Lembrar o volume"
+
+#: crates/cineo-desktop/src/settings/mod.rs:290
+msgid "Each video starts at the volume the last one ended with."
+msgstr "Cada vídeo começa no volume em que o anterior terminou."
+
+#: crates/cineo-desktop/src/settings/mod.rs:297
+msgid "Play the next episode automatically"
+msgstr "Reproduzir o próximo episódio automaticamente"
+
+#: crates/cineo-desktop/src/settings/mod.rs:299
+msgid ""
+"When an episode ends, the next one plays from the same addon, or its streams "
+"open."
+msgstr ""
+"Quando um episódio termina, o próximo é reproduzido pelo mesmo complemento, "
+"ou seus streams são abertos."
+
+#: crates/cineo-desktop/src/settings/mod.rs:307
+msgid "Next episode notice"
+msgstr "Aviso do próximo episódio"
+
+#: crates/cineo-desktop/src/settings/mod.rs:308
+msgid "How long before the end the next episode is offered."
+msgstr "Quanto tempo antes do fim o próximo episódio é oferecido."
+
+#: crates/cineo-desktop/src/settings/mod.rs:319
+msgid "Audio language"
+msgstr "Idioma do áudio"
+
+#: crates/cineo-desktop/src/settings/mod.rs:320
+msgid "The file's track in this language plays; otherwise its default track."
+msgstr "A faixa do arquivo neste idioma é reproduzida; senão, a faixa padrão."
+
+#: crates/cineo-desktop/src/settings/mod.rs:327
+msgid "Second audio language"
+msgstr "Segundo idioma do áudio"
+
+#: crates/cineo-desktop/src/settings/mod.rs:328
+msgid "Used when the file has no audio in the first."
+msgstr "Usado quando o arquivo não tem áudio no primeiro."
+
+#: crates/cineo-desktop/src/settings/mod.rs:335
+msgid "Subtitle language"
+msgstr "Idioma das legendas"
+
+#: crates/cineo-desktop/src/settings/mod.rs:337
+msgid ""
+"Turned on when a video starts: from the file if it has them, otherwise from "
+"a subtitles addon."
+msgstr ""
+"Ativadas quando um vídeo começa: do arquivo, se ele tiver, senão de um "
+"complemento de legendas."
+
+#: crates/cineo-desktop/src/settings/mod.rs:345
+msgid "Second subtitle language"
+msgstr "Segundo idioma das legendas"
+
+#: crates/cineo-desktop/src/settings/mod.rs:346
+msgid "Used when no subtitle is in the first."
+msgstr "Usado quando não há legenda no primeiro."
+
+#: crates/cineo-desktop/src/settings/mod.rs:356
+msgid "Audio output"
+msgstr "Saída de áudio"
+
+#: crates/cineo-desktop/src/settings/mod.rs:357
+msgid "Stereo mixes surround sound down to two speakers or headphones."
+msgstr ""
+"Estéreo reduz o som surround para duas caixas de som ou fones de ouvido."
+
+#: crates/cineo-desktop/src/settings/mod.rs:366
+msgid "Passthrough"
+msgstr "Passthrough"
+
+#: crates/cineo-desktop/src/settings/mod.rs:368
+msgid ""
+"Sends Dolby and DTS audio undecoded to a receiver over HDMI or S/PDIF. Leave "
+"off unless your receiver decodes them, or you may hear silence."
+msgstr ""
+"Envia áudio Dolby e DTS sem decodificar a um receiver por HDMI ou S/PDIF. "
+"Deixe desativado, a menos que seu receiver os decodifique, ou você pode não "
+"ouvir nada."
+
+#: crates/cineo-desktop/src/settings/mod.rs:379
+msgid "Count as watched at"
+msgstr "Contar como assistido em"
+
+#: crates/cineo-desktop/src/settings/mod.rs:380
+msgid "Watched videos start over and leave Continue Watching."
+msgstr "Vídeos assistidos recomeçam do início e saem de Continuar assistindo."
+
+#: crates/cineo-desktop/src/settings/mod.rs:388
+msgid "Clear watch history"
+msgstr "Limpar histórico"
+
+#: crates/cineo-desktop/src/settings/mod.rs:389
+msgid "Empties the Library and Continue Watching."
+msgstr "Esvazia a Biblioteca e Continuar assistindo."
+
+#: crates/cineo-desktop/src/settings/mod.rs:391
+msgid "Clear…"
+msgstr "Limpar…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:398
+msgid "Reset all settings"
+msgstr "Redefinir todas as configurações"
+
+#: crates/cineo-desktop/src/settings/mod.rs:399
+msgid "Every setting on this page goes back to its default."
+msgstr "Todas as configurações desta página voltam ao padrão."
+
+#: crates/cineo-desktop/src/settings/mod.rs:401
+msgid "Reset…"
+msgstr "Redefinir…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:410
+#: crates/cineo-desktop/src/view/sidebar.rs:52
+#, rust-format
+msgid "Cineo v{version}"
+msgstr "Cineo v{version}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:417
+msgid "Check for updates"
+msgstr "Verificar atualizações"
+
+#: crates/cineo-desktop/src/settings/mod.rs:418
+msgid "Asks GitHub once per start whether a newer version exists."
+msgstr ""
+"Pergunta ao GitHub uma vez a cada início se existe uma versão mais nova."
+
+#: crates/cineo-desktop/src/settings/mod.rs:432
+msgid "Cineo is free software under the MIT License."
+msgstr "O Cineo é software livre sob a Licença MIT."
+
+#: crates/cineo-desktop/src/settings/mod.rs:433
+msgid "Made with Rust, egui, mpv and librqbit."
+msgstr "Feito com Rust, egui, mpv e librqbit."
+
+#: crates/cineo-desktop/src/settings/mod.rs:452
+msgid "Show and play torrent streams"
+msgstr "Mostrar e reproduzir streams torrent"
+
+#: crates/cineo-desktop/src/settings/mod.rs:454
+#: crates/cineo-desktop/src/view/mod.rs:403
+msgid ""
+"Torrent streams come from other people's computers. While one plays, your IP "
+"address is visible to the peers and trackers it connects to, and Cineo "
+"uploads the parts it has already downloaded to those peers. Downloaded data "
+"is kept in a local cache. You can turn peer-to-peer streaming off in "
+"Settings."
+msgstr ""
+"Os streams torrent vêm dos computadores de outras pessoas. Enquanto um é "
+"reproduzido, seu endereço IP fica visível para os peers e trackers aos quais "
+"ele se conecta, e o Cineo envia a esses peers as partes que já baixou. Os "
+"dados baixados ficam em um cache local. Você pode desativar o streaming "
+"ponto a ponto nas Configurações."
+
+#: crates/cineo-desktop/src/settings/mod.rs:462
+msgid "Upload to other peers"
+msgstr "Enviar para outros peers"
+
+#: crates/cineo-desktop/src/settings/mod.rs:464
+msgid ""
+"When off, Cineo only downloads. Some peers then send less, so torrents can "
+"be slower. Your IP address is still visible to peers."
+msgstr ""
+"Desativado, o Cineo apenas baixa. Alguns peers então enviam menos, e os "
+"torrents podem ficar mais lentos. Seu endereço IP continua visível para os "
+"peers."
+
+#: crates/cineo-desktop/src/settings/mod.rs:472
+msgid "Torrent data"
+msgstr "Dados de torrent"
+
+#: crates/cineo-desktop/src/settings/mod.rs:474
+msgid ""
+"Cineo keeps only the part around the playback position, up to the size "
+"chosen, in memory or on disk. Seeking back past it downloads that part "
+"again. Nothing is kept as a cache: the data is deleted when playback stops. "
+"Applies from the next torrent you play."
+msgstr ""
+"O Cineo guarda apenas a parte em volta da posição de reprodução, até o "
+"tamanho escolhido, na memória ou no disco. Voltar além dela baixa essa parte "
+"de novo. Nada é guardado como cache: os dados são apagados quando a "
+"reprodução para. Vale a partir do próximo torrent que você reproduzir."
+
+#: crates/cineo-desktop/src/settings/mod.rs:484
+msgid "Download limit"
+msgstr "Limite de download"
+
+#: crates/cineo-desktop/src/settings/mod.rs:485
+#: crates/cineo-desktop/src/settings/mod.rs:495
+msgid "Applies from the next torrent you play."
+msgstr "Vale a partir do próximo torrent que você reproduzir."
+
+#: crates/cineo-desktop/src/settings/mod.rs:494
+msgid "Upload limit"
+msgstr "Limite de upload"
+
+#: crates/cineo-desktop/src/settings/mod.rs:504
+msgid "Peers per torrent"
+msgstr "Peers por torrent"
+
+#: crates/cineo-desktop/src/settings/mod.rs:505
+msgid "More peers can be faster but use more connections."
+msgstr "Mais peers podem ser mais rápidos, mas usam mais conexões."
+
+#: crates/cineo-desktop/src/settings/mod.rs:514
+msgid "Find peers through the DHT"
+msgstr "Encontrar peers pela DHT"
+
+#: crates/cineo-desktop/src/settings/mod.rs:515
+msgid "Finds peers without trackers. Off means fewer peers for many torrents."
+msgstr ""
+"Encontra peers sem trackers. Desativado significa menos peers para muitos "
+"torrents."
+
+#: crates/cineo-desktop/src/settings/mod.rs:521
+#: crates/cineo-desktop/src/settings/mod.rs:526
+msgid "Listening port"
+msgstr "Porta de escuta"
+
+#: crates/cineo-desktop/src/settings/mod.rs:523
+msgid ""
+"Peers can connect to Cineo on this port, over TCP and uTP. Forward it on "
+"your router for more peers. If it is taken, a random port is used. Applies "
+"from the next torrent you play."
+msgstr ""
+"Os peers podem se conectar ao Cineo por esta porta, via TCP e uTP. Encaminhe-"
+"a no seu roteador para ter mais peers. Se ela estiver ocupada, uma porta "
+"aleatória é usada. Vale a partir do próximo torrent que você reproduzir."
+
+#: crates/cineo-desktop/src/settings/mod.rs:534
+msgid "Allow local network addresses"
+msgstr "Permitir endereços da rede local"
+
+#: crates/cineo-desktop/src/settings/mod.rs:536
+msgid ""
+"Lets addons, images and torrent peers on 127.0.0.1 or your home network be "
+"reached, for self-hosted addons. Off is safer. Takes effect after restarting "
+"Cineo."
+msgstr ""
+"Permite acessar complementos, imagens e peers de torrent em 127.0.0.1 ou na "
+"sua rede doméstica, para complementos auto-hospedados. Desativado é mais "
+"seguro. Vale após reiniciar o Cineo."
+
+#: crates/cineo-desktop/src/settings/mod.rs:556
+#, rust-format
+msgid "System ({language})"
+msgstr "Sistema ({language})"
+
+#: crates/cineo-desktop/src/settings/mod.rs:563
+msgid "Automatic (surround)"
+msgstr "Automático (surround)"
+
+#: crates/cineo-desktop/src/settings/mod.rs:564
+msgid "Stereo"
+msgstr "Estéreo"
+
+#: crates/cineo-desktop/src/settings/mod.rs:570
+#: crates/cineo-desktop/src/settings/mod.rs:593
+msgid "No limit"
+msgstr "Sem limite"
+
+#: crates/cineo-desktop/src/settings/mod.rs:581
+#: crates/cineo-desktop/src/settings/mod.rs:582
+#: crates/cineo-desktop/src/settings/mod.rs:583
+#: crates/cineo-desktop/src/settings/mod.rs:584
+#, rust-format
+msgid "In memory, {size}"
+msgstr "Na memória, {size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:585
+#: crates/cineo-desktop/src/settings/mod.rs:586
+#: crates/cineo-desktop/src/settings/mod.rs:587
+#, rust-format
+msgid "On disk, {size}"
+msgstr "No disco, {size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:628
+msgctxt "next-notice-off"
+msgid "Off"
+msgstr "Desativado"
+
+#: crates/cineo-desktop/src/settings/mod.rs:654
+msgid "None"
+msgstr "Nenhum"
+
+#: crates/cineo-desktop/src/settings/mod.rs:708
+#, rust-format
+msgid "{a}  or  {b}"
+msgstr "{a}  ou  {b}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:711
+msgid "mouse back"
+msgstr "botão voltar do mouse"
+
+#: crates/cineo-desktop/src/settings/mod.rs:713
+msgctxt "shortcut-search"
+msgid "Search"
+msgstr "Buscar"
+
+#: crates/cineo-desktop/src/settings/mod.rs:714
+msgid "Switch page"
+msgstr "Trocar de página"
+
+#: crates/cineo-desktop/src/settings/mod.rs:715
+msgid "Leave a detail page"
+msgstr "Sair de uma página de detalhes"
+
+#: crates/cineo-desktop/src/settings/mod.rs:716
+msgid "Shift+wheel"
+msgstr "Shift+roda do mouse"
+
+#: crates/cineo-desktop/src/settings/mod.rs:716
+msgid "Scroll a row sideways"
+msgstr "Rolar uma fileira para o lado"
+
+#: crates/cineo-desktop/src/settings/mod.rs:717
+msgid "Space"
+msgstr "Espaço"
+
+#: crates/cineo-desktop/src/settings/mod.rs:717
+msgid "Play or pause"
+msgstr "Reproduzir ou pausar"
+
+#: crates/cineo-desktop/src/settings/mod.rs:718
+msgid "Seek by the seek step"
+msgstr "Saltar pelo salto"
+
+#: crates/cineo-desktop/src/settings/mod.rs:719
+msgid "Seek by the short seek step"
+msgstr "Saltar pelo salto curto"
+
+#: crates/cineo-desktop/src/settings/mod.rs:720
+msgid "Volume  ·  mute"
+msgstr "Volume  ·  silenciar"
+
+#: crates/cineo-desktop/src/settings/mod.rs:737
+msgid "Reset all settings?"
+msgstr "Redefinir todas as configurações?"
+
+#: crates/cineo-desktop/src/settings/mod.rs:738
+msgid ""
+"Every setting goes back to its default. Your addons and library are kept."
+msgstr ""
+"Todas as configurações voltam ao padrão. Seus complementos e sua biblioteca "
+"são mantidos."
+
+#: crates/cineo-desktop/src/settings/mod.rs:739
+msgid "Reset"
+msgstr "Redefinir"
+
+#: crates/cineo-desktop/src/settings/mod.rs:743
+msgid "Clear watch history?"
+msgstr "Limpar histórico?"
+
+#: crates/cineo-desktop/src/settings/mod.rs:744
+msgid "Every item and its progress leaves the Library. This cannot be undone."
+msgstr ""
+"Todos os itens e seu progresso saem da Biblioteca. Isso não pode ser "
+"desfeito."
+
+#: crates/cineo-desktop/src/settings/mod.rs:745
+msgctxt "clear"
+msgid "Clear"
+msgstr "Limpar"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:25
+#: crates/cineo-desktop/src/view/detail.rs:387
+msgid "Size"
+msgstr "Tamanho"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:34
+msgid "Font"
+msgstr "Fonte"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:44
+msgid "Bold"
+msgstr "Negrito"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:52
+msgid "Text color"
+msgstr "Cor do texto"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:63
+msgid "Text opacity"
+msgstr "Opacidade do texto"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:72
+msgid "Outline"
+msgstr "Contorno"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:73
+msgid "Not drawn when there is a background."
+msgstr "Não é desenhado quando há fundo."
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:82
+msgid "Background"
+msgstr "Fundo"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:93
+msgid "Raise from the bottom"
+msgstr "Elevar a partir da base"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:94
+msgid "Percent of the picture's height."
+msgstr "Porcentagem da altura da imagem."
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:102
+msgid "Keep the look of styled subtitles"
+msgstr "Manter a aparência das legendas estilizadas"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:104
+msgid ""
+"Styled (ASS) subtitles, common for anime, bring their own fonts, colors and "
+"positions. When off, the settings above replace them."
+msgstr ""
+"Legendas estilizadas (ASS), comuns em animes, trazem suas próprias fontes, "
+"cores e posições. Desativado, as configurações acima as substituem."
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:137
+msgid "Subtitles look like this."
+msgstr "As legendas ficam assim."
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:172
+msgid "PREVIEW"
+msgstr "PRÉVIA"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:180
+msgid "Sans-serif"
+msgstr "Sem serifa"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:181
+msgid "Serif"
+msgstr "Com serifa"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:182
+msgid "Monospace"
+msgstr "Monoespaçada"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:188
+msgid "White"
+msgstr "Branco"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:189
+msgid "Yellow"
+msgstr "Amarelo"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:190
+msgid "Cyan"
+msgstr "Ciano"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:191
+msgid "Green"
+msgstr "Verde"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:197
+msgid "Black"
+msgstr "Preto"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:198
+msgid "Gray"
+msgstr "Cinza"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:199
+msgid "No outline"
+msgstr "Sem contorno"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:205
+msgid "No background"
+msgstr "Sem fundo"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:206
+msgid "Black box"
+msgstr "Caixa preta"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:207
+msgid "Gray box"
+msgstr "Caixa cinza"
+
+#: crates/cineo-desktop/src/view/addons.rs:33
+#: crates/cineo-desktop/src/view/addons.rs:107
+#: crates/cineo-desktop/src/view/addons.rs:251
+#: crates/cineo-desktop/src/view/addons.rs:307
+msgid "Configure"
+msgstr "Configurar"
+
+#: crates/cineo-desktop/src/view/addons.rs:42
+#: crates/cineo-desktop/src/view/mod.rs:62
+msgid "Addons"
+msgstr "Complementos"
+
+#: crates/cineo-desktop/src/view/addons.rs:44
+msgid "When two addons return the same item, the one higher in the list wins."
+msgstr ""
+"Quando dois complementos retornam o mesmo item, vence o que estiver mais "
+"acima na lista."
+
+#: crates/cineo-desktop/src/view/addons.rs:47
+msgid "Install an addon"
+msgstr "Instalar um complemento"
+
+#: crates/cineo-desktop/src/view/addons.rs:64
+#: crates/cineo-desktop/src/view/addons.rs:250
+#: crates/cineo-desktop/src/view/addons.rs:309
+#: crates/cineo-desktop/src/view/mod.rs:389
+msgid "Install"
+msgstr "Instalar"
+
+#: crates/cineo-desktop/src/view/addons.rs:72
+msgid "Installing…"
+msgstr "Instalando…"
+
+#: crates/cineo-desktop/src/view/addons.rs:93
+msgctxt "addons-installed"
+msgid "Installed"
+msgstr "Instalados"
+
+#: crates/cineo-desktop/src/view/addons.rs:95
+#, rust-format
+msgid "Addons: {count}"
+msgstr "Complementos: {count}"
+
+#: crates/cineo-desktop/src/view/addons.rs:99
+msgid "Nothing installed yet."
+msgstr "Nada instalado ainda."
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:128
+msgid "Move up"
+msgstr "Mover para cima"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:119
+msgid "Move down"
+msgstr "Mover para baixo"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:288
+msgid "Remove"
+msgstr "Remover"
+
+#: crates/cineo-desktop/src/view/addons.rs:145
+msgid "Addon"
+msgstr "Complemento"
+
+#: crates/cineo-desktop/src/view/addons.rs:151
+msgid "Could not load"
+msgstr "Não foi possível carregar"
+
+#: crates/cineo-desktop/src/view/addons.rs:156
+#: crates/cineo-desktop/src/view/addons.rs:263
+msgid "Retry"
+msgstr "Tentar de novo"
+
+#: crates/cineo-desktop/src/view/addons.rs:196
+msgid "Adult content"
+msgstr "Conteúdo adulto"
+
+#: crates/cineo-desktop/src/view/addons.rs:199
+msgid "Peer-to-peer"
+msgstr "Ponto a ponto"
+
+#: crates/cineo-desktop/src/view/addons.rs:202
+msgid "Needs configuration"
+msgstr "Precisa de configuração"
+
+#: crates/cineo-desktop/src/view/addons.rs:214
+msgid "Discover addons"
+msgstr "Explorar complementos"
+
+#: crates/cineo-desktop/src/view/addons.rs:217
+msgid ""
+"Addons in these lists are made by third parties. Install only those you "
+"trust."
+msgstr ""
+"Os complementos destas listas são feitos por terceiros. Instale apenas "
+"aqueles em que você confia."
+
+#: crates/cineo-desktop/src/view/addons.rs:252
+#: crates/cineo-desktop/src/view/addons.rs:305
+msgctxt "addon-installed"
+msgid "Installed"
+msgstr "Instalado"
+
+#: crates/cineo-desktop/src/view/addons.rs:268
+msgid "This list is empty."
+msgstr "Esta lista está vazia."
+
+#: crates/cineo-desktop/src/view/cards.rs:26
+msgid "See all"
+msgstr "Ver tudo"
+
+#: crates/cineo-desktop/src/view/cards.rs:44
+msgid "Could not load:"
+msgstr "Não foi possível carregar:"
+
+#: crates/cineo-desktop/src/view/cards.rs:49
+msgid "Nothing in this catalog."
+msgstr "Nada neste catálogo."
+
+#: crates/cineo-desktop/src/view/cards.rs:128
+msgid "Scroll right"
+msgstr "Rolar para a direita"
+
+#: crates/cineo-desktop/src/view/cards.rs:130
+msgid "Scroll left"
+msgstr "Rolar para a esquerda"
+
+#: crates/cineo-desktop/src/view/cards.rs:229
+#: crates/cineo-desktop/src/view/detail.rs:164
+msgid "Remove from favourites"
+msgstr "Remover dos favoritos"
+
+#: crates/cineo-desktop/src/view/cards.rs:231
+#: crates/cineo-desktop/src/view/detail.rs:171
+msgid "Add to favourites"
+msgstr "Adicionar aos favoritos"
+
+#: crates/cineo-desktop/src/view/cards.rs:244
+msgid "Remove from continue watching"
+msgstr "Remover de Continuar assistindo"
+
+#: crates/cineo-desktop/src/view/cards.rs:248
+msgid "Remove from library"
+msgstr "Remover da biblioteca"
+
+#: crates/cineo-desktop/src/view/detail.rs:126
+msgid "Where to watch"
+msgstr "Onde assistir"
+
+#: crates/cineo-desktop/src/view/detail.rs:130
+msgid "No installed addon provides streams for this item."
+msgstr "Nenhum complemento instalado oferece streams para este item."
+
+#: crates/cineo-desktop/src/view/detail.rs:163
+msgid "Favourited"
+msgstr "Nos favoritos"
+
+#: crates/cineo-desktop/src/view/detail.rs:170
+msgid "Favourite"
+msgstr "Favorito"
+
+#: crates/cineo-desktop/src/view/detail.rs:217
+msgid "Directed by"
+msgstr "Direção de"
+
+#: crates/cineo-desktop/src/view/detail.rs:247
+msgid "Genres"
+msgstr "Gêneros"
+
+#: crates/cineo-desktop/src/view/detail.rs:254
+msgid "Cast"
+msgstr "Elenco"
+
+#: crates/cineo-desktop/src/view/detail.rs:281
+#, rust-format
+msgid "{rating} IMDb"
+msgstr "{rating} IMDb"
+
+#: crates/cineo-desktop/src/view/detail.rs:301
+msgid "Episodes"
+msgstr "Episódios"
+
+#: crates/cineo-desktop/src/view/detail.rs:384
+msgid "Addon order"
+msgstr "Ordem dos complementos"
+
+#: crates/cineo-desktop/src/view/detail.rs:385
+msgid "Quality"
+msgstr "Qualidade"
+
+#: crates/cineo-desktop/src/view/detail.rs:386
+msgid "Seeders"
+msgstr "Seeders"
+
+#: crates/cineo-desktop/src/view/detail.rs:405
+msgid "Search streams"
+msgstr "Buscar streams"
+
+#: crates/cineo-desktop/src/view/detail.rs:449
+msgid "All"
+msgstr "Todos"
+
+#: crates/cineo-desktop/src/view/detail.rs:475
+msgid "Sort by"
+msgstr "Ordenar por"
+
+#: crates/cineo-desktop/src/view/detail.rs:524
+msgid "No streams"
+msgstr "Nenhum stream"
+
+#: crates/cineo-desktop/src/view/detail.rs:558
+msgid "No matching streams"
+msgstr "Nenhum stream correspondente"
+
+#: crates/cineo-desktop/src/view/detail.rs:562
+#, rust-format
+msgid "Torrent streams hidden: {count} (peer-to-peer is off in Settings)"
+msgstr ""
+"Streams torrent ocultos: {count} (o ponto a ponto está desativado nas "
+"Configurações)"
+
+#: crates/cineo-desktop/src/view/detail.rs:754
+msgid "Specials"
+msgstr "Especiais"
+
+#: crates/cineo-desktop/src/view/detail.rs:762
+msgid "HTTP"
+msgstr "HTTP"
+
+#: crates/cineo-desktop/src/view/detail.rs:763
+msgid "URL"
+msgstr "URL"
+
+#: crates/cineo-desktop/src/view/detail.rs:764
+msgid "YouTube"
+msgstr "YouTube"
+
+#: crates/cineo-desktop/src/view/detail.rs:765
+msgid "Torrent"
+msgstr "Torrent"
+
+#: crates/cineo-desktop/src/view/detail.rs:766
+msgid "External"
+msgstr "Externo"
+
+#: crates/cineo-desktop/src/view/detail.rs:767
+msgid "Archive"
+msgstr "Arquivo"
+
+#: crates/cineo-desktop/src/view/detail.rs:768
+msgid "Usenet"
+msgstr "Usenet"
+
+#: crates/cineo-desktop/src/view/mod.rs:58
+#: crates/cineo-desktop/src/view/pages.rs:33
+msgid "Home"
+msgstr "Início"
+
+#: crates/cineo-desktop/src/view/mod.rs:59
+#: crates/cineo-desktop/src/view/pages.rs:50
+msgid "Discover"
+msgstr "Explorar"
+
+#: crates/cineo-desktop/src/view/mod.rs:60
+#: crates/cineo-desktop/src/view/pages.rs:134
+msgctxt "page-search"
+msgid "Search"
+msgstr "Busca"
+
+#: crates/cineo-desktop/src/view/mod.rs:381
+msgid "Install this addon?"
+msgstr "Instalar este complemento?"
+
+#: crates/cineo-desktop/src/view/mod.rs:382
+msgid "A link asks to install the addon below. Only install addons you trust."
+msgstr ""
+"Um link pede para instalar o complemento abaixo. Instale apenas complementos "
+"em que você confia."
+
+#: crates/cineo-desktop/src/view/mod.rs:401
+msgid "Peer-to-peer streaming"
+msgstr "Streaming ponto a ponto"
+
+#: crates/cineo-desktop/src/view/mod.rs:412
+msgid "Accept and play"
+msgstr "Aceitar e reproduzir"
+
+#: crates/cineo-desktop/src/view/mod.rs:424
+msgid "This addon is already installed"
+msgstr "Este complemento já está instalado"
+
+#: crates/cineo-desktop/src/view/mod.rs:426
+msgid ""
+"This addon must be configured before it can be installed. Configure it, then "
+"install the link it gives you."
+msgstr ""
+"Este complemento precisa ser configurado antes de ser instalado. Configure-o "
+"e depois instale o link que ele fornecer."
+
+#: crates/cineo-desktop/src/view/mod.rs:429
+#, rust-format
+msgid "Invalid addon URL: {detail}"
+msgstr "URL de complemento inválida: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:431
+msgid "No installed addon provides details for this item"
+msgstr "Nenhum complemento instalado oferece detalhes para este item"
+
+#: crates/cineo-desktop/src/view/mod.rs:432
+msgid "This catalog does not support that filter"
+msgstr "Este catálogo não aceita esse filtro"
+
+#: crates/cineo-desktop/src/view/mod.rs:441
+#, rust-format
+msgid "An addon could not be loaded: {detail}"
+msgstr "Não foi possível carregar um complemento: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:447
+#, rust-format
+msgid "Unsupported stream scheme `{scheme}`"
+msgstr "Esquema de stream não suportado `{scheme}`"
+
+#: crates/cineo-desktop/src/view/mod.rs:451
+msgid "Torrent streams are turned off in Settings"
+msgstr "Os streams torrent estão desativados nas Configurações"
+
+#: crates/cineo-desktop/src/view/mod.rs:454
+#, rust-format
+msgid "{kind} streams are not supported yet"
+msgstr "Streams {kind} ainda não são suportados"
+
+#: crates/cineo-desktop/src/view/mod.rs:466
+#, rust-format
+msgid "The torrent could not be played: {detail}"
+msgstr "Não foi possível reproduzir o torrent: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:473
+#, rust-format
+msgid "The last stream could not be played, pick another one. {reason}"
+msgstr "Não foi possível reproduzir o último stream, escolha outro. {reason}"
+
+#: crates/cineo-desktop/src/view/mod.rs:480
+msgid "The torrent engine returned an unexpected address"
+msgstr "O mecanismo de torrent retornou um endereço inesperado"
+
+#: crates/cineo-desktop/src/view/mod.rs:482
+#, rust-format
+msgid "Could not load the subtitle: {detail}"
+msgstr "Não foi possível carregar a legenda: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:486
+#, rust-format
+msgid "Could not save changes: {detail}"
+msgstr "Não foi possível salvar as alterações: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:488
+msgid "Changes can no longer be saved"
+msgstr "As alterações não podem mais ser salvas"
+
+#: crates/cineo-desktop/src/view/mod.rs:489
+msgid "That link cannot be opened by Cineo"
+msgstr "Esse link não pode ser aberto pelo Cineo"
+
+#: crates/cineo-desktop/src/view/pages.rs:24
+msgid "Continue watching"
+msgstr "Continuar assistindo"
+
+#: crates/cineo-desktop/src/view/pages.rs:36
+msgid ""
+"No addons installed. Catalogs show up here once you add one by its manifest "
+"URL."
+msgstr ""
+"Nenhum complemento instalado. Os catálogos aparecem aqui assim que você "
+"adicionar um pela URL do manifesto."
+
+#: crates/cineo-desktop/src/view/pages.rs:38
+msgid "Open Addons"
+msgstr "Abrir complementos"
+
+#: crates/cineo-desktop/src/view/pages.rs:52
+msgid "No installed addon has a browsable catalog."
+msgstr "Nenhum complemento instalado tem um catálogo para explorar."
+
+#: crates/cineo-desktop/src/view/pages.rs:76
+msgid "All genres"
+msgstr "Todos os gêneros"
+
+#: crates/cineo-desktop/src/view/pages.rs:139
+msgid "Search movies and series"
+msgstr "Buscar filmes e séries"
+
+#: crates/cineo-desktop/src/view/pages.rs:194
+msgid "Results come from every installed addon that supports search."
+msgstr ""
+"Os resultados vêm de todos os complementos instalados que oferecem busca."
+
+#: crates/cineo-desktop/src/view/pages.rs:199
+msgid "No installed addon supports search."
+msgstr "Nenhum complemento instalado oferece busca."
+
+#: crates/cineo-desktop/src/view/pages.rs:214
+msgid "Favourites"
+msgstr "Favoritos"
+
+#: crates/cineo-desktop/src/view/pages.rs:220
+msgid "Recently played"
+msgstr "Reproduzidos recentemente"
+
+#: crates/cineo-desktop/src/view/pages.rs:226
+msgid "Anything you play shows up here."
+msgstr "Tudo o que você reproduzir aparece aqui."
+
+#: crates/cineo-desktop/src/view/pages.rs:252
+msgid "Movies"
+msgstr "Filmes"
+
+#: crates/cineo-desktop/src/view/pages.rs:253
+msgid "Series"
+msgstr "Séries"
+
+#: crates/cineo-desktop/src/view/pages.rs:254
+msgid "Channels"
+msgstr "Canais"
+
+#: crates/cineo-desktop/src/view/pages.rs:255
+msgid "TV"
+msgstr "TV"
+
+#: crates/cineo-desktop/src/view/pages.rs:258
+#, rust-format
+msgid "{name} {kind}"
+msgstr "{name} {kind}"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:65
+msgid "Loading addons…"
+msgstr "Carregando complementos…"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:74
+#, rust-format
+msgid "v{version} available"
+msgstr "v{version} disponível"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:93
+msgid "Open the release page to download it."
+msgstr "Abra a página da versão para baixá-la."
+
+#: crates/cineo-desktop/src/view/widgets.rs:44
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: crates/cineo-desktop/src/view/widgets.rs:123
+msgctxt "clear-field"
+msgid "Clear"
+msgstr "Limpar"

@@ -4,7 +4,7 @@ extend-exclude = [
     "android/gradle/**",
     "android/gradlew*",
     "fastlane/**",
-    "crates/cineo-desktop/assets/locales/**",
+    "crates/cineo-desktop/assets/i18n/**",
     "android/app/src/main/res/values-*/**",
 ]
 

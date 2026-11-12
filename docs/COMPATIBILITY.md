@@ -344,7 +344,8 @@ The full evidence for the rows above whose notes do not fit in the table.
 - English, Spanish (Spain), Spanish (Latin America, `es-419`), Russian,
   Italian, German, French, Brazilian Portuguese (`pt-BR`) and Simplified
   Chinese (`zh-CN`).
-- The default follows the OS locale (`sys-locale`): Spanish with no region
+- The default follows the first of the OS's preferred languages that Cineo
+  has (`fastframe-i18n`, ADR-0034): Spanish with no region
   or `ES` picks Spain, any other region Latin America; any Portuguese
   locale, `pt-PT` included, picks Brazilian Portuguese; any Chinese locale,
   `zh-TW` included, picks Simplified Chinese; anything else falls back to
@@ -355,9 +356,9 @@ The full evidence for the rows above whose notes do not fit in the table.
   (`the_interface_follows_the_language_setting_and_the_system`,
   `the_interface_language_is_picked_in_settings`,
   `spanish_notices_wrap_the_technical_detail`,
-  `every_locale_has_the_same_messages_and_arguments`,
-  `every_message_the_code_asks_for_exists`,
-  `messages_follow_the_locale_and_fall_back_to_the_id`,
+  `every_catalog_translates_exactly_the_messages_the_code_asks_for`,
+  `messages_follow_the_locale_and_fall_back_to_english`,
+  `arguments_fill_their_placeholders_once`,
   `the_system_tag_picks_a_locale`,
   `every_locale_has_glyphs_in_the_text_fonts`).
 - Chinese text is drawn with a CJK font installed on the system (ADR-0033);

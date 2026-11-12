@@ -196,7 +196,7 @@ Format:
 
 ### Desktop UI: no right-to-left UI languages, and Chinese needs an installed font
 - Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
-  [assets/locales](../crates/cineo-desktop/assets/locales)
+  [assets/i18n](../crates/cineo-desktop/assets/i18n)
 - Gap: the UI is offered in English, Spanish (Spain and Latin America),
   Russian, Italian, German, French, Brazilian Portuguese and Simplified
   Chinese only. Portugal gets Brazilian Portuguese, and Traditional Chinese
@@ -206,13 +206,13 @@ Format:
   and the name of the language in the picker, draw as boxes.
   Right-to-left languages cannot be added.
   Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
-  Counted messages are worded as "label: number" because the catalogs
-  have no plural rules (ADR-0021).
+  Counted messages are worded as "label: number" (ADR-0021), although the
+  gettext catalogs could now hold plural forms (ADR-0034).
   Technical details from IO layers stay in English inside a translated
   sentence.
 - Why: egui does not shape right-to-left text, the bundled fonts cover
-  Latin and Cyrillic only (a CJK font would add megabytes), and `rust-i18n` has neither plural rules nor
-  per-locale number formatting.
+  Latin and Cyrillic only (a CJK font would add megabytes), and nothing formats
+  numbers per locale.
 - Instead: other system locales fall back to English.
 - Exit: wait for bidi support in egui, and
   give IO errors typed kinds that the UI can word.
@@ -367,7 +367,7 @@ Format:
 - Where: [res](../android/app/src/main/res) (`values-*/strings.xml`)
 - Gap: the Android UI has the desktop's nine languages, but no Language
   setting: Android picks the strings from the system language. Its texts
-  are a copy of the desktop's translations (`crates/cineo-desktop/assets/locales/`)
+  are a copy of the desktop's translations (`crates/cineo-desktop/assets/i18n/`)
   plus 24 strings and 2 plurals of its own, translated on 2026-11-05 and
   not reviewed by a native speaker; nothing keeps the two copies in step.
 - Why: the desktop's catalogs are compiled into the Rust UI; Android needs

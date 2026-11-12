@@ -34,22 +34,27 @@ pub(super) fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec
             *downloaded as f64,
             *size as f64,
         );
-        rows.push((t!("stats-download"), format!("{}/s", bytes(rate))));
-        rows.push((t!("stats-peers"), peers.to_string()));
+        rows.push((t!("Download"), format!("{}/s", bytes(rate))));
+        rows.push((t!("Peers"), peers.to_string()));
         rows.push((
-            t!("stats-downloaded"),
-            t!("stats-of", done = bytes(done), total = bytes(total)).into_owned(),
+            t!("Downloaded"),
+            t!(
+                "{done} of {total}",
+                done = bytes(done),
+                total = bytes(total)
+            )
+            .into_owned(),
         ));
     }
     let stats = &status.stats;
     if let Some(speed) = stats.cache_speed {
-        rows.push((t!("stats-network"), format!("{}/s", bytes(speed))));
+        rows.push((t!("Network"), format!("{}/s", bytes(speed))));
     }
     if let Some(seconds) = stats.cache_s {
-        rows.push((t!("stats-buffered"), format!("{seconds:.0} s")));
+        rows.push((t!("Buffered"), format!("{seconds:.0} s")));
     }
     if let (Some(width), Some(height)) = (stats.width, stats.height) {
-        rows.push((t!("stats-resolution"), format!("{width:.0}×{height:.0}")));
+        rows.push((t!("Resolution"), format!("{width:.0}×{height:.0}")));
     }
     let codec = status.video_codec();
     let bitrate = stats
@@ -58,18 +63,18 @@ pub(super) fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec
         .map(|b| format!("{:.1} Mb/s", b / 1_000_000.0));
     let video: Vec<String> = codec.into_iter().chain(bitrate).collect();
     if !video.is_empty() {
-        rows.push((t!("stats-video"), video.join(" · ")));
+        rows.push((t!("Video"), video.join(" · ")));
     }
     if let Some(hwdec) = &stats.hwdec {
         let decoder = if hwdec == "no" {
-            t!("stats-software").into_owned()
+            t!("Software").into_owned()
         } else {
             plain_text(hwdec)
         };
-        rows.push((t!("stats-decoder"), decoder));
+        rows.push((t!("Decoder"), decoder));
     }
     if let Some(dropped) = stats.dropped_frames {
-        rows.push((t!("stats-dropped"), format!("{dropped:.0}")));
+        rows.push((t!("Dropped frames"), format!("{dropped:.0}")));
     }
     rows
 }
@@ -182,11 +187,11 @@ mod tests {
             [
                 "2.0 MB/s",
                 "12",
-                &t!("stats-of", done = "512.0 MB", total = "1.0 GB"),
+                &t!("{done} of {total}", done = "512.0 MB", total = "1.0 GB"),
                 "1.0 MB/s",
                 "1920×1080",
                 "hevc · 5.2 Mb/s",
-                &t!("stats-software"),
+                &t!("Software"),
             ]
         );
         assert!(stat_rows(&Status::default(), Some(&TorrentStatus::Starting)).is_empty());

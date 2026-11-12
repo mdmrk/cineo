@@ -65,7 +65,7 @@ pub(super) fn detail_page(
         );
     }
     let back = Rect::from_min_size(backdrop.min + Vec2::splat(14.0), vec2(76.0, 30.0));
-    if icon_button(ui, back, Icon::ArrowLeft, &t!("back")).clicked() {
+    if icon_button(ui, back, Icon::ArrowLeft, &t!("Back")).clicked() {
         out.push(Action::CloseDetail);
         view.leave_detail();
     }
@@ -123,9 +123,12 @@ pub(super) fn detail_page(
                 }
                 if detail.selected_video.is_some() {
                     ui.add_space(theme::SECTION_GAP);
-                    section(ui, &t!("where-to-watch"), |_| {});
+                    section(ui, &t!("Where to watch"), |_| {});
                     if detail.streams.is_empty() {
-                        empty(ui, &t!("streams-unavailable"));
+                        empty(
+                            ui,
+                            &t!("No installed addon provides streams for this item."),
+                        );
                     }
                     stream_filters(
                         ui,
@@ -157,15 +160,15 @@ fn favorite_button(ui: &mut Ui, favorite: bool) -> bool {
     let (icon, text, label, ink) = if favorite {
         (
             Icon::Heart,
-            t!("favourited"),
-            t!("favourite-remove"),
+            t!("Favourited"),
+            t!("Remove from favourites"),
             theme::ACCENT,
         )
     } else {
         (
             Icon::Named("heart"),
-            t!("favourite"),
-            t!("favourite-add"),
+            t!("Favourite"),
+            t!("Add to favourites"),
             theme::TEXT_BRIGHT,
         )
     };
@@ -211,7 +214,7 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
     {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing.x = 5.0;
-            ui.label(dim(&t!("directed-by")));
+            ui.label(dim(&t!("Directed by")));
             ui.label(
                 RichText::new(m.director.join(", "))
                     .font(theme::strong())
@@ -241,14 +244,14 @@ fn about(ui: &mut Ui, name: &str, preview: Option<&MetaPreview>, meta: Option<&M
         && !p.genres.is_empty()
     {
         ui.add_space(theme::SECTION_GAP);
-        section(ui, &t!("genres"), |_| {});
+        section(ui, &t!("Genres"), |_| {});
         tags(ui, &p.genres);
     }
     if let Some(m) = meta
         && !m.cast.is_empty()
     {
         ui.add_space(theme::SECTION_GAP);
-        section(ui, &t!("cast"), |_| {});
+        section(ui, &t!("Cast"), |_| {});
         tags(ui, &m.cast);
     }
 }
@@ -275,7 +278,7 @@ fn facts(preview: Option<&MetaPreview>, meta: Option<&Meta>) -> Option<LayoutJob
         }
         append_icon(&mut job, Icon::Star, 14.0, theme::ACCENT);
         job.append(
-            &format!(" {}", t!("rating-imdb", rating = rating)),
+            &format!(" {}", t!("{rating} IMDb", rating = rating)),
             0.0,
             format,
         );
@@ -295,7 +298,7 @@ fn episodes(
         .season
         .filter(|s| seasons.contains(s))
         .or_else(|| seasons.first().copied());
-    section(ui, &t!("episodes"), |_| {});
+    section(ui, &t!("Episodes"), |_| {});
     if seasons.len() > 1 {
         ui.horizontal_wrapped(|ui| {
             ui.spacing_mut().item_spacing = Vec2::splat(6.0);
@@ -378,10 +381,10 @@ fn list_row(ui: &mut Ui, number: Option<&str>, text: &str, selected: bool) -> Re
 
 fn sort_label(sort: StreamSort) -> Text {
     match sort {
-        StreamSort::AddonOrder => t!("sort-addon-order"),
-        StreamSort::Quality => t!("sort-quality"),
-        StreamSort::Seeders => t!("sort-seeders"),
-        StreamSort::Size => t!("sort-size"),
+        StreamSort::AddonOrder => t!("Addon order"),
+        StreamSort::Quality => t!("Quality"),
+        StreamSort::Seeders => t!("Seeders"),
+        StreamSort::Size => t!("Size"),
     }
 }
 
@@ -399,7 +402,7 @@ fn stream_filters(
     let field = ui.add(
         TextEdit::singleline(&mut filter.query)
             .id_salt("stream-search")
-            .hint_text(t!("streams-search"))
+            .hint_text(t!("Search streams"))
             .margin(Margin {
                 left: 30,
                 right: 30,
@@ -443,7 +446,7 @@ fn stream_filters(
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
         if chip(
             ui,
-            &t!("streams-all"),
+            &t!("All"),
             filter.quality.is_none() && filter.addon.is_none(),
         )
         .clicked()
@@ -469,7 +472,7 @@ fn stream_filters(
     ui.add_space(6.0);
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = Vec2::splat(6.0);
-        ui.label(faint(&t!("sort-by")));
+        ui.label(faint(&t!("Sort by")));
         for sort in StreamSort::ALL {
             if chip(ui, &sort_label(sort), filter.sort == sort).clicked() {
                 filter.sort = sort;
@@ -507,7 +510,7 @@ fn stream_group(
         if let Loadable::Ready(streams) = &group.streams
             && !streams.is_empty()
         {
-            ui.label(faint(&t!("count-streams", count = streams.len())));
+            ui.label(faint(&t!("Streams: {count}", count = streams.len())));
         }
     });
     match &group.streams {
@@ -518,7 +521,7 @@ fn stream_group(
             ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
         }
         Loadable::Ready(streams) if streams.is_empty() => {
-            ui.label(faint(&t!("streams-empty")));
+            ui.label(faint(&t!("No streams")));
         }
         Loadable::Ready(streams) => {
             ui.spacing_mut().item_spacing.y = 4.0;
@@ -552,10 +555,13 @@ fn stream_group(
                 }
             }
             if shown == 0 && filter.is_active() {
-                ui.label(faint(&t!("streams-no-match")));
+                ui.label(faint(&t!("No matching streams")));
             }
             if hidden > 0 {
-                ui.label(faint(&t!("streams-hidden", count = hidden)));
+                ui.label(faint(&t!(
+                    "Torrent streams hidden: {count} (peer-to-peer is off in Settings)",
+                    count = hidden
+                )));
             }
         }
     }
@@ -674,7 +680,7 @@ fn play_button(ui: &mut Ui, playable: bool) -> Response {
     ui.add_enabled_ui(playable, |ui| {
         let (rect, response) = ui.allocate_exact_size(Vec2::splat(32.0), Sense::click());
         response
-            .widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), t!("play")));
+            .widget_info(|| WidgetInfo::labeled(WidgetType::Button, ui.is_enabled(), t!("Play")));
         if ui.is_rect_visible(rect) {
             let hover = ui.ctx().animate_bool_with_time(
                 response.id,
@@ -745,20 +751,20 @@ pub(super) fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32, stroke: 
 
 fn season_label(season: u32) -> Text {
     if season == 0 {
-        t!("specials")
+        t!("Specials")
     } else {
-        t!("season", number = season)
+        t!("Season {number}", number = season)
     }
 }
 
 pub(super) fn source_name(kind: SourceKind) -> Text {
     match kind {
-        SourceKind::Http => t!("source-http"),
-        SourceKind::OtherUrl => t!("source-url"),
-        SourceKind::YouTube => t!("source-youtube"),
-        SourceKind::Torrent => t!("source-torrent"),
-        SourceKind::External => t!("source-external"),
-        SourceKind::Archive => t!("source-archive"),
-        SourceKind::Usenet => t!("source-usenet"),
+        SourceKind::Http => t!("HTTP"),
+        SourceKind::OtherUrl => t!("URL"),
+        SourceKind::YouTube => t!("YouTube"),
+        SourceKind::Torrent => t!("Torrent"),
+        SourceKind::External => t!("External"),
+        SourceKind::Archive => t!("Archive"),
+        SourceKind::Usenet => t!("Usenet"),
     }
 }

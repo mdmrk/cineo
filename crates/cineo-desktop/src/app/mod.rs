@@ -521,20 +521,24 @@ fn graphics_dialog(trouble: &fastframe_graphics::Trouble<'_>) -> fastframe_graph
     use fastframe_graphics::{Cause, Dialog};
     let details = trouble.details;
     let body = if trouble.cause == Cause::WindowsOnArm {
-        t!("graphics-arm", details = details).into_owned()
+        t!("On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's OpenCL, OpenGL & Vulkan Compatibility Pack. Install or repair it from the Microsoft Store, then open Cineo again.\n\nDetails: {details}\n\nOpen its Microsoft Store page?", details = details).into_owned()
     } else {
         let remedy = if cfg!(windows) {
-            t!("graphics-remedy-windows")
+            t!(
+                "Install your graphics card's driver, from its maker or from Windows Update, then open Cineo again. Remote Desktop and virtual machines need 3D acceleration turned on."
+            )
         } else {
-            t!("graphics-remedy-linux")
+            t!(
+                "Install your graphics card's driver or Mesa, then open Cineo again. Remote sessions and virtual machines need 3D acceleration turned on."
+            )
         };
-        t!("graphics-driver", remedy = remedy, details = details).into_owned()
+        t!("Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and this computer only has basic graphics.\n\n{remedy}\n\nDetails: {details}", remedy = remedy, details = details).into_owned()
     };
     Dialog {
-        title: t!("graphics-title").into_owned(),
+        title: t!("Cineo cannot open its window").into_owned(),
         body,
-        open_label: t!("graphics-open-store").into_owned(),
-        close_label: t!("graphics-close").into_owned(),
+        open_label: t!("Open Microsoft Store").into_owned(),
+        close_label: t!("Close").into_owned(),
         ..Dialog::english(trouble)
     }
 }

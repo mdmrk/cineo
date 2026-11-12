@@ -49,7 +49,7 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                 if let Some(latest) = state.available_update() {
                     update_link(ui, latest, compact);
                 }
-                let version = faint(&t!("app-version", version = env!("CARGO_PKG_VERSION")));
+                let version = faint(&t!("Cineo v{version}", version = env!("CARGO_PKG_VERSION")));
                 ui.horizontal(|ui| {
                     ui.add_space(9.0);
                     ui.add_visible(!compact, egui::Label::new(version).truncate());
@@ -62,7 +62,7 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                         ui.add_space(8.0);
                         spinner(ui);
                         if !compact {
-                            ui.label(faint(&t!("loading-addons")));
+                            ui.label(faint(&t!("Loading addons…")));
                         }
                     });
                 }
@@ -71,7 +71,7 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
 }
 
 fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
-    let text = t!("update-available", version = latest.to_string());
+    let text = t!("v{version} available", version = latest.to_string());
     let mut job = LayoutJob::default();
     append_icon(
         &mut job,
@@ -90,7 +90,7 @@ fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
         ui.add_space(9.0);
         let link = ui
             .add(egui::Link::new(job))
-            .on_hover_text(t!("update-available-help"));
+            .on_hover_text(t!("Open the release page to download it."));
         link.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &text));
         if link.clicked() {
             ui.ctx()

@@ -6,7 +6,7 @@ use super::widgets::{
     chip, clear_button, empty, faint, loading_screen, page_title, paint_spinner, primary, section,
 };
 use super::{Page, SEARCH_DEBOUNCE, ViewState, go, open_detail, problem_text};
-use crate::i18n::{Text, t};
+use crate::i18n::{Text, pt, t};
 use crate::theme;
 use cineo_core::addon::ContentType;
 use cineo_core::app::{
@@ -21,7 +21,7 @@ use std::time::Duration;
 pub(super) fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let resume = continue_watching(&state.library, state.settings.watched_at);
     if !resume.is_empty() {
-        section(ui, &t!("continue-watching"), |_| {});
+        section(ui, &t!("Continue watching"), |_| {});
         poster_strip(ui, "continue", |ui| {
             for item in resume {
                 library_card(ui, theme::CARD_WIDTH, item, Shelf::ContinueWatching, out);
@@ -30,9 +30,12 @@ pub(super) fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: 
         ui.add_space(theme::SECTION_GAP);
     }
     if state.installed.is_empty() {
-        page_title(ui, &t!("page-home"), None);
-        empty(ui, &t!("home-empty"));
-        if primary(ui, true, &t!("open-addons")).clicked() {
+        page_title(ui, &t!("Home"), None);
+        empty(
+            ui,
+            &t!("No addons installed. Catalogs show up here once you add one by its manifest URL."),
+        );
+        if primary(ui, true, &t!("Open Addons")).clicked() {
             go(Page::Addons, state, view, out);
         }
     }
@@ -44,9 +47,9 @@ pub(super) fn board_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: 
 pub(super) fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     let targets = board_targets(&state.addons);
     let discover = &state.discover;
-    page_title(ui, &t!("page-discover"), None);
+    page_title(ui, &t!("Discover"), None);
     if targets.is_empty() {
-        empty(ui, &t!("discover-empty"));
+        empty(ui, &t!("No installed addon has a browsable catalog."));
         return;
     }
     let several_addons = targets.iter().any(|t| t.addon != targets[0].addon);
@@ -70,7 +73,7 @@ pub(super) fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
     if let Some((options, required)) = genre_options(state) {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
-            let all = t!("all-genres");
+            let all = t!("All genres");
             let current = discover.genre.as_deref().unwrap_or(&all);
             ComboBox::from_id_salt("genre")
                 .icon(|ui, rect, visuals, _open| {
@@ -128,12 +131,12 @@ pub(super) fn discover_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
 }
 
 pub(super) fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
-    page_title(ui, &t!("page-search"), None);
+    page_title(ui, &pt!("page-search", "Search"), None);
     let width = ui.available_width().min(640.0);
     let field = ui.add(
         TextEdit::singleline(&mut view.search_input)
             .id_salt("search")
-            .hint_text(t!("search-hint"))
+            .hint_text(t!("Search movies and series"))
             .font(FontId::new(15.0, egui::FontFamily::Proportional))
             .margin(Margin {
                 left: 34,
@@ -186,11 +189,14 @@ pub(super) fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out:
     }
     ui.add_space(theme::SECTION_GAP);
     if state.search_query.is_empty() {
-        empty(ui, &t!("search-help"));
+        empty(
+            ui,
+            &t!("Results come from every installed addon that supports search."),
+        );
         return;
     }
     if state.search.is_empty() {
-        empty(ui, &t!("search-unsupported"));
+        empty(ui, &t!("No installed addon supports search."));
     }
     for (index, row) in state.search.iter().enumerate() {
         catalog_row(ui, ("search", index), row, None, out);
@@ -198,26 +204,26 @@ pub(super) fn search_page(ui: &mut Ui, state: &State, view: &mut ViewState, out:
 }
 
 pub(super) fn library_page(ui: &mut Ui, state: &State, out: &mut Vec<Action>) {
-    page_title(ui, &t!("page-library"), None);
+    page_title(ui, &t!("Library"), None);
     let mut favorites: Vec<&LibraryItem> =
         state.library.iter().filter(|i| i.is_favorite()).collect();
     favorites.sort_by_key(|i| std::cmp::Reverse(i.favorited));
     let mut rest: Vec<&LibraryItem> = state.library.iter().filter(|i| i.was_played()).collect();
     rest.sort_by_key(|i| std::cmp::Reverse(i.updated_ms));
     if !favorites.is_empty() {
-        section(ui, &t!("favourites"), |ui| {
-            ui.label(faint(&t!("count-titles", count = favorites.len())));
+        section(ui, &t!("Favourites"), |ui| {
+            ui.label(faint(&t!("Titles: {count}", count = favorites.len())));
         });
         library_grid(ui, "favorites", Shelf::Favorites, &favorites, out);
         ui.add_space(theme::SECTION_GAP);
     }
-    section(ui, &t!("recently-played"), |ui| {
+    section(ui, &t!("Recently played"), |ui| {
         if !rest.is_empty() {
-            ui.label(faint(&t!("count-titles", count = rest.len())));
+            ui.label(faint(&t!("Titles: {count}", count = rest.len())));
         }
     });
     if rest.is_empty() {
-        empty(ui, &t!("library-empty"));
+        empty(ui, &t!("Anything you play shows up here."));
         return;
     }
     library_grid(ui, "recent", Shelf::Library, &rest, out);
@@ -243,13 +249,13 @@ fn library_grid(
 pub(super) fn catalog_title(target: &CatalogTarget) -> Text {
     let content_type = &target.path.content_type;
     let kind = match content_type.as_str() {
-        ContentType::MOVIE => t!("type-movie"),
-        ContentType::SERIES => t!("type-series"),
-        ContentType::CHANNEL => t!("type-channel"),
-        ContentType::TV => t!("type-tv"),
+        ContentType::MOVIE => t!("Movies"),
+        ContentType::SERIES => t!("Series"),
+        ContentType::CHANNEL => t!("Channels"),
+        ContentType::TV => t!("TV"),
         other => other.to_owned().into(),
     };
-    t!("catalog-title", name = target.name.as_str(), kind = kind)
+    t!("{name} {kind}", name = target.name.as_str(), kind = kind)
 }
 
 fn target_label(target: &CatalogTarget) -> Text {

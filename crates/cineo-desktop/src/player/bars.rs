@@ -35,7 +35,7 @@ pub(super) fn top_bar(ui: &mut Ui, rect: Rect, title: &str, out: &mut Vec<Player
         pos2(bar.left() + 32.0, bar.top() + 30.0),
         egui::Vec2::splat(BUTTON),
     );
-    if icon_button(ui, back, Icon::ArrowLeft, &t!("back")).clicked() {
+    if icon_button(ui, back, Icon::ArrowLeft, &t!("Back")).clicked() {
         out.push(PlayerCommand::Stop);
     }
     let text = Rect::from_min_max(
@@ -91,9 +91,9 @@ pub(super) fn bottom_bar(
         Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
     };
     let (icon, label) = if status.paused {
-        (Icon::Play, t!("play"))
+        (Icon::Play, t!("Play"))
     } else {
-        (Icon::Pause, t!("pause"))
+        (Icon::Pause, t!("Pause"))
     };
     if icon_button(ui, slot(BUTTON + 4.0), icon, &label).clicked() {
         out.push(PlayerCommand::TogglePause);
@@ -103,7 +103,7 @@ pub(super) fn bottom_bar(
             ui,
             slot(BUTTON + 4.0),
             Icon::Named("player-skip-forward"),
-            &t!("next-episode"),
+            &t!("Next episode"),
         )
         .clicked()
     {
@@ -113,7 +113,7 @@ pub(super) fn bottom_bar(
         ui,
         slot(BUTTON + 4.0),
         Icon::Named(back_icon),
-        &t!("seek-back", seconds = seconds),
+        &t!("Seek back {seconds} seconds", seconds = seconds),
     )
     .clicked()
     {
@@ -123,7 +123,7 @@ pub(super) fn bottom_bar(
         ui,
         slot(BUTTON + 12.0),
         Icon::Named(forward_icon),
-        &t!("seek-forward", seconds = seconds),
+        &t!("Seek forward {seconds} seconds", seconds = seconds),
     )
     .clicked()
     {
@@ -148,9 +148,9 @@ pub(super) fn bottom_bar(
         Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
     };
     let (icon, label) = if is_fullscreen(ui.ctx()) {
-        ("minimize", t!("exit-fullscreen"))
+        ("minimize", t!("Exit fullscreen"))
     } else {
-        ("maximize", t!("fullscreen"))
+        ("maximize", t!("Fullscreen"))
     };
     if icon_button(ui, slot(BUTTON + 4.0), Icon::Named(icon), &label).clicked() {
         toggle_fullscreen(ui);
@@ -159,25 +159,18 @@ pub(super) fn bottom_bar(
         ui,
         slot(BUTTON + 4.0),
         Icon::Named("activity"),
-        &t!("player-stats"),
+        &t!("Streaming stats"),
     )
     .clicked()
     {
         toggle_stats_shown(ui.ctx());
     }
     let subtitles = slot(BUTTON + 4.0);
-    if icon_button(
-        ui,
-        subtitles,
-        Icon::Named("badge-cc"),
-        &t!("player-subtitles"),
-    )
-    .clicked()
-    {
+    if icon_button(ui, subtitles, Icon::Named("badge-cc"), &t!("Subtitles")).clicked() {
         controls.menu = toggle(controls.menu, TrackKind::Subtitle);
     }
     let audio = slot(BUTTON + 12.0);
-    if icon_button(ui, audio, Icon::Named("language"), &t!("player-audio")).clicked() {
+    if icon_button(ui, audio, Icon::Named("language"), &t!("Audio")).clicked() {
         controls.menu = toggle(controls.menu, TrackKind::Audio);
     }
     let volume = Rect::from_min_max(
@@ -190,9 +183,9 @@ pub(super) fn bottom_bar(
         egui::Vec2::splat(BUTTON),
     );
     let (icon, label) = if status.muted || status.volume <= 0.0 {
-        ("volume-off", t!("unmute"))
+        ("volume-off", t!("Unmute"))
     } else {
-        ("volume", t!("mute"))
+        ("volume", t!("Mute"))
     };
     if icon_button(ui, mute, Icon::Named(icon), &label).clicked() {
         out.push(PlayerCommand::ToggleMute);
@@ -290,9 +283,9 @@ pub(super) fn next_popup(
 
             let c = card.center();
             let caption = if auto {
-                t!("next-episode-in", seconds = left.ceil())
+                t!("Next episode in {seconds} s", seconds = left.ceil())
             } else {
-                t!("next-episode")
+                t!("Next episode")
             };
             ui.painter().text(
                 pos2(c.x, c.y - 66.0),
@@ -314,7 +307,7 @@ pub(super) fn next_popup(
                 .galley(pos2(c.x, c.y - 52.0), galley, theme::TEXT_BRIGHT);
 
             let play = Rect::from_center_size(pos2(c.x, c.y + 18.0), egui::Vec2::splat(56.0));
-            let label = t!("play");
+            let label = t!("Play");
             let response = ui
                 .interact(play, ui.id().with("next-play"), Sense::click())
                 .on_hover_cursor(CursorIcon::PointingHand);
@@ -342,7 +335,7 @@ pub(super) fn next_popup(
                 pos2(card.right() - 22.0, card.top() + 22.0),
                 egui::Vec2::splat(32.0),
             );
-            if icon_button(ui, close, Icon::Named("x"), &t!("dismiss")).clicked() {
+            if icon_button(ui, close, Icon::Named("x"), &t!("Dismiss")).clicked() {
                 controls.next_dismissed = true;
             }
 
@@ -405,7 +398,7 @@ fn seek_bar(
         }
     }
     let position = seek.or(status.position_s);
-    response.widget_info(|| WidgetInfo::slider(true, position, t!("position")));
+    response.widget_info(|| WidgetInfo::slider(true, position, t!("Position")));
     let active = response.hovered() || seek.drag.is_some();
     let thickness = if active { 6.0 } else { 4.0 };
     let track = Rect::from_center_size(rect.center(), vec2(rect.width(), thickness));
@@ -472,7 +465,7 @@ fn volume_slider(
         volume.commit(percent, now);
     }
     let shown = volume.or(status.volume);
-    response.widget_info(|| WidgetInfo::slider(true, shown, t!("volume")));
+    response.widget_info(|| WidgetInfo::slider(true, shown, t!("Volume")));
     let level = if status.muted { 0.0 } else { shown / 100.0 };
     #[expect(clippy::cast_possible_truncation, reason = "a fraction in 0..=1")]
     let level = level.clamp(0.0, 1.0) as f32;

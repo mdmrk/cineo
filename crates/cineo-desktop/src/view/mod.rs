@@ -3,7 +3,7 @@ use self::detail::{detail_page, source_name};
 use self::pages::{board_page, discover_page, library_page, search_page};
 use self::sidebar::sidebar;
 use self::widgets::column;
-use crate::i18n::{self, Locale, Text, t};
+use crate::i18n::{self, Locale, Text, pt, t};
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
 use cineo_core::addon::{MetaPreview, ResourcePath, Stream, TransportUrl};
@@ -55,12 +55,12 @@ impl Page {
 
     pub(crate) fn label(self) -> Text {
         match self {
-            Self::Board => t!("page-home"),
-            Self::Discover => t!("page-discover"),
-            Self::Search => t!("page-search"),
-            Self::Library => t!("page-library"),
-            Self::Addons => t!("page-addons"),
-            Self::Settings => t!("page-settings"),
+            Self::Board => t!("Home"),
+            Self::Discover => t!("Discover"),
+            Self::Search => pt!("page-search", "Search"),
+            Self::Library => t!("Library"),
+            Self::Addons => t!("Addons"),
+            Self::Settings => t!("Settings"),
         }
     }
 
@@ -346,7 +346,7 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                     );
                     ui.label(RichText::new(&*notice).color(theme::TEXT_BRIGHT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if ui.button(t!("dismiss")).clicked() {
+                        if ui.button(t!("Dismiss")).clicked() {
                             out.push(Action::DismissNotice);
                         }
                     });
@@ -378,15 +378,15 @@ pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> 
 }
 
 fn link_prompt(ui: &Ui, url: &str, out: &mut Vec<Action>) {
-    let title = t!("link-install-title");
-    let notice = t!("link-install-notice");
+    let title = t!("Install this addon?");
+    let notice = t!("A link asks to install the addon below. Only install addons you trust.");
     if let Some(accepted) = dialog(
         ui,
         "link_prompt",
         &title,
         &notice,
         Some(url),
-        &t!("install"),
+        &t!("Install"),
     ) {
         out.push(if accepted {
             Action::AcceptLink
@@ -397,8 +397,20 @@ fn link_prompt(ui: &Ui, url: &str, out: &mut Vec<Action>) {
 }
 
 fn p2p_prompt(ui: &Ui, out: &mut Vec<Action>) {
-    let (title, notice) = (t!("p2p-title"), t!("p2p-notice"));
-    if let Some(accepted) = dialog(ui, "p2p_prompt", &title, &notice, None, &t!("p2p-accept")) {
+    let (title, notice) = (
+        t!("Peer-to-peer streaming"),
+        t!(
+            "Torrent streams come from other people's computers. While one plays, your IP address is visible to the peers and trackers it connects to, and Cineo uploads the parts it has already downloaded to those peers. Downloaded data is kept in a local cache. You can turn peer-to-peer streaming off in Settings."
+        ),
+    );
+    if let Some(accepted) = dialog(
+        ui,
+        "p2p_prompt",
+        &title,
+        &notice,
+        None,
+        &t!("Accept and play"),
+    ) {
         out.push(if accepted {
             Action::AcceptP2p
         } else {
@@ -409,11 +421,15 @@ fn p2p_prompt(ui: &Ui, out: &mut Vec<Action>) {
 
 fn problem_text(problem: &Problem) -> Text {
     match problem {
-        Problem::AlreadyInstalled => t!("problem-already-installed"),
-        Problem::ConfigurationRequired(_) => t!("problem-configuration-required"),
-        Problem::InvalidAddonUrl(detail) => t!("problem-invalid-url", detail = detail.as_str()),
-        Problem::NoMetaAddon => t!("problem-no-meta"),
-        Problem::UnsupportedFilter => t!("problem-unsupported-filter"),
+        Problem::AlreadyInstalled => t!("This addon is already installed"),
+        Problem::ConfigurationRequired(_) => t!(
+            "This addon must be configured before it can be installed. Configure it, then install the link it gives you."
+        ),
+        Problem::InvalidAddonUrl(detail) => {
+            t!("Invalid addon URL: {detail}", detail = detail.as_str())
+        }
+        Problem::NoMetaAddon => t!("No installed addon provides details for this item"),
+        Problem::UnsupportedFilter => t!("This catalog does not support that filter"),
         Problem::Request(detail) => detail.clone().into(),
     }
 }
@@ -421,14 +437,23 @@ fn problem_text(problem: &Problem) -> Text {
 fn notice_text(notice: &Notice) -> Text {
     match notice {
         Notice::AddonUnavailable(detail) => {
-            t!("notice-addon-unavailable", detail = detail.as_str())
+            t!(
+                "An addon could not be loaded: {detail}",
+                detail = detail.as_str()
+            )
         }
         Notice::UnsupportedScheme(scheme) => {
-            t!("notice-unsupported-scheme", scheme = scheme.as_str())
+            t!(
+                "Unsupported stream scheme `{scheme}`",
+                scheme = scheme.as_str()
+            )
         }
-        Notice::TorrentsOff => t!("notice-torrents-off"),
+        Notice::TorrentsOff => t!("Torrent streams are turned off in Settings"),
         Notice::UnsupportedSource(kind) => {
-            t!("notice-unsupported-source", kind = source_name(*kind))
+            t!(
+                "{kind} streams are not supported yet",
+                kind = source_name(*kind)
+            )
         }
         Notice::PlaybackFailed {
             failure,
@@ -437,20 +462,31 @@ fn notice_text(notice: &Notice) -> Text {
             let reason: Text = match failure {
                 PlaybackFailure::Player(detail) => detail.clone().into(),
                 PlaybackFailure::Torrent(detail) => {
-                    t!("notice-torrent-failed", detail = detail.as_str())
+                    t!(
+                        "The torrent could not be played: {detail}",
+                        detail = detail.as_str()
+                    )
                 }
             };
             if *pick_another {
-                t!("notice-pick-another", reason = reason)
+                t!(
+                    "The last stream could not be played, pick another one. {reason}",
+                    reason = reason
+                )
             } else {
                 reason
             }
         }
-        Notice::UnexpectedEngineAddress => t!("notice-engine-address"),
-        Notice::SubtitleFailed(detail) => t!("notice-subtitle-failed", detail = detail.as_str()),
-        Notice::SaveFailed(detail) => t!("notice-save-failed", detail = detail.as_str()),
-        Notice::StoreClosed => t!("notice-store-closed"),
-        Notice::InvalidLink => t!("notice-invalid-link"),
+        Notice::UnexpectedEngineAddress => t!("The torrent engine returned an unexpected address"),
+        Notice::SubtitleFailed(detail) => t!(
+            "Could not load the subtitle: {detail}",
+            detail = detail.as_str()
+        ),
+        Notice::SaveFailed(detail) => {
+            t!("Could not save changes: {detail}", detail = detail.as_str())
+        }
+        Notice::StoreClosed => t!("Changes can no longer be saved"),
+        Notice::InvalidLink => t!("That link cannot be opened by Cineo"),
     }
 }
 

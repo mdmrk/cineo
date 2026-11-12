@@ -22,7 +22,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        &t!("subtitle-size"),
+        &t!("Size"),
         "",
         size.get(),
         (SubtitleSize::MIN, SubtitleSize::MAX, 5),
@@ -31,7 +31,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        &t!("subtitle-font"),
+        &t!("Font"),
         "",
         s.subtitle_font,
         SubtitleFont::ALL,
@@ -41,7 +41,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     switch(
         ui,
         out,
-        &t!("subtitle-bold"),
+        &t!("Bold"),
         "",
         s.subtitle_bold,
         Setting::SubtitleBold,
@@ -49,7 +49,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        &t!("subtitle-color"),
+        &t!("Text color"),
         "",
         s.subtitle_color,
         SubtitleColor::ALL,
@@ -60,7 +60,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        &t!("subtitle-opacity"),
+        &t!("Text opacity"),
         "",
         opacity.get(),
         (SubtitleOpacity::MIN, SubtitleOpacity::MAX, 5),
@@ -69,8 +69,8 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        &t!("subtitle-outline"),
-        &t!("subtitle-outline-help"),
+        &t!("Outline"),
+        &t!("Not drawn when there is a background."),
         s.subtitle_outline,
         SubtitleOutline::ALL,
         outline_name,
@@ -79,7 +79,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     pick(
         ui,
         out,
-        &t!("subtitle-background"),
+        &t!("Background"),
         "",
         s.subtitle_background,
         SubtitleBackground::ALL,
@@ -90,8 +90,8 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        &t!("subtitle-raise"),
-        &t!("subtitle-raise-help"),
+        &t!("Raise from the bottom"),
+        &t!("Percent of the picture's height."),
         position.get(),
         (SubtitlePosition::MIN, SubtitlePosition::MAX, 1),
         |v| Setting::SubtitlePosition(SubtitlePosition::new(v)),
@@ -99,8 +99,10 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     switch(
         ui,
         out,
-        &t!("subtitle-keep-styles"),
-        &t!("subtitle-keep-styles-help"),
+        &t!("Keep the look of styled subtitles"),
+        &t!(
+            "Styled (ASS) subtitles, common for anime, bring their own fonts, colors and positions. When off, the settings above replace them."
+        ),
         s.keep_subtitle_styles,
         Setting::KeepSubtitleStyles,
     );
@@ -132,7 +134,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     let alpha = u8::try_from(s.subtitle_opacity.get() * 255 / 100).unwrap_or(u8::MAX);
     let ink = Color32::from_rgba_unmultiplied(r, g, b, alpha);
     let galley = painter.layout_no_wrap(
-        t!("subtitle-preview").into_owned(),
+        t!("Subtitles look like this.").into_owned(),
         FontId::new(22.0 * scale, family),
         ink,
     );
@@ -167,7 +169,7 @@ fn preview(ui: &mut Ui, s: &Settings) {
     painter.text(
         rect.left_top() + vec2(10.0, 8.0),
         Align2::LEFT_TOP,
-        t!("subtitle-preview-badge"),
+        t!("PREVIEW"),
         theme::caption(),
         theme::TEXT_FAINT,
     );
@@ -175,33 +177,33 @@ fn preview(ui: &mut Ui, s: &Settings) {
 
 fn font_name(font: SubtitleFont) -> Text {
     match font {
-        SubtitleFont::Sans => t!("font-sans"),
-        SubtitleFont::Serif => t!("font-serif"),
-        SubtitleFont::Mono => t!("font-mono"),
+        SubtitleFont::Sans => t!("Sans-serif"),
+        SubtitleFont::Serif => t!("Serif"),
+        SubtitleFont::Mono => t!("Monospace"),
     }
 }
 
 fn color_name(color: SubtitleColor) -> Text {
     match color {
-        SubtitleColor::White => t!("color-white"),
-        SubtitleColor::Yellow => t!("color-yellow"),
-        SubtitleColor::Cyan => t!("color-cyan"),
-        SubtitleColor::Green => t!("color-green"),
+        SubtitleColor::White => t!("White"),
+        SubtitleColor::Yellow => t!("Yellow"),
+        SubtitleColor::Cyan => t!("Cyan"),
+        SubtitleColor::Green => t!("Green"),
     }
 }
 
 fn outline_name(outline: SubtitleOutline) -> Text {
     match outline {
-        SubtitleOutline::Black => t!("outline-black"),
-        SubtitleOutline::Gray => t!("outline-gray"),
-        SubtitleOutline::None => t!("outline-none"),
+        SubtitleOutline::Black => t!("Black"),
+        SubtitleOutline::Gray => t!("Gray"),
+        SubtitleOutline::None => t!("No outline"),
     }
 }
 
 fn background_name(background: SubtitleBackground) -> Text {
     match background {
-        SubtitleBackground::None => t!("background-none"),
-        SubtitleBackground::Black => t!("background-black"),
-        SubtitleBackground::Gray => t!("background-gray"),
+        SubtitleBackground::None => t!("No background"),
+        SubtitleBackground::Black => t!("Black box"),
+        SubtitleBackground::Gray => t!("Gray box"),
     }
 }

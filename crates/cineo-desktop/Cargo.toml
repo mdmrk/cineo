@@ -28,6 +28,7 @@ fastframe-emoji.workspace = true
 fastframe-file.workspace = true
 fastframe-fonts.workspace = true
 fastframe-graphics.workspace = true
+fastframe-i18n.workspace = true
 fastframe-instance.workspace = true
 fastframe-log.workspace = true
 fastframe-now-playing.workspace = true
@@ -37,9 +38,7 @@ fastframe-text.workspace = true
 iconflow.workspace = true
 image.workspace = true
 raw-window-handle.workspace = true
-rust-i18n.workspace = true
 semver.workspace = true
-sys-locale.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
@@ -50,6 +49,9 @@ zbus.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 keepawake.workspace = true
+
+[build-dependencies]
+fastframe-i18n = { workspace = true, features = ["build"] }
 
 [dev-dependencies]
 egui_kittest.workspace = true

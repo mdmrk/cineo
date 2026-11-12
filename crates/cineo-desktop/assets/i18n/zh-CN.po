@@ -1,0 +1,1460 @@
+# Chinese (Simplified) translations for Cineo.
+msgid ""
+msgstr ""
+"Project-Id-Version: Cineo\n"
+"Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
+"POT-Creation-Date: 2026-11-12 20:59+0100\n"
+"PO-Revision-Date: 2026-11-12 00:00+0000\n"
+"Last-Translator: Cineo contributors\n"
+"Language-Team: Cineo contributors\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: crates/cineo-desktop/src/app/mod.rs:524
+#, rust-format
+msgid ""
+"On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
+"OpenCL, OpenGL & Vulkan Compatibility Pack. Install or repair it from the "
+"Microsoft Store, then open Cineo again.\n"
+"\n"
+"Details: {details}\n"
+"\n"
+"Open its Microsoft Store page?"
+msgstr ""
+"在 ARM 版 Windows 上，Cineo 绘制所用的 OpenGL 来自 Microsoft 的 OpenCL、"
+"OpenGL 和 Vulkan 兼容包。请从 Microsoft Store 安装或修复它，然后重新打开 "
+"Cineo。\n"
+"\n"
+"详细信息：{details}\n"
+"\n"
+"要打开它的 Microsoft Store 页面吗？"
+
+#: crates/cineo-desktop/src/app/mod.rs:528
+msgid ""
+"Install your graphics card's driver, from its maker or from Windows Update, "
+"then open Cineo again. Remote Desktop and virtual machines need 3D "
+"acceleration turned on."
+msgstr ""
+"请从显卡制造商或 Windows 更新安装显卡驱动程序，然后重新打开 Cineo。远程桌面和"
+"虚拟机需要开启 3D 加速。"
+
+#: crates/cineo-desktop/src/app/mod.rs:532
+msgid ""
+"Install your graphics card's driver or Mesa, then open Cineo again. Remote "
+"sessions and virtual machines need 3D acceleration turned on."
+msgstr ""
+"请安装显卡驱动程序或 Mesa，然后重新打开 Cineo。远程会话和虚拟机需要开启 3D 加"
+"速。"
+
+#: crates/cineo-desktop/src/app/mod.rs:535
+#, rust-format
+msgid ""
+"Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
+"this computer only has basic graphics.\n"
+"\n"
+"{remedy}\n"
+"\n"
+"Details: {details}"
+msgstr ""
+"Cineo 需要显卡驱动程序来绘制窗口（OpenGL 2 或更高版本），而这台电脑只有基本图"
+"形支持。\n"
+"\n"
+"{remedy}\n"
+"\n"
+"详细信息：{details}"
+
+#: crates/cineo-desktop/src/app/mod.rs:538
+msgid "Cineo cannot open its window"
+msgstr "Cineo 无法打开窗口"
+
+#: crates/cineo-desktop/src/app/mod.rs:540
+msgid "Open Microsoft Store"
+msgstr "打开 Microsoft Store"
+
+#: crates/cineo-desktop/src/app/mod.rs:541
+msgid "Close"
+msgstr "关闭"
+
+#: crates/cineo-desktop/src/i18n.rs:200
+msgid "Arabic"
+msgstr "阿拉伯语"
+
+#: crates/cineo-desktop/src/i18n.rs:201
+msgid "Bulgarian"
+msgstr "保加利亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:202
+msgid "Catalan"
+msgstr "加泰罗尼亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:203
+msgid "Chinese"
+msgstr "中文"
+
+#: crates/cineo-desktop/src/i18n.rs:204
+msgid "Croatian"
+msgstr "克罗地亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:205
+msgid "Czech"
+msgstr "捷克语"
+
+#: crates/cineo-desktop/src/i18n.rs:206
+msgid "Danish"
+msgstr "丹麦语"
+
+#: crates/cineo-desktop/src/i18n.rs:207
+msgid "Dutch"
+msgstr "荷兰语"
+
+#: crates/cineo-desktop/src/i18n.rs:208
+msgid "English"
+msgstr "英语"
+
+#: crates/cineo-desktop/src/i18n.rs:209
+msgid "Finnish"
+msgstr "芬兰语"
+
+#: crates/cineo-desktop/src/i18n.rs:210
+msgid "French"
+msgstr "法语"
+
+#: crates/cineo-desktop/src/i18n.rs:211
+msgid "German"
+msgstr "德语"
+
+#: crates/cineo-desktop/src/i18n.rs:212
+msgid "Greek"
+msgstr "希腊语"
+
+#: crates/cineo-desktop/src/i18n.rs:213
+msgid "Hebrew"
+msgstr "希伯来语"
+
+#: crates/cineo-desktop/src/i18n.rs:214
+msgid "Hindi"
+msgstr "印地语"
+
+#: crates/cineo-desktop/src/i18n.rs:215
+msgid "Hungarian"
+msgstr "匈牙利语"
+
+#: crates/cineo-desktop/src/i18n.rs:216
+msgid "Indonesian"
+msgstr "印度尼西亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:217
+msgid "Italian"
+msgstr "意大利语"
+
+#: crates/cineo-desktop/src/i18n.rs:218
+msgid "Japanese"
+msgstr "日语"
+
+#: crates/cineo-desktop/src/i18n.rs:219
+msgid "Korean"
+msgstr "韩语"
+
+#: crates/cineo-desktop/src/i18n.rs:220
+msgid "Norwegian"
+msgstr "挪威语"
+
+#: crates/cineo-desktop/src/i18n.rs:221
+msgid "Persian"
+msgstr "波斯语"
+
+#: crates/cineo-desktop/src/i18n.rs:222
+msgid "Polish"
+msgstr "波兰语"
+
+#: crates/cineo-desktop/src/i18n.rs:223
+msgid "Portuguese"
+msgstr "葡萄牙语"
+
+#: crates/cineo-desktop/src/i18n.rs:224
+msgid "Romanian"
+msgstr "罗马尼亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:225
+msgid "Russian"
+msgstr "俄语"
+
+#: crates/cineo-desktop/src/i18n.rs:226
+msgid "Serbian"
+msgstr "塞尔维亚语"
+
+#: crates/cineo-desktop/src/i18n.rs:227
+msgid "Spanish"
+msgstr "西班牙语"
+
+#: crates/cineo-desktop/src/i18n.rs:228
+msgid "Swedish"
+msgstr "瑞典语"
+
+#: crates/cineo-desktop/src/i18n.rs:229
+msgid "Thai"
+msgstr "泰语"
+
+#: crates/cineo-desktop/src/i18n.rs:230
+msgid "Turkish"
+msgstr "土耳其语"
+
+#: crates/cineo-desktop/src/i18n.rs:231
+msgid "Ukrainian"
+msgstr "乌克兰语"
+
+#: crates/cineo-desktop/src/i18n.rs:232
+msgid "Vietnamese"
+msgstr "越南语"
+
+#: crates/cineo-desktop/src/i18n.rs:411 crates/cineo-desktop/src/view/mod.rs:61
+#: crates/cineo-desktop/src/view/pages.rs:207
+msgid "Library"
+msgstr "媒体库"
+
+#: crates/cineo-desktop/src/i18n.rs:412 crates/cineo-desktop/src/i18n.rs:420
+#: crates/cineo-desktop/src/view/pages.rs:215
+#: crates/cineo-desktop/src/view/pages.rs:222
+#, rust-format
+msgid "Titles: {count}"
+msgstr "作品：{count}"
+
+#: crates/cineo-desktop/src/i18n.rs:416 crates/cineo-desktop/src/i18n.rs:418
+#: crates/cineo-desktop/src/i18n.rs:429 crates/cineo-desktop/src/i18n.rs:431
+#: crates/cineo-desktop/src/settings/mod.rs:123
+#: crates/cineo-desktop/src/view/mod.rs:63
+msgid "Settings"
+msgstr "设置"
+
+#: crates/cineo-desktop/src/i18n.rs:423
+#: crates/cineo-desktop/src/settings/mod.rs:621
+#, rust-format
+msgid "{percent} % played"
+msgstr "已播放 {percent}%"
+
+#: crates/cineo-desktop/src/i18n.rs:425
+#: crates/cineo-desktop/src/view/detail.rs:756
+#, rust-format
+msgid "Season {number}"
+msgstr "第 {number} 季"
+
+#: crates/cineo-desktop/src/i18n.rs:427 crates/cineo-desktop/src/i18n.rs:432
+#: crates/cineo-desktop/src/view/detail.rs:513
+#, rust-format
+msgid "Streams: {count}"
+msgstr "片源：{count}"
+
+#: crates/cineo-desktop/src/i18n.rs:435
+#: crates/cineo-desktop/src/view/addons.rs:77
+#, rust-format
+msgid "Installed {name}"
+msgstr "已安装 {name}"
+
+#: crates/cineo-desktop/src/i18n.rs:438
+#: crates/cineo-desktop/src/settings/mod.rs:634
+#, rust-format
+msgid "{count} s"
+msgstr "{count} 秒"
+
+#: crates/cineo-desktop/src/player/bars.rs:38
+#: crates/cineo-desktop/src/view/detail.rs:68
+msgid "Back"
+msgstr "返回"
+
+#: crates/cineo-desktop/src/player/bars.rs:94
+#: crates/cineo-desktop/src/player/bars.rs:310
+#: crates/cineo-desktop/src/view/detail.rs:683
+msgid "Play"
+msgstr "播放"
+
+#: crates/cineo-desktop/src/player/bars.rs:96
+msgid "Pause"
+msgstr "暂停"
+
+#: crates/cineo-desktop/src/player/bars.rs:106
+#: crates/cineo-desktop/src/player/bars.rs:288
+msgid "Next episode"
+msgstr "下一集"
+
+#: crates/cineo-desktop/src/player/bars.rs:116
+#, rust-format
+msgid "Seek back {seconds} seconds"
+msgstr "后退 {seconds} 秒"
+
+#: crates/cineo-desktop/src/player/bars.rs:126
+#, rust-format
+msgid "Seek forward {seconds} seconds"
+msgstr "前进 {seconds} 秒"
+
+#: crates/cineo-desktop/src/player/bars.rs:151
+msgid "Exit fullscreen"
+msgstr "退出全屏"
+
+#: crates/cineo-desktop/src/player/bars.rs:153
+#: crates/cineo-desktop/src/settings/mod.rs:721
+msgid "Fullscreen"
+msgstr "全屏"
+
+#: crates/cineo-desktop/src/player/bars.rs:162
+msgid "Streaming stats"
+msgstr "串流统计"
+
+#: crates/cineo-desktop/src/player/bars.rs:169
+#: crates/cineo-desktop/src/settings/mod.rs:58
+msgid "Subtitles"
+msgstr "字幕"
+
+#: crates/cineo-desktop/src/player/bars.rs:173
+#: crates/cineo-desktop/src/settings/mod.rs:59
+msgid "Audio"
+msgstr "音频"
+
+#: crates/cineo-desktop/src/player/bars.rs:186
+msgid "Unmute"
+msgstr "取消静音"
+
+#: crates/cineo-desktop/src/player/bars.rs:188
+msgid "Mute"
+msgstr "静音"
+
+#: crates/cineo-desktop/src/player/bars.rs:286
+#, rust-format
+msgid "Next episode in {seconds} s"
+msgstr "{seconds} 秒后播放下一集"
+
+#: crates/cineo-desktop/src/player/bars.rs:338
+#: crates/cineo-desktop/src/view/mod.rs:349
+msgid "Dismiss"
+msgstr "关闭"
+
+#: crates/cineo-desktop/src/player/bars.rs:401
+msgid "Position"
+msgstr "位置"
+
+#: crates/cineo-desktop/src/player/bars.rs:468
+msgid "Volume"
+msgstr "音量"
+
+#: crates/cineo-desktop/src/player/stats.rs:37
+msgid "Download"
+msgstr "下载"
+
+#: crates/cineo-desktop/src/player/stats.rs:38
+msgid "Peers"
+msgstr "节点"
+
+#: crates/cineo-desktop/src/player/stats.rs:40
+msgid "Downloaded"
+msgstr "已下载"
+
+#: crates/cineo-desktop/src/player/stats.rs:42
+#: crates/cineo-desktop/src/player/stats.rs:190
+#, rust-format
+msgid "{done} of {total}"
+msgstr "{done} / {total}"
+
+#: crates/cineo-desktop/src/player/stats.rs:51
+msgid "Network"
+msgstr "网络"
+
+#: crates/cineo-desktop/src/player/stats.rs:54
+msgid "Buffered"
+msgstr "已缓冲"
+
+#: crates/cineo-desktop/src/player/stats.rs:57
+msgid "Resolution"
+msgstr "分辨率"
+
+#: crates/cineo-desktop/src/player/stats.rs:66
+msgid "Video"
+msgstr "视频"
+
+#: crates/cineo-desktop/src/player/stats.rs:70
+#: crates/cineo-desktop/src/player/stats.rs:194
+msgid "Software"
+msgstr "软件"
+
+#: crates/cineo-desktop/src/player/stats.rs:74
+msgid "Decoder"
+msgstr "解码器"
+
+#: crates/cineo-desktop/src/player/stats.rs:77
+msgid "Dropped frames"
+msgstr "丢帧"
+
+#: crates/cineo-desktop/src/player/tracks.rs:55
+msgctxt "subtitles-off"
+msgid "Off"
+msgstr "关闭"
+
+#: crates/cineo-desktop/src/player/tracks.rs:75
+msgid "No audio tracks"
+msgstr "没有音轨"
+
+#: crates/cineo-desktop/src/player/tracks.rs:181
+msgid "Style and delay"
+msgstr "样式和延迟"
+
+#: crates/cineo-desktop/src/player/tracks.rs:251
+msgid "Delay"
+msgstr "延迟"
+
+#: crates/cineo-desktop/src/player/tracks.rs:255
+msgid "This video only."
+msgstr "仅限此视频。"
+
+#: crates/cineo-desktop/src/player/tracks.rs:262
+#: crates/cineo-desktop/src/player/tracks.rs:267
+#, rust-format
+msgid "Subtitles {amount} earlier"
+msgstr "字幕提前 {amount}"
+
+#: crates/cineo-desktop/src/player/tracks.rs:273
+#: crates/cineo-desktop/src/player/tracks.rs:275
+#, rust-format
+msgid "Subtitles {amount} later"
+msgstr "字幕延后 {amount}"
+
+#: crates/cineo-desktop/src/player/tracks.rs:291
+#, rust-format
+msgid "Subtitle delay {delay}, reset"
+msgstr "字幕延迟 {delay}，点击重置"
+
+#: crates/cineo-desktop/src/player/tracks.rs:332
+#, rust-format
+msgid "Track {number}"
+msgstr "轨道 {number}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:55
+msgid "Interface"
+msgstr "界面"
+
+#: crates/cineo-desktop/src/settings/mod.rs:56
+msgid "Player"
+msgstr "播放器"
+
+#: crates/cineo-desktop/src/settings/mod.rs:57
+msgid "Languages"
+msgstr "语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:60
+msgid "Torrents"
+msgstr "种子"
+
+#: crates/cineo-desktop/src/settings/mod.rs:61
+msgid "Data"
+msgstr "数据"
+
+#: crates/cineo-desktop/src/settings/mod.rs:62
+msgid "Keyboard"
+msgstr "键盘"
+
+#: crates/cineo-desktop/src/settings/mod.rs:63
+msgid "About"
+msgstr "关于"
+
+#: crates/cineo-desktop/src/settings/mod.rs:180
+msgid "Language"
+msgstr "语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:181
+msgid "The language of Cineo's menus and messages."
+msgstr "Cineo 菜单和消息使用的语言。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:190
+msgid "Interface size"
+msgstr "界面大小"
+
+#: crates/cineo-desktop/src/settings/mod.rs:191
+msgid "Makes text, posters and controls larger or smaller."
+msgstr "放大或缩小文字、海报和控件。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:200
+msgid "Start page"
+msgstr "启动页面"
+
+#: crates/cineo-desktop/src/settings/mod.rs:201
+msgid "Shown when Cineo opens."
+msgstr "打开 Cineo 时显示。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:209
+msgid "Open stremio:// and cineo:// links"
+msgstr "打开 stremio:// 和 cineo:// 链接"
+
+#: crates/cineo-desktop/src/settings/mod.rs:211
+msgid ""
+"Links to addons and pages open in Cineo. Stremio stops receiving stremio:// "
+"links."
+msgstr ""
+"指向插件和页面的链接将在 Cineo 中打开。Stremio 将不再接收 stremio:// 链接。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:216
+msgid "Use Cineo"
+msgstr "使用 Cineo"
+
+#: crates/cineo-desktop/src/settings/mod.rs:220
+msgid "Done"
+msgstr "完成"
+
+#: crates/cineo-desktop/src/settings/mod.rs:221
+#, rust-format
+msgid "Failed: {detail}"
+msgstr "失败：{detail}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:233
+msgid "Hardware decoding"
+msgstr "硬件解码"
+
+#: crates/cineo-desktop/src/settings/mod.rs:235
+msgid ""
+"Lets the graphics card decode video, which saves power. Turn it off if "
+"videos show artifacts or a black picture."
+msgstr "让显卡解码视频，以节省电量。如果视频出现花屏或黑屏，请关闭此项。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:243
+msgid "Seek step"
+msgstr "跳转步长"
+
+#: crates/cineo-desktop/src/settings/mod.rs:244
+msgid "How far ←/→ and the seek buttons jump."
+msgstr "←/→ 和跳转按钮的跳转幅度。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:253
+msgid "Short seek step"
+msgstr "短跳转步长"
+
+#: crates/cineo-desktop/src/settings/mod.rs:254
+msgid "How far Shift+←/→ jump."
+msgstr "Shift+←/→ 的跳转幅度。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:263
+msgid "Hide controls after"
+msgstr "隐藏控件的等待时间"
+
+#: crates/cineo-desktop/src/settings/mod.rs:264
+msgid "Without mouse or key input while playing."
+msgstr "播放时没有鼠标或键盘操作后开始计时。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:273
+msgid "Esc leaves fullscreen first"
+msgstr "按 Esc 先退出全屏"
+
+#: crates/cineo-desktop/src/settings/mod.rs:274
+msgid "When off, Esc leaves the player at once."
+msgstr "关闭后，按 Esc 会立即离开播放器。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:281
+msgid "Pause when minimized"
+msgstr "最小化时暂停"
+
+#: crates/cineo-desktop/src/settings/mod.rs:289
+msgid "Remember volume"
+msgstr "记住音量"
+
+#: crates/cineo-desktop/src/settings/mod.rs:290
+msgid "Each video starts at the volume the last one ended with."
+msgstr "每个视频都以上一个视频结束时的音量开始。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:297
+msgid "Play the next episode automatically"
+msgstr "自动播放下一集"
+
+#: crates/cineo-desktop/src/settings/mod.rs:299
+msgid ""
+"When an episode ends, the next one plays from the same addon, or its streams "
+"open."
+msgstr "一集结束后，从同一插件播放下一集，或打开其片源列表。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:307
+msgid "Next episode notice"
+msgstr "下一集提示"
+
+#: crates/cineo-desktop/src/settings/mod.rs:308
+msgid "How long before the end the next episode is offered."
+msgstr "在结束前多久提示下一集。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:319
+msgid "Audio language"
+msgstr "音频语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:320
+msgid "The file's track in this language plays; otherwise its default track."
+msgstr "播放文件中此语言的音轨，否则播放其默认音轨。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:327
+msgid "Second audio language"
+msgstr "第二音频语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:328
+msgid "Used when the file has no audio in the first."
+msgstr "文件中没有第一语言的音频时使用。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:335
+msgid "Subtitle language"
+msgstr "字幕语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:337
+msgid ""
+"Turned on when a video starts: from the file if it has them, otherwise from "
+"a subtitles addon."
+msgstr ""
+"视频开始时自动开启：优先使用文件自带的字幕，否则使用字幕插件提供的字幕。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:345
+msgid "Second subtitle language"
+msgstr "第二字幕语言"
+
+#: crates/cineo-desktop/src/settings/mod.rs:346
+msgid "Used when no subtitle is in the first."
+msgstr "没有第一语言的字幕时使用。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:356
+msgid "Audio output"
+msgstr "音频输出"
+
+#: crates/cineo-desktop/src/settings/mod.rs:357
+msgid "Stereo mixes surround sound down to two speakers or headphones."
+msgstr "立体声会把环绕声混合为两个扬声器或耳机的声音。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:366
+msgid "Passthrough"
+msgstr "直通"
+
+#: crates/cineo-desktop/src/settings/mod.rs:368
+msgid ""
+"Sends Dolby and DTS audio undecoded to a receiver over HDMI or S/PDIF. Leave "
+"off unless your receiver decodes them, or you may hear silence."
+msgstr ""
+"通过 HDMI 或 S/PDIF 将杜比和 DTS 音频不经解码直接发送给功放。除非您的功放能够"
+"解码，否则请保持关闭，不然可能没有声音。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:379
+msgid "Count as watched at"
+msgstr "视为已看完的进度"
+
+#: crates/cineo-desktop/src/settings/mod.rs:380
+msgid "Watched videos start over and leave Continue Watching."
+msgstr "已看完的视频会从头开始，并离开“继续观看”。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:388
+msgid "Clear watch history"
+msgstr "清除观看记录"
+
+#: crates/cineo-desktop/src/settings/mod.rs:389
+msgid "Empties the Library and Continue Watching."
+msgstr "清空媒体库和“继续观看”。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:391
+msgid "Clear…"
+msgstr "清除…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:398
+msgid "Reset all settings"
+msgstr "重置所有设置"
+
+#: crates/cineo-desktop/src/settings/mod.rs:399
+msgid "Every setting on this page goes back to its default."
+msgstr "此页面上的每项设置都恢复为默认值。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:401
+msgid "Reset…"
+msgstr "重置…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:410
+#: crates/cineo-desktop/src/view/sidebar.rs:52
+#, rust-format
+msgid "Cineo v{version}"
+msgstr "Cineo v{version}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:417
+msgid "Check for updates"
+msgstr "检查更新"
+
+#: crates/cineo-desktop/src/settings/mod.rs:418
+msgid "Asks GitHub once per start whether a newer version exists."
+msgstr "每次启动时询问 GitHub 一次，看看是否有新版本。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:432
+msgid "Cineo is free software under the MIT License."
+msgstr "Cineo 是基于 MIT 许可证的自由软件。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:433
+msgid "Made with Rust, egui, mpv and librqbit."
+msgstr "使用 Rust、egui、mpv 和 librqbit 制作。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:452
+msgid "Show and play torrent streams"
+msgstr "显示并播放种子片源"
+
+#: crates/cineo-desktop/src/settings/mod.rs:454
+#: crates/cineo-desktop/src/view/mod.rs:403
+msgid ""
+"Torrent streams come from other people's computers. While one plays, your IP "
+"address is visible to the peers and trackers it connects to, and Cineo "
+"uploads the parts it has already downloaded to those peers. Downloaded data "
+"is kept in a local cache. You can turn peer-to-peer streaming off in "
+"Settings."
+msgstr ""
+"种子片源来自其他人的电脑。播放时，您的 IP 地址对所连接的节点和 Tracker 可见，"
+"Cineo 还会把已下载的部分上传给这些节点。下载的数据保存在本地缓存中。您可以在"
+"设置中关闭点对点串流。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:462
+msgid "Upload to other peers"
+msgstr "上传给其他节点"
+
+#: crates/cineo-desktop/src/settings/mod.rs:464
+msgid ""
+"When off, Cineo only downloads. Some peers then send less, so torrents can "
+"be slower. Your IP address is still visible to peers."
+msgstr ""
+"关闭后，Cineo 只下载不上传。部分节点因此会减少发送，种子可能变慢。您的 IP 地"
+"址对节点仍然可见。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:472
+msgid "Torrent data"
+msgstr "种子数据"
+
+#: crates/cineo-desktop/src/settings/mod.rs:474
+msgid ""
+"Cineo keeps only the part around the playback position, up to the size "
+"chosen, in memory or on disk. Seeking back past it downloads that part "
+"again. Nothing is kept as a cache: the data is deleted when playback stops. "
+"Applies from the next torrent you play."
+msgstr ""
+"Cineo 只在内存或磁盘中保留播放位置附近的部分，不超过所选大小。跳转回更早的位"
+"置时会重新下载该部分。数据不作为缓存保留：播放停止后即删除。从下一次播放的种"
+"子开始生效。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:484
+msgid "Download limit"
+msgstr "下载限制"
+
+#: crates/cineo-desktop/src/settings/mod.rs:485
+#: crates/cineo-desktop/src/settings/mod.rs:495
+msgid "Applies from the next torrent you play."
+msgstr "从下一次播放的种子开始生效。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:494
+msgid "Upload limit"
+msgstr "上传限制"
+
+#: crates/cineo-desktop/src/settings/mod.rs:504
+msgid "Peers per torrent"
+msgstr "每个种子的节点数"
+
+#: crates/cineo-desktop/src/settings/mod.rs:505
+msgid "More peers can be faster but use more connections."
+msgstr "节点越多可能越快，但会占用更多连接。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:514
+msgid "Find peers through the DHT"
+msgstr "通过 DHT 查找节点"
+
+#: crates/cineo-desktop/src/settings/mod.rs:515
+msgid "Finds peers without trackers. Off means fewer peers for many torrents."
+msgstr "无需 Tracker 即可查找节点。关闭后，许多种子的节点会减少。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:521
+#: crates/cineo-desktop/src/settings/mod.rs:526
+msgid "Listening port"
+msgstr "监听端口"
+
+#: crates/cineo-desktop/src/settings/mod.rs:523
+msgid ""
+"Peers can connect to Cineo on this port, over TCP and uTP. Forward it on "
+"your router for more peers. If it is taken, a random port is used. Applies "
+"from the next torrent you play."
+msgstr ""
+"节点可以通过此端口以 TCP 和 uTP 连接到 Cineo。在路由器上转发此端口可获得更多"
+"节点。如果端口被占用，将使用随机端口。从下一次播放的种子开始生效。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:534
+msgid "Allow local network addresses"
+msgstr "允许本地网络地址"
+
+#: crates/cineo-desktop/src/settings/mod.rs:536
+msgid ""
+"Lets addons, images and torrent peers on 127.0.0.1 or your home network be "
+"reached, for self-hosted addons. Off is safer. Takes effect after restarting "
+"Cineo."
+msgstr ""
+"允许访问 127.0.0.1 或家庭网络上的插件、图片和种子节点，用于自建插件。关闭更安"
+"全。重启 Cineo 后生效。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:556
+#, rust-format
+msgid "System ({language})"
+msgstr "跟随系统（{language}）"
+
+#: crates/cineo-desktop/src/settings/mod.rs:563
+msgid "Automatic (surround)"
+msgstr "自动（环绕声）"
+
+#: crates/cineo-desktop/src/settings/mod.rs:564
+msgid "Stereo"
+msgstr "立体声"
+
+#: crates/cineo-desktop/src/settings/mod.rs:570
+#: crates/cineo-desktop/src/settings/mod.rs:593
+msgid "No limit"
+msgstr "无限制"
+
+#: crates/cineo-desktop/src/settings/mod.rs:581
+#: crates/cineo-desktop/src/settings/mod.rs:582
+#: crates/cineo-desktop/src/settings/mod.rs:583
+#: crates/cineo-desktop/src/settings/mod.rs:584
+#, rust-format
+msgid "In memory, {size}"
+msgstr "内存，{size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:585
+#: crates/cineo-desktop/src/settings/mod.rs:586
+#: crates/cineo-desktop/src/settings/mod.rs:587
+#, rust-format
+msgid "On disk, {size}"
+msgstr "磁盘，{size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:628
+msgctxt "next-notice-off"
+msgid "Off"
+msgstr "关闭"
+
+#: crates/cineo-desktop/src/settings/mod.rs:654
+msgid "None"
+msgstr "无"
+
+#: crates/cineo-desktop/src/settings/mod.rs:708
+#, rust-format
+msgid "{a}  or  {b}"
+msgstr "{a}  或  {b}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:711
+msgid "mouse back"
+msgstr "鼠标后退键"
+
+#: crates/cineo-desktop/src/settings/mod.rs:713
+msgctxt "shortcut-search"
+msgid "Search"
+msgstr "搜索"
+
+#: crates/cineo-desktop/src/settings/mod.rs:714
+msgid "Switch page"
+msgstr "切换页面"
+
+#: crates/cineo-desktop/src/settings/mod.rs:715
+msgid "Leave a detail page"
+msgstr "离开详情页"
+
+#: crates/cineo-desktop/src/settings/mod.rs:716
+msgid "Shift+wheel"
+msgstr "Shift+滚轮"
+
+#: crates/cineo-desktop/src/settings/mod.rs:716
+msgid "Scroll a row sideways"
+msgstr "横向滚动一行"
+
+#: crates/cineo-desktop/src/settings/mod.rs:717
+msgid "Space"
+msgstr "空格"
+
+#: crates/cineo-desktop/src/settings/mod.rs:717
+msgid "Play or pause"
+msgstr "播放或暂停"
+
+#: crates/cineo-desktop/src/settings/mod.rs:718
+msgid "Seek by the seek step"
+msgstr "按跳转步长跳转"
+
+#: crates/cineo-desktop/src/settings/mod.rs:719
+msgid "Seek by the short seek step"
+msgstr "按短跳转步长跳转"
+
+#: crates/cineo-desktop/src/settings/mod.rs:720
+msgid "Volume  ·  mute"
+msgstr "音量  ·  静音"
+
+#: crates/cineo-desktop/src/settings/mod.rs:737
+msgid "Reset all settings?"
+msgstr "重置所有设置？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:738
+msgid ""
+"Every setting goes back to its default. Your addons and library are kept."
+msgstr "每项设置都将恢复为默认值。您的插件和媒体库会保留。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:739
+msgid "Reset"
+msgstr "重置"
+
+#: crates/cineo-desktop/src/settings/mod.rs:743
+msgid "Clear watch history?"
+msgstr "清除观看记录？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:744
+msgid "Every item and its progress leaves the Library. This cannot be undone."
+msgstr "所有条目及其进度都将从媒体库中移除。此操作无法撤销。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:745
+msgctxt "clear"
+msgid "Clear"
+msgstr "清除"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:25
+#: crates/cineo-desktop/src/view/detail.rs:387
+msgid "Size"
+msgstr "大小"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:34
+msgid "Font"
+msgstr "字体"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:44
+msgid "Bold"
+msgstr "粗体"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:52
+msgid "Text color"
+msgstr "文字颜色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:63
+msgid "Text opacity"
+msgstr "文字不透明度"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:72
+msgid "Outline"
+msgstr "描边"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:73
+msgid "Not drawn when there is a background."
+msgstr "有背景时不绘制。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:82
+msgid "Background"
+msgstr "背景"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:93
+msgid "Raise from the bottom"
+msgstr "距底部高度"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:94
+msgid "Percent of the picture's height."
+msgstr "占画面高度的百分比。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:102
+msgid "Keep the look of styled subtitles"
+msgstr "保留特效字幕的外观"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:104
+msgid ""
+"Styled (ASS) subtitles, common for anime, bring their own fonts, colors and "
+"positions. When off, the settings above replace them."
+msgstr ""
+"特效（ASS）字幕常见于动画，自带字体、颜色和位置。关闭后，由上面的设置取代。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:137
+msgid "Subtitles look like this."
+msgstr "字幕看起来是这样的。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:172
+msgid "PREVIEW"
+msgstr "预览"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:180
+msgid "Sans-serif"
+msgstr "无衬线"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:181
+msgid "Serif"
+msgstr "衬线"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:182
+msgid "Monospace"
+msgstr "等宽"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:188
+msgid "White"
+msgstr "白色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:189
+msgid "Yellow"
+msgstr "黄色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:190
+msgid "Cyan"
+msgstr "青色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:191
+msgid "Green"
+msgstr "绿色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:197
+msgid "Black"
+msgstr "黑色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:198
+msgid "Gray"
+msgstr "灰色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:199
+msgid "No outline"
+msgstr "无描边"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:205
+msgid "No background"
+msgstr "无背景"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:206
+msgid "Black box"
+msgstr "黑色底框"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:207
+msgid "Gray box"
+msgstr "灰色底框"
+
+#: crates/cineo-desktop/src/view/addons.rs:33
+#: crates/cineo-desktop/src/view/addons.rs:107
+#: crates/cineo-desktop/src/view/addons.rs:251
+#: crates/cineo-desktop/src/view/addons.rs:307
+msgid "Configure"
+msgstr "配置"
+
+#: crates/cineo-desktop/src/view/addons.rs:42
+#: crates/cineo-desktop/src/view/mod.rs:62
+msgid "Addons"
+msgstr "插件"
+
+#: crates/cineo-desktop/src/view/addons.rs:44
+msgid "When two addons return the same item, the one higher in the list wins."
+msgstr "当两个插件返回相同的条目时，以列表中靠前的插件为准。"
+
+#: crates/cineo-desktop/src/view/addons.rs:47
+msgid "Install an addon"
+msgstr "安装插件"
+
+#: crates/cineo-desktop/src/view/addons.rs:64
+#: crates/cineo-desktop/src/view/addons.rs:250
+#: crates/cineo-desktop/src/view/addons.rs:309
+#: crates/cineo-desktop/src/view/mod.rs:389
+msgid "Install"
+msgstr "安装"
+
+#: crates/cineo-desktop/src/view/addons.rs:72
+msgid "Installing…"
+msgstr "正在安装…"
+
+#: crates/cineo-desktop/src/view/addons.rs:93
+msgctxt "addons-installed"
+msgid "Installed"
+msgstr "已安装"
+
+#: crates/cineo-desktop/src/view/addons.rs:95
+#, rust-format
+msgid "Addons: {count}"
+msgstr "插件：{count}"
+
+#: crates/cineo-desktop/src/view/addons.rs:99
+msgid "Nothing installed yet."
+msgstr "尚未安装任何插件。"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:128
+msgid "Move up"
+msgstr "上移"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:119
+msgid "Move down"
+msgstr "下移"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:288
+msgid "Remove"
+msgstr "移除"
+
+#: crates/cineo-desktop/src/view/addons.rs:145
+msgid "Addon"
+msgstr "插件"
+
+#: crates/cineo-desktop/src/view/addons.rs:151
+msgid "Could not load"
+msgstr "无法加载"
+
+#: crates/cineo-desktop/src/view/addons.rs:156
+#: crates/cineo-desktop/src/view/addons.rs:263
+msgid "Retry"
+msgstr "重试"
+
+#: crates/cineo-desktop/src/view/addons.rs:196
+msgid "Adult content"
+msgstr "成人内容"
+
+#: crates/cineo-desktop/src/view/addons.rs:199
+msgid "Peer-to-peer"
+msgstr "点对点"
+
+#: crates/cineo-desktop/src/view/addons.rs:202
+msgid "Needs configuration"
+msgstr "需要配置"
+
+#: crates/cineo-desktop/src/view/addons.rs:214
+msgid "Discover addons"
+msgstr "发现插件"
+
+#: crates/cineo-desktop/src/view/addons.rs:217
+msgid ""
+"Addons in these lists are made by third parties. Install only those you "
+"trust."
+msgstr "这些列表中的插件由第三方制作。请只安装您信任的插件。"
+
+#: crates/cineo-desktop/src/view/addons.rs:252
+#: crates/cineo-desktop/src/view/addons.rs:305
+msgctxt "addon-installed"
+msgid "Installed"
+msgstr "已安装"
+
+#: crates/cineo-desktop/src/view/addons.rs:268
+msgid "This list is empty."
+msgstr "此列表为空。"
+
+#: crates/cineo-desktop/src/view/cards.rs:26
+msgid "See all"
+msgstr "查看全部"
+
+#: crates/cineo-desktop/src/view/cards.rs:44
+msgid "Could not load:"
+msgstr "无法加载："
+
+#: crates/cineo-desktop/src/view/cards.rs:49
+msgid "Nothing in this catalog."
+msgstr "此片单中没有内容。"
+
+#: crates/cineo-desktop/src/view/cards.rs:128
+msgid "Scroll right"
+msgstr "向右滚动"
+
+#: crates/cineo-desktop/src/view/cards.rs:130
+msgid "Scroll left"
+msgstr "向左滚动"
+
+#: crates/cineo-desktop/src/view/cards.rs:229
+#: crates/cineo-desktop/src/view/detail.rs:164
+msgid "Remove from favourites"
+msgstr "取消收藏"
+
+#: crates/cineo-desktop/src/view/cards.rs:231
+#: crates/cineo-desktop/src/view/detail.rs:171
+msgid "Add to favourites"
+msgstr "加入收藏"
+
+#: crates/cineo-desktop/src/view/cards.rs:244
+msgid "Remove from continue watching"
+msgstr "从继续观看中移除"
+
+#: crates/cineo-desktop/src/view/cards.rs:248
+msgid "Remove from library"
+msgstr "从媒体库中移除"
+
+#: crates/cineo-desktop/src/view/detail.rs:126
+msgid "Where to watch"
+msgstr "观看来源"
+
+#: crates/cineo-desktop/src/view/detail.rs:130
+msgid "No installed addon provides streams for this item."
+msgstr "已安装的插件都没有为此条目提供片源。"
+
+#: crates/cineo-desktop/src/view/detail.rs:163
+msgid "Favourited"
+msgstr "已收藏"
+
+#: crates/cineo-desktop/src/view/detail.rs:170
+msgid "Favourite"
+msgstr "收藏"
+
+#: crates/cineo-desktop/src/view/detail.rs:217
+msgid "Directed by"
+msgstr "导演"
+
+#: crates/cineo-desktop/src/view/detail.rs:247
+msgid "Genres"
+msgstr "类型"
+
+#: crates/cineo-desktop/src/view/detail.rs:254
+msgid "Cast"
+msgstr "演员"
+
+#: crates/cineo-desktop/src/view/detail.rs:281
+#, rust-format
+msgid "{rating} IMDb"
+msgstr "{rating} IMDb"
+
+#: crates/cineo-desktop/src/view/detail.rs:301
+msgid "Episodes"
+msgstr "分集"
+
+#: crates/cineo-desktop/src/view/detail.rs:384
+msgid "Addon order"
+msgstr "插件顺序"
+
+#: crates/cineo-desktop/src/view/detail.rs:385
+msgid "Quality"
+msgstr "画质"
+
+#: crates/cineo-desktop/src/view/detail.rs:386
+msgid "Seeders"
+msgstr "做种数"
+
+#: crates/cineo-desktop/src/view/detail.rs:405
+msgid "Search streams"
+msgstr "搜索片源"
+
+#: crates/cineo-desktop/src/view/detail.rs:449
+msgid "All"
+msgstr "全部"
+
+#: crates/cineo-desktop/src/view/detail.rs:475
+msgid "Sort by"
+msgstr "排序方式"
+
+#: crates/cineo-desktop/src/view/detail.rs:524
+msgid "No streams"
+msgstr "没有片源"
+
+#: crates/cineo-desktop/src/view/detail.rs:558
+msgid "No matching streams"
+msgstr "没有匹配的片源"
+
+#: crates/cineo-desktop/src/view/detail.rs:562
+#, rust-format
+msgid "Torrent streams hidden: {count} (peer-to-peer is off in Settings)"
+msgstr "已隐藏的种子片源：{count}（设置中已关闭点对点）"
+
+#: crates/cineo-desktop/src/view/detail.rs:754
+msgid "Specials"
+msgstr "特别篇"
+
+#: crates/cineo-desktop/src/view/detail.rs:762
+msgid "HTTP"
+msgstr "HTTP"
+
+#: crates/cineo-desktop/src/view/detail.rs:763
+msgid "URL"
+msgstr "URL"
+
+#: crates/cineo-desktop/src/view/detail.rs:764
+msgid "YouTube"
+msgstr "YouTube"
+
+#: crates/cineo-desktop/src/view/detail.rs:765
+msgid "Torrent"
+msgstr "种子"
+
+#: crates/cineo-desktop/src/view/detail.rs:766
+msgid "External"
+msgstr "外部"
+
+#: crates/cineo-desktop/src/view/detail.rs:767
+msgid "Archive"
+msgstr "压缩包"
+
+#: crates/cineo-desktop/src/view/detail.rs:768
+msgid "Usenet"
+msgstr "Usenet"
+
+#: crates/cineo-desktop/src/view/mod.rs:58
+#: crates/cineo-desktop/src/view/pages.rs:33
+msgid "Home"
+msgstr "首页"
+
+#: crates/cineo-desktop/src/view/mod.rs:59
+#: crates/cineo-desktop/src/view/pages.rs:50
+msgid "Discover"
+msgstr "发现"
+
+#: crates/cineo-desktop/src/view/mod.rs:60
+#: crates/cineo-desktop/src/view/pages.rs:134
+msgctxt "page-search"
+msgid "Search"
+msgstr "搜索"
+
+#: crates/cineo-desktop/src/view/mod.rs:381
+msgid "Install this addon?"
+msgstr "安装此插件？"
+
+#: crates/cineo-desktop/src/view/mod.rs:382
+msgid "A link asks to install the addon below. Only install addons you trust."
+msgstr "有链接请求安装下面的插件。请只安装您信任的插件。"
+
+#: crates/cineo-desktop/src/view/mod.rs:401
+msgid "Peer-to-peer streaming"
+msgstr "点对点串流"
+
+#: crates/cineo-desktop/src/view/mod.rs:412
+msgid "Accept and play"
+msgstr "接受并播放"
+
+#: crates/cineo-desktop/src/view/mod.rs:424
+msgid "This addon is already installed"
+msgstr "此插件已安装"
+
+#: crates/cineo-desktop/src/view/mod.rs:426
+msgid ""
+"This addon must be configured before it can be installed. Configure it, then "
+"install the link it gives you."
+msgstr "此插件必须先配置才能安装。请先配置，然后安装它提供的链接。"
+
+#: crates/cineo-desktop/src/view/mod.rs:429
+#, rust-format
+msgid "Invalid addon URL: {detail}"
+msgstr "插件 URL 无效：{detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:431
+msgid "No installed addon provides details for this item"
+msgstr "已安装的插件都没有提供此条目的详情"
+
+#: crates/cineo-desktop/src/view/mod.rs:432
+msgid "This catalog does not support that filter"
+msgstr "此片单不支持该筛选条件"
+
+#: crates/cineo-desktop/src/view/mod.rs:441
+#, rust-format
+msgid "An addon could not be loaded: {detail}"
+msgstr "有一个插件无法加载：{detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:447
+#, rust-format
+msgid "Unsupported stream scheme `{scheme}`"
+msgstr "不支持的片源协议 `{scheme}`"
+
+#: crates/cineo-desktop/src/view/mod.rs:451
+msgid "Torrent streams are turned off in Settings"
+msgstr "种子片源已在设置中关闭"
+
+#: crates/cineo-desktop/src/view/mod.rs:454
+#, rust-format
+msgid "{kind} streams are not supported yet"
+msgstr "暂不支持 {kind} 片源"
+
+#: crates/cineo-desktop/src/view/mod.rs:466
+#, rust-format
+msgid "The torrent could not be played: {detail}"
+msgstr "无法播放此种子：{detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:473
+#, rust-format
+msgid "The last stream could not be played, pick another one. {reason}"
+msgstr "无法播放上一个片源，请另选一个。{reason}"
+
+#: crates/cineo-desktop/src/view/mod.rs:480
+msgid "The torrent engine returned an unexpected address"
+msgstr "种子引擎返回了意外的地址"
+
+#: crates/cineo-desktop/src/view/mod.rs:482
+#, rust-format
+msgid "Could not load the subtitle: {detail}"
+msgstr "无法加载字幕：{detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:486
+#, rust-format
+msgid "Could not save changes: {detail}"
+msgstr "无法保存更改：{detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:488
+msgid "Changes can no longer be saved"
+msgstr "已无法再保存更改"
+
+#: crates/cineo-desktop/src/view/mod.rs:489
+msgid "That link cannot be opened by Cineo"
+msgstr "Cineo 无法打开该链接"
+
+#: crates/cineo-desktop/src/view/pages.rs:24
+msgid "Continue watching"
+msgstr "继续观看"
+
+#: crates/cineo-desktop/src/view/pages.rs:36
+msgid ""
+"No addons installed. Catalogs show up here once you add one by its manifest "
+"URL."
+msgstr "尚未安装插件。通过清单 URL 添加插件后，片单会显示在这里。"
+
+#: crates/cineo-desktop/src/view/pages.rs:38
+msgid "Open Addons"
+msgstr "打开插件"
+
+#: crates/cineo-desktop/src/view/pages.rs:52
+msgid "No installed addon has a browsable catalog."
+msgstr "已安装的插件都没有可浏览的片单。"
+
+#: crates/cineo-desktop/src/view/pages.rs:76
+msgid "All genres"
+msgstr "所有类型"
+
+#: crates/cineo-desktop/src/view/pages.rs:139
+msgid "Search movies and series"
+msgstr "搜索电影和剧集"
+
+#: crates/cineo-desktop/src/view/pages.rs:194
+msgid "Results come from every installed addon that supports search."
+msgstr "结果来自所有支持搜索的已安装插件。"
+
+#: crates/cineo-desktop/src/view/pages.rs:199
+msgid "No installed addon supports search."
+msgstr "已安装的插件都不支持搜索。"
+
+#: crates/cineo-desktop/src/view/pages.rs:214
+msgid "Favourites"
+msgstr "收藏"
+
+#: crates/cineo-desktop/src/view/pages.rs:220
+msgid "Recently played"
+msgstr "最近播放"
+
+#: crates/cineo-desktop/src/view/pages.rs:226
+msgid "Anything you play shows up here."
+msgstr "您播放过的内容会显示在这里。"
+
+#: crates/cineo-desktop/src/view/pages.rs:252
+msgid "Movies"
+msgstr "电影"
+
+#: crates/cineo-desktop/src/view/pages.rs:253
+msgid "Series"
+msgstr "剧集"
+
+#: crates/cineo-desktop/src/view/pages.rs:254
+msgid "Channels"
+msgstr "频道"
+
+#: crates/cineo-desktop/src/view/pages.rs:255
+msgid "TV"
+msgstr "电视"
+
+#: crates/cineo-desktop/src/view/pages.rs:258
+#, rust-format
+msgid "{name} {kind}"
+msgstr "{name} {kind}"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:65
+msgid "Loading addons…"
+msgstr "正在加载插件…"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:74
+#, rust-format
+msgid "v{version} available"
+msgstr "v{version} 可用"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:93
+msgid "Open the release page to download it."
+msgstr "打开发布页面进行下载。"
+
+#: crates/cineo-desktop/src/view/widgets.rs:44
+msgid "Cancel"
+msgstr "取消"
+
+#: crates/cineo-desktop/src/view/widgets.rs:123
+msgctxt "clear-field"
+msgid "Clear"
+msgstr "清除"

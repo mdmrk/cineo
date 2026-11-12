@@ -1,6 +1,6 @@
 use super::detail::tag;
 use super::icons::{Icon, paint_icon};
-use crate::i18n::t;
+use crate::i18n::{pt, t};
 use crate::{brand, theme};
 use eframe::egui::{
     self, Align, Button, Color32, CornerRadius, FontId, Frame, Label, Layout, Margin, Mesh, Modal,
@@ -41,7 +41,7 @@ pub(crate) fn dialog(
                 if primary(ui, true, accept).clicked() {
                     answer = Some(true);
                 }
-                if ui.button(t!("cancel")).clicked() {
+                if ui.button(t!("Cancel")).clicked() {
                     answer = Some(false);
                 }
             });
@@ -119,7 +119,8 @@ pub(super) fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool
     let response = ui
         .interact(rect, field.id.with("clear"), Sense::click())
         .on_hover_cursor(egui::CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, t!("clear-field")));
+    response
+        .widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, pt!("clear-field", "Clear")));
     let ink = if response.hovered() {
         theme::TEXT_BRIGHT
     } else {

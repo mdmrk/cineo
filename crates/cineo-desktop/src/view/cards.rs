@@ -23,7 +23,7 @@ pub(super) fn catalog_row(
     section(ui, &catalog_title(&row.target), |ui| {
         if let Some(view) = see_all
             && ui
-                .add(Button::new(RichText::new(t!("see-all")).color(theme::TEXT_DIM)).frame(false))
+                .add(Button::new(RichText::new(t!("See all")).color(theme::TEXT_DIM)).frame(false))
                 .on_hover_cursor(egui::CursorIcon::PointingHand)
                 .clicked()
         {
@@ -41,12 +41,12 @@ pub(super) fn catalog_row(
         }
         Loadable::Failed(err) => {
             ui.horizontal(|ui| {
-                ui.label(faint(&t!("catalog-failed")));
+                ui.label(faint(&t!("Could not load:")));
                 ui.label(RichText::new(problem_text(err)).color(theme::DANGER));
             });
         }
         Loadable::Ready(items) if items.is_empty() => {
-            ui.label(faint(&t!("catalog-empty")));
+            ui.label(faint(&t!("Nothing in this catalog.")));
         }
         Loadable::Ready(items) => {
             poster_strip(ui, salt, |ui| {
@@ -125,9 +125,9 @@ pub(super) fn poster_strip(
 fn pager(ui: &Ui, strip: egui::Id, center: Pos2, right: bool, opacity: f32) -> Response {
     let rect = Rect::from_center_size(center, vec2(34.0, 56.0));
     let label = if right {
-        t!("scroll-right")
+        t!("Scroll right")
     } else {
-        t!("scroll-left")
+        t!("Scroll left")
     };
     let response = ui.interact(rect, strip.with(right), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
@@ -226,9 +226,9 @@ pub(super) fn library_card(
     }
     let corner = 20.0;
     let (heart, label) = if item.is_favorite() {
-        (Icon::Heart, t!("favourite-remove"))
+        (Icon::Heart, t!("Remove from favourites"))
     } else {
-        (Icon::Named("heart"), t!("favourite-add"))
+        (Icon::Named("heart"), t!("Add to favourites"))
     };
     let favorite = rect.left_top() + vec2(corner, corner);
     let shown = if item.is_favorite() { 1.0 } else { hover };
@@ -241,11 +241,11 @@ pub(super) fn library_card(
     let remove = rect.right_top() + vec2(-corner, corner);
     let removable = match shelf {
         Shelf::ContinueWatching => Some((
-            t!("remove-continue"),
+            t!("Remove from continue watching"),
             Action::RemoveFromLibrary(item.id.clone()),
         )),
         Shelf::Library if item.was_played() => Some((
-            t!("remove-library"),
+            t!("Remove from library"),
             Action::RemoveFromLibrary(item.id.clone()),
         )),
         Shelf::Library | Shelf::Favorites => None,
