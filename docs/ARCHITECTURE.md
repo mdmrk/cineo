@@ -170,7 +170,7 @@ sits behind `cfg` in the crate that does the IO:
 | Data and cache directories (desktop `dirs`, ADR-0034) | XDG state and cache via `fastframe-dirs` | `%LOCALAPPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` via `fastframe-dirs` | `~/Library/Application Support/Cineo`, `~/Library/Caches/Cineo` via `fastframe-dirs` |
 | Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL | mode 0700/0600 |
 | Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` | `read_at`/`write_all_at` |
-| libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) | dylibs in `Cineo.app/Contents/Frameworks`, else the system or `/opt/homebrew/lib` |
+| libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) | dylibs in `Cineo.app/Contents/Frameworks`, else the system, `/opt/homebrew/lib` or `/usr/local/lib` |
 | Single-instance handover (desktop `instance`, ADR-0032) | Unix socket via `fastframe-instance` | loopback port and token via `fastframe-instance` | Unix socket via `fastframe-instance` |
 | Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` | none (ADR-0035) |
 | Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` | Now Playing via `fastframe-now-playing` |

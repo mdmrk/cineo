@@ -137,7 +137,7 @@ const NAMES: &[&str] = &["libmpv-2.dll", "mpv-2.dll"];
 const NAMES: &[&str] = &["libmpv.2.dylib", "libmpv.dylib"];
 
 #[cfg(target_os = "macos")]
-const SYSTEM_DIRS: &[&str] = &["/opt/homebrew/lib"];
+const SYSTEM_DIRS: &[&str] = &["/opt/homebrew/lib", "/usr/local/lib"];
 #[cfg(not(target_os = "macos"))]
 const SYSTEM_DIRS: &[&str] = &[];
 
@@ -558,6 +558,17 @@ mod tests {
             ]
         );
         assert!(NAMES.contains(&"libmpv.dylib"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn homebrew_is_searched_on_apple_silicon_and_on_intel_after_the_system() {
+        let paths = candidates_from(&[], None);
+        let at = |path: &str| paths.iter().position(|p| p == Path::new(path));
+        let system = at("libmpv.dylib").unwrap();
+        let arm = at("/opt/homebrew/lib/libmpv.dylib").unwrap();
+        let intel = at("/usr/local/lib/libmpv.dylib").unwrap();
+        assert!(system < arm && arm < intel, "{paths:?}");
     }
 
     #[test]

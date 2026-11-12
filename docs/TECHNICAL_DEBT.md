@@ -317,8 +317,8 @@ Format:
   on Linux and Windows. Behavior differences are UNKNOWN.
 - Why: it is the newest LGPL universal macOS build found that ships ready
   dylibs (media-kit/libmpv-darwin-build v0.7.3).
-- Instead: a Homebrew libmpv in `/opt/homebrew/lib` is used only when the
-  bundle has none.
+- Instead: a Homebrew libmpv in `/opt/homebrew/lib` or `/usr/local/lib`
+  is used only when the bundle has none.
 - Exit: build libmpv for macOS in CI from pinned sources, as for Android.
 
 ### Windows: nothing has run on a Windows machine

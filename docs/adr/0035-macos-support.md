@@ -56,7 +56,7 @@ Option 1.
   path to each, signs them ad hoc and checks that `libmpv.dylib` loads.
   `cineo-player` looks for `libmpv.2.dylib` and `libmpv.dylib` next to the
   executable, then in `../Frameworks`, then on the system path, then in
-  `/opt/homebrew/lib`. `hwdec` is `auto-safe`.
+  `/opt/homebrew/lib` and `/usr/local/lib`. `hwdec` is `auto-safe`.
 - **App.** `Cineo.app` with `scripts/macos/Info.plist`
   (`io.github.mdmrk.cineo`, macOS 11 or newer), executable `cineo`, a
   `lipo` of the `aarch64-apple-darwin` and `x86_64-apple-darwin` builds,
