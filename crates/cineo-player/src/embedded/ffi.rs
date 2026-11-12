@@ -129,10 +129,17 @@ pub(crate) fn lib() -> Result<&'static Lib, String> {
     LIB.get_or_init(load).as_ref().map_err(Clone::clone)
 }
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), not(target_os = "macos")))]
 const NAMES: &[&str] = &["libmpv.so.2", "libmpv.so"];
 #[cfg(windows)]
 const NAMES: &[&str] = &["libmpv-2.dll", "mpv-2.dll"];
+#[cfg(target_os = "macos")]
+const NAMES: &[&str] = &["libmpv.2.dylib", "libmpv.dylib"];
+
+#[cfg(target_os = "macos")]
+const SYSTEM_DIRS: &[&str] = &["/opt/homebrew/lib"];
+#[cfg(not(target_os = "macos"))]
+const SYSTEM_DIRS: &[&str] = &[];
 
 static BUNDLED: OnceLock<PathBuf> = OnceLock::new();
 
@@ -141,19 +148,33 @@ pub(crate) fn set_bundled(path: PathBuf) {
 }
 
 fn candidates() -> Vec<PathBuf> {
-    let beside = std::env::current_exe()
+    let dirs = std::env::current_exe()
         .ok()
-        .and_then(|exe| exe.parent().map(PathBuf::from));
-    candidates_from(beside.as_deref(), BUNDLED.get().map(PathBuf::as_path))
+        .and_then(|exe| exe.parent().map(library_dirs_from))
+        .unwrap_or_default();
+    candidates_from(&dirs, BUNDLED.get().map(PathBuf::as_path))
 }
 
-fn candidates_from(beside: Option<&Path>, bundled: Option<&Path>) -> Vec<PathBuf> {
-    let mut paths: Vec<PathBuf> = beside
-        .iter()
-        .flat_map(|dir| NAMES.iter().map(|name| dir.join(name)))
-        .collect();
+fn library_dirs_from(exe_dir: &Path) -> Vec<PathBuf> {
+    let mut dirs = vec![exe_dir.to_path_buf()];
+    if cfg!(target_os = "macos")
+        && let Some(contents) = exe_dir.parent()
+    {
+        dirs.push(contents.join("Frameworks"));
+    }
+    dirs
+}
+
+fn candidates_from(dirs: &[PathBuf], bundled: Option<&Path>) -> Vec<PathBuf> {
+    let in_dirs = |dirs: Vec<PathBuf>| {
+        dirs.into_iter()
+            .flat_map(|dir| NAMES.iter().map(move |name| dir.join(name)))
+            .collect::<Vec<_>>()
+    };
+    let mut paths = in_dirs(dirs.to_vec());
     paths.extend(bundled.map(Path::to_path_buf));
     paths.extend(NAMES.iter().map(PathBuf::from));
+    paths.extend(in_dirs(SYSTEM_DIRS.iter().map(PathBuf::from).collect()));
     paths
 }
 
@@ -500,17 +521,43 @@ mod tests {
 
     #[test]
     fn the_bundled_library_comes_after_the_executable_dir_and_before_the_system() {
-        let exe_dir = Path::new("/opt/cineo");
+        let exe_dir = PathBuf::from("/opt/cineo");
         let bundled = Path::new("/cache/libmpv/1.5.1/libmpv-2.dll");
-        let paths = candidates_from(Some(exe_dir), Some(bundled));
+        let paths = candidates_from(std::slice::from_ref(&exe_dir), Some(bundled));
+        let system: Vec<PathBuf> = NAMES
+            .iter()
+            .map(PathBuf::from)
+            .chain(
+                SYSTEM_DIRS
+                    .iter()
+                    .flat_map(|dir| NAMES.iter().map(move |name| Path::new(dir).join(name))),
+            )
+            .collect();
         let mut expected: Vec<PathBuf> = NAMES.iter().map(|name| exe_dir.join(name)).collect();
         expected.push(bundled.to_path_buf());
-        expected.extend(NAMES.iter().map(PathBuf::from));
+        expected.extend(system.iter().cloned());
         assert_eq!(paths, expected);
+        assert_eq!(candidates_from(&[], None), system);
+    }
+
+    #[test]
+    fn the_executable_dir_is_searched_first() {
+        let dirs = library_dirs_from(Path::new("/opt/cineo"));
+        assert_eq!(dirs.first(), Some(&PathBuf::from("/opt/cineo")));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn inside_an_app_bundle_the_frameworks_folder_is_searched_too() {
+        let dirs = library_dirs_from(Path::new("/Applications/Cineo.app/Contents/MacOS"));
         assert_eq!(
-            candidates_from(None, None),
-            NAMES.iter().map(PathBuf::from).collect::<Vec<_>>()
+            dirs,
+            [
+                PathBuf::from("/Applications/Cineo.app/Contents/MacOS"),
+                PathBuf::from("/Applications/Cineo.app/Contents/Frameworks"),
+            ]
         );
+        assert!(NAMES.contains(&"libmpv.dylib"));
     }
 
     #[test]

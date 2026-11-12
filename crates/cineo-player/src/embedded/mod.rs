@@ -166,9 +166,9 @@ const OBSERVED: [(u64, &str, std::ffi::c_int); 16] = [
     (CACHE_STATE, "demuxer-cache-state", ffi::FORMAT_STRING),
 ];
 
-#[cfg(all(not(windows), not(target_os = "android")))]
+#[cfg(target_os = "linux")]
 const HWDEC: &str = "vaapi,auto-safe";
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 const HWDEC: &str = "auto-safe";
 #[cfg(target_os = "android")]
 const HWDEC: &str = "mediacodec";
