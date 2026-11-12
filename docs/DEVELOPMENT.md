@@ -313,7 +313,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 #### Persistence problems
 
 - Installed addons and the library live in one SQLite database, by default
-  `$XDG_DATA_HOME/cineo/cineo.db` (`~/.local/share/cineo/cineo.db`);
+  `$XDG_STATE_HOME/cineo/cineo.db` (`~/.local/state/cineo/cineo.db`);
   `--data-dir <dir>` uses another directory. The database uses write-ahead
   logging, so while Cineo runs recent writes live in `cineo.db-wal`; copy
   `cineo.db` only after closing it. Addon URLs in it can contain your addon
@@ -460,7 +460,7 @@ current version when adding one.
 | `wiremock` (dev)                                                                       | 0.6.5                                                                                                                                  | Mock addon servers in tests                                                                                                                     | MIT/Apache                           |
 | `tempfile` (dev)                                                                       | 3.27.0                                                                                                                                 | Temporary directories removed after each test                                                                                                   | MIT/Apache                           |
 | `rusqlite` (`bundled`, no default features)                                            | 0.41.1                                                                                                                                 | SQLite database (store)                                                                                                                         | MIT; bundled SQLite is public domain |
-| `etcetera`                                                                             | 0.11.0                                                                                                                                 | XDG data and cache directories (store)                                                                                                          | MIT/Apache                           |
+| `fastframe-dirs` (git, tag; not on crates.io) | 0.17.0 | Per-user data and cache folders, through `directories` (desktop, ADR-0034) | MIT |
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`, `links`; no default features) | 0.36.2 (ADR-0033)                                                                                                                                 | Desktop window and egui (desktop, ADR-0011)                                                                                                     | MIT/Apache                           |
 | `iconflow` (`pack-tabler` only; no default features)                                   | 2.1.0                                                                                                                                  | Tabler icon font and codepoints for the desktop UI (desktop)                                                                                    | MIT; Tabler font MIT                 |
 | `image` (`jpeg`, `png`, `webp` only)                                                   | 0.25.10                                                                                                                                | Image header checks and decoding (desktop)                                                                                                      | MIT/Apache                           |
@@ -499,7 +499,7 @@ dropped with the external mpv player (2026-10-07). The player uses
 
 `rusqlite` drops its default features (`cache`, and an FFI backend used only
 on wasm). `bundled` compiles SQLite from source, so no system library is
-needed. `etcetera` MSRV: 1.87.
+needed.
 
 egui (2026-10-06): the egui crates have MSRV 1.95. Through `eframe`, the
 tree gains `arboard` for copy and paste. Wayland and X11 libraries are loaded at run time
@@ -556,7 +556,6 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | `slint`                    | GPL or proprietary licensing                                                                                                           |
 | `serde_with`               | The ADR-0003 lenient parser needs warnings, which serde adapters cannot emit                                                           |
 | `chrono` / `jiff` / `time` | The only date parsed is `released`, by a small ISO 8601 reader in the core (`addon::meta`)                                             |
-| `directories` 6.0.0        | Pulls in `option-ext` (MPL-2.0, not in the `.config/deny.toml` allowlist) via `dirs-sys`. `etcetera` gives the same paths (2026-10-06) |
 | `sqlx` / `redb`            | `sqlx`: async with compile-time checks, heavier than needed. `redb`: key-value, no queries. `rusqlite` chosen instead                  |
 | `async-trait`              | Native async fn in traits is enough; effects are data (ADR-0001)                                                                       |
 | `figment` / config crates  | No configuration file; settings live in SQLite                                                                                         |

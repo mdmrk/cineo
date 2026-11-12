@@ -1,5 +1,6 @@
 mod app;
 mod brand;
+pub mod dirs;
 pub mod i18n;
 mod image_disk;
 mod images;

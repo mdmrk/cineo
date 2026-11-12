@@ -1,6 +1,7 @@
 crates/cineo-desktop/src/app/mod.rs
 crates/cineo-desktop/src/app/playback.rs
 crates/cineo-desktop/src/brand.rs
+crates/cineo-desktop/src/dirs.rs
 crates/cineo-desktop/src/i18n.rs
 crates/cineo-desktop/src/image_disk.rs
 crates/cineo-desktop/src/images.rs

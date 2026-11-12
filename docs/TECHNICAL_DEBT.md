@@ -343,6 +343,18 @@ Format:
 - Exit: add the Wayland `idle-inhibit` protocol on the window surface, and
   test it on the desktops Cineo targets.
 
+### Desktop: the data of earlier versions is not moved
+- Where: [dirs.rs](../crates/cineo-desktop/src/dirs.rs)
+- Gap: since ADR-0034 the database is in `~/.local/state/cineo` (Linux)
+  and `%LOCALAPPDATA%\Cineo\data` (Windows). Addons, library and settings
+  in `~/.local/share/cineo` or `%APPDATA%\Cineo\data` are not read, so an
+  upgraded install starts empty.
+- Why: the owner chose not to move or copy them (2026-11-12).
+- Instead: pass `--data-dir` with the old folder, or move `cineo.db` into
+  the new one with Cineo closed.
+- Exit: move the old folder on the first start when the new one does not
+  exist.
+
 ### Desktop: egui is held at 0.36.2 for fastframe
 - Where: [Cargo.toml](../Cargo.toml) (ADR-0033)
 - Gap: Cineo is one egui release behind. It misses 0.37's accessibility

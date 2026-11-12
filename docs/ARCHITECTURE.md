@@ -166,7 +166,7 @@ in the crate that does the IO:
 
 | Concern | Linux | Windows |
 |---------|-------|---------|
-| Data and cache directories (`cineo-store`) | XDG | `%APPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` |
+| Data and cache directories (desktop `dirs`, ADR-0034) | XDG state and cache via `fastframe-dirs` | `%LOCALAPPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` via `fastframe-dirs` |
 | Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL |
 | Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` |
 | libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) |

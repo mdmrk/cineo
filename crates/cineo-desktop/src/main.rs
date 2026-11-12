@@ -23,7 +23,11 @@ struct Cli {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let data_dir = cli.data_dir.clone().or_else(cineo_store::default_data_dir);
+    let installed = cineo_desktop::dirs::installed();
+    let data_dir = cli
+        .data_dir
+        .clone()
+        .or_else(|| installed.as_ref().map(|dirs| dirs.state.clone()));
     if let Some(dir) = &data_dir {
         cineo_desktop::panic_log::record_panics(dir);
         if cineo_desktop::instance::forward(dir, cli.link.as_deref()) {
@@ -31,7 +35,8 @@ fn main() -> ExitCode {
         }
     }
     cineo_desktop::logging::init(cli.verbose, data_dir.as_deref());
-    match start(cli, data_dir) {
+    let cache_dir = installed.map(|dirs| dirs.cache);
+    match start(cli, data_dir, cache_dir) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             tracing::error!("{err:#}");
@@ -40,11 +45,11 @@ fn main() -> ExitCode {
     }
 }
 
-fn start(cli: Cli, data_dir: Option<PathBuf>) -> anyhow::Result<()> {
+fn start(cli: Cli, data_dir: Option<PathBuf>, cache_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let data_dir = data_dir.context("no home directory; pass --data-dir")?;
     let cache_dir = cli
         .cache_dir
-        .or_else(cineo_store::default_cache_dir)
+        .or(cache_dir)
         .unwrap_or_else(|| data_dir.join("cache"));
     cineo_desktop::libmpv::install(&cache_dir);
     cineo_desktop::run(cineo_desktop::Options {

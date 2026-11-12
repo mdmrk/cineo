@@ -42,8 +42,9 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   `x86_64-pc-windows-msvc` and `aarch64-linux-android` dependency graphs.
 - One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
   MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
-  `dirs-sys` (ADR-0012) and cannot be removed without forking
-  librqbit. MPL-2.0 is copyleft per file: we use it unmodified, so the
+  `dirs-sys` (ADR-0012), and since 2026-11-12 also through
+  `fastframe-dirs` → `directories` (ADR-0034). It cannot be removed without
+  forking librqbit. MPL-2.0 is copyleft per file: we use it unmodified, so the
   obligation is to ship its notice and point to its source. The exception
   in `.config/deny.toml` covers only this crate; MPL-2.0 is not on the general
   allowlist.

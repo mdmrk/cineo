@@ -72,7 +72,9 @@ $env:CINEO_UNINSTALL=1; irm https://github.com/mdmrk/cineo/releases/latest/downl
 ```
 
 Your addons and library are kept. To remove them too, delete
-`~/.local/share/cineo` (Linux) or `%APPDATA%\Cineo` (Windows).
+`~/.local/state/cineo` (Linux) or `%LOCALAPPDATA%\Cineo\data` (Windows).
+Earlier versions kept them in `~/.local/share/cineo` or `%APPDATA%\Cineo`,
+and Cineo does not move them.
 
 On Android, uninstall Cineo like any other app. This also deletes your
 addons and library.

@@ -24,6 +24,7 @@ cineo-stream.workspace = true
 clap.workspace = true
 eframe.workspace = true
 fast_image_resize.workspace = true
+fastframe-dirs.workspace = true
 fastframe-emoji.workspace = true
 fastframe-file.workspace = true
 fastframe-fonts.workspace = true

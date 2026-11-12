@@ -12,7 +12,7 @@ $Extracted = Join-Path $env:LOCALAPPDATA 'Cineo\cache\libmpv'
 if ($env:CINEO_UNINSTALL) {
     Remove-Item -Force -ErrorAction SilentlyContinue $Shortcut
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $InstallDir, $Extracted
-    Write-Host "Cineo removed. Your addons and library stay in $env:APPDATA\Cineo."
+    Write-Host "Cineo removed. Your addons and library stay in $env:LOCALAPPDATA\Cineo\data."
     return
 }
 

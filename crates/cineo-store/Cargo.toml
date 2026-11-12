@@ -9,7 +9,6 @@ publish.workspace = true
 
 [dependencies]
 cineo-core.workspace = true
-etcetera.workspace = true
 rusqlite.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

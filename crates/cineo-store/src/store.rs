@@ -1,9 +1,8 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
-use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use rusqlite::{Connection, ErrorCode, Row, params};
 use tracing::warn;
 use url::Url;
@@ -45,23 +44,6 @@ impl From<rusqlite::Error> for StoreError {
             _ => Self::Sqlite(err),
         }
     }
-}
-
-pub fn default_data_dir() -> Option<PathBuf> {
-    app_strategy().map(|s| s.data_dir())
-}
-
-pub fn default_cache_dir() -> Option<PathBuf> {
-    app_strategy().map(|s| s.cache_dir())
-}
-
-fn app_strategy() -> Option<impl AppStrategy> {
-    choose_app_strategy(AppStrategyArgs {
-        top_level_domain: String::new(),
-        author: String::new(),
-        app_name: "Cineo".to_owned(),
-    })
-    .ok()
 }
 
 #[derive(Debug)]
