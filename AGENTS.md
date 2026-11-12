@@ -1,7 +1,7 @@
 # AGENTS.md — engineering contract
 
 Cineo: an independent Rust media center for Stremio-protocol addons, for
-Linux x86_64 and Windows x86_64 (ADR-0022, ADR-0027), with an Android
+Linux x86_64, Windows x86_64 and macOS (ADR-0022, ADR-0027, ADR-0035), with an Android
 arm64 port in progress and released as an APK (ADR-0028, ADR-0029). Scope and current state:
 `docs/COMPATIBILITY.md`. Known limitations: `docs/TECHNICAL_DEBT.md`.
 

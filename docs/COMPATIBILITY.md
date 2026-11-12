@@ -99,7 +99,7 @@ _Last reviewed: 2026-10-13._
 |----------|--------|-------|
 | Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh` |
 | Windows x86_64 | Untested | Released with libmpv embedded; tests pass under wine; never run on real Windows. [Details](#windows) |
-| macOS | Unsupported | Removed 2026-10-13 (ADR-0022) |
+| macOS (arm64, x86_64) | Untested | Restored 2026-11-12 (ADR-0035) as a universal `.dmg` with libmpv inside; never run on a Mac. [Details](#macos) |
 | Android | Partial | In progress (ADR-0028); a signed arm64 APK in every release since 2026-11-04; arm64 phones only, gaps and parts not yet seen on a phone in the details. [Details](#android) |
 | iOS / Web | Unsupported | |
 
@@ -483,6 +483,23 @@ The full evidence for the rows above whose notes do not fit in the table.
   there (`desktop_commands_map_to_remotes` covers only the button mapping).
 - The wine results for the named pipe and SMTC predate the moves to
   fastframe (ADR-0031, ADR-0032).
+
+### macOS
+
+- Restored 2026-11-12 (ADR-0035); released as `cineo-universal-macos.dmg`
+  with `Cineo.app` (arm64 and x86_64, macOS 11 or newer), signed ad hoc and
+  not notarized, with libmpv 0.36.0 and FFmpeg 6.0 from
+  media-kit/libmpv-darwin-build in `Contents/Frameworks`.
+- CI runs clippy and the tests on `macos-latest`; the release job checks
+  that the bundled `libmpv.dylib` and its libraries load (`dlopen`).
+- Library lookup order is tested on every platform
+  (`the_bundled_library_comes_after_the_executable_dir_and_before_the_system`)
+  and inside a bundle on macOS
+  (`inside_an_app_bundle_the_frameworks_folder_is_searched_too`).
+- `stremio://` and `cineo://` links are not handled on macOS, and the
+  setting that registers them is hidden.
+- Nobody has run the app on a Mac, so the window, playback, hardware
+  decoding, Now Playing, keep-awake and the folders are UNKNOWN.
 
 ### Android
 

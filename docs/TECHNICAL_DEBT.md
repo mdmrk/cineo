@@ -282,6 +282,45 @@ Format:
   on the next start.
 - Exit: a network-change signal per platform, with retries while it is down.
 
+### macOS: nothing has run on a Mac
+- Where: every `cfg(target_os = "macos")` path and `scripts/package.sh macos` (ADR-0035)
+- Gap: CI compiles and tests on `macos-latest` and checks that the bundled
+  libmpv loads, but no one has opened the app. The window, playback over
+  the OpenGL render API, `hwdec=auto-safe`, Now Playing, keep-awake and the
+  `~/Library` folders are UNKNOWN.
+- Why: there is no Mac in development.
+- Instead: macOS is marked Untested in COMPATIBILITY.md.
+- Exit: run the [manual test](DEVELOPMENT.md#manual-gui-test) on a Mac and
+  record the results.
+
+### macOS: links are not handled
+- Where: [register.rs](../crates/cineo-desktop/src/register.rs), [Info.plist](../scripts/macos/Info.plist)
+- Gap: macOS delivers `stremio://` and `cineo://` links as Apple Events.
+  Cineo installs no handler and declares no URL schemes.
+- Why: a handler needs `unsafe` Objective-C calls, forbidden in the desktop
+  shell (ADR-0035).
+- Instead: the setting is hidden on macOS; links open in whichever app
+  claims the scheme.
+- Exit: take URL events from a safe crate, then declare `CFBundleURLTypes`.
+
+### macOS: the app is not notarized
+- Where: `scripts/package.sh macos`
+- Gap: the bundle is signed ad hoc. Gatekeeper blocks the first open of
+  the downloaded app until the user allows it.
+- Why: there is no Apple Developer account.
+- Instead: the README explains how to open it.
+- Exit: sign with a Developer ID and notarize in CI.
+
+### macOS: an older libmpv
+- Where: [libmpv-macos.env](../scripts/libmpv-macos.env)
+- Gap: the bundled build is mpv 0.36.0 with FFmpeg 6.0 (2023), older than
+  on Linux and Windows. Behavior differences are UNKNOWN.
+- Why: it is the newest LGPL universal macOS build found that ships ready
+  dylibs (media-kit/libmpv-darwin-build v0.7.3).
+- Instead: a Homebrew libmpv in `/opt/homebrew/lib` is used only when the
+  bundle has none.
+- Exit: build libmpv for macOS in CI from pinned sources, as for Android.
+
 ### Windows: nothing has run on a Windows machine
 - Where: every `cfg(windows)` path (ADR-0027)
 - Gap: CI compiles and tests on `windows-latest`, and the app starts under

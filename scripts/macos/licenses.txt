@@ -1,0 +1,16 @@
+mpv-LGPL-2.1.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/LICENSE.LGPL
+mpv-Copyright.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/Copyright
+ffmpeg-LGPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.LGPLv3
+ffmpeg-GPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.GPLv3
+ffmpeg-LICENSE.md https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/LICENSE.md
+dav1d-BSD-2-Clause.txt https://code.videolan.org/videolan/dav1d/-/raw/1.2.1/COPYING
+libass-ISC.txt https://raw.githubusercontent.com/libass/libass/0.17.1/COPYING
+freetype.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/LICENSE.TXT
+freetype-FTL.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/docs/FTL.TXT
+fribidi-LGPL-2.1.txt https://raw.githubusercontent.com/fribidi/fribidi/v1.0.13/COPYING
+harfbuzz-MIT.txt https://raw.githubusercontent.com/harfbuzz/harfbuzz/8.1.1/COPYING
+libpng.txt https://raw.githubusercontent.com/pnggroup/libpng/v1.6.40/LICENSE
+libxml2-MIT.txt https://gitlab.gnome.org/GNOME/libxml2/-/raw/v2.11.5/Copyright
+mbedtls-Apache-2.0.txt https://raw.githubusercontent.com/Mbed-TLS/mbedtls/v3.4.1/LICENSE
+uchardet.txt https://gitlab.freedesktop.org/uchardet/uchardet/-/raw/v0.0.8/COPYING
+libmpv-darwin-build-MIT.txt https://raw.githubusercontent.com/media-kit/libmpv-darwin-build/v0.7.3/LICENSE.txt

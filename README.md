@@ -1,10 +1,10 @@
 # Cineo
 
 [![Release](https://img.shields.io/github/v/release/mdmrk/cineo)](https://github.com/mdmrk/cineo/releases/latest)
-[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20android-blue)](docs/COMPATIBILITY.md#platforms)
+[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20macos%20%7C%20android-blue)](docs/COMPATIBILITY.md#platforms)
 [![License](https://img.shields.io/github/license/mdmrk/cineo)](LICENSE)
 
-A fast, native media center for Linux, Windows and Android phones.
+A fast, native media center for Linux, Windows, macOS and Android phones.
 It works with Stremio addons. No account, no cloud.
 
 <table>
@@ -45,6 +45,16 @@ irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 
 Nothing else is needed.
 
+### macOS (Apple silicon and Intel, macOS 11 or newer)
+
+Download `cineo-universal-macos.dmg` from the
+[latest release](https://github.com/mdmrk/cineo/releases/latest), open it
+and drag Cineo to Applications. The app is not notarized, so macOS blocks
+it the first time: open **System Settings → Privacy & Security** and
+click **Open Anyway**, or run
+`xattr -dr com.apple.quarantine /Applications/Cineo.app`.
+Nobody has tried it on a Mac yet; see [what is known](docs/COMPATIBILITY.md#macos).
+
 ### Android (arm64 phones)
 
 Download and open `cineo-arm64-android.apk` from the
@@ -54,8 +64,8 @@ The Android app does less than the desktop one; see
 
 ## Update
 
-Run the install command again. On Android, install the new APK over the
-old one.
+Run the install command again. On macOS, replace Cineo in Applications
+with the new one. On Android, install the new APK over the old one.
 
 ## Uninstall
 
@@ -75,6 +85,9 @@ Your addons and library are kept. To remove them too, delete
 `~/.local/state/cineo` (Linux) or `%LOCALAPPDATA%\Cineo\data` (Windows).
 Earlier versions kept them in `~/.local/share/cineo` or `%APPDATA%\Cineo`,
 and Cineo does not move them.
+
+On macOS, move Cineo from Applications to the Trash; your addons and
+library stay in `~/Library/Application Support/Cineo`.
 
 On Android, uninstall Cineo like any other app. This also deletes your
 addons and library.

@@ -28,6 +28,9 @@ cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
 Cineo writes the DLL to %LOCALAPPDATA%\\Cineo\\cache\\libmpv\\<version>\\.
 To use your own build, put a libmpv-2.dll next to cineo-x86_64-windows.exe;
 it is loaded first.
+
+cineo-universal-macos.dmg carries its own libmpv and FFmpeg builds; their
+notices and license texts are in Cineo.app/Contents/Resources/licenses.
 EOT
     if command -v zip >/dev/null; then
       (cd dist && zip -qr cineo-licenses.zip cineo-licenses)
@@ -113,6 +116,74 @@ PY
         echo "$apk: expected versionCode $expected and versionName $version, got: $badging" >&2
         exit 1
       }
+    ;;
+  macos)
+    source scripts/libmpv-macos.env
+    libmpv=${CINEO_LIBMPV_MACOS:-target/libmpv-macos}
+    version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+    app=dist/Cineo.app
+    contents=$app/Contents
+    mkdir -p "$contents/MacOS" "$contents/Frameworks" "$contents/Resources/licenses"
+    lipo -create target/aarch64-apple-darwin/release/cineo-desktop \
+      target/x86_64-apple-darwin/release/cineo-desktop -output "$contents/MacOS/cineo"
+    sed -e "s/__VERSION__/$version/g" -e "s/__BUILD__/${version%%-*}/g" \
+      scripts/macos/Info.plist >"$contents/Info.plist"
+    plutil -lint "$contents/Info.plist"
+    iconset=$(mktemp -d)/cineo.iconset
+    mkdir -p "$iconset"
+    icon=crates/cineo-desktop/assets/brand/icon.png
+    for size in 16 32 128; do
+      sips -z "$size" "$size" "$icon" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+      sips -z $((size * 2)) $((size * 2)) "$icon" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+    done
+    cp "$icon" "$iconset/icon_256x256.png"
+    iconutil -c icns "$iconset" -o "$contents/Resources/cineo.icns"
+    cp "$libmpv"/lib/*.dylib "$contents/Frameworks/"
+    for lib in "$contents"/Frameworks/*.dylib; do
+      chmod u+w "$lib"
+      install_name_tool -add_rpath @loader_path "$lib"
+      codesign --force --sign - "$lib"
+    done
+    licenses=$contents/Resources/licenses
+    cp LICENSE "$licenses/cineo-MIT.txt"
+    cp crates/cineo-desktop/assets/fonts/*-OFL.txt "$licenses/"
+    iconflow=$(cargo metadata --format-version 1 --locked |
+      jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
+    cp "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" "$licenses/"
+    cp "$libmpv"/licenses/* "$licenses/"
+    cat >"$licenses/libmpv.md" <<EOT
+# libmpv (macOS build)
+
+Cineo.app/Contents/Frameworks holds unmodified LGPL builds of libmpv
+${LIBMPV_MACOS_MPV_VERSION} and FFmpeg ${LIBMPV_MACOS_FFMPEG_VERSION} with the libraries they use, from
+media-kit/libmpv-darwin-build ${LIBMPV_MACOS_TAG} (variant video-default).
+mpv is LGPL-2.1-or-later; FFmpeg is built with --enable-version3, so it is
+LGPL-3.0-or-later. License texts are in this folder.
+
+- Binary: ${LIBMPV_MACOS_UPSTREAM}/${LIBMPV_MACOS_FILE}
+  (SHA-256 ${LIBMPV_MACOS_SHA256})
+- Build scripts and the source of every library:
+  https://github.com/media-kit/libmpv-darwin-build/tree/${LIBMPV_MACOS_TAG}
+  (sources: packages.lock.nix)
+
+The only change Cineo makes is an @loader_path run path in each library, so
+they find each other inside the app. To use your own build, replace the
+.dylib files in Cineo.app/Contents/Frameworks and sign the app again with
+\`codesign --force --deep --sign - Cineo.app\`.
+EOT
+    codesign --force --sign - "$app"
+    codesign --verify --strict --deep "$app"
+    check=$(mktemp -d)/dlopen
+    printf '%s\n' '#include <dlfcn.h>' '#include <stdio.h>' \
+      'int main(int argc, char **argv) { (void)argc; if (!dlopen(argv[1], RTLD_NOW)) { fprintf(stderr, "%s\n", dlerror()); return 1; } return 0; }' |
+      cc -x c -o "$check" -
+    "$check" "$contents/Frameworks/libmpv.dylib"
+    lipo "$contents/MacOS/cineo" -verify_arch arm64 x86_64
+    stage=$(mktemp -d)
+    cp -R "$app" "$stage/"
+    ln -s /Applications "$stage/Applications"
+    hdiutil create -volname Cineo -srcfolder "$stage" -ov -format UDZO dist/cineo-universal-macos.dmg
+    rm -rf "$app" "$stage"
     ;;
   *)
     echo "unknown platform: $1" >&2

@@ -1,7 +1,8 @@
 # Architecture
 
 Decisions are recorded in [adr/](adr/README.md). Cineo runs on Linux
-x86_64 and Windows x86_64 (ADR-0022, ADR-0027). An Android port for
+x86_64, Windows x86_64 and macOS arm64 and x86_64 (ADR-0022, ADR-0027,
+ADR-0035). An Android port for
 arm64, with a Kotlin UI over a Rust shell crate, is in progress
 (ADR-0028); each release carries its APK (ADR-0029).
 
@@ -161,19 +162,19 @@ In `cineo-desktop`:
 
 ### Platform integration
 
-Linux and Windows (ADR-0022, ADR-0027). Platform code sits behind `cfg`
-in the crate that does the IO:
+Linux, Windows and macOS (ADR-0022, ADR-0027, ADR-0035). Platform code
+sits behind `cfg` in the crate that does the IO:
 
-| Concern | Linux | Windows |
-|---------|-------|---------|
-| Data and cache directories (desktop `dirs`, ADR-0034) | XDG state and cache via `fastframe-dirs` | `%LOCALAPPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` via `fastframe-dirs` |
-| Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL |
-| Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` |
-| libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) |
-| Single-instance handover (desktop `instance`, ADR-0032) | Unix socket via `fastframe-instance` | loopback port and token via `fastframe-instance` |
-| Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` |
-| Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` |
-| Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver`, and idle sleep via `fastframe-power` | `SetThreadExecutionState` via `keepawake`, and idle sleep via `fastframe-power` |
+| Concern | Linux | Windows | macOS |
+|---------|-------|---------|-------|
+| Data and cache directories (desktop `dirs`, ADR-0034) | XDG state and cache via `fastframe-dirs` | `%LOCALAPPDATA%\Cineo\data`, `%LOCALAPPDATA%\Cineo\cache` via `fastframe-dirs` | `~/Library/Application Support/Cineo`, `~/Library/Caches/Cineo` via `fastframe-dirs` |
+| Private files (`cineo-store`, `cineo-stream`, desktop subtitles) | mode 0700/0600 | the profile's default ACL | mode 0700/0600 |
+| Torrent piece IO (`cineo-stream`) | `read_at`/`write_all_at` | `seek_read`/`seek_write` | `read_at`/`write_all_at` |
+| libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) | dylibs in `Cineo.app/Contents/Frameworks`, else the system or `/opt/homebrew/lib` |
+| Single-instance handover (desktop `instance`, ADR-0032) | Unix socket via `fastframe-instance` | loopback port and token via `fastframe-instance` | Unix socket via `fastframe-instance` |
+| Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` | none (ADR-0035) |
+| Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` | Now Playing via `fastframe-now-playing` |
+| Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver`, and idle sleep via `fastframe-power` | `SetThreadExecutionState` via `keepawake`, and idle sleep via `fastframe-power` | IOKit assertions via `keepawake`, and App Nap via `fastframe-power` |
 
 `std::os::unix` and `std::os::windows` need a `cfg`.
 

@@ -74,6 +74,23 @@ jobs:
       - run: cargo nextest run --workspace --locked
         working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
 
+  macos:
+    name: check (macos)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - *checkout
+      - *unoptimized-deps
+      - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2.88.1
+        with:
+          tool: cargo-nextest@0.9.150
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo nextest run --workspace --locked
+
   android:
     name: check (android)
     runs-on: ubuntu-latest
@@ -99,8 +116,9 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { platform: linux, os: ubuntu-latest }
-          - { platform: windows, os: windows-latest, features: bundled-libmpv }
+          - { platform: linux, os: ubuntu-latest, rustflags: -C target-cpu=x86-64-v2 }
+          - { platform: windows, os: windows-latest, features: bundled-libmpv, rustflags: -C target-cpu=x86-64-v2 }
+          - { platform: macos, os: macos-latest, targets: aarch64-apple-darwin x86_64-apple-darwin }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     permissions: &attest
@@ -112,7 +130,9 @@ jobs:
         shell: bash
     steps:
       - *checkout
-      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - run: rustup toolchain install stable --profile minimal ${TARGETS:+--target ${TARGETS// /,}} && rustup default stable
+        env:
+          TARGETS: ${{ matrix.targets }}
       - uses: Swatinem/rust-cache@v2.9.3
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
@@ -122,10 +142,23 @@ jobs:
         run: |
           scripts/fetch-libmpv.sh libmpv
           echo "CINEO_LIBMPV_DLL=$(cygpath -m "$PWD/libmpv/libmpv-2.dll")" >> "$GITHUB_ENV"
-      - run: cargo build -p cineo-desktop --locked --release ${FEATURES:+--features "$FEATURES"}
+      - name: Fetch libmpv (macOS)
+        if: matrix.platform == 'macos'
+        run: scripts/fetch-libmpv-macos.sh target/libmpv-macos
+      - name: Build
+        run: |
+          if [[ -n "$TARGETS" ]]; then
+            for target in $TARGETS; do
+              cargo build -p cineo-desktop --locked --release --target "$target"
+            done
+          else
+            cargo build -p cineo-desktop --locked --release ${FEATURES:+--features "$FEATURES"}
+          fi
         env:
-          RUSTFLAGS: -C target-cpu=x86-64-v2
+          RUSTFLAGS: ${{ matrix.rustflags }}
           FEATURES: ${{ matrix.features }}
+          TARGETS: ${{ matrix.targets }}
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
       - run: scripts/package.sh "$PLATFORM"
         env:
           PLATFORM: ${{ matrix.platform }}
@@ -184,7 +217,7 @@ jobs:
 
   publish:
     name: publish
-    needs: [linux, windows, android, build, build-android]
+    needs: [linux, windows, macos, android, build, build-android]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -217,7 +250,7 @@ jobs:
 
   prune-caches:
     name: prune caches
-    needs: [linux, windows, android, build, build-android]
+    needs: [linux, windows, macos, android, build, build-android]
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5

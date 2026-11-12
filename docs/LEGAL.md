@@ -30,6 +30,7 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 | Stremio/stremio-web | GPL-2.0 | Architectural ideas only; **no code, assets or styles** |
 | Stremio/stremio-shell-ng | **No license file found** (all rights reserved by default) | Architectural ideas only; **no code** |
 | boykopovar/AnyPS5 | GPL-2.0 | Repository/process ideas only |
+| crmne/spotifast | MIT | macOS packaging layout (`.app`, `Info.plist`, `.icns` with `sips`/`iconutil`, ad-hoc signing); our scripts are written anew (ADR-0035) |
 
 ## Third-party crates
 - Dependencies are permissively licensed and MIT-compatible (Apache-2.0
@@ -119,6 +120,19 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
   binary's hash, the mpv commit and the build sources. Releases do not
   carry the archive itself; `libmpv.md` links to it upstream.
+- The macOS release (ADR-0035) carries, in
+  `Cineo.app/Contents/Frameworks`, the LGPL dylibs of
+  media-kit/libmpv-darwin-build v0.7.3 (variant `video-default`, MIT build
+  scripts), pinned in `scripts/libmpv-macos.env`: mpv 0.36.0
+  (LGPL-2.1-or-later), FFmpeg 6.0 (`--enable-version3`, so
+  LGPL-3.0-or-later), and libass (ISC), dav1d (BSD-2-Clause), FreeType
+  (FTL), FriBidi (LGPL-2.1), HarfBuzz (MIT), libpng, libxml2 (MIT),
+  Mbed TLS (Apache-2.0) and uchardet (MPL-1.1). They are separate shared
+  libraries loaded at runtime; the only change is an added `@loader_path`
+  run path, and a user can replace them (LGPL-2.1 §6, LGPL-3.0 §4).
+  `Contents/Resources/licenses` holds each library's license text, fetched
+  from its pinned upstream tag (`scripts/macos/licenses.txt`), and
+  `libmpv.md` with the archive's hash and the link to the build sources.
 - The Android release (ADR-0029) carries `libmpv.so` and FFmpeg's
   libraries, unmodified, as separate shared libraries in
   `lib/arm64-v8a/` of the APK, loaded at runtime (LGPL-2.1 §6(b)). The
