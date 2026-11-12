@@ -100,7 +100,7 @@ _Last reviewed: 2026-10-13._
 | Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh` |
 | Windows x86_64 | Untested | Released with libmpv embedded; tests pass under wine; never run on real Windows. [Details](#windows) |
 | macOS | Unsupported | Removed 2026-10-13 (ADR-0022) |
-| Android | Unsupported | In progress (ADR-0028); a signed arm64 APK in every release since 2026-11-04. [Details](#android) |
+| Android | Partial | In progress (ADR-0028); a signed arm64 APK in every release since 2026-11-04; arm64 phones only, gaps and parts not yet seen on a phone in the details. [Details](#android) |
 | iOS / Web | Unsupported | |
 
 ## Verified addons
