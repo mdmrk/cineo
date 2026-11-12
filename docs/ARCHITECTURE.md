@@ -15,13 +15,12 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
 - **IO crates** perform effects described by the core. These are HTTP, the
   player (libmpv), storage and the streaming engine, and each has its own
   safety policy.
-- **Shells** wire everything together and present state: the desktop GUI,
-  the Android shell, and a CLI for debugging addons.
+- **Shells** wire everything together and present state: the desktop GUI
+  and the Android shell.
 
 ```mermaid
 flowchart TB
   subgraph Shells
-    CLI[cineo-cli]
     GUI[cineo-desktop<br/>egui]
     AND[cineo-android<br/>UniFFI]
     KT[android/<br/>Kotlin + Compose]
@@ -33,9 +32,7 @@ flowchart TB
     STREAM[cineo-stream<br/>torrents → loopback HTTP]
   end
   CORE[cineo-core<br/>pure domain + protocol]
-  CLI --> CORE
   GUI --> CORE
-  CLI --> NET & STORE
   GUI --> NET & PLAYER & STORE & STREAM
   KT --> AND
   AND --> CORE
@@ -67,7 +64,6 @@ flowchart TB
 |-------|---------------|
 | `cineo-core` | Protocol model (wire → domain), validation, filtering, URL building, aggregation, library/progress model, reducers |
 | `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy |
-| `cineo-cli` | Headless shell; debugging tool |
 | `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events (ADR-0014) |
 | `cineo-store` | Persistence (installed addons, library, progress, settings) with migrations |
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |

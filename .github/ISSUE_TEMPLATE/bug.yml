@@ -12,7 +12,7 @@ body:
     id: repro
     attributes:
       label: Steps to reproduce
-      description: Minimal steps. Include the exact `cineo` command if applicable.
+      description: Minimal steps.
     validations:
       required: true
   - type: textarea

@@ -186,8 +186,7 @@ The full evidence for the rows above whose notes do not fit in the table.
 ### Installing and ordering addons
 
 - Persisted in order
-  (`addons_round_trip_in_order_and_replace_the_previous_list`); CLI `addon
-  add/remove/list` (`addons_are_added_listed_and_removed_across_runs`); GUI
+  (`addons_round_trip_in_order_and_replace_the_previous_list`); GUI
   Addons page with install, move up/down and remove; a new profile starts
   with Cinemeta (`https://v3-cinemeta.strem.io/manifest.json`) installed, as
   in Stremio, and it can be removed like any other addon; profiles that

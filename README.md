@@ -90,9 +90,7 @@ cargo run -p cineo-desktop --release
 ```
 
 On Windows, put a `libmpv-2.dll` next to the executable
-([details](docs/DEVELOPMENT.md)). A
-[command-line tool](docs/DEVELOPMENT.md#command-line-tool) is also
-included, mainly for debugging addons. The Android app builds with the
+([details](docs/DEVELOPMENT.md)). The Android app builds with the
 NDK and Gradle; see [Development](docs/DEVELOPMENT.md).
 
 ## Documentation

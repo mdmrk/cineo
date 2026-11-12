@@ -1097,21 +1097,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cineo-cli"
-version = "1.8.2"
-dependencies = [
- "anyhow",
- "cineo-core",
- "cineo-net",
- "cineo-store",
- "clap",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "wiremock",
-]
-
-[[package]]
 name = "cineo-core"
 version = "1.8.2"
 dependencies = [

@@ -187,7 +187,7 @@ first test needs it.
 ### Pyramid
 
 ```
-            ┌───────────────┐  few: E2E (CLI binary vs mock addon) and headless UI tests
+            ┌───────────────┐  few: headless UI tests
           ┌─┴───────────────┴─┐  some: integration (IO crate vs local mock / temp DB / real libmpv, opt-in)
       ┌───┴───────────────────┴───┐  many: unit + protocol fixtures (pure core, fast)
 ```
@@ -200,7 +200,6 @@ first test needs it.
 | Persistence         | `crates/cineo-store/tests/`                  | temp-dir SQLite, fixture DBs per schema version                                                                                    | always                             |
 | Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: CI (Linux)      |
 | Android UI logic    | `android/app/src/test/`                      | JUnit 4 on the JVM (`./gradlew testDebugUnitTest`)                                                                                 | always (check (android))           |
-| E2E                 | `crates/cineo-cli/tests/`                    | built binary (`CARGO_BIN_EXE_cineo`) + mock addon                                                                                  | always                             |
 
 ### Rules
 
@@ -235,40 +234,6 @@ Commands are under [Everyday commands](#everyday-commands).
 | Persistence        | Round-trip; migration from each historical schema fixture; corruption handling                                                       |
 | GUI                | Core-level tests carry the logic; `egui_kittest` tests drive the views headlessly                                                    |
 
-## Command-line tool
-
-A headless front end, mainly for debugging addons. Logs go to stderr: use
-`-v` for debug, `-vv` for trace, or set `RUST_LOG`.
-
-```sh
-cineo addon inspect <manifest-url>                 # validate + summarize, list warnings
-cineo catalog <manifest-url> <type> <catalog-id> [--extra name=value]...
-cineo addon add <manifest-url>                     # validate, then install at the end
-cineo addon remove <manifest-url>
-cineo addon list                                   # installed addons, in order
-cineo library [--all]                              # continue watching (or every item)
-cineo doctor                                       # database path, schema, counts, integrity
-```
-
-Example:
-`cineo catalog https://v3-cinemeta.strem.io/manifest.json movie top --extra genre=Drama`.
-
-Output of `catalog`: one tab-separated line per item: `id  type  year  name`.
-Output of `library`: `id  video-id  position/duration  name`, most recent
-first.
-
-Installed addons and the library live in one SQLite database, by default
-`$XDG_DATA_HOME/cineo/cineo.db` (`~/.local/share/cineo/cineo.db`).
-The database uses write-ahead logging, so while Cineo runs recent writes
-live in `cineo.db-wal`; copy `cineo.db` only after closing it.
-`--data-dir <dir>` uses another directory. `addon list` prints full addon
-URLs, which can contain your addon configuration; do not paste them publicly.
-A database that is corrupt or from a newer Cineo is never modified: commands
-fail with an explanation, and `cineo doctor` describes the problem.
-
-`--allow-private-network` permits addons on localhost or the LAN. It is off
-by default; see [SECURITY.md](SECURITY.md).
-
 ## Debugging
 
 Failures must be observable without a debugger. This page says what each
@@ -278,12 +243,9 @@ subsystem logs and how to diagnose it.
 
 - `tracing` everywhere. Libraries never print. Only shells write to
   stdout/stderr.
-- CLI: `-v` gives debug logs for Cineo crates, `-vv` gives trace for
-  everything. `RUST_LOG` overrides both, for example
-  `RUST_LOG=cineo_net=trace`. Logs go to **stderr**, so stdout stays
-  machine-readable.
-- GUI: `cineo-desktop` logs to stderr with the same `-v`/`-vv`/
-  `RUST_LOG` rules. libmpv's own messages use the target `libmpv`: its
+- GUI: `cineo-desktop` logs to stderr. `-v` gives debug logs for Cineo
+  crates, `-vv` gives trace for everything. `RUST_LOG` overrides both, for
+  example `RUST_LOG=cineo_net=trace`. libmpv's own messages use the target `libmpv`: its
   errors are always shown, its warnings (about the media, some on every
   frame) only with `-v`. Each run also writes `<data dir>/cineo.log` and
   keeps the run before it as `cineo.previous.log`. By default that file
@@ -305,9 +267,9 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 #### Addon failures
 
-1. `cineo -v addon inspect <manifest-url>`. This shows the parsed
-   manifest, every **warning** (field location + reason), and the request
-   span.
+1. Install the addon in `cineo-desktop -v`. Every parse **warning** is
+   logged as `addon data problem` (field location + reason) inside the
+   `addon_request` span, on stderr and in `cineo.log`.
 2. Read the error type. It is one of:
    - `blocked by network policy` (private address, redirect downgrade, too
      many redirects)
@@ -317,13 +279,12 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
    - `invalid manifest: …` (the field is named)
 3. If another client accepts the addon and Cineo does not, compare against
    [ADDON_PROTOCOL.md](ADDON_PROTOCOL.md). Then file an "Addon
-   compatibility" issue with the inspect output.
+   compatibility" issue with those log lines.
 
 #### Catalog / metadata failures
 
-- `cineo -v catalog <url> <type> <id> [--extra k=v]`. It refuses
-  undeclared catalogs and invalid extras **before** sending a request, and
-  the message says which rule failed.
+- Undeclared catalogs and invalid extras are never requested; the
+  `addon_request` span shows which catalogs were asked for.
 - Skipped items appear as `warn` lines with `metas[i]` locations.
 - An empty result with no warnings means the addon returned
   `"metas": []` or `null`.
@@ -350,8 +311,12 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 #### Persistence problems
 
-- `cineo doctor` prints the database path, schema version, row counts and an
-  integrity-check result.
+- Installed addons and the library live in one SQLite database, by default
+  `$XDG_DATA_HOME/cineo/cineo.db` (`~/.local/share/cineo/cineo.db`);
+  `--data-dir <dir>` uses another directory. The database uses write-ahead
+  logging, so while Cineo runs recent writes live in `cineo.db-wal`; copy
+  `cineo.db` only after closing it. Addon URLs in it can contain your addon
+  configuration; do not share it publicly.
 - Migrations log `from → to` at `info`. All pending migrations run in one
   transaction, so a failed migration leaves the database at its previous
   version.
@@ -370,7 +335,7 @@ A good report contains:
 
 1. The exact command or UI steps.
 2. `-v` logs, scrubbed of personal data.
-3. The version (`cineo --version`) and OS.
+3. The version (`cineo-desktop --version`) and OS.
 4. For addon issues: a **public** manifest URL only.
 
 The issue templates ask for these.
@@ -656,7 +621,7 @@ unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
 write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
-start without a cache. The `cineo` CLI is not shipped.
+start without a cache.
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read

@@ -14,7 +14,7 @@ use cineo_core::app::{
     Action, Effect, Language, LibraryItem, ManifestOrigin, Percent, SeekStep, Settings, State,
     WatchedAt, continue_watching, update,
 };
-use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError, diagnose};
+use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError};
 use url::Url;
 
 fn fixture(rel: &str) -> Vec<u8> {
@@ -351,33 +351,6 @@ fn corrupt_file_is_reported_and_left_untouched() {
     let err = Store::open(&path).unwrap_err();
     assert!(matches!(err, StoreError::Corrupt(_)), "{err:?}");
     assert_eq!(std::fs::read(&path).unwrap(), garbage);
-
-    let report = diagnose(&path);
-    assert!(!report.is_healthy());
-    assert!(report.error.is_some(), "{report:?}");
-}
-
-#[test]
-fn doctor_reports_missing_and_healthy_databases_without_creating_one() {
-    let dir = temp_dir("doctor");
-    let path = dir.join(DB_FILE);
-    let missing = diagnose(&path);
-    assert!(!missing.exists && missing.is_healthy());
-    assert!(!path.exists(), "doctor never creates the database");
-
-    let mut store = Store::open(&path).unwrap();
-    store
-        .save_addons(&[addon("https://a.example/manifest.json")])
-        .unwrap();
-    store.save_library_item(&item("tt1", 1, 1)).unwrap();
-    drop(store);
-
-    let report = diagnose(&path);
-    assert!(report.is_healthy(), "{report:?}");
-    assert_eq!(report.schema_version, Some(SCHEMA_VERSION));
-    assert_eq!(report.addons, Some(1));
-    assert_eq!(report.library_items, Some(1));
-    assert_eq!(report.integrity, vec!["ok".to_owned()]);
 }
 
 const BASIC: &str = "https://basic.example/manifest.json";
