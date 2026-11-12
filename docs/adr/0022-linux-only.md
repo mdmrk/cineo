@@ -1,6 +1,6 @@
 # 0022. Linux only
 
-- Status: Accepted (Windows: superseded by 0027; Android: superseded by 0028)
+- Status: Accepted (Windows: superseded by 0027; Android: superseded by 0028; macOS: superseded by 0035)
 - Date: 2026-10-13
 - Supersedes: the Windows and macOS parts of 0014 (bundled libmpv) and
   0018 (named pipe, registry registration, macOS links)

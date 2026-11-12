@@ -1,6 +1,6 @@
 # 0027. Windows x86_64 support
 
-- Status: Accepted (media keys: superseded by 0031; handover channel: superseded by 0032)
+- Status: Accepted (media keys: superseded by 0031; handover channel: superseded by 0032; macOS: superseded by 0035)
 - Date: 2026-11-03
 - Supersedes: the Windows parts of 0022
 
