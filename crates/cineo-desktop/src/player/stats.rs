@@ -142,6 +142,7 @@ mod tests {
     use cineo_player::embedded::{Track, TrackKind};
 
     use super::*;
+    use crate::i18n::t as tr;
 
     #[test]
     fn byte_counts_scale_to_readable_units() {
@@ -187,11 +188,11 @@ mod tests {
             [
                 "2.0 MB/s",
                 "12",
-                &t!("{done} of {total}", done = "512.0 MB", total = "1.0 GB"),
+                &tr!("{done} of {total}", done = "512.0 MB", total = "1.0 GB"),
                 "1.0 MB/s",
                 "1920×1080",
                 "hevc · 5.2 Mb/s",
-                &t!("Software"),
+                &tr!("Software"),
             ]
         );
         assert!(stat_rows(&Status::default(), Some(&TorrentStatus::Starting)).is_empty());

@@ -241,6 +241,7 @@ mod tests {
     use cineo_core::app::Language;
 
     use super::*;
+    use crate::i18n::t as tr;
 
     #[derive(Debug, Default)]
     struct Entry {
@@ -408,34 +409,34 @@ mod tests {
     #[test]
     fn messages_follow_the_locale_and_fall_back_to_english() {
         set(Locale::Spanish);
-        assert_eq!(t!("Library"), "Biblioteca");
-        assert_eq!(t!("Titles: {count}", count = 3), "Títulos: 3");
+        assert_eq!(tr!("Library"), "Biblioteca");
+        assert_eq!(tr!("Titles: {count}", count = 3), "Títulos: 3");
         const MISSING: &str = "No such message";
         assert_eq!(fastframe_i18n::gettext(current(), MISSING), MISSING);
         set(Locale::LatinAmericanSpanish);
-        assert_eq!(t!("Settings"), "Configuración");
+        assert_eq!(tr!("Settings"), "Configuración");
         set(Locale::Spanish);
-        assert_eq!(t!("Settings"), "Ajustes");
+        assert_eq!(tr!("Settings"), "Ajustes");
         set(Locale::Russian);
-        assert_eq!(t!("Titles: {count}", count = 21), "Названий: 21");
+        assert_eq!(tr!("Titles: {count}", count = 21), "Названий: 21");
         assert_eq!(language_name("ara"), "Арабский");
         set(Locale::Italian);
-        assert_eq!(t!("{percent} % played", percent = 40), "40 % riprodotto");
+        assert_eq!(tr!("{percent} % played", percent = 40), "40 % riprodotto");
         set(Locale::German);
-        assert_eq!(t!("Season {number}", number = 2), "Staffel 2");
+        assert_eq!(tr!("Season {number}", number = 2), "Staffel 2");
         set(Locale::French);
-        assert_eq!(t!("Streams: {count}", count = 4), "Flux : 4");
+        assert_eq!(tr!("Streams: {count}", count = 4), "Flux : 4");
         set(Locale::BrazilianPortuguese);
-        assert_eq!(t!("Settings"), "Configurações");
+        assert_eq!(tr!("Settings"), "Configurações");
         set(Locale::SimplifiedChinese);
-        assert_eq!(t!("Settings"), "设置");
-        assert_eq!(t!("Streams: {count}", count = 4), "片源：4");
+        assert_eq!(tr!("Settings"), "设置");
+        assert_eq!(tr!("Streams: {count}", count = 4), "片源：4");
         set(Locale::English);
         assert_eq!(
-            t!("Installed {name}", name = "Torrentio"),
+            tr!("Installed {name}", name = "Torrentio"),
             "Installed Torrentio"
         );
-        assert_eq!(t!("{count} s", count = 2.5), "2.5 s");
+        assert_eq!(tr!("{count} s", count = 2.5), "2.5 s");
     }
 
     fn tag(tag: &str) -> Option<Locale> {

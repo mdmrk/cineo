@@ -5,7 +5,7 @@ use super::widgets::{
     icon_button, lerp_color, loading_screen, offscreen_size, section, tags,
 };
 use super::{StreamFacts, StreamFilter, ViewState, problem_text};
-use crate::i18n::{Text, t};
+use crate::i18n::{Text, pt, t};
 use crate::theme;
 use cineo_core::addon::{Meta, MetaPreview, SourceKind, Stream};
 use cineo_core::app::{
@@ -384,7 +384,7 @@ fn sort_label(sort: StreamSort) -> Text {
         StreamSort::AddonOrder => t!("Addon order"),
         StreamSort::Quality => t!("Quality"),
         StreamSort::Seeders => t!("Seeders"),
-        StreamSort::Size => t!("Size"),
+        StreamSort::Size => pt!("sort-size", "Size"),
     }
 }
 

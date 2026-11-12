@@ -6,7 +6,7 @@ use eframe::egui::{
     Align2, Color32, CornerRadius, FontFamily, FontId, Rect, Sense, Ui, pos2, vec2,
 };
 
-use crate::i18n::{Text, t};
+use crate::i18n::{Text, pt, t};
 use crate::theme;
 
 use super::widgets::{number, pick, switch};
@@ -22,7 +22,7 @@ pub(crate) fn subtitle_controls(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>
     number(
         ui,
         out,
-        &t!("Size"),
+        &pt!("subtitle-size", "Size"),
         "",
         size.get(),
         (SubtitleSize::MIN, SubtitleSize::MAX, 5),
