@@ -468,10 +468,10 @@ The full evidence for the rows above whose notes do not fit in the table.
   (`a_link_reaches_the_running_instance_through_a_private_socket`, and by
   hand: a second launch with `stremio:///search?search=matrix` exits and the
   running window searches); scheme registration writes the `HKCU` keys for
-  both schemes (checked by hand with `reg query`); data and cache go to
-  `%APPDATA%\Cineo\data` and `%LOCALAPPDATA%\Cineo\cache` (since
-  ADR-0034 the data folder is `%LOCALAPPDATA%\Cineo\data`, not tried on
-  Windows); the bundled
+  both schemes (checked by hand with `reg query`); the cache goes to
+  `%LOCALAPPDATA%\Cineo\cache` (data went to `%APPDATA%\Cineo\data` when
+  this was checked; since ADR-0034 it goes to `%LOCALAPPDATA%\Cineo\data`,
+  not tried on Windows); the bundled
   libmpv plays over HTTP with headers, tracks, cache ranges and resume
   (`real_libmpv_plays_to_the_end_with_headers_and_tracks`,
   `real_libmpv_stop_reports_the_position_and_shuts_down`), the same as

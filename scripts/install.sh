@@ -5,6 +5,7 @@ repo=mdmrk/cineo
 version=${CINEO_VERSION:-latest}
 bin_dir=${XDG_BIN_HOME:-$HOME/.local/bin}
 data_home=${XDG_DATA_HOME:-$HOME/.local/share}
+state_home=${XDG_STATE_HOME:-$HOME/.local/state}
 exe=$bin_dir/cineo-desktop
 desktop=$data_home/applications/cineo.desktop
 icon=$data_home/icons/hicolor/256x256/apps/cineo.png
@@ -19,7 +20,7 @@ die() {
 if [ "${1:-}" = "--uninstall" ]; then
   rm -f "$exe" "$desktop" "$icon"
   rm -rf "$licenses"
-  say "Cineo removed. Your addons and library stay in $data_home/cineo."
+  say "Cineo removed. Your addons and library stay in $state_home/cineo."
   exit 0
 fi
 
