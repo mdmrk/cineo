@@ -75,7 +75,6 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), 
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use super::*;
 

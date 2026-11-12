@@ -90,7 +90,6 @@ fn to_remove<T>(mut files: Vec<(T, SystemTime, u64)>, now: SystemTime, budget: u
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use std::fs::OpenOptions;
 

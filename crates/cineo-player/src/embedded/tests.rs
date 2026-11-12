@@ -1,5 +1,3 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::Path;

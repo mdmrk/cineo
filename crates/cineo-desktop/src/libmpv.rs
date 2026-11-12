@@ -50,7 +50,6 @@ fn remove_other_versions(root: &Path, keep: &str) {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
 
     use super::*;
 

@@ -337,7 +337,6 @@ fn checked_decoder(bytes: &[u8]) -> Result<impl ImageDecoder + '_, String> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used, reason = "test assertions")]
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
