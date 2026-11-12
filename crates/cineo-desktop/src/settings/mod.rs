@@ -204,27 +204,35 @@ fn body(
                 start_name,
                 Setting::StartPage,
             );
-            row(
-                ui,
-                &t!("Open stremio:// and cineo:// links"),
-                &t!(
-                    "Links to addons and pages open in Cineo. Stremio stops receiving stremio:// links."
-                ),
-                |ui| {
-                    let line = vec2(ui.available_width(), ui.spacing().interact_size.y);
-                    ui.allocate_ui_with_layout(line, Layout::right_to_left(Align::Center), |ui| {
-                        if ui.button(t!("Use Cineo")).clicked() {
-                            view.register_links = true;
-                        }
-                        let status = match &view.links_registered {
-                            Some(Ok(())) => t!("Done"),
-                            Some(Err(err)) => t!("Failed: {detail}", detail = err.as_str()),
-                            None => return,
-                        };
-                        ui.add(Label::new(RichText::new(status).color(theme::TEXT_DIM)).wrap());
-                    });
-                },
-            );
+            if cfg!(not(target_os = "macos")) {
+                row(
+                    ui,
+                    &t!("Open stremio:// and cineo:// links"),
+                    &t!(
+                        "Links to addons and pages open in Cineo. Stremio stops receiving stremio:// links."
+                    ),
+                    |ui| {
+                        let line = vec2(ui.available_width(), ui.spacing().interact_size.y);
+                        ui.allocate_ui_with_layout(
+                            line,
+                            Layout::right_to_left(Align::Center),
+                            |ui| {
+                                if ui.button(t!("Use Cineo")).clicked() {
+                                    view.register_links = true;
+                                }
+                                let status = match &view.links_registered {
+                                    Some(Ok(())) => t!("Done"),
+                                    Some(Err(err)) => t!("Failed: {detail}", detail = err.as_str()),
+                                    None => return,
+                                };
+                                ui.add(
+                                    Label::new(RichText::new(status).color(theme::TEXT_DIM)).wrap(),
+                                );
+                            },
+                        );
+                    },
+                );
+            }
         }
         Section::Player => {
             switch(

@@ -24,7 +24,11 @@ mod tests {
         let Some(dirs) = installed() else {
             return;
         };
-        let name = if cfg!(windows) { "Cineo" } else { "cineo" };
+        let name = if cfg!(target_os = "linux") {
+            "cineo"
+        } else {
+            "Cineo"
+        };
         assert!(
             dirs.cache.components().any(|c| c.as_os_str() == name),
             "{dirs:?}"

@@ -1,12 +1,12 @@
 use std::sync::mpsc::{self, Receiver, Sender};
 
 use tracing::warn;
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 use zbus::Connection;
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 const SERVICE: &str = "org.freedesktop.ScreenSaver";
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 const PATH: &str = "/org/freedesktop/ScreenSaver";
 
 pub(crate) struct KeepAwake {
@@ -43,7 +43,7 @@ impl KeepAwake {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 fn run(rx: &Receiver<bool>) {
     let mut bus: Option<Connection> = None;
     let mut cookie: Option<u32> = None;
@@ -80,7 +80,7 @@ fn run(rx: &Receiver<bool>) {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 fn inhibit(conn: &Connection) -> zbus::Result<u32> {
     zbus::block_on(conn.call_method(
         Some(SERVICE),
@@ -93,7 +93,7 @@ fn inhibit(conn: &Connection) -> zbus::Result<u32> {
     .deserialize()
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 fn run(rx: &Receiver<bool>) {
     let mut held: Option<keepawake::KeepAwake> = None;
     for on in rx {

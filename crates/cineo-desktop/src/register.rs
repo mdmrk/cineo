@@ -1,10 +1,14 @@
+#[cfg(not(target_os = "macos"))]
 use std::process::Command;
 
-use anyhow::{Context, bail};
+#[cfg(not(target_os = "macos"))]
+use anyhow::Context;
+use anyhow::bail;
 
+#[cfg(not(target_os = "macos"))]
 const SCHEMES: [&str; 2] = ["stremio", "cineo"];
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 pub(crate) fn register() -> anyhow::Result<()> {
     let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
     let data = std::env::var_os("XDG_DATA_HOME")
@@ -30,7 +34,7 @@ pub(crate) fn register() -> anyhow::Result<()> {
         .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}"))))
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 fn desktop_quote(path: &str) -> String {
     let mut out = String::from("\"");
     for c in path.chars() {
@@ -78,9 +82,15 @@ pub(crate) fn register() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "macos")]
+pub(crate) fn register() -> anyhow::Result<()> {
+    bail!("links are not supported on macOS yet")
+}
+
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+#[cfg(not(target_os = "macos"))]
 fn run(command: &mut Command) -> anyhow::Result<()> {
     let program = command.get_program().to_string_lossy().into_owned();
     let output = command
