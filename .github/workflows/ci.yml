@@ -38,6 +38,8 @@ jobs:
         with:
           tool: cargo-nextest@0.9.150,cargo-deny@0.20.2,taplo@0.10.0,typos@1.51.1,cargo-machete@0.9.2,shellcheck@0.11.0,shfmt@3.14.1
       - run: scripts/check.sh
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libmpv2 > /dev/null
+      - run: cargo nextest run -p cineo-player --locked --run-ignored only
 
   windows:
     name: check (windows)

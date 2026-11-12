@@ -198,7 +198,7 @@ first test needs it.
 | Protocol fixtures   | `crates/cineo-core/tests/` + `tests/addons/` | JSON fixtures                                                                                                                      | always                             |
 | Network integration | `crates/cineo-net/tests/`                    | local mock HTTP server (`wiremock`)                                                                                                | always                             |
 | Persistence         | `crates/cineo-store/tests/`                  | temp-dir SQLite, fixture DBs per schema version                                                                                    | always                             |
-| Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: manual         |
+| Player              | `crates/cineo-player/src/` (unit tests)      | pure command, track-list and event-mapping tests; real libmpv tests marked `#[ignore]` (`cargo test -p cineo-player -- --ignored`) | pure: always; real: CI (Linux)      |
 | Android UI logic    | `android/app/src/test/`                      | JUnit 4 on the JVM (`./gradlew testDebugUnitTest`)                                                                                 | always (check (android))           |
 | E2E                 | `crates/cineo-cli/tests/`                    | built binary (`CARGO_BIN_EXE_cineo`) + mock addon                                                                                  | always                             |
 
