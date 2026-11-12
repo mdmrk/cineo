@@ -134,7 +134,7 @@ fn start_stream(
         addon_name,
         stream,
     } = start;
-    let name = preview.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let name = preview.as_ref().map_or_default(|p| p.name.clone());
     let title = video_title(&name, meta.as_ref(), &video_id);
     let subtitles = subtitle_groups(
         state,
@@ -509,8 +509,7 @@ pub(super) fn addon_name(addons: &[InstalledAddon], addon: &TransportUrl) -> Str
     addons
         .iter()
         .find(|a| a.transport == *addon)
-        .map(|a| a.manifest.name.clone())
-        .unwrap_or_default()
+        .map_or_default(|a| a.manifest.name.clone())
 }
 
 pub(super) fn dedup_by_url(subtitles: &mut Vec<Subtitle>) {

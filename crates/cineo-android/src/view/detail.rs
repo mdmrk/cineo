@@ -144,7 +144,7 @@ pub(super) fn detail(
         description: text(|p| p.description.as_ref()),
         release_info: text(|p| p.release_info.as_ref()),
         runtime: meta.and_then(|m: &Meta| m.runtime.clone()),
-        genres: preview.map(|p| p.genres.clone()).unwrap_or_default(),
+        genres: preview.map_or_default(|p| p.genres.clone()),
         imdb_rating: text(|p| p.imdb_rating.as_ref()),
         meta: match &detail.meta {
             Loadable::Loading => MetaStatus::Loading,
@@ -153,9 +153,7 @@ pub(super) fn detail(
                 problem: problem_view(problem),
             },
         },
-        videos: meta
-            .map(|m| m.videos.iter().map(video).collect())
-            .unwrap_or_default(),
+        videos: meta.map_or_default(|m| m.videos.iter().map(video).collect()),
         selected_video: detail.selected_video.clone(),
         streams: detail
             .streams
