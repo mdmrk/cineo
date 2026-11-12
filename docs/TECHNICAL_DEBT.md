@@ -23,7 +23,7 @@ Format:
 ## Entries
 
 ### Subtitles: no video hash or size from the player
-- Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`subtitle_groups`)
+- Where: [playback.rs](../crates/cineo-core/src/app/playback.rs) (`subtitle_groups`)
 - Gap: the `subtitles` request's `videoHash`, `videoSize` and `filename`
   come only from the stream's `behaviorHints`. The reference client also
   uses values its player reports (an OpenSubtitles hash from its streaming

@@ -3,6 +3,7 @@ mod library;
 mod link;
 mod message;
 mod plan;
+mod playback;
 mod release;
 mod settings;
 mod state;
