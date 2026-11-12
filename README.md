@@ -1,13 +1,11 @@
 # Cineo
 
-[![CI](https://img.shields.io/github/actions/workflow/status/mdmrk/cineo/ci.yml?branch=main&label=ci)](https://github.com/mdmrk/cineo/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/mdmrk/cineo)](https://github.com/mdmrk/cineo/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/mdmrk/cineo/total)](https://github.com/mdmrk/cineo/releases)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20android-blue)](docs/COMPATIBILITY.md#platforms)
 [![License](https://img.shields.io/github/license/mdmrk/cineo)](LICENSE)
 
-A fast, native media center written in Rust, for the desktop and Android
-phones. It works with Stremio-protocol addons.
+A fast, native media center for Linux, Windows and Android phones.
+It works with Stremio addons. No account, no cloud.
 
 <table>
   <tr>
@@ -20,29 +18,22 @@ phones. It works with Stremio-protocol addons.
   </tr>
 </table>
 
-[Features](#features) · [Install](#install) · [Uninstall](#uninstall) ·
-[Build from source](#build-from-source) ·
-[Documentation](#documentation) · [License](#license)
-
 ## Features
 
 - Stremio addons, catalogs and search
 - Built-in player with torrent streaming
 - Subtitles, binge watching and a local library
-- No account, no cloud
+- Everything stays on your device
 
 ## Install
 
-Run the same command again to update. Executables for every release are on
-the [Releases](https://github.com/mdmrk/cineo/releases) page.
-
 ### Linux (x86_64)
+
+Install your distribution's **mpv** package first, then run:
 
 ```sh
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
 ```
-
-Cineo needs libmpv: install your distribution's mpv package.
 
 ### Windows (x86_64)
 
@@ -52,13 +43,19 @@ In PowerShell:
 irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 ```
 
-libmpv is built in.
+Nothing else is needed.
 
 ### Android (arm64 phones)
 
-Install `cineo-arm64-android.apk` from the
-[latest release](https://github.com/mdmrk/cineo/releases/latest). It does
-less than the desktop app (see [Compatibility](docs/COMPATIBILITY.md#platforms)).
+Download and open `cineo-arm64-android.apk` from the
+[latest release](https://github.com/mdmrk/cineo/releases/latest).
+The Android app does less than the desktop one; see
+[what works](docs/COMPATIBILITY.md#platforms).
+
+## Update
+
+Run the install command again. On Android, install the new APK over the
+old one.
 
 ## Uninstall
 
@@ -74,38 +71,27 @@ Windows (PowerShell):
 $env:CINEO_UNINSTALL=1; irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 ```
 
-Your addons and library are kept. To delete them too, remove
-`~/.local/share/cineo` on Linux or `%APPDATA%\Cineo` on Windows.
+Your addons and library are kept. To remove them too, delete
+`~/.local/share/cineo` (Linux) or `%APPDATA%\Cineo` (Windows).
 
-Android: uninstall Cineo like any other app. This also deletes its addons
-and library.
+On Android, uninstall Cineo like any other app. This also deletes your
+addons and library.
 
-## Build from source
-
-You need [Rust](https://rustup.rs) and libmpv.
+## For developers
 
 ```sh
 git clone https://github.com/mdmrk/cineo && cd cineo
 cargo run -p cineo-desktop --release
 ```
 
-On Windows, put a `libmpv-2.dll` next to the executable
-([details](docs/DEVELOPMENT.md)). The Android app builds with the
-NDK and Gradle; see [Development](docs/DEVELOPMENT.md).
-
-## Documentation
-
-| Document | Contents |
-|----------|----------|
-| [Compatibility](docs/COMPATIBILITY.md) | What works, per feature and platform |
-| [Addon protocol](docs/ADDON_PROTOCOL.md) | How Cineo reads Stremio addons |
-| [Architecture](docs/ARCHITECTURE.md) | Crates, data flow and platform code |
-| [Development](docs/DEVELOPMENT.md) | Building, testing and releasing |
-| [Security](docs/SECURITY.md) | Threat model and defaults |
-| [Technical debt](docs/TECHNICAL_DEBT.md) | Known limitations |
-| [Decisions](docs/adr/README.md) | Architecture decision records |
+You need [Rust](https://rustup.rs) and libmpv. Windows and Android builds
+are covered in [Development](docs/DEVELOPMENT.md). See also
+[Architecture](docs/ARCHITECTURE.md), the
+[addon protocol](docs/ADDON_PROTOCOL.md), [Security](docs/SECURITY.md),
+[known limitations](docs/TECHNICAL_DEBT.md) and the
+[decision records](docs/adr/README.md).
 
 ## License
 
-[MIT](LICENSE). Cineo is not affiliated with Stremio. It ships no content
-and no content addons. See [Legal](docs/LEGAL.md).
+[MIT](LICENSE). Cineo is not affiliated with Stremio and ships no content
+or content addons. See [Legal](docs/LEGAL.md).
