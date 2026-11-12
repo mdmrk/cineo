@@ -8,10 +8,12 @@ pub fn installed() -> Option<Dirs> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_os = "linux")]
     use std::path::PathBuf;
 
     use super::*;
 
+    #[cfg(target_os = "linux")]
     fn base(variable: &str, fallback: &str) -> Option<PathBuf> {
         std::env::var_os(variable)
             .map(PathBuf::from)
