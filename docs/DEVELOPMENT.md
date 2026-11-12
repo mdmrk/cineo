@@ -342,7 +342,7 @@ The issue templates ask for these.
 
 ## Manual GUI test
 
-The UI tests (`crates/cineo-desktop/tests/ui.rs`) check rendering and the
+The UI tests (`crates/cineo-desktop/tests/ui/`) check rendering and the
 actions clicks produce. This script covers what they cannot: real windows,
 real addons, libmpv, and restarts. Run it before a release that changes the
 GUI, player or engine, and record the date, desktop session (Wayland or X11)
