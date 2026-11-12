@@ -453,7 +453,7 @@ Format:
   becoming-noisy receiver, and a `MediaSession`.
 
 ### Android: what the automatic retry leaves out
-- Where: [state.rs](../crates/cineo-core/src/app/state.rs) (`retry_failed`),
+- Where: [refresh.rs](../crates/cineo-core/src/app/refresh.rs) (`retry_failed`),
   [NetworkWatch.kt](../android/app/src/main/java/io/github/mdmrk/cineo/NetworkWatch.kt),
   [Images.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/Images.kt)
 - Gap: failed Discover pages and posters are not asked for

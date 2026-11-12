@@ -5,10 +5,11 @@ use url::Url;
 use super::library::{LibraryItem, SavedStream};
 use super::message::{Notice, PlaybackFailure};
 use super::plan;
+use super::refresh::{fetch_streams, open_detail, select_video};
 use super::settings::Settings;
 use super::state::{
     Detail, Effect, InstalledAddon, Loadable, NextVideo, PlayRequest, Playing, State,
-    SubtitleGroup, fetch_streams, open_detail, select_video, stop_torrent,
+    SubtitleGroup, stop_torrent,
 };
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus};
 use crate::addon::{
