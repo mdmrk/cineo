@@ -18,6 +18,15 @@ It works with Stremio addons. No account, no cloud.
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" alt="Cineo home screen on Android"></td>
+    <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" alt="A movie page with its streams on Android"></td>
+    <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" alt="Installed and suggested addons on Android"></td>
+    <td><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" alt="Player and language settings on Android"></td>
+  </tr>
+</table>
+
 ## Features
 
 - Stremio addons, catalogs and search
@@ -53,7 +62,6 @@ and drag Cineo to Applications. The app is not notarized, so macOS blocks
 it the first time: open **System Settings → Privacy & Security** and
 click **Open Anyway**, or run
 `xattr -dr com.apple.quarantine /Applications/Cineo.app`.
-Nobody has tried it on a Mac yet; see [what is known](docs/COMPATIBILITY.md#macos).
 
 ### Android (arm64 phones)
 
