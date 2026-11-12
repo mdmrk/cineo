@@ -407,7 +407,7 @@ Format:
   try whether another MediaTek decoder setting accepts Main10.
 
 ### Android: torrents use mobile data and battery without limits
-- Where: [shell.rs](../crates/cineo-android/src/shell.rs),
+- Where: [shell/mod.rs](../crates/cineo-android/src/shell/mod.rs),
   [TorrentService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/TorrentService.kt)
 - Gap: a torrent streams over any network, mobile data included, and
   keeps DHT and uploads on with the desktop's defaults; how much battery
@@ -480,7 +480,7 @@ Format:
 - Exit: hold the orientation for the whole playback session, with a test.
 
 ### Android: no update check
-- Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`run_effect`)
+- Where: [shell/worker.rs](../crates/cineo-android/src/shell/worker.rs) (`run_effect`)
 - Gap: releases carry the APK (ADR-0029), but the app never says that a
   newer one exists.
 - Why: the check was left out while Android had no release; the
@@ -562,7 +562,7 @@ Format:
 
 ### Android: only some settings
 - Where: [SettingsScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/SettingsScreen.kt),
-  [shell.rs](../crates/cineo-android/src/shell.rs) (`SettingChange`)
+  [shell/mod.rs](../crates/cineo-android/src/shell/mod.rs) (`SettingChange`)
 - Gap: Android has no setting for the short seek step, Escape leaving
   fullscreen, remembering the volume, audio output or passthrough,
   interface scale, start page, interface language or the update check.
@@ -573,7 +573,7 @@ Format:
 - Exit: add each one that applies, with its feature.
 
 ### Android: an addon subtitle is saved while the player lock is held
-- Where: [shell.rs](../crates/cineo-android/src/shell.rs) (`subtitle_fetched`)
+- Where: [shell/worker.rs](../crates/cineo-android/src/shell/worker.rs) (`subtitle_fetched`)
 - Gap: the downloaded subtitle file is written to disk and handed to mpv
   while the shell holds the lock that every player call takes. The
   250 ms `player_status` poll runs off the UI thread, but pause, seek and
