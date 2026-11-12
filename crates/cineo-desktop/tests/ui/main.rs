@@ -13,6 +13,7 @@ use cineo_core::app::{
     Setting, Settings, StartPage, State, SubtitleColor, SubtitleSize, TorrentPort, UiLanguage,
     update,
 };
+use cineo_desktop::dirs::LeftBehind;
 use cineo_desktop::i18n::Locale;
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;

@@ -389,8 +389,9 @@ Format:
   in `~/.local/share/cineo` or `%APPDATA%\Cineo\data` are not read, so an
   upgraded install starts empty.
 - Why: the owner chose not to move or copy them (2026-11-12).
-- Instead: pass `--data-dir` with the old folder, or move `cineo.db` into
-  the new one with Cineo closed.
+- Instead: until the new folder has a database, a bar names the old and
+  new folders and says to move `cineo.db` with Cineo closed. `--data-dir`
+  with the old folder also works.
 - Exit: move the old folder on the first start when the new one does not
   exist.
 

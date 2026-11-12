@@ -3,6 +3,7 @@ use self::detail::{detail_page, source_name};
 use self::pages::{board_page, discover_page, library_page, search_page};
 use self::sidebar::sidebar;
 use self::widgets::column;
+use crate::dirs::LeftBehind;
 use crate::i18n::{self, Locale, Text, pt, t};
 use crate::settings::{self, Confirm, Section};
 use crate::theme;
@@ -103,6 +104,7 @@ pub struct ViewState {
     pub system_locale: Locale,
     pub register_links: bool,
     pub links_registered: Option<Result<(), String>>,
+    pub left_behind: Option<LeftBehind>,
 }
 
 impl ViewState {
@@ -193,8 +195,15 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     );
     shortcuts(ui, state, view, &mut out);
     sidebar(ui, state, view, &mut out);
-    if let Some(notice) = &state.notice {
-        notice_bar(ui, notice, &mut out);
+    if let Some(notice) = &state.notice
+        && warning_bar(ui, "notice", &notice_text(notice))
+    {
+        out.push(Action::DismissNotice);
+    }
+    if let Some(left) = &view.left_behind
+        && warning_bar(ui, "left-behind", &left_behind_text(left))
+    {
+        view.left_behind = None;
     }
     if state.p2p_prompt.is_some() {
         p2p_prompt(ui, &mut out);
@@ -318,9 +327,18 @@ fn shortcuts(ui: &Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>
     }
 }
 
-fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
-    let notice = notice_text(notice);
-    egui::Panel::top("notice")
+fn left_behind_text(left: &LeftBehind) -> Text {
+    t!(
+        "Your addons and library from an earlier version are in {earlier}. To use them, close Cineo and move {file} from there into {current}.",
+        earlier = left.earlier.display(),
+        file = cineo_store::DB_FILE,
+        current = left.current.display()
+    )
+}
+
+fn warning_bar(ui: &mut Ui, id: &'static str, text: &str) -> bool {
+    let mut dismissed = false;
+    egui::Panel::top(id)
         .show_separator_line(false)
         .frame(
             Frame::new()
@@ -345,15 +363,13 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                         theme::WARNING,
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if ui.button(t!("Dismiss")).clicked() {
-                            out.push(Action::DismissNotice);
-                        }
+                        dismissed = ui.button(t!("Dismiss")).clicked();
                         ui.allocate_ui_with_layout(
                             vec2(ui.available_width(), 0.0),
                             Layout::left_to_right(Align::Center),
                             |ui| {
                                 ui.add(
-                                    Label::new(RichText::new(&*notice).color(theme::TEXT_BRIGHT))
+                                    Label::new(RichText::new(text).color(theme::TEXT_BRIGHT))
                                         .wrap(),
                                 );
                             },
@@ -362,6 +378,7 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                 });
             });
         });
+    dismissed
 }
 
 pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> Vec<Action> {

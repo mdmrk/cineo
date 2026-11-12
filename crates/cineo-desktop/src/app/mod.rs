@@ -35,6 +35,7 @@ pub struct Options {
     pub cache_dir: PathBuf,
     pub allow_private_network: bool,
     pub link: Option<String>,
+    pub left_behind: Option<crate::dirs::LeftBehind>,
 }
 
 pub fn run(options: Options) -> anyhow::Result<()> {
@@ -92,7 +93,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         fastframe_fonts::system::fallbacks();
     });
     let handle = runtime.handle().clone();
-    let (data_dir, link) = (options.data_dir, options.link);
+    let (data_dir, link, left_behind) = (options.data_dir, options.link, options.left_behind);
     let result = eframe::run_native(
         "Cineo",
         native,
@@ -127,6 +128,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
                 (results_tx, results_rx),
             );
             app.pending_link = link;
+            app.view.left_behind = left_behind;
             app.view.desktop_text_scale = Some(text_scale);
             Ok(Box::new(app))
         }),

@@ -52,7 +52,9 @@ keys inside PO files. For existing data: move it, copy it, or leave it.
 - `rust-i18n`, `sys-locale` (as a direct dependency) and `etcetera` leave
   the tree. `fastframe-i18n` and `fastframe-dirs` enter.
 - A user upgrading from an earlier version starts with an empty library
-  unless they pass `--data-dir` or move the folder (TECHNICAL_DEBT.md).
+  unless they pass `--data-dir` or move the folder (TECHNICAL_DEBT.md). A
+  bar points to the old folder while the new one has no database; it reads
+  and moves nothing.
 - Updating the template needs GNU gettext 0.24 or later. Builds do not.
 
 ## Rejected alternatives

@@ -455,6 +455,19 @@ The full evidence for the rows above whose notes do not fit in the table.
   `update_checks_can_be_turned_off_in_about`).
 - No in-app install: the user runs the installer again.
 
+### Data from earlier versions
+
+- Since ADR-0034 the database lives in a new folder and the old one is not
+  moved. On Linux and Windows, when the new folder has no `cineo.db` and
+  `~/.local/share/cineo` (or `$XDG_DATA_HOME/cineo`) or
+  `%APPDATA%\Cineo\data` has one, a dismissable bar names both folders
+  and says to move `cineo.db` with Cineo closed. Nothing is shown with
+  `--data-dir`
+  (`a_database_in_the_earlier_folder_is_found_only_while_the_new_folder_has_none`,
+  `earlier_versions_kept_data_in_the_xdg_data_folder`,
+  `data_left_by_an_earlier_version_is_pointed_out_until_dismissed`; the
+  Windows path test runs only on Windows CI).
+
 ### Windows
 
 - Restored 2026-11-03 (ADR-0027); released as a single

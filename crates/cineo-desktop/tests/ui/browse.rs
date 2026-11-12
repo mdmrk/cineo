@@ -34,6 +34,28 @@ fn notices_are_shown_and_can_be_dismissed() {
 }
 
 #[test]
+fn data_left_by_an_earlier_version_is_pointed_out_until_dismissed() {
+    let view = ViewState {
+        left_behind: Some(LeftBehind {
+            earlier: "/home/u/.local/share/cineo".into(),
+            current: "/home/u/.local/state/cineo".into(),
+        }),
+        ..ViewState::default()
+    };
+    let mut harness = harness(State::default(), view);
+    harness.get_by_label_contains("/home/u/.local/share/cineo");
+    harness.get_by_label("Dismiss").click();
+    harness.run();
+    assert_eq!(harness.state().1.left_behind, None);
+    assert!(harness.state().2.is_empty());
+    assert!(
+        harness
+            .query_by_label_contains("/home/u/.local/share/cineo")
+            .is_none()
+    );
+}
+
+#[test]
 fn the_clear_button_empties_the_search_and_searches_at_once() {
     let view = ViewState {
         page: Page::Search,
