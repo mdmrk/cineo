@@ -581,28 +581,36 @@ alpha (`colour_and_transparency_survive_downscaling`).
 - **Tags:** `vMAJOR.MINOR.PATCH`, with an optional pre-release suffix
   (`v1.0.1-rc.1`). Tags containing `-` become GitHub pre-releases.
 
-One workflow, `ci.yml`, runs everything; each job waits for the one before
-it:
+One workflow, `ci.yml`, runs everything. The builds run alongside the
+checks, and `publish` waits for both:
 
-| Trigger                  | Jobs                                 |
-| ------------------------ | ------------------------------------ |
-| pull request, manual run | check (linux), check (windows), check (android) |
-| push to `main`           | the checks → build → publish `prerelease` |
-| tag `vX.Y.Z`             | the checks → build → publish `vX.Y.Z`     |
+| Trigger                  | Jobs                                              |
+| ------------------------ | ------------------------------------------------- |
+| pull request, manual run | check (linux), check (windows), check (android)   |
+| push to `main`           | the checks and build → publish `prerelease`       |
+| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z`           |
 
 The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
 `ci / check (android)`, `ci / build (linux)`, `ci / build (windows)`,
 `ci / build (android)` and `ci / publish`.
 `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`, clippy,
 nextest with the `ci` profile, `scripts/lint.sh`, docs, cargo-deny); `check (windows)` runs clippy and nextest on
-`windows-latest`. `build` builds `cineo-desktop` for Linux x86_64 and
+`windows-latest`, in a copy of the checkout on a Dev Drive
+(`samypr100/setup-dev-drive`). CI builds the dev profile without debug info
+(`CARGO_PROFILE_DEV_DEBUG=0`), and `check (linux)` and `check (windows)`
+write a `.cargo/config.toml` that builds the dependencies at `opt-level = 0`
+instead of the `Cargo.toml`'s 2: a cold test build went from 173 s to 54 s
+and the tests from 6 s to 9 s (measured locally on 2026-11-12). Only tag builds use the release profile's
+`lto = "thin"` and `codegen-units = 1`; every other run, including the
+prerelease and the APK `check (android)` builds, uses `lto = "off"` and
+`codegen-units = 16`. `build` builds `cineo-desktop` for Linux x86_64 and
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
 provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
 named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
 `.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
-`check (android)` fills first and tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
+tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
 the hash of the script and its `.env`, never on tags) and runs
 `scripts/release-android.sh`: it builds libmpv if needed, a signed
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that
@@ -621,7 +629,9 @@ unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
 write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
-start without a cache.
+start without a cache. After each run on `main`, `prune caches` deletes all
+but the newest Rust and libmpv cache of each job, so the repository stays
+under GitHub's 10 GB cache limit.
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read
@@ -667,10 +677,11 @@ Every release has these files, with the same names in every release so that
 
 ### Prerelease builds
 
-Every push to `main` builds a prerelease once the checks pass, except a push
-whose head commit starts with `chore(release):`; that commit gets the real
-release from its tag instead. It deletes the previous `prerelease` GitHub
-release and its tag and recreates both at the pushed commit.
+Every push to `main` builds a prerelease, alongside the checks, and
+publishes it once they pass, except a push whose head commit starts with
+`chore(release):`; that commit gets the real release from its tag instead.
+It deletes the previous `prerelease` GitHub release and its tag and
+recreates both at the pushed commit.
 
 The desktop artifacts are not code-signed; build provenance attestations
 and `SHA256SUMS` are the integrity checks. The APK is signed, because

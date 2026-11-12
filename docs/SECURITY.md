@@ -242,6 +242,13 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   hash of `scripts/build-libmpv-android.sh` and its `.env`, and only by
   `build (android)`, which runs on pushes to `main`; tag builds rebuild it
   from the pinned, hash-checked sources.
+- `prune caches` runs after runs on `main` and is the only job with
+  `actions: write`: it deletes every `v0-rust-*` and `libmpv-android-*`
+  cache on `main` except the newest per key prefix, so the repository stays
+  under GitHub's cache limit and the libmpv build is not evicted.
+- The build jobs run alongside the checks; `publish` needs every check and
+  build, so nothing is released unless all checks pass. A failed check can
+  still leave build attestations for artifacts that are never published.
 - The Android release key is only in repository secrets, decoded into
   the runner's temporary directory by `build (android)`, which runs on
   pushes only, never for pull requests. Pull requests build an unsigned
