@@ -141,8 +141,9 @@ Format:
 - Where: [store.rs](../crates/cineo-store/src/store.rs)
 - Gap: a corrupt `cineo.db` makes every persistence command fail.
 - Why: silently replacing it would lose the user's library.
-- Instead: the error and `cineo doctor` explain it; the user moves the file
-  away and Cineo starts fresh.
+- Instead: the error explains it; the user moves `<data dir>/cineo.db`
+  away and Cineo starts fresh. `cineo doctor` also describes it, but only
+  source builds have the CLI; releases ship the desktop app alone.
 - Exit: a GUI prompt that renames the file aside and starts fresh.
 
 ### Desktop: no diagnostics view
@@ -150,7 +151,8 @@ Format:
 - Gap: there is no page that shows the log or the state of the app.
 - Why: it would be a new page.
 - Instead: `<data dir>/cineo.log` holds the warnings of each run;
-  `cineo doctor` covers the database.
+  `cineo doctor` covers the database in source builds (releases do not
+  ship the CLI).
 - Exit: a diagnostics page.
 
 ### Desktop: the image cache has no controls
