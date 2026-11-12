@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-android"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "android_logger",
  "cineo-core",
@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-core"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "percent-encoding",
  "semver",
@@ -1109,7 +1109,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-desktop"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "anyhow",
  "cineo-core",
@@ -1148,7 +1148,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-net"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "cineo-core",
  "reqwest",
@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-player"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "cineo-core",
  "libloading 0.9.0",
@@ -1176,7 +1176,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-store"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "cineo-core",
  "etcetera",
@@ -1188,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "cineo-stream"
-version = "1.8.2"
+version = "1.8.3"
 dependencies = [
  "anyhow",
  "bytes",
