@@ -12,8 +12,8 @@ use cineo_core::app::{
     StreamFacts as Facts, StreamSort, board_targets, stream_matcher,
 };
 use eframe::egui::{
-    self, Align, Frame, Key, Layout, Margin, Modifiers, RichText, ScrollArea, Sense, Stroke, Ui,
-    Vec2,
+    self, Align, Frame, Key, Label, Layout, Margin, Modifiers, RichText, ScrollArea, Sense, Stroke,
+    Ui, Vec2, vec2,
 };
 
 mod addons;
@@ -344,11 +344,20 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                         18.0,
                         theme::WARNING,
                     );
-                    ui.label(RichText::new(&*notice).color(theme::TEXT_BRIGHT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if ui.button(t!("Dismiss")).clicked() {
                             out.push(Action::DismissNotice);
                         }
+                        ui.allocate_ui_with_layout(
+                            vec2(ui.available_width(), 0.0),
+                            Layout::left_to_right(Align::Center),
+                            |ui| {
+                                ui.add(
+                                    Label::new(RichText::new(&*notice).color(theme::TEXT_BRIGHT))
+                                        .wrap(),
+                                );
+                            },
+                        );
                     });
                 });
             });
