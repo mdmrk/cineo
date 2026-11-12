@@ -17,7 +17,7 @@ old one *Superseded by NNNN*.
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](0001-functional-core-effects-as-data.md) | Functional core with effects as data | Accepted |
-| [0002](0002-workspace-and-crate-boundaries.md) | Minimal workspace; crates by IO boundary | Accepted |
+| [0002](0002-workspace-and-crate-boundaries.md) | Minimal workspace; crates by IO boundary | Accepted (`cineo-cli`: removed 2026-11-12) |
 | [0003](0003-lenient-wire-strict-domain.md) | Lenient wire parsing, strict domain types | Accepted |
 | [0004](0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Superseded by 0014 |
 | [0005](0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
