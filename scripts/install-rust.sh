@@ -7,7 +7,7 @@ if [[ -z $channel ]]; then
   echo "rust-toolchain.toml names no channel" >&2
   exit 1
 fi
-args=(--profile minimal --component rustfmt,clippy)
+args=(--profile minimal --component "rustfmt,clippy")
 for target in "$@"; do
   args+=(--target "$target")
 done
