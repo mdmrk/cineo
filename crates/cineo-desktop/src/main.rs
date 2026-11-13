@@ -35,15 +35,8 @@ fn main() -> ExitCode {
         }
     }
     cineo_desktop::logging::init(cli.verbose, data_dir.as_deref());
-    let left_behind = cli
-        .data_dir
-        .is_none()
-        .then(cineo_desktop::dirs::earlier_data_dir)
-        .flatten()
-        .zip(data_dir.as_deref())
-        .and_then(|(earlier, current)| cineo_desktop::dirs::left_behind(current, &earlier));
     let cache_dir = installed.map(|dirs| dirs.cache);
-    match start(cli, data_dir, cache_dir, left_behind) {
+    match start(cli, data_dir, cache_dir) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             tracing::error!("{err:#}");
@@ -52,12 +45,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn start(
-    cli: Cli,
-    data_dir: Option<PathBuf>,
-    cache_dir: Option<PathBuf>,
-    left_behind: Option<cineo_desktop::dirs::LeftBehind>,
-) -> anyhow::Result<()> {
+fn start(cli: Cli, data_dir: Option<PathBuf>, cache_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let data_dir = data_dir.context("no home directory; pass --data-dir")?;
     let cache_dir = cli
         .cache_dir
@@ -69,6 +57,5 @@ fn start(
         cache_dir,
         allow_private_network: cli.allow_private_network,
         link: cli.link,
-        left_behind,
     })
 }

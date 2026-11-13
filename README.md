@@ -102,9 +102,6 @@ $env:CINEO_UNINSTALL=1; irm https://github.com/mdmrk/cineo/releases/latest/downl
 
 Your addons and library are kept. To remove them too, delete
 `~/.local/state/cineo` (Linux) or `%LOCALAPPDATA%\Cineo\data` (Windows).
-Earlier versions kept them in `~/.local/share/cineo` or `%APPDATA%\Cineo`,
-and Cineo does not move them: it shows where they are until you move
-`cineo.db` into the new folder.
 
 On macOS, move Cineo from Applications to the Trash. Your addons and
 library stay in `~/Library/Application Support/Cineo`.

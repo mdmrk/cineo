@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-12 21:59+0100\n"
+"POT-Creation-Date: 2026-11-12 22:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:526
+#: crates/cineo-desktop/src/app/mod.rs:524
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -29,20 +29,20 @@ msgid ""
 "Open its Microsoft Store page?"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:530
+#: crates/cineo-desktop/src/app/mod.rs:528
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
 "acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:534
+#: crates/cineo-desktop/src/app/mod.rs:532
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:537
+#: crates/cineo-desktop/src/app/mod.rs:535
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -53,15 +53,15 @@ msgid ""
 "Details: {details}"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:540
+#: crates/cineo-desktop/src/app/mod.rs:538
 msgid "Cineo cannot open its window"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:542
+#: crates/cineo-desktop/src/app/mod.rs:540
 msgid "Open Microsoft Store"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:543
+#: crates/cineo-desktop/src/app/mod.rs:541
 msgid "Close"
 msgstr ""
 
@@ -264,7 +264,7 @@ msgid "Next episode in {seconds} s"
 msgstr ""
 
 #: crates/cineo-desktop/src/player/bars.rs:338
-#: crates/cineo-desktop/src/view/mod.rs:367
+#: crates/cineo-desktop/src/view/mod.rs:348
 msgid "Dismiss"
 msgstr ""
 
@@ -393,7 +393,7 @@ msgid "About"
 msgstr ""
 
 #: crates/cineo-desktop/src/settings/mod.rs:123
-#: crates/cineo-desktop/src/view/mod.rs:64
+#: crates/cineo-desktop/src/view/mod.rs:63
 msgid "Settings"
 msgstr ""
 
@@ -627,7 +627,7 @@ msgid "Show and play torrent streams"
 msgstr ""
 
 #: crates/cineo-desktop/src/settings/mod.rs:462
-#: crates/cineo-desktop/src/view/mod.rs:420
+#: crates/cineo-desktop/src/view/mod.rs:412
 msgid ""
 "Torrent streams come from other people's computers. While one plays, your IP "
 "address is visible to the peers and trackers it connects to, and Cineo "
@@ -957,7 +957,7 @@ msgid "Configure"
 msgstr ""
 
 #: crates/cineo-desktop/src/view/addons.rs:42
-#: crates/cineo-desktop/src/view/mod.rs:63
+#: crates/cineo-desktop/src/view/mod.rs:62
 msgid "Addons"
 msgstr ""
 
@@ -972,7 +972,7 @@ msgstr ""
 #: crates/cineo-desktop/src/view/addons.rs:64
 #: crates/cineo-desktop/src/view/addons.rs:250
 #: crates/cineo-desktop/src/view/addons.rs:309
-#: crates/cineo-desktop/src/view/mod.rs:406
+#: crates/cineo-desktop/src/view/mod.rs:398
 msgid "Install"
 msgstr ""
 
@@ -1218,121 +1218,114 @@ msgstr ""
 msgid "Usenet"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:59
+#: crates/cineo-desktop/src/view/mod.rs:58
 #: crates/cineo-desktop/src/view/pages.rs:33
 msgid "Home"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:60
+#: crates/cineo-desktop/src/view/mod.rs:59
 #: crates/cineo-desktop/src/view/pages.rs:50
 msgid "Discover"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:61
+#: crates/cineo-desktop/src/view/mod.rs:60
 #: crates/cineo-desktop/src/view/pages.rs:134
 msgctxt "page-search"
 msgid "Search"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:62
+#: crates/cineo-desktop/src/view/mod.rs:61
 #: crates/cineo-desktop/src/view/pages.rs:207
 msgid "Library"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:332
-#, rust-format
-msgid ""
-"Your addons and library from an earlier version are in {earlier}. To use "
-"them, close Cineo and move {file} from there into {current}."
-msgstr ""
-
-#: crates/cineo-desktop/src/view/mod.rs:398
+#: crates/cineo-desktop/src/view/mod.rs:390
 msgid "Install this addon?"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:399
+#: crates/cineo-desktop/src/view/mod.rs:391
 msgid "A link asks to install the addon below. Only install addons you trust."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:418
+#: crates/cineo-desktop/src/view/mod.rs:410
 msgid "Peer-to-peer streaming"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:429
+#: crates/cineo-desktop/src/view/mod.rs:421
 msgid "Accept and play"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:441
+#: crates/cineo-desktop/src/view/mod.rs:433
 msgid "This addon is already installed"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:443
+#: crates/cineo-desktop/src/view/mod.rs:435
 msgid ""
 "This addon must be configured before it can be installed. Configure it, then "
 "install the link it gives you."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:446
+#: crates/cineo-desktop/src/view/mod.rs:438
 #, rust-format
 msgid "Invalid addon URL: {detail}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:448
+#: crates/cineo-desktop/src/view/mod.rs:440
 msgid "No installed addon provides details for this item"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:449
+#: crates/cineo-desktop/src/view/mod.rs:441
 msgid "This catalog does not support that filter"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:458
+#: crates/cineo-desktop/src/view/mod.rs:450
 #, rust-format
 msgid "An addon could not be loaded: {detail}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:464
+#: crates/cineo-desktop/src/view/mod.rs:456
 #, rust-format
 msgid "Unsupported stream scheme `{scheme}`"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:468
+#: crates/cineo-desktop/src/view/mod.rs:460
 msgid "Torrent streams are turned off in Settings"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:471
+#: crates/cineo-desktop/src/view/mod.rs:463
 #, rust-format
 msgid "{kind} streams are not supported yet"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:483
+#: crates/cineo-desktop/src/view/mod.rs:475
 #, rust-format
 msgid "The torrent could not be played: {detail}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:490
+#: crates/cineo-desktop/src/view/mod.rs:482
 #, rust-format
 msgid "The last stream could not be played, pick another one. {reason}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:497
+#: crates/cineo-desktop/src/view/mod.rs:489
 msgid "The torrent engine returned an unexpected address"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:499
+#: crates/cineo-desktop/src/view/mod.rs:491
 #, rust-format
 msgid "Could not load the subtitle: {detail}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:503
+#: crates/cineo-desktop/src/view/mod.rs:495
 #, rust-format
 msgid "Could not save changes: {detail}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:505
+#: crates/cineo-desktop/src/view/mod.rs:497
 msgid "Changes can no longer be saved"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/mod.rs:506
+#: crates/cineo-desktop/src/view/mod.rs:498
 msgid "That link cannot be opened by Cineo"
 msgstr ""
 
