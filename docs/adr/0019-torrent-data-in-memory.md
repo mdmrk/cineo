@@ -43,7 +43,8 @@ over keeping the whole file in memory.
   `EngineOptions::memory_window`. The engine's own default is disk.
 - Settings → Torrents → "Torrent data": on disk, or in memory with a
   256 MB, 512 MB, 1 GB or 2 GB window. In memory with 1 GB is the default
-  (owner decision 2026-10-09). It applies from the next
+  (owner decision 2026-10-09; since 2026-11-13 the default is on disk with
+  1 GB, ADR-0020). It applies from the next
   torrent.
 
 ## Consequences

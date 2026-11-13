@@ -591,6 +591,7 @@ private fun storageName(value: String) = when (value) {
     "ram-512" -> stringResource(R.string.storage_memory, "512 MB")
     "ram-1024" -> stringResource(R.string.storage_memory, "1 GB")
     "ram-2048" -> stringResource(R.string.storage_memory, "2 GB")
+    "disk-1024" -> stringResource(R.string.storage_disk, "1 GB")
     "disk-2048" -> stringResource(R.string.storage_disk, "2 GB")
     "disk" -> stringResource(R.string.storage_disk, "4 GB")
     "disk-8192" -> stringResource(R.string.storage_disk, "8 GB")

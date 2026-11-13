@@ -34,8 +34,8 @@ old one *Superseded by NNNN*.
 | [0016](0016-librqbit-from-a-fork.md) | librqbit from the owner's fork instead of a vendored copy | Accepted |
 | [0017](0017-localization-with-fluent.md) | Localization: Fluent catalogs in the desktop shell; core reports typed messages | Accepted (Fluent: superseded by 0021) |
 | [0018](0018-deep-links-single-instance-and-scheme-registration.md) | Deep links: typed routes in core, single-instance handover, opt-in scheme registration | Accepted (Windows and macOS: superseded by 0022) |
-| [0019](0019-torrent-data-in-memory.md) | Torrent data in memory, bounded by a sliding window | Accepted (unbounded disk choice: superseded by 0020; lookahead: 0023) |
-| [0020](0020-torrent-data-on-disk-bounded-by-the-window.md) | Torrent data on disk, bounded by the same window | Accepted (Android default on disk: amended 2026-11-05) |
+| [0019](0019-torrent-data-in-memory.md) | Torrent data in memory, bounded by a sliding window | Accepted (unbounded disk choice and the in-memory default: superseded by 0020; lookahead: 0023) |
+| [0020](0020-torrent-data-on-disk-bounded-by-the-window.md) | Torrent data on disk, bounded by the same window | Accepted (Android default on disk: amended 2026-11-05; desktop default on disk with 1 GB: amended 2026-11-13) |
 | [0021](0021-localization-with-rust-i18n.md) | Localization: rust-i18n catalogs instead of Fluent | Accepted (catalogs and lookup: superseded by 0034) |
 | [0022](0022-linux-only.md) | Linux only | Accepted (Windows: superseded by 0027; Android: superseded by 0028; macOS: superseded by 0035) |
 | [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |

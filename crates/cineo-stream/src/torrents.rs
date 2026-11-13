@@ -257,7 +257,7 @@ mod tests {
             EngineOptions {
                 peer_limit: Some(128),
                 window: NonZeroU64::new(1024 * 1024 * 1024),
-                in_memory: true,
+                in_memory: false,
                 listen_port: 42713,
                 ..base.clone()
             },

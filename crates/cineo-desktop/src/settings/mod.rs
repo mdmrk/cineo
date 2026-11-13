@@ -590,6 +590,7 @@ fn storage_name(storage: TorrentStorage) -> Text {
         TorrentStorage::Ram512 => t!("In memory, {size}", size = "512 MB"),
         TorrentStorage::Ram1024 => t!("In memory, {size}", size = "1 GB"),
         TorrentStorage::Ram2048 => t!("In memory, {size}", size = "2 GB"),
+        TorrentStorage::Disk1024 => t!("On disk, {size}", size = "1 GB"),
         TorrentStorage::Disk2048 => t!("On disk, {size}", size = "2 GB"),
         TorrentStorage::Disk4096 => t!("On disk, {size}", size = "4 GB"),
         TorrentStorage::Disk8192 => t!("On disk, {size}", size = "8 GB"),

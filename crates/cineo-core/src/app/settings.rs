@@ -227,7 +227,7 @@ impl DownloadLimit {
 choice! {
     TorrentStorage {
         Ram256 = "ram-256", Ram512 = "ram-512", Ram1024 = "ram-1024", Ram2048 = "ram-2048",
-        Disk2048 = "disk-2048", Disk4096 = "disk", Disk8192 = "disk-8192",
+        Disk1024 = "disk-1024", Disk2048 = "disk-2048", Disk4096 = "disk", Disk8192 = "disk-8192",
     }
 }
 
@@ -237,7 +237,7 @@ impl TorrentStorage {
         match self {
             Self::Ram256 => 256 * MIB,
             Self::Ram512 => 512 * MIB,
-            Self::Ram1024 => 1024 * MIB,
+            Self::Ram1024 | Self::Disk1024 => 1024 * MIB,
             Self::Ram2048 | Self::Disk2048 => 2048 * MIB,
             Self::Disk4096 => 4096 * MIB,
             Self::Disk8192 => 8192 * MIB,
@@ -451,7 +451,7 @@ settings! {
     audio_output: AudioOutput = AudioOutput::Auto => AudioOutput("audio_output"),
     audio_passthrough: bool = false => AudioPassthrough("audio_passthrough"),
     torrent_upload: bool = true => TorrentUpload("torrent_upload"),
-    torrent_storage: TorrentStorage = TorrentStorage::Ram1024 => TorrentStorage("torrent_storage"),
+    torrent_storage: TorrentStorage = TorrentStorage::Disk1024 => TorrentStorage("torrent_storage"),
     download_limit: DownloadLimit = DownloadLimit::Unlimited => DownloadLimit("download_limit"),
     upload_limit: UploadLimit = UploadLimit::Unlimited => UploadLimit("upload_limit"),
     peer_limit: PeerLimit = PeerLimit::P128 => PeerLimit("peer_limit"),

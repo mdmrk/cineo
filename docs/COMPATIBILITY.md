@@ -560,8 +560,8 @@ The full evidence for the rows above whose notes do not fit in the table.
   (`the_subtitle_preview_follows_the_style_settings`,
   `a_subtitle_background_replaces_the_outline_in_the_preview`; not yet seen
   on a phone), the torrent settings (upload, data storage, on
-  disk with 4 GB by default on Android where the desktop keeps 1 GB in
-  memory, download and upload limits, peers, DHT, port;
+  disk with 4 GB by default on Android where the desktop keeps 1 GB on
+  disk, download and upload limits, peers, DHT, port;
   `a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_reset`),
   local network addresses, clearing the history and resetting, and an About
   section with the version and the bundled license texts

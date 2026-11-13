@@ -192,6 +192,18 @@ fn torrent_data_on_disk_is_bounded_too() {
 }
 
 #[test]
+fn torrent_data_is_on_disk_with_1_gb_by_default() {
+    let storage = Settings::default().torrent_storage;
+    assert_eq!(storage, TorrentStorage::Disk1024);
+    assert_eq!(storage.window_bytes(), 1 << 30);
+    assert!(!storage.in_memory());
+    assert_eq!(
+        Setting::parse("torrent_storage", "disk-1024"),
+        Ok(Setting::TorrentStorage(TorrentStorage::Disk1024))
+    );
+}
+
+#[test]
 fn numbers_are_kept_in_range() {
     assert_eq!(Percent::new(250).get(), 100);
     assert_eq!(
