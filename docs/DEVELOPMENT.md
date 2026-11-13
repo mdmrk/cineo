@@ -105,7 +105,7 @@ that setting.
 | Task                 | Command                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------- |
 | Everything CI checks | `scripts/check.sh` (`--quick` skips lint, docs and deny)                                        |
-| Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--allow-private-network`) |
+| Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--portable`, `--allow-private-network`) |
 | Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
 | Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, doc references, lockfile)                       |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
@@ -317,7 +317,9 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 - Installed addons and the library live in one SQLite database, by default
   `$XDG_STATE_HOME/cineo/cineo.db` (`~/.local/state/cineo/cineo.db`);
-  `--data-dir <dir>` uses another directory. The database uses write-ahead
+  `--data-dir <dir>` uses another directory, and `--portable` or a
+  `portable.txt` file in the working directory uses the working directory,
+  with the cache in its `cache` folder. The database uses write-ahead
   logging, so while Cineo runs recent writes live in `cineo.db-wal`; copy
   `cineo.db` only after closing it. Addon URLs in it can contain your addon
   configuration; do not share it publicly.

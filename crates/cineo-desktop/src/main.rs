@@ -13,6 +13,8 @@ struct Cli {
     verbose: u8,
     #[arg(long)]
     allow_private_network: bool,
+    #[arg(long)]
+    portable: bool,
     #[arg(long, value_name = "DIR")]
     data_dir: Option<PathBuf>,
     #[arg(long, value_name = "DIR")]
@@ -23,10 +25,18 @@ struct Cli {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let installed = cineo_desktop::dirs::installed();
+    let portable = std::env::current_dir()
+        .ok()
+        .filter(|cwd| cineo_desktop::dirs::is_portable(cli.portable, cwd));
+    let installed = if portable.is_some() {
+        None
+    } else {
+        cineo_desktop::dirs::installed()
+    };
     let data_dir = cli
         .data_dir
         .clone()
+        .or(portable)
         .or_else(|| installed.as_ref().map(|dirs| dirs.state.clone()));
     if let Some(dir) = &data_dir {
         cineo_desktop::panic_log::record_panics(dir);

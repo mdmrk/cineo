@@ -92,6 +92,7 @@ _Last reviewed: 2026-10-13._
 | Casting | Unsupported | |
 | Account / cloud sync | Unsupported | Out of scope (owner decision 2026-10-06) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
+| Portable mode | Supported | Desktop: `--portable`, or a `portable.txt` file in the working directory, keeps the database, log and cache in the working directory; `--data-dir` and `--cache-dir` still win (`the_flag_or_a_marker_file_in_the_folder_makes_it_portable`; both ways run by hand on Linux, 2026-11-13) |
 
 ## Platforms
 
