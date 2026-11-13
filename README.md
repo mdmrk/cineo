@@ -27,6 +27,19 @@ It works with Stremio addons. No account, no cloud.
   </tr>
 </table>
 
+## Contents
+
+- [Features](#features)
+- [Install](#install)
+  - [Linux](#linux-x86_64)
+  - [Windows](#windows-x86_64)
+  - [macOS](#macos-apple-silicon-and-intel-macos-11-or-newer)
+  - [Android](#android-arm64-phones)
+- [Update](#update)
+- [Uninstall](#uninstall)
+- [For developers](#for-developers)
+- [License](#license)
+
 ## Features
 
 - Stremio addons, catalogs and search
