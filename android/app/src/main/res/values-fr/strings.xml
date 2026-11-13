@@ -141,6 +141,8 @@
     <string name="close">Fermer</string>
     <string name="section_about">À propos</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">APERÇU</string>
+    <string name="subtitle_preview_text">Voici l\'apparence des sous-titres.</string>
     <string name="licenses">Licences</string>
     <string name="licenses_help">Les licences des polices, des icônes, de libmpv et de FFmpeg de cette application.</string>
     <string name="seek_step_help">La distance des sauts avec les boutons de saut.</string>

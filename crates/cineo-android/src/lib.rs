@@ -13,7 +13,8 @@ pub use view::{
     AddonListItems, AddonListView, AddonView, AppView, ArtView, ChoiceView, DetailView,
     InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView,
     PlaybackView, PosterView, ProblemView, QualityView, RangeView, RowItems, RowView, SettingsView,
-    StreamFilterView, StreamGroupView, StreamItems, StreamView, ToggleView, TorrentView, VideoView,
+    StreamFilterView, StreamGroupView, StreamItems, StreamView, SubtitlePreviewView, ToggleView,
+    TorrentView, VideoView,
 };
 
 #[uniffi::export]

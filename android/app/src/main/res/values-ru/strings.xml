@@ -141,6 +141,8 @@
     <string name="close">Закрыть</string>
     <string name="section_about">О программе</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">ПРЕДПРОСМОТР</string>
+    <string name="subtitle_preview_text">Так выглядят субтитры.</string>
     <string name="licenses">Лицензии</string>
     <string name="licenses_help">Лицензии шрифтов, значков, libmpv и FFmpeg в этом приложении.</string>
     <string name="seek_step_help">Насколько перематывают кнопки перемотки.</string>

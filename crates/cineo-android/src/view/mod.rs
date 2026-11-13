@@ -15,7 +15,7 @@ pub use detail::{
     StreamView, VideoView,
 };
 use settings::settings;
-pub use settings::{ChoiceView, RangeView, SettingsView, ToggleView};
+pub use settings::{ChoiceView, RangeView, SettingsView, SubtitlePreviewView, ToggleView};
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct AppView {

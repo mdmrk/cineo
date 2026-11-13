@@ -558,7 +558,11 @@ The full evidence for the rows above whose notes do not fit in the table.
   tab, its menu and favourites worked, owner, 2026-11-04).
 - Settings: hardware decoding, seek step, watched-at threshold,
   hide-controls delay, first and second audio and subtitle language, the
-  desktop's subtitle style, the torrent settings (upload, data storage, on
+  desktop's subtitle style with a preview drawn in Inter, the font the
+  player uses on Android
+  (`the_subtitle_preview_follows_the_style_settings`,
+  `a_subtitle_background_replaces_the_outline_in_the_preview`; not yet seen
+  on a phone), the torrent settings (upload, data storage, on
   disk with 4 GB by default on Android where the desktop keeps 1 GB in
   memory, download and upload limits, peers, DHT, port;
   `a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_reset`),

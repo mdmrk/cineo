@@ -141,6 +141,8 @@
     <string name="close">Fechar</string>
     <string name="section_about">Sobre</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">PRÉVIA</string>
+    <string name="subtitle_preview_text">As legendas ficam assim.</string>
     <string name="licenses">Licenças</string>
     <string name="licenses_help">As licenças das fontes, dos ícones, do libmpv e do FFmpeg deste app.</string>
     <string name="seek_step_help">Quanto os botões de salto avançam ou voltam.</string>

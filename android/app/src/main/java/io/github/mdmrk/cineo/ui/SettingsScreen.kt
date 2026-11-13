@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +46,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,6 +61,7 @@ import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.RangeView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
+import io.github.mdmrk.cineo.rust.SubtitlePreviewView
 import io.github.mdmrk.cineo.rust.ToggleView
 import io.github.mdmrk.cineo.rust.version
 import java.text.Collator
@@ -179,6 +188,7 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
         item(key = "subtitles") {
             val style = stringResource(R.string.subtitle_style_help)
             Group(stringResource(R.string.section_subtitles)) {
+                SubtitlePreview(settings.subtitlePreview)
                 Range(stringResource(R.string.subtitle_size), style, settings.subtitleSize, 5, set)
                 Divider()
                 Choice(stringResource(R.string.subtitle_font), style, settings.subtitleFont, { fontName(it) }, set)
@@ -363,6 +373,50 @@ private fun Group(title: String, content: @Composable () -> Unit) {
     Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge, color = Brand.Accent)
         Column(Modifier.fillMaxWidth().clip(GroupShape).background(Brand.Panel)) { content() }
+    }
+}
+
+@Composable
+private fun SubtitlePreview(preview: SubtitlePreviewView) {
+    BoxWithConstraints(
+        Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+            .height(150.dp)
+            .clip(GroupShape)
+            .background(Color(0xFF181818)),
+    ) {
+        Text(
+            stringResource(R.string.subtitle_preview),
+            style = MaterialTheme.typography.labelSmall,
+            color = Brand.TextFaint,
+            modifier = Modifier.padding(start = 10.dp, top = 8.dp),
+        )
+        val style = TextStyle(
+            fontFamily = Inter,
+            fontWeight = if (preview.bold) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 22.sp * (preview.sizePercent.toFloat() / 100f),
+        )
+        val text = stringResource(R.string.subtitle_preview_text)
+        val stroke = with(LocalDensity.current) { 3.dp.toPx() }
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 14.dp + maxHeight * (preview.raisePercent.toFloat() / 100f))
+                .then(preview.background?.let { Modifier.background(Color(it.toInt())) } ?: Modifier)
+                .padding(4.dp),
+        ) {
+            preview.outline?.let {
+                Text(
+                    text,
+                    style = style.copy(drawStyle = Stroke(width = stroke, join = StrokeJoin.Round)),
+                    color = Color(it.toInt()),
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+            Text(text, style = style, color = Color(preview.color.toInt()), maxLines = 1, softWrap = false)
+        }
     }
 }
 

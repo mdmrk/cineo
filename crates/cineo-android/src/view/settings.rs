@@ -31,6 +31,7 @@ pub struct SettingsView {
     pub subtitle_background: ChoiceView,
     pub subtitle_position: RangeView,
     pub keep_subtitle_styles: ToggleView,
+    pub subtitle_preview: SubtitlePreviewView,
     pub torrent_upload: ToggleView,
     pub torrent_storage: ChoiceView,
     pub download_limit: ChoiceView,
@@ -38,6 +39,16 @@ pub struct SettingsView {
     pub peer_limit: ChoiceView,
     pub torrent_dht: ToggleView,
     pub torrent_port: RangeView,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SubtitlePreviewView {
+    pub size_percent: u32,
+    pub bold: bool,
+    pub color: u32,
+    pub outline: Option<u32>,
+    pub background: Option<u32>,
+    pub raise_percent: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -113,6 +124,7 @@ pub(super) fn settings(settings: &Settings) -> SettingsView {
         ),
         subtitle_position: range(settings.subtitle_position, Setting::SubtitlePosition),
         keep_subtitle_styles: toggle(settings.keep_subtitle_styles, Setting::KeepSubtitleStyles),
+        subtitle_preview: subtitle_preview(settings),
         torrent_upload: toggle(settings.torrent_upload, Setting::TorrentUpload),
         torrent_storage: choice(
             settings.torrent_storage,
@@ -133,6 +145,27 @@ pub(super) fn settings(settings: &Settings) -> SettingsView {
         torrent_dht: toggle(settings.torrent_dht, Setting::TorrentDht),
         torrent_port: range(settings.torrent_port, Setting::TorrentPort),
     }
+}
+
+fn subtitle_preview(settings: &Settings) -> SubtitlePreviewView {
+    let alpha = settings.subtitle_opacity.get() * 0xFF / 100;
+    let background = settings.subtitle_background.rgb();
+    let outline = match background {
+        Some(_) => None,
+        None => settings.subtitle_outline.rgb(),
+    };
+    SubtitlePreviewView {
+        size_percent: settings.subtitle_size.get(),
+        bold: settings.subtitle_bold,
+        color: argb(alpha, settings.subtitle_color.rgb()),
+        outline: outline.map(|rgb| argb(0xFF, rgb)),
+        background: background.map(|rgb| argb(0xCC, rgb)),
+        raise_percent: settings.subtitle_position.get(),
+    }
+}
+
+fn argb(alpha: u32, [r, g, b]: [u8; 3]) -> u32 {
+    alpha << 24 | u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b)
 }
 
 fn choice<T: Copy>(current: T, all: &[T], wrap: fn(T) -> Setting) -> ChoiceView {
@@ -159,5 +192,49 @@ fn range<const MIN: u32, const MAX: u32>(
         value: current.get(),
         min: MIN,
         max: MAX,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cineo_core::app::{SubtitleOpacity, SubtitlePosition, SubtitleSize};
+
+    use super::*;
+
+    #[test]
+    fn the_subtitle_preview_follows_the_style_settings() {
+        let preview = subtitle_preview(&Settings {
+            subtitle_size: SubtitleSize::new(150),
+            subtitle_bold: true,
+            subtitle_color: SubtitleColor::Yellow,
+            subtitle_opacity: SubtitleOpacity::new(50),
+            subtitle_outline: SubtitleOutline::Gray,
+            subtitle_background: SubtitleBackground::None,
+            subtitle_position: SubtitlePosition::new(10),
+            ..Settings::default()
+        });
+        assert_eq!(
+            preview,
+            SubtitlePreviewView {
+                size_percent: 150,
+                bold: true,
+                color: 0x7FFF_E45C,
+                outline: Some(0xFF40_4040),
+                background: None,
+                raise_percent: 10,
+            }
+        );
+    }
+
+    #[test]
+    fn a_subtitle_background_replaces_the_outline_in_the_preview() {
+        let preview = subtitle_preview(&Settings {
+            subtitle_outline: SubtitleOutline::Black,
+            subtitle_background: SubtitleBackground::Gray,
+            ..Settings::default()
+        });
+        assert_eq!(preview.outline, None);
+        assert_eq!(preview.background, Some(0xCC30_3030));
+        assert_eq!(preview.color, 0xFFFF_FFFF);
     }
 }

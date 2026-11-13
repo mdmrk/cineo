@@ -141,6 +141,8 @@
     <string name="close">Cerrar</string>
     <string name="section_about">Acerca de</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">VISTA PREVIA</string>
+    <string name="subtitle_preview_text">Así se ven los subtítulos.</string>
     <string name="licenses">Licencias</string>
     <string name="licenses_help">Las licencias de las fuentes, los iconos, libmpv y FFmpeg de esta app.</string>
     <string name="seek_step_help">Cuánto saltan los botones de salto.</string>

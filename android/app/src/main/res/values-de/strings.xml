@@ -141,6 +141,8 @@
     <string name="close">Schließen</string>
     <string name="section_about">Über</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">VORSCHAU</string>
+    <string name="subtitle_preview_text">So sehen Untertitel aus.</string>
     <string name="licenses">Lizenzen</string>
     <string name="licenses_help">Die Lizenzen der Schriften, Symbole, libmpv und FFmpeg in dieser App.</string>
     <string name="seek_step_help">Wie weit die Sprungtasten springen.</string>

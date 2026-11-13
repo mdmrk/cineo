@@ -150,6 +150,8 @@
     <string name="close">Close</string>
     <string name="section_about">About</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">PREVIEW</string>
+    <string name="subtitle_preview_text">Subtitles look like this.</string>
     <string name="licenses">Licenses</string>
     <string name="licenses_help">The licenses of the fonts, icons, libmpv and FFmpeg in this app.</string>
     <string name="seek_step_help">How far the seek buttons jump.</string>

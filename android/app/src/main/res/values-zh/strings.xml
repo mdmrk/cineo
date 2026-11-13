@@ -147,6 +147,8 @@
     <string name="close">关闭</string>
     <string name="section_about">关于</string>
     <string name="app_version">Cineo v%1$s</string>
+    <string name="subtitle_preview">预览</string>
+    <string name="subtitle_preview_text">字幕看起来是这样的。</string>
     <string name="licenses">许可证</string>
     <string name="licenses_help">此应用中字体、图标、libmpv 和 FFmpeg 的许可证。</string>
     <string name="seek_step_help">跳转按钮的跳转幅度。</string>
