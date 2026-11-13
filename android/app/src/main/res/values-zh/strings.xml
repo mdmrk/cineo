@@ -149,6 +149,13 @@
     <string name="app_version">Cineo v%1$s</string>
     <string name="subtitle_preview">预览</string>
     <string name="subtitle_preview_text">字幕看起来是这样的。</string>
+    <string name="check_updates">检查更新</string>
+    <string name="check_updates_help">每次启动时询问 GitHub 一次，看看是否有新版本。</string>
+    <string name="update_available">v%1$s 可用</string>
+    <string name="update_available_help">打开发布页面进行下载。</string>
+    <string name="update_channel">更新</string>
+    <string name="update_notification_title">Cineo v%1$s 已可用</string>
+    <string name="update_notification_text">点按以打开发布页面并下载 APK。</string>
     <string name="licenses">许可证</string>
     <string name="licenses_help">此应用中字体、图标、libmpv 和 FFmpeg 的许可证。</string>
     <string name="seek_step_help">跳转按钮的跳转幅度。</string>

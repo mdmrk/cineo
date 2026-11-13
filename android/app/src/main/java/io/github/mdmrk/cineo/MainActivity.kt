@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
                         val detail = current?.detail
                         val connecting = current?.connecting
                         TorrentForeground(current?.torrent != null)
+                        UpdateNotification(current?.update, canAsk = playback == null && connecting == null)
                         when {
                             playback != null -> PlayerScreen(playback, current.torrent, images, cineo)
                             connecting != null -> ConnectingScreen(connecting, current.torrent, images, cineo::stopPlayback)
@@ -150,7 +151,7 @@ class MainActivity : ComponentActivity() {
                                             Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
                                             Page.LIBRARY -> LibraryScreen(current, images, library, padding)
                                             Page.ADDONS -> AddonsScreen(current, images, cineo, padding)
-                                            Page.SETTINGS -> current?.let { SettingsScreen(it.settings, cineo, padding) }
+                                            Page.SETTINGS -> current?.let { SettingsScreen(it.settings, it.update, cineo, padding) }
                                         }
                                     }
                                 }

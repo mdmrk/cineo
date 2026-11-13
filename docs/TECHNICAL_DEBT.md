@@ -528,17 +528,6 @@ Format:
   connecting screen.
 - Exit: hold the orientation for the whole playback session, with a test.
 
-### Android: no update check
-- Where: [shell/worker.rs](../crates/cineo-android/src/shell/worker.rs) (`run_effect`)
-- Gap: releases carry the APK (ADR-0029), but the app never says that a
-  newer one exists.
-- Why: the check was left out while Android had no release; the
-  `prerelease` builds share a version with the release before them.
-- Instead: the Android shell drops `Effect::CheckForUpdate`
-  (`the_desktop_update_check_does_not_run`); users look at the Releases
-  page and install the new APK over the old one.
-- Exit: run the check on Android and open the release page, with a test.
-
 ### Android: prereleases share the release's versionCode
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`versionCode`)
 - Gap: the `versionCode` comes from the workspace version (ADR-0030), so a
@@ -614,9 +603,9 @@ Format:
   [shell/mod.rs](../crates/cineo-android/src/shell/mod.rs) (`SettingChange`)
 - Gap: Android has no setting for the short seek step, Escape leaving
   fullscreen, remembering the volume, audio output or passthrough,
-  interface scale, start page, interface language or the update check.
+  interface scale, start page or interface language.
 - Why: they were not brought over; some have no matching feature on
-  Android (no Escape key, no update check).
+  Android (no Escape key).
 - Instead: those settings keep their saved values, and reset still
   resets them.
 - Exit: add each one that applies, with its feature.

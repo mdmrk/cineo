@@ -108,7 +108,8 @@ impl Shell {
             | Effect::FetchAddonList { .. }
             | Effect::FetchMeta { .. }
             | Effect::FetchStreams { .. }
-            | Effect::FetchSubtitles { .. }) => {
+            | Effect::FetchSubtitles { .. }
+            | Effect::CheckForUpdate(_)) => {
                 if let Some(task) = fetch_task(&self.client, effect) {
                     let tx = self.tx.clone();
                     self.runtime.spawn(async move {
@@ -134,7 +135,6 @@ impl Shell {
                     });
             }
             Effect::StopTorrent => self.torrents.stop(),
-            Effect::CheckForUpdate(_) => {}
         }
     }
 
@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn the_desktop_update_check_does_not_run() {
+    fn restoring_settings_checks_for_an_update_once() {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -333,7 +333,9 @@ mod tests {
             ..Settings::default()
         }));
         assert!(shell.state.update_checked);
-        assert_eq!(runtime.metrics().num_alive_tasks(), 0);
+        assert_eq!(runtime.metrics().num_alive_tasks(), 1);
+        shell.dispatch(Action::RestoreSettings(Settings::default()));
+        assert_eq!(runtime.metrics().num_alive_tasks(), 1);
         assert!(rx.try_recv().is_err());
     }
 }

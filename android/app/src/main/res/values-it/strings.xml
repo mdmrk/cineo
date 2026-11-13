@@ -143,6 +143,13 @@
     <string name="app_version">Cineo v%1$s</string>
     <string name="subtitle_preview">ANTEPRIMA</string>
     <string name="subtitle_preview_text">I sottotitoli appaiono così.</string>
+    <string name="check_updates">Controlla aggiornamenti</string>
+    <string name="check_updates_help">Chiede a GitHub all\'avvio se esiste una versione più recente.</string>
+    <string name="update_available">v%1$s disponibile</string>
+    <string name="update_available_help">Apri la pagina della versione per scaricarla.</string>
+    <string name="update_channel">Aggiornamenti</string>
+    <string name="update_notification_title">Cineo v%1$s è disponibile</string>
+    <string name="update_notification_text">Tocca per aprire la pagina della versione e scaricare l\'APK.</string>
     <string name="licenses">Licenze</string>
     <string name="licenses_help">Le licenze di font, icone, libmpv e FFmpeg di questa app.</string>
     <string name="seek_step_help">Di quanto saltano i pulsanti di avanzamento.</string>

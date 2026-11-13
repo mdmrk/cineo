@@ -51,6 +51,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -62,6 +63,7 @@ import io.github.mdmrk.cineo.rust.RangeView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
 import io.github.mdmrk.cineo.rust.SubtitlePreviewView
+import io.github.mdmrk.cineo.rust.UpdateView
 import io.github.mdmrk.cineo.rust.ToggleView
 import io.github.mdmrk.cineo.rust.version
 import java.text.Collator
@@ -70,7 +72,7 @@ import kotlin.math.roundToInt
 private val GroupShape = RoundedCornerShape(10.dp)
 
 @Composable
-fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues) {
+fun SettingsScreen(settings: SettingsView, update: UpdateView?, cineo: Cineo, padding: PaddingValues) {
     val change = cineo::changeSetting
     val locale = LocalConfiguration.current.locales[0]
     val collator = remember(locale) { Collator.getInstance(locale) }
@@ -304,6 +306,24 @@ fun SettingsScreen(settings: SettingsView, cineo: Cineo, padding: PaddingValues)
                 ListItem(
                     colors = rowColors,
                     headlineContent = { Text(stringResource(R.string.app_version, version())) },
+                )
+                Divider()
+                if (update != null) {
+                    val uri = LocalUriHandler.current
+                    SettingRow(
+                        stringResource(R.string.update_available, update.version),
+                        stringResource(R.string.update_available_help),
+                        Modifier.clickable { uri.openUri(update.pageUrl) },
+                    ) {
+                        CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.Accent, size = 20.sp)
+                    }
+                    Divider()
+                }
+                Switch(
+                    stringResource(R.string.check_updates),
+                    stringResource(R.string.check_updates_help),
+                    settings.checkForUpdates,
+                    set,
                 )
                 Divider()
                 Licenses()

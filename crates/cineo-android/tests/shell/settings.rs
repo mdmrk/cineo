@@ -126,6 +126,8 @@ async fn subtitle_torrent_and_player_settings_change_by_key_and_reach_the_player
             (50, 200)
         );
         assert_eq!(first.torrent_port.value, 42713);
+        assert_eq!(first.check_for_updates.key, "check_for_updates");
+        assert!(!first.check_for_updates.on);
         assert!(first.torrent_upload.on);
         cineo.install_addon(manifest);
         wait_for(&views, |v| v.addons.len() == 1);

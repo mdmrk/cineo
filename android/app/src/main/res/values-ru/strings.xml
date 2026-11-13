@@ -143,6 +143,13 @@
     <string name="app_version">Cineo v%1$s</string>
     <string name="subtitle_preview">ПРЕДПРОСМОТР</string>
     <string name="subtitle_preview_text">Так выглядят субтитры.</string>
+    <string name="check_updates">Проверять обновления</string>
+    <string name="check_updates_help">При запуске спрашивает GitHub, есть ли новая версия.</string>
+    <string name="update_available">Доступна v%1$s</string>
+    <string name="update_available_help">Открыть страницу версии, чтобы скачать её.</string>
+    <string name="update_channel">Обновления</string>
+    <string name="update_notification_title">Доступна Cineo v%1$s</string>
+    <string name="update_notification_text">Нажмите, чтобы открыть страницу версии и скачать APK.</string>
     <string name="licenses">Лицензии</string>
     <string name="licenses_help">Лицензии шрифтов, значков, libmpv и FFmpeg в этом приложении.</string>
     <string name="seek_step_help">Насколько перематывают кнопки перемотки.</string>

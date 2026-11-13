@@ -4,6 +4,7 @@ use cineo_core::addon::{AddonDescriptor, MetaPreview, PosterShape, SourceKind, T
 use cineo_core::app::{
     AddonList, CatalogTarget, HideControls, InstalledAddon, LibraryItem, Loadable, NextVideoNotice,
     Notice, PlayRequest, PlaybackFailure, Problem, Row, State, TorrentStatus, continue_watching,
+    release_page,
 };
 
 mod detail;
@@ -37,6 +38,13 @@ pub struct AppView {
     pub p2p_prompt: bool,
     pub settings: SettingsView,
     pub notice: Option<NoticeView>,
+    pub update: Option<UpdateView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct UpdateView {
+    pub version: String,
+    pub page_url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -282,6 +290,10 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
         p2p_prompt: state.p2p_prompt.is_some(),
         settings: settings(&state.settings),
         notice: state.notice.as_ref().map(notice_view),
+        update: state.available_update().map(|version| UpdateView {
+            version: version.to_string(),
+            page_url: release_page(version),
+        }),
     };
     if view.playback.is_none() && view.connecting.is_none() {
         fill_browsing(&mut view, state, filter);
@@ -506,5 +518,33 @@ fn notice_view(notice: &Notice) -> NoticeView {
         },
         Notice::StoreClosed => NoticeView::StoreClosed,
         Notice::InvalidLink => NoticeView::InvalidLink,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cineo_core::app::{Settings, parse_release};
+
+    use super::*;
+
+    #[test]
+    fn a_newer_release_shows_with_its_page_until_checks_are_turned_off() {
+        let mut state = State {
+            update: parse_release(br#"{"tag_name":"v999.0.0"}"#).ok(),
+            ..State::default()
+        };
+        let filter = StreamFilterView::default();
+        assert_eq!(
+            view(&state, None, &filter).update,
+            Some(UpdateView {
+                version: "999.0.0".into(),
+                page_url: "https://github.com/mdmrk/cineo/releases/tag/v999.0.0".into(),
+            })
+        );
+        state.settings = Settings {
+            check_for_updates: false,
+            ..Settings::default()
+        };
+        assert_eq!(view(&state, None, &filter).update, None);
     }
 }

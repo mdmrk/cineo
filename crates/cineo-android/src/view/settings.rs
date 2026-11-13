@@ -39,6 +39,7 @@ pub struct SettingsView {
     pub peer_limit: ChoiceView,
     pub torrent_dht: ToggleView,
     pub torrent_port: RangeView,
+    pub check_for_updates: ToggleView,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -144,6 +145,7 @@ pub(super) fn settings(settings: &Settings) -> SettingsView {
         peer_limit: choice(settings.peer_limit, PeerLimit::ALL, Setting::PeerLimit),
         torrent_dht: toggle(settings.torrent_dht, Setting::TorrentDht),
         torrent_port: range(settings.torrent_port, Setting::TorrentPort),
+        check_for_updates: toggle(settings.check_for_updates, Setting::CheckForUpdates),
     }
 }
 

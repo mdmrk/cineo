@@ -14,7 +14,7 @@ pub use view::{
     InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView,
     PlaybackView, PosterView, ProblemView, QualityView, RangeView, RowItems, RowView, SettingsView,
     StreamFilterView, StreamGroupView, StreamItems, StreamView, SubtitlePreviewView, ToggleView,
-    TorrentView, VideoView,
+    TorrentView, UpdateView, VideoView,
 };
 
 #[uniffi::export]

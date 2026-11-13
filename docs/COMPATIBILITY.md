@@ -548,7 +548,16 @@ The full evidence for the rows above whose notes do not fit in the table.
   shell thread crashed libmpv's AudioTrack output on the second exit
   (`the_player_is_released_on_its_own_thread_before_drop_returns`; on the
   Redmi 9 three plays and exits in a row with no crash, 2026-11-04).
-- No update check (`the_desktop_update_check_does_not_run`).
+- Update notice: once per start, as on the desktop, GitHub's latest
+  release is compared with the running version; a newer one is posted once
+  as an Android notification that opens its release page (asking for the
+  notification permission on Android 13 and later, but not while a video
+  plays or connects), and shows in Settings →
+  About, where the check can be turned off
+  (`restoring_settings_checks_for_an_update_once`,
+  `a_newer_release_shows_with_its_page_until_checks_are_turned_off`; the
+  notification has no test and was not yet seen on a phone). No in-app
+  install: the new APK is installed over the old one.
 - Library: continue watching on the home screen, favourites and recently
   played on a Library tab, resume of the saved stream at its saved position,
   favouriting from the detail page and removal
