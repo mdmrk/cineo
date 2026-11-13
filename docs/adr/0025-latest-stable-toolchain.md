@@ -1,6 +1,6 @@
 # 0025. Latest stable toolchain; no pin and no MSRV
 
-- Status: Accepted
+- Status: Superseded by 0036
 - Date: 2026-10-27
 - Supersedes: 0009
 

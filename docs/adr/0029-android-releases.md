@@ -108,8 +108,12 @@ What we know (2026-11-04):
   2026-11-04), and every user downloads it with every update. The
   `ci / build (android)` job
   builds libmpv (about 7 minutes) when its script or pins change. The
-  build is cached by the hash of the script and `.env`, except for tag
-  builds, which start without a cache like the other platforms.
+  build is cached by the hash of the script and `.env`. Amended
+  2026-11-13: tag builds also restore that cache, which only runs on
+  `main` save. `build (android)` took 742 to 1131 s on tags and 167 s on
+  `main` (VERIFIED on the run history); how much of the tag time libmpv
+  took is UNKNOWN, because the job logs were not read. The Rust build of a
+  tag still starts without a cache.
 - A user who replaces libmpv signs with their own key, so they must
   uninstall our copy first and cannot take updates from us.
 - `docs/LEGAL.md`, `docs/DEVELOPMENT.md`, `docs/COMPATIBILITY.md`,

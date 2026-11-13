@@ -546,9 +546,9 @@ Format:
   the same machine give the same unsigned APK (VERIFIED 2026-11-05, SHA-256
   `2fe745f8…dbe0a7`). Whether F-Droid's Debian build server gives the same
   APK as CI's Ubuntu runner is UNKNOWN: Python, Perl and the host tools
-  that generate libplacebo's and OpenSSL's code differ. Rust is the latest
-  stable at release time (ADR-0025), so the recipe must name the version
-  CI used, which `release-android.sh` prints. libmpv is built in the fixed
+  that generate libplacebo's and OpenSSL's code differ. Rust is the version
+  `rust-toolchain.toml` pins at the tag (ADR-0036), which the recipe must
+  name and `release-android.sh` prints. libmpv is built in the fixed
   `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
   one machine, and its sources are downloaded again after a reboot.
 - Why: F-Droid publishes our signed APK only if its build matches

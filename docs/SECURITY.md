@@ -247,10 +247,13 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   The prerelease build reuses `main`'s cache, but a tag build never
   restores one, so a release binary is always built from a clean target
   directory.
-- The Android libmpv build is cached with `actions/cache`, keyed by the
-  hash of `scripts/build-libmpv-android.sh` and its `.env`, and only by
-  `build (android)`, which runs on pushes to `main`; tag builds rebuild it
-  from the pinned, hash-checked sources.
+- The Android libmpv build is cached with `actions/cache/save`, keyed by the
+  hash of `scripts/build-libmpv-android.sh` and its `.env`, and saved only
+  by `build (android)` on pushes to `main`, which builds it from the pinned,
+  hash-checked sources. Tag builds restore that cache and rebuild libmpv
+  only when no cache matches the key (ADR-0029, amended 2026-11-13), so a
+  release APK can carry a libmpv that a run on `main` built, never one that
+  a pull request or a tag built.
 - `prune caches` runs after runs on `main` and is the only job with
   `actions: write`: it deletes every `v0-rust-*` and `libmpv-android-*`
   cache on `main` except the newest per key prefix, so the repository stays

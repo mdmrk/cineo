@@ -40,17 +40,18 @@ old one *Superseded by NNNN*.
 | [0022](0022-linux-only.md) | Linux only | Accepted (Windows: superseded by 0027; Android: superseded by 0028; macOS: superseded by 0035) |
 | [0023](0023-torrent-downloads-keep-25-to-30-s-ahead.md) | Torrent downloads keep 25 to 30 s ahead of the playhead | Accepted (30 s and 25 s: superseded by 0024) |
 | [0024](0024-a-two-minute-buffer.md) | A two-minute buffer | Accepted |
-| [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Accepted |
+| [0025](0025-latest-stable-toolchain.md) | Latest stable toolchain; no pin and no MSRV | Superseded by 0036 |
 | [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted (media keys: superseded by 0031; handover channel: superseded by 0032; macOS: superseded by 0035) |
 | [0028](0028-android-port.md) | Android port | Accepted (LGPL in a signed APK: settled by 0029) |
-| [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030) |
+| [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030; libmpv cache on tags: amended 2026-11-13) |
 | [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted |
 | [0031](0031-media-controls-through-fastframe.md) | Media controls through fastframe-now-playing | Accepted |
 | [0032](0032-link-handover-and-file-replacement-through-fastframe.md) | Link handover, file replacement, system sleep and panic log through fastframe | Accepted |
 | [0033](0033-egui-0-36-for-fastframe.md) | egui 0.36.2 so that fastframe's egui crates can be used | Accepted |
 | [0034](0034-i18n-and-dirs-through-fastframe.md) | Translations and folders through fastframe | Accepted |
 | [0035](0035-macos-support.md) | macOS support | Accepted |
+| [0036](0036-pinned-toolchain-for-the-ci-cache.md) | A pinned stable toolchain, bumped by hand | Accepted |
 
 ## What we took from the reference projects
 
@@ -71,7 +72,7 @@ old one *Superseded by NNNN*.
 | Private account API + library sync | **Reject** | Not public; cloud sync not planned for now (owner decision 2026-10-06) |
 | 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
 | Watched bitfield encoding | **Defer** | Revisit with series progress |
-| MSRV CI job | **Reject** | We are an application built with the latest stable Rust (ADR-0025) |
+| MSRV CI job | **Reject** | We are an application built with one pinned stable Rust (ADR-0036) |
 
 ### stremio-web (GPL-2.0): ideas only, no code
 - The core runs separately from the UI (in a worker) and the UI renders state

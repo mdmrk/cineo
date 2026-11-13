@@ -13,9 +13,9 @@ holds the details it links to.
 
 ## Setup
 
-1. Install the latest stable Rust with [rustup](https://rustup.rs), with
-   rustfmt and clippy (ADR-0025):
-   `rustup toolchain install stable --component rustfmt,clippy`.
+1. Install [rustup](https://rustup.rs). It installs the Rust version that
+   `rust-toolchain.toml` pins, with rustfmt and clippy, the first time you
+   run `cargo` (ADR-0036).
 2. Optional tools, which CI always runs:
    ```sh
    cargo install --locked cargo-nextest cargo-deny taplo-cli typos-cli cargo-machete
@@ -94,8 +94,8 @@ holds the details it links to.
    AGP keeps the libmpv and FFmpeg `.so` files unstripped, so they match
    the hashes in `libmpv.md`.
 
-If you build with a distro-packaged Rust instead of rustup, make sure it is a
-current stable release. Some distro builds expect a cross linker name; if
+If you build with a distro-packaged Rust instead of rustup, make sure it is
+the version `rust-toolchain.toml` pins or newer. Some distro builds expect a cross linker name; if
 linking fails with `linker 'x86_64-linux-gnu-gcc' not found`, set
 `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=cc` in your shell. Do not commit
 that setting.
@@ -177,10 +177,14 @@ updated `Cargo.lock`.
 - `unsafe_code = "forbid"`, except in the modules listed in [SECURITY.md](SECURITY.md), which also
   describes the exception process.
 
-### New stable Rust releases (ADR-0025)
+### Rust version (ADR-0036)
 
-CI always uses the latest stable Rust. When a release brings new lints, fix
-them.
+`rust-toolchain.toml` pins one stable release, and CI installs that one with
+`scripts/install-rust.sh [target…]`.
+To move to a new release, change `channel`, fix the new lints and commit
+both as `build: use Rust X.Y.Z`. The pin keeps CI's Rust cache warm:
+`Swatinem/rust-cache` hashes the `rustc` version into its key, so an
+unpinned `stable` started every job cold with each Rust release.
 
 ## Testing
 
@@ -607,7 +611,11 @@ instead of the `Cargo.toml`'s 2: a cold test build went from 173 s to 54 s
 and the tests from 6 s to 9 s (measured locally on 2026-11-12). Only tag builds use the release profile's
 `lto = "thin"` and `codegen-units = 1`; every other run, including the
 prerelease and the APK `check (android)` builds, uses `lto = "off"` and
-`codegen-units = 16`. `build` builds `cineo-desktop` for Linux x86_64 and
+`codegen-units = 16`. The `CARGO_PROFILE_RELEASE_*` variables that choose
+this are set on the build steps, never in the workflow's `env`:
+`Swatinem/rust-cache` hashes every `CARGO*` variable into its key, so a
+workflow-wide value that differs on tags made the checks on tags miss
+`main`'s cache. `build` builds `cineo-desktop` for Linux x86_64 and
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
@@ -615,7 +623,8 @@ provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
 named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
 `.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
 tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
-the hash of the script and its `.env`, never on tags) and runs
+the hash of the script and its `.env`, also on tags; only runs on `main`
+save it) and runs
 `scripts/release-android.sh`: it builds libmpv if needed, a signed
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that
 the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
@@ -633,7 +642,7 @@ unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file
 `gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
 write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
-start without a cache. After each run on `main`, `prune caches` deletes all
+start without a Rust cache and reuse only `main`'s libmpv for Android. After each run on `main`, `prune caches` deletes all
 but the newest Rust and libmpv cache of each job, so the repository stays
 under GitHub's 10 GB cache limit.
 
