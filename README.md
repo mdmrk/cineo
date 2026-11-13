@@ -67,8 +67,6 @@ click **Open Anyway**, or run
 
 Download and open `cineo-arm64-android.apk` from the
 [latest release](https://github.com/mdmrk/cineo/releases/latest).
-The Android app does less than the desktop one; see
-[what works](docs/COMPATIBILITY.md#platforms).
 
 ## Update
 
@@ -95,7 +93,7 @@ Earlier versions kept them in `~/.local/share/cineo` or `%APPDATA%\Cineo`,
 and Cineo does not move them: it shows where they are until you move
 `cineo.db` into the new folder.
 
-On macOS, move Cineo from Applications to the Trash; your addons and
+On macOS, move Cineo from Applications to the Trash. Your addons and
 library stay in `~/Library/Application Support/Cineo`.
 
 On Android, uninstall Cineo like any other app. This also deletes your
