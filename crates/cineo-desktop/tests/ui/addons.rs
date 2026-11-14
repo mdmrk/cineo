@@ -44,7 +44,7 @@ fn addons_that_failed_to_load_can_be_retried_or_removed() {
         Action::ManifestLoaded {
             transport: down.clone(),
             result: Err("HTTP 503".into()),
-            origin: ManifestOrigin::Restore,
+            origin: ManifestOrigin::RestoreAgain,
         },
     );
     let view = ViewState {
@@ -92,7 +92,7 @@ fn addon_lists_install_listed_addons_and_mark_installed_ones() {
         Action::ManifestLoaded {
             transport: subs,
             result: Err("HTTP 503".into()),
-            origin: ManifestOrigin::Restore,
+            origin: ManifestOrigin::RestoreAgain,
         },
     );
     update(&mut state, Action::LoadAddonLists);

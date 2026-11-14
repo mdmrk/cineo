@@ -197,7 +197,12 @@ The full evidence for the rows above whose notes do not fit in the table.
   (`addons_keep_the_saved_order_whatever_order_they_load_in`); an addon
   whose manifest fails stays installed and can be retried or removed
   (`an_addon_that_fails_to_load_stays_installed`,
-  `addons_that_failed_to_load_can_be_retried_or_removed`).
+  `addons_that_failed_to_load_can_be_retried_or_removed`). A manifest that
+  fails at start is asked for once more before the "could not be loaded"
+  notice, and the notice goes away once a retry loads every installed addon
+  (`a_manifest_that_fails_at_start_is_asked_again_once_before_the_notice`,
+  `the_addon_notice_goes_once_a_retry_loads_every_addon`); whether this
+  stops the timeouts seen on Android after a while away is not yet known.
 
 ### Stream list
 

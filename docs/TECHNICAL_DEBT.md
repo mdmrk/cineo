@@ -536,7 +536,10 @@ Format:
   less than 90 s away on the same network; that value follows reqwest's pool
   idle timeout and was not measured. The timeouts after hours in the background were not
   reproduced; the fix was tested with a silent connection in `cineo-net` and
-  with Wi-Fi off on a phone.
+  with Wi-Fi off on a phone. A manifest that times out at start is asked for
+  once more right away, but why it takes over 20 s after a while away is
+  UNKNOWN, and a manifest that fails twice still waits for the next usable
+  network or return to the app.
 - Why: the report was about addons, the home screen and the detail page.
 - Exit: retry those loads too, and only errors that can recover, with tests.
 

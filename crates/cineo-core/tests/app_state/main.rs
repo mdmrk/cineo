@@ -80,7 +80,7 @@ fn load_failed(transport: &str) -> Action {
     Action::ManifestLoaded {
         transport: url(transport),
         result: Err("HTTP 503".into()),
-        origin: ManifestOrigin::Restore,
+        origin: ManifestOrigin::RestoreAgain,
     }
 }
 

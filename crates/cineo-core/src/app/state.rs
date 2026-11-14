@@ -285,6 +285,7 @@ pub enum Action {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ManifestOrigin {
     Restore,
+    RestoreAgain,
     Install,
     Retry,
 }

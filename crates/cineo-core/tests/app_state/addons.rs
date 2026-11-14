@@ -434,6 +434,58 @@ fn retry_asks_again_for_search_rows_that_failed() {
 }
 
 #[test]
+fn a_manifest_that_fails_at_start_is_asked_again_once_before_the_notice() {
+    let mut state = restore(&[BASIC]);
+    let first = Action::ManifestLoaded {
+        transport: url(BASIC),
+        result: Err("request timed out".into()),
+        origin: ManifestOrigin::Restore,
+    };
+
+    let effects = update(&mut state, first);
+
+    assert_eq!(
+        effects,
+        vec![Effect::FetchManifest {
+            transport: url(BASIC),
+            origin: ManifestOrigin::RestoreAgain,
+        }]
+    );
+    assert_eq!(state.notice, None);
+    assert!(state.addons_loading.contains(&url(BASIC)));
+    assert!(state.unavailable_addons().is_empty());
+
+    let effects = update(&mut state, load_failed(BASIC));
+
+    assert_eq!(effects, Vec::new());
+    assert_eq!(
+        state.notice,
+        Some(Notice::AddonUnavailable("HTTP 503".into()))
+    );
+    assert_eq!(state.unavailable_addons(), vec![&url(BASIC)]);
+}
+
+#[test]
+fn the_addon_notice_goes_once_a_retry_loads_every_addon() {
+    let mut state = restore(&[BASIC, STREAMS]);
+    update(&mut state, load_failed(BASIC));
+    update(&mut state, load_failed(STREAMS));
+    update(&mut state, Action::RetryFailed);
+
+    update(&mut state, retried(loaded(BASIC, "basic/manifest.json")));
+    assert!(
+        state.notice.is_some(),
+        "an addon is still missing, so the notice stays"
+    );
+
+    update(
+        &mut state,
+        retried(loaded(STREAMS, "basic/manifest-streams.json")),
+    );
+    assert_eq!(state.notice, None);
+}
+
+#[test]
 fn retry_asks_again_for_the_addons_whose_manifest_failed() {
     let mut state = restore(&[BASIC, STREAMS]);
     update(&mut state, load_failed(BASIC));

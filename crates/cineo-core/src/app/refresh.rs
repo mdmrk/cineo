@@ -290,20 +290,33 @@ pub(super) fn manifest_loaded(
                     .count();
                 state.addons.insert(at, addon);
             }
+            let all_loaded = state
+                .installed
+                .iter()
+                .all(|t| state.addons.iter().any(|a| &a.transport == t));
+            if all_loaded && matches!(state.notice, Some(Notice::AddonUnavailable(_))) {
+                state.notice = None;
+            }
             addons_changed(state, install)
         }
-        Err(err) => {
-            match origin {
-                ManifestOrigin::Install => {
-                    state.install = Some(Loadable::Failed(Problem::Request(err)));
-                }
-                ManifestOrigin::Restore => {
-                    state.notice = Some(Notice::AddonUnavailable(err));
-                }
-                ManifestOrigin::Retry => {}
+        Err(err) => match origin {
+            ManifestOrigin::Install => {
+                state.install = Some(Loadable::Failed(Problem::Request(err)));
+                Vec::new()
             }
-            Vec::new()
-        }
+            ManifestOrigin::Restore => {
+                state.addons_loading.push(transport.clone());
+                vec![Effect::FetchManifest {
+                    transport: transport.clone(),
+                    origin: ManifestOrigin::RestoreAgain,
+                }]
+            }
+            ManifestOrigin::RestoreAgain => {
+                state.notice = Some(Notice::AddonUnavailable(err));
+                Vec::new()
+            }
+            ManifestOrigin::Retry => Vec::new(),
+        },
     }
 }
 
