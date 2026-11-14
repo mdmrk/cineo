@@ -28,7 +28,7 @@ import io.github.mdmrk.cineo.rust.ArtView
 import io.github.mdmrk.cineo.rust.TorrentView
 
 @Composable
-fun TorrentStats(torrent: TorrentView?, modifier: Modifier = Modifier) {
+private fun TorrentStats(torrent: TorrentView?, modifier: Modifier = Modifier) {
     val streaming = torrent as? TorrentView.Streaming ?: return
     val context = LocalContext.current
     val size = { bytes: ULong -> Formatter.formatShortFileSize(context, bytes.toLong()) }

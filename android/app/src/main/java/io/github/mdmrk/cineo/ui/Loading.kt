@@ -71,8 +71,8 @@ private const val STRIP_COLUMNS = 5
 private const val STRIP_PERIOD = 1.0 / 3.0
 private const val PULSE_PERIOD = 1600
 
-val LoadingWidth = 128.dp
-val PlayerLoadingWidth = 176.dp
+private val LoadingWidth = 128.dp
+private val PlayerLoadingWidth = 176.dp
 private val LoadingBackdropDim = Color.Black.copy(alpha = 1f - 70f / 255f)
 
 private class Layers(

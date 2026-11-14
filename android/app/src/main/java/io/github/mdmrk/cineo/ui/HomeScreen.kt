@@ -225,7 +225,7 @@ private fun PlaceholderStrip() {
 }
 
 @Composable
-fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
+private fun PosterCard(item: PosterView, images: Images, onOpen: (PosterView) -> Unit) {
     val ratio = when (item.shape) {
         PosterShape.POSTER -> 2f / 3f
         PosterShape.SQUARE -> 1f

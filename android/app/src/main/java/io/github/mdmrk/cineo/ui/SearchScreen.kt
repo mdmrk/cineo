@@ -93,7 +93,7 @@ fun SearchScreen(
 }
 
 @Composable
-fun EmptyState(icon: Icon, text: String) {
+private fun EmptyState(icon: Icon, text: String) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 64.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

@@ -47,7 +47,7 @@ import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.AppView
 import io.github.mdmrk.cineo.rust.LibraryItemView
 
-enum class Shelf { CONTINUE_WATCHING, FAVORITES, LIBRARY }
+private enum class Shelf { CONTINUE_WATCHING, FAVORITES, LIBRARY }
 
 class LibraryActions(
     val open: (LibraryItemView) -> Unit,

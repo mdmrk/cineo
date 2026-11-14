@@ -36,7 +36,7 @@ fun UpdateNotification(update: UpdateView?, canAsk: Boolean) {
     }
 }
 
-object UpdateNotice {
+private object UpdateNotice {
     private const val CHANNEL = "updates"
     private const val NOTIFICATION = 2
     private const val PREFERENCES = "updates"
