@@ -498,10 +498,14 @@ Format:
 - Gap: playback pauses when another app takes the audio focus, but does not
   resume when the focus comes back after a short loss, does not duck, and
   does not pause when headphones are unplugged (`ACTION_AUDIO_BECOMING_NOISY`).
-  There is no media session, so no lock-screen or headset controls.
+  The `MediaSession` (`PlaybackSession.kt`) only exists while the foreground
+  service runs, so with "Pause when leaving the app" on an HTTP stream has
+  no lock-screen or headset controls. The session, its notification buttons
+  and headset buttons were not tried on a phone; it has no artwork.
 - Why: the first slice only stops Cineo and other apps playing at once.
 - Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
-  becoming-noisy receiver, and a `MediaSession`.
+  becoming-noisy receiver, and a session for every playback, tried on a
+  phone.
 
 ### Android: background playback with the video track off is untested
 - Where: [embedded/mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`detach_surface`, `attach_surface`),

@@ -211,6 +211,8 @@
     <string name="torrent_channel">Torrent-Streaming</string>
     <string name="torrent_notification">Ein Torrent wird gestreamt</string>
     <string name="playback_notification">Ein Video wird abgespielt</string>
+    <string name="seek_back_notification">Zurückspulen</string>
+    <string name="seek_forward_notification">Vorspulen</string>
     <string name="page_search">Suche</string>
     <string name="open_addons">Add-ons öffnen</string>
     <string name="search_hint">Filme und Serien suchen</string>

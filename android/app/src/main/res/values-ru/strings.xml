@@ -211,6 +211,8 @@
     <string name="torrent_channel">Торрент-трансляция</string>
     <string name="torrent_notification">Идёт трансляция торрента</string>
     <string name="playback_notification">Воспроизводится видео</string>
+    <string name="seek_back_notification">Назад</string>
+    <string name="seek_forward_notification">Вперёд</string>
     <string name="page_search">Поиск</string>
     <string name="open_addons">Открыть аддоны</string>
     <string name="search_hint">Поиск фильмов и сериалов</string>

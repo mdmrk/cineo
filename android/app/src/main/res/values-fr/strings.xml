@@ -211,6 +211,8 @@
     <string name="torrent_channel">Streaming torrent</string>
     <string name="torrent_notification">Lecture d\'un torrent en cours</string>
     <string name="playback_notification">Lecture d\'une vidéo en cours</string>
+    <string name="seek_back_notification">Reculer</string>
+    <string name="seek_forward_notification">Avancer</string>
     <string name="page_search">Recherche</string>
     <string name="open_addons">Ouvrir les extensions</string>
     <string name="search_hint">Rechercher des films et des séries</string>
