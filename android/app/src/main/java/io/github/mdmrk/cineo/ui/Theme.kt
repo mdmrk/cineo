@@ -18,7 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.mdmrk.cineo.R
@@ -124,7 +127,9 @@ fun CineoIcon(
     val family = if (useFilled) TablerFilled else TablerRegular
     Text(
         glyph.toString(),
-        modifier = modifier.clearAndSetSemantics { label?.let { contentDescription = it } },
+        modifier = modifier
+            .offset { IntOffset((size.toPx() * icon.shiftEm).roundToInt(), 0) }
+            .clearAndSetSemantics { label?.let { contentDescription = it } },
         color = tint,
         fontFamily = family,
         fontSize = size,

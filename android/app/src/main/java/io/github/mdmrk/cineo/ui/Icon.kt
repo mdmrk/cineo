@@ -1,6 +1,6 @@
 package io.github.mdmrk.cineo.ui
 
-enum class Icon(val regular: Char?, val filled: Char?) {
+enum class Icon(val regular: Char?, val filled: Char?, val shiftEm: Float = 0f) {
     HOME('\uea87', '\ue24a'),
     SEARCH('\ueffe', null),
     BOOKS('\ue21e', null),
@@ -20,7 +20,7 @@ enum class Icon(val regular: Char?, val filled: Char?) {
     HEART('\uea18', '\ue21a'),
     X('\uf33b', null),
     CHEVRON_DOWN('\ue4f9', null),
-    CHEVRON_RIGHT('\ue4fd', null),
+    CHEVRON_RIGHT('\ue4fd', null, 0.123f),
     TRASH('\uf24b', '\ue3c1'),
     ARROW_UP('\ue115', null),
     ARROW_DOWN('\ue0c6', null),
@@ -29,7 +29,7 @@ enum class Icon(val regular: Char?, val filled: Char?) {
     ALERT_CIRCLE('\ue03c', '\ue00b'),
     MOVIE('\ued2f', null),
     CHECK('\ue4e4', null),
-    DOTS_VERTICAL('\ue805', null),
+    DOTS_VERTICAL('\ue805', null, 0.207f),
     WORLD('\uf334', null),
     MAGNET('\uebe7', '\ue29a'),
     INFO_CIRCLE('\ueabd', '\ue24e'),
