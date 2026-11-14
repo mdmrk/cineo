@@ -548,12 +548,23 @@ async fn the_player_offers_the_next_episode_and_plays_it_on_request() {
                 .iter()
                 .any(|c| c == "SetPause(true)")
         );
-        wait_for(&views, |v| {
-            v.playback
-                .as_ref()
-                .and_then(|p| p.next.as_ref())
-                .is_some_and(|n| n.ready)
-        });
+        let next_streams_asked = || {
+            tokio::runtime::Handle::current()
+                .block_on(server.received_requests())
+                .unwrap_or_default()
+                .iter()
+                .any(|r| r.url.path().contains("tt0000010") && r.url.path().ends_with("2.json"))
+        };
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !next_streams_asked() {
+            assert!(
+                Instant::now() < deadline,
+                "the next episode's streams were never asked for"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        std::thread::sleep(Duration::from_millis(200));
+        shell_caught_up(&cineo, &views);
         let first_events = players.events.lock().unwrap().clone().unwrap();
         cineo.play_next();
         wait_for(&views, |v| {
