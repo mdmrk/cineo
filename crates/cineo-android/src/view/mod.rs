@@ -84,7 +84,6 @@ pub struct PlaybackView {
 pub struct NextView {
     pub title: String,
     pub image: Option<String>,
-    pub ready: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -263,7 +262,6 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
                 .map(|n| NextView {
                     title: n.title.clone(),
                     image: n.image.as_ref().map(ToString::to_string),
-                    ready: n.stream.is_some(),
                 }),
             binge_watching: state.settings.binge_watching,
             next_notice_s: next_notice_s(state.settings.next_video_notice),
