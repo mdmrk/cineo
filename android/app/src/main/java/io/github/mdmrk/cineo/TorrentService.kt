@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class TorrentService : Service() {
     private val scope = MainScope()
@@ -74,12 +75,13 @@ class TorrentService : Service() {
             NEXT -> (application as CineoApplication).cineo?.playNext()
             else -> {
                 torrent = intent?.getBooleanExtra(TORRENT, true) ?: true
-                val plain = Shown(torrent, null, paused = false, next = false, step = 0, art = null)
-                shown = plain
+                val kept = shown?.takeIf { it.title != null }?.copy(torrent = torrent)
+                    ?: Shown(torrent, null, paused = false, next = false, step = 0, art = null)
+                shown = kept
                 ServiceCompat.startForeground(
                     this,
                     NOTIFICATION,
-                    notification(plain),
+                    notification(kept),
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0,
                 )
             }
@@ -138,7 +140,7 @@ class TorrentService : Service() {
     private fun notification(shown: Shown): Notification {
         val channel = NotificationChannel(
             CHANNEL,
-            getString(R.string.torrent_channel),
+            getString(R.string.playback_channel),
             NotificationManager.IMPORTANCE_LOW,
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -211,8 +213,14 @@ class TorrentService : Service() {
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
             var sample = 1
-            while (bounds.outWidth / (sample * 2) >= ART_SIDE && bounds.outHeight / (sample * 2) >= ART_SIDE) sample *= 2
-            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+            while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= ART_SIDE) sample *= 2
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+                ?: return null
+            val scale = ART_SIDE.toFloat() / maxOf(decoded.width, decoded.height)
+            if (scale >= 1f) return decoded
+            val width = (decoded.width * scale).roundToInt().coerceAtLeast(1)
+            val height = (decoded.height * scale).roundToInt().coerceAtLeast(1)
+            return Bitmap.createScaledBitmap(decoded, width, height, true)
         }
     }
 }

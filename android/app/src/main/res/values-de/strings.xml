@@ -208,7 +208,7 @@
     <string name="subtitles_off">Aus</string>
     <string name="no_audio_tracks">Keine Audiospuren</string>
     <string name="track">Spur %1$d</string>
-    <string name="torrent_channel">Torrent-Streaming</string>
+    <string name="playback_channel">Wiedergabe</string>
     <string name="torrent_notification">Ein Torrent wird gestreamt</string>
     <string name="playback_notification">Ein Video wird abgespielt</string>
     <string name="seek_back_notification">Zurückspulen</string>

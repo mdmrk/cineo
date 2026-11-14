@@ -520,8 +520,8 @@ Format:
   show on return while mpv selects the video track again.
   Any playback now holds the foreground service unless "Pause when leaving
   the app" is on, not only a torrent; whether that keeps an HTTP stream
-  playing in the background is UNKNOWN. The notification channel is still
-  named for torrents.
+  playing in the background is UNKNOWN. The notification channel keeps the
+  id `torrents` under its new name, Playback.
 - Why: the change was made without a device.
 - Exit: try both orientations on a phone with HTTP and torrent streams.
 

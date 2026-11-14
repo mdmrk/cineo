@@ -208,7 +208,7 @@
     <string name="subtitles_off">Выкл.</string>
     <string name="no_audio_tracks">Нет звуковых дорожек</string>
     <string name="track">Дорожка %1$d</string>
-    <string name="torrent_channel">Торрент-трансляция</string>
+    <string name="playback_channel">Воспроизведение</string>
     <string name="torrent_notification">Идёт трансляция торрента</string>
     <string name="playback_notification">Воспроизводится видео</string>
     <string name="seek_back_notification">Назад</string>

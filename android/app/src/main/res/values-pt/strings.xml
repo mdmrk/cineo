@@ -208,7 +208,7 @@
     <string name="subtitles_off">Desativadas</string>
     <string name="no_audio_tracks">Nenhuma faixa de áudio</string>
     <string name="track">Faixa %1$d</string>
-    <string name="torrent_channel">Streaming de torrents</string>
+    <string name="playback_channel">Reprodução</string>
     <string name="torrent_notification">Reproduzindo um torrent</string>
     <string name="playback_notification">Reproduzindo um vídeo</string>
     <string name="seek_back_notification">Retroceder</string>

@@ -214,7 +214,7 @@
     <string name="subtitles_off">关闭</string>
     <string name="no_audio_tracks">没有音轨</string>
     <string name="track">轨道 %1$d</string>
-    <string name="torrent_channel">种子串流</string>
+    <string name="playback_channel">播放</string>
     <string name="torrent_notification">正在串流种子</string>
     <string name="playback_notification">正在播放视频</string>
     <string name="seek_back_notification">后退</string>
