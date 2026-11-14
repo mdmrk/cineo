@@ -501,7 +501,8 @@ Format:
   The `MediaSession` (`PlaybackSession.kt`) only exists while the foreground
   service runs, so with "Pause when leaving the app" on an HTTP stream has
   no lock-screen or headset controls. The session, its notification buttons
-  and headset buttons were not tried on a phone; it has no artwork.
+  and headset buttons, its artwork and the Tabler icons it draws were not
+  tried on a phone.
 - Why: the first slice only stops Cineo and other apps playing at once.
 - Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
   becoming-noisy receiver, and a session for every playback, tried on a

@@ -8,13 +8,20 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import io.github.mdmrk.cineo.rust.ArtView
+import io.github.mdmrk.cineo.rust.Cineo
+import io.github.mdmrk.cineo.rust.ImageException
+import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -27,8 +34,18 @@ class TorrentService : Service() {
     private var session: PlaybackSession? = null
     private var torrent = true
     private var shown: Shown? = null
+    private var artUrl: String? = null
+    private var art: Bitmap? = null
+    private var artJob: Job? = null
 
-    private data class Shown(val torrent: Boolean, val title: String?, val paused: Boolean, val next: Boolean)
+    private data class Shown(
+        val torrent: Boolean,
+        val title: String?,
+        val paused: Boolean,
+        val next: Boolean,
+        val step: Int,
+        val art: Bitmap?,
+    )
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -41,8 +58,9 @@ class TorrentService : Service() {
             while (isActive) {
                 val status = withContext(Dispatchers.Default) { cineo.playerStatus() }
                 val playback = app.view.value?.playback
-                session.update(playback, status)
-                show(playback?.art?.title, status, playback?.next != null)
+                loadArt(cineo, playback?.art)
+                session.update(playback, status, art)
+                show(playback, status)
                 delay(1000)
             }
         }
@@ -53,9 +71,10 @@ class TorrentService : Service() {
             TOGGLE -> session?.togglePause()
             REWIND -> session?.seekBy(-1)
             FORWARD -> session?.seekBy(1)
+            NEXT -> (application as CineoApplication).cineo?.playNext()
             else -> {
                 torrent = intent?.getBooleanExtra(TORRENT, true) ?: true
-                val plain = Shown(torrent, null, paused = false, next = false)
+                val plain = Shown(torrent, null, paused = false, next = false, step = 0, art = null)
                 shown = plain
                 ServiceCompat.startForeground(
                     this,
@@ -79,9 +98,38 @@ class TorrentService : Service() {
         stopSelf()
     }
 
-    private fun show(title: String?, status: PlayerStatusView?, next: Boolean) {
-        val playing = status?.loaded == true
-        val wanted = Shown(torrent, title.takeIf { playing }, status?.paused == true, playing && next)
+    private fun loadArt(cineo: Cineo, view: ArtView?) {
+        val url = view?.background ?: view?.logo
+        if (url == artUrl) return
+        artUrl = url
+        art = null
+        artJob?.cancel()
+        if (url == null) return
+        artJob = scope.launch {
+            val bytes = try {
+                cineo.fetchImage(url)
+            } catch (e: ImageException) {
+                return@launch
+            }
+            val decoded = withContext(Dispatchers.Default) { decodeArt(bytes) }
+            if (artUrl == url) art = decoded
+        }
+    }
+
+    private fun show(playback: PlaybackView?, status: PlayerStatusView?) {
+        val playing = playback != null && status?.loaded == true
+        val wanted = if (playing) {
+            Shown(
+                torrent,
+                playback?.art?.title,
+                status?.paused == true,
+                playback?.next != null,
+                playback?.seekStepS?.toInt() ?: 0,
+                art,
+            )
+        } else {
+            Shown(torrent, null, paused = false, next = false, step = 0, art = null)
+        }
         if (wanted == shown) return
         shown = wanted
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(wanted))
@@ -102,24 +150,29 @@ class TorrentService : Service() {
         )
         val text = getString(if (shown.torrent) R.string.torrent_notification else R.string.playback_notification)
         val builder = Notification.Builder(this, CHANNEL)
-            .setSmallIcon(if (shown.torrent) android.R.drawable.stat_sys_download else android.R.drawable.ic_media_play)
-            .setContentTitle(shown.title ?: text)
+            .setSmallIcon(if (shown.torrent) R.drawable.media_small_torrent else R.drawable.media_small)
             .setContentIntent(open)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-        if (shown.title != null) {
-            builder.setContentText(text)
-            builder.addAction(action(android.R.drawable.ic_media_rew, R.string.seek_back_notification, REWIND))
-            builder.addAction(
-                if (shown.paused) action(android.R.drawable.ic_media_play, R.string.play, TOGGLE)
-                else action(android.R.drawable.ic_media_pause, R.string.pause, TOGGLE),
-            )
-            builder.addAction(action(android.R.drawable.ic_media_ff, R.string.seek_forward_notification, FORWARD))
-            val style = Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2)
-            session?.let { style.setMediaSession(it.token) }
-            builder.setStyle(style)
+            .setShowWhen(false)
+            .setCategory(Notification.CATEGORY_TRANSPORT)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+        if (shown.title == null) {
+            return builder.setContentTitle(text).build()
         }
-        return builder.build()
+        builder.setContentTitle(shown.title)
+        if (shown.torrent) builder.setContentText(text)
+        shown.art?.let { builder.setLargeIcon(it) }
+        builder.addAction(action(PlaybackSession.backIcon(shown.step), R.string.seek_back_notification, REWIND))
+        builder.addAction(
+            if (shown.paused) action(R.drawable.media_play, R.string.play, TOGGLE)
+            else action(R.drawable.media_pause, R.string.pause, TOGGLE),
+        )
+        builder.addAction(action(PlaybackSession.forwardIcon(shown.step), R.string.seek_forward_notification, FORWARD))
+        if (shown.next) builder.addAction(action(R.drawable.media_next, R.string.next_episode, NEXT))
+        val style = Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2)
+        session?.let { style.setMediaSession(it.token) }
+        return builder.setStyle(style).build()
     }
 
     private fun action(icon: Int, label: Int, name: String): Notification.Action {
@@ -139,6 +192,8 @@ class TorrentService : Service() {
         private const val TOGGLE = "io.github.mdmrk.cineo.TOGGLE"
         private const val REWIND = "io.github.mdmrk.cineo.REWIND"
         private const val FORWARD = "io.github.mdmrk.cineo.FORWARD"
+        private const val NEXT = "io.github.mdmrk.cineo.NEXT"
+        private const val ART_SIDE = 512
 
         fun start(context: Context, torrent: Boolean) {
             ContextCompat.startForegroundService(
@@ -149,6 +204,15 @@ class TorrentService : Service() {
 
         fun stop(context: Context) {
             context.stopService(Intent(context, TorrentService::class.java))
+        }
+
+        private fun decodeArt(bytes: ByteArray): Bitmap? {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= ART_SIDE && bounds.outHeight / (sample * 2) >= ART_SIDE) sample *= 2
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
         }
     }
 }

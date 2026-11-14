@@ -179,6 +179,11 @@ in `android/app/src/main/res/font/`, and carries their license texts in
 `Tabler-MIT.txt` copied from iconflow's `THIRD_PARTY_LICENSES_FONTS.md`).
 Added 2026-11-04.
 
+The notification icons in `android/app/src/main/res/drawable/media_*.xml`
+are the outlines of thirteen glyphs of those Tabler fonts, converted to
+Android vector drawables and centered horizontally; the same MIT notice
+covers them. Added 2026-11-14.
+
 The store screenshots (`fastlane/metadata/android/en-US/images/phoneScreenshots/`)
 were taken on the owner's phone on 2026-11-05. They show posters and frames
 from Blender Foundation open movies: Sintel (2010, © Blender Foundation,
