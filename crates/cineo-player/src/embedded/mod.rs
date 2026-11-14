@@ -245,6 +245,13 @@ pub fn set_java_vm(vm: std::ptr::NonNull<std::ffi::c_void>) -> Result<(), Player
     ffi::set_java_vm(vm).map_err(PlayerError::LibmpvUnavailable)
 }
 
+fn selected_video(tracks: &[Track]) -> Option<i64> {
+    tracks
+        .iter()
+        .find(|t| t.kind == TrackKind::Video && t.selected)
+        .map(|t| t.id)
+}
+
 fn load(core: &Core, url: &Url) -> Result<(), ffi::MpvError> {
     core.command(&["loadfile", url.as_str(), "replace"])?;
     info!(origin = %url.origin().ascii_serialization(), "libmpv playback started");
@@ -278,6 +285,7 @@ const OPTIONS: &[(&str, &str)] = &[
 pub struct Player {
     core: Arc<Core>,
     pending: Mutex<Option<Url>>,
+    hidden_video: Mutex<Option<i64>>,
     status: Arc<Mutex<Status>>,
     finished: Arc<AtomicBool>,
     events_thread: Option<std::thread::JoinHandle<()>>,
@@ -343,10 +351,26 @@ impl Player {
         if let Some(url) = pending {
             load(&self.core, &url).map_err(|err| PlayerError::Libmpv(err.message))?;
         }
+        let hidden = self
+            .hidden_video
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        if let Some(id) = hidden {
+            self.apply(&[(Set::Property, "vid", id.to_string())])?;
+        }
         Ok(())
     }
 
     pub fn detach_surface(&self) -> Result<(), PlayerError> {
+        let video = selected_video(&self.status().tracks);
+        if let Some(id) = video {
+            self.apply(&[(Set::Property, "vid", "no".into())])?;
+            *self
+                .hidden_video
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner) = Some(id);
+        }
         self.apply(&detach_steps())
     }
 
@@ -471,6 +495,7 @@ impl Player {
             Self {
                 core,
                 pending: Mutex::new(waits_for_surface.then(|| request.url.clone())),
+                hidden_video: Mutex::new(None),
                 status,
                 finished,
                 events_thread: joins_on_drop.then_some(events_thread),

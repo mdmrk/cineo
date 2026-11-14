@@ -503,6 +503,18 @@ Format:
 - Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
   becoming-noisy receiver, and a `MediaSession`.
 
+### Android: background playback with the video track off is untested
+- Where: [embedded/mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`detach_surface`, `attach_surface`)
+- Gap: leaving the app sets `vid=no` and returning selects the same track
+  again. The report was that playback stopped after leaving the app in
+  landscape but not in portrait, and that the loading logo showed on return.
+  The cause is INFERRED: without a surface mpv kept decoding the video in
+  software (ADR-0028) on a backgrounded process. Why only landscape is
+  UNKNOWN. The fix was not tried on a phone, and the loading logo may still
+  show on return while mpv selects the video track again.
+- Why: the change was made without a device.
+- Exit: try both orientations on a phone with HTTP and torrent streams.
+
 ### Android: what the automatic retry leaves out
 - Where: [refresh.rs](../crates/cineo-core/src/app/refresh.rs) (`retry_failed`),
   [NetworkWatch.kt](../android/app/src/main/java/io/github/mdmrk/cineo/NetworkWatch.kt),

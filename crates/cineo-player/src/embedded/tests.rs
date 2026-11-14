@@ -55,6 +55,27 @@ fn a_surface_is_attached_before_video_output_starts_and_detached_after_it_stops(
 }
 
 #[test]
+fn the_video_track_hidden_without_a_surface_is_the_selected_one() {
+    let track = |id, kind, selected| Track {
+        id,
+        kind,
+        title: None,
+        lang: None,
+        selected,
+        external_file: None,
+        codec: None,
+    };
+    let tracks = [
+        track(1, TrackKind::Audio, true),
+        track(1, TrackKind::Video, false),
+        track(2, TrackKind::Video, true),
+    ];
+    assert_eq!(selected_video(&tracks), Some(2));
+    assert_eq!(selected_video(&tracks[..2]), None);
+    assert_eq!(selected_video(&[]), None);
+}
+
+#[test]
 fn only_missing_script_options_are_tolerated() {
     let missing = ffi::MpvError {
         message: "option not found".into(),
