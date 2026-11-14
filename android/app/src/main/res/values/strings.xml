@@ -219,6 +219,7 @@
     <string name="track">Track %1$d</string>
     <string name="torrent_channel">Torrent streaming</string>
     <string name="torrent_notification">Streaming a torrent</string>
+    <string name="playback_notification">Playing a video</string>
     <string name="page_search">Search</string>
     <string name="open_addons">Open Addons</string>
     <string name="search_hint">Search movies and series</string>

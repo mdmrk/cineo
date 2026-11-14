@@ -216,6 +216,7 @@
     <string name="track">轨道 %1$d</string>
     <string name="torrent_channel">种子串流</string>
     <string name="torrent_notification">正在串流种子</string>
+    <string name="playback_notification">正在播放视频</string>
     <string name="page_search">搜索</string>
     <string name="open_addons">打开插件</string>
     <string name="search_hint">搜索电影和剧集</string>

@@ -504,7 +504,8 @@ Format:
   becoming-noisy receiver, and a `MediaSession`.
 
 ### Android: background playback with the video track off is untested
-- Where: [embedded/mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`detach_surface`, `attach_surface`)
+- Where: [embedded/mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`detach_surface`, `attach_surface`),
+  [MainActivity.kt](../android/app/src/main/java/io/github/mdmrk/cineo/MainActivity.kt) (`TorrentForeground`)
 - Gap: leaving the app sets `vid=no` and returning selects the same track
   again. The report was that playback stopped after leaving the app in
   landscape but not in portrait, and that the loading logo showed on return.
@@ -512,6 +513,10 @@ Format:
   software (ADR-0028) on a backgrounded process. Why only landscape is
   UNKNOWN. The fix was not tried on a phone, and the loading logo may still
   show on return while mpv selects the video track again.
+  Any playback now holds the foreground service unless "Pause when leaving
+  the app" is on, not only a torrent; whether that keeps an HTTP stream
+  playing in the background is UNKNOWN. The notification channel is still
+  named for torrents.
 - Why: the change was made without a device.
 - Exit: try both orientations on a phone with HTTP and torrent streams.
 

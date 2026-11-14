@@ -42,10 +42,10 @@ import io.github.mdmrk.cineo.ui.SettingsScreen
 import io.github.mdmrk.cineo.ui.StartFailed
 
 @Composable
-private fun TorrentForeground(active: Boolean) {
+private fun TorrentForeground(active: Boolean, torrent: Boolean) {
     val context = LocalContext.current
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(active) {
+    LaunchedEffect(active, torrent) {
         if (active) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -53,7 +53,7 @@ private fun TorrentForeground(active: Boolean) {
             ) {
                 ask.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-            TorrentService.start(context)
+            TorrentService.start(context, torrent)
         } else {
             TorrentService.stop(context)
         }
@@ -98,7 +98,11 @@ class MainActivity : ComponentActivity() {
                         val playback = current?.playback
                         val detail = current?.detail
                         val connecting = current?.connecting
-                        TorrentForeground(current?.torrent != null)
+                        TorrentForeground(
+                            active = current?.torrent != null ||
+                                (playback != null && !current.settings.pauseOnMinimize.on),
+                            torrent = current?.torrent != null,
+                        )
                         UpdateNotification(current?.update, canAsk = playback == null && connecting == null)
                         when {
                             playback != null -> PlayerScreen(playback, current.torrent, images, cineo)

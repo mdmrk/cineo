@@ -21,7 +21,7 @@ class TorrentService : Service() {
         ServiceCompat.startForeground(
             this,
             NOTIFICATION,
-            notification(),
+            notification(intent?.getBooleanExtra(TORRENT, true) ?: true),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0,
         )
         return START_NOT_STICKY
@@ -32,7 +32,7 @@ class TorrentService : Service() {
         stopSelf()
     }
 
-    private fun notification(): Notification {
+    private fun notification(torrent: Boolean): Notification {
         val channel = NotificationChannel(
             CHANNEL,
             getString(R.string.torrent_channel),
@@ -47,7 +47,7 @@ class TorrentService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle(getString(R.string.torrent_notification))
+            .setContentTitle(getString(if (torrent) R.string.torrent_notification else R.string.playback_notification))
             .setContentIntent(open)
             .setOngoing(true)
             .setSilent(true)
@@ -57,9 +57,13 @@ class TorrentService : Service() {
     companion object {
         private const val CHANNEL = "torrents"
         private const val NOTIFICATION = 1
+        private const val TORRENT = "torrent"
 
-        fun start(context: Context) {
-            ContextCompat.startForegroundService(context, Intent(context, TorrentService::class.java))
+        fun start(context: Context, torrent: Boolean) {
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, TorrentService::class.java).putExtra(TORRENT, torrent),
+            )
         }
 
         fun stop(context: Context) {
