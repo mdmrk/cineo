@@ -6,47 +6,36 @@ import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Bundle
-import io.github.mdmrk.cineo.rust.Cineo
+import android.os.SystemClock
 import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
+import kotlin.math.abs
 
-internal class PlaybackSession(private val context: Context, private val cineo: Cineo) {
+internal class PlaybackSession(private val context: Context, private val player: Player) {
     private val session = MediaSession(context, "Cineo")
     private var playback: PlaybackView? = null
-    private var paused = false
     private var metadata: Triple<String, Long, Bitmap?>? = null
+    private var reported: Reported? = null
 
     val token: MediaSession.Token get() = session.sessionToken
 
     init {
         session.setCallback(
             object : MediaSession.Callback() {
-                override fun onPlay() {
-                    if (paused) cineo.togglePause()
-                }
+                override fun onPlay() = player.play()
 
-                override fun onPause() {
-                    cineo.pause()
-                }
+                override fun onPause() = player.pause()
 
-                override fun onStop() {
-                    cineo.stopPlayback()
-                }
+                override fun onStop() = player.stop()
 
-                override fun onSeekTo(pos: Long) {
-                    cineo.seekTo(pos / 1000.0)
-                }
+                override fun onSeekTo(pos: Long) = player.seekTo(pos / 1000.0)
 
-                override fun onFastForward() {
-                    seekBy(1)
-                }
+                override fun onFastForward() = seekBy(1)
 
-                override fun onRewind() {
-                    seekBy(-1)
-                }
+                override fun onRewind() = seekBy(-1)
 
                 override fun onSkipToNext() {
-                    if (playback?.next != null) cineo.playNext()
+                    if (playback?.next != null) player.next()
                 }
 
                 override fun onCustomAction(action: String, extras: Bundle?) {
@@ -61,21 +50,17 @@ internal class PlaybackSession(private val context: Context, private val cineo: 
 
     fun seekBy(direction: Int) {
         val step = playback?.seekStepS?.toInt() ?: return
-        cineo.seekBy((direction * step).toDouble())
-    }
-
-    fun togglePause() {
-        cineo.togglePause()
+        player.seekBy((direction * step).toDouble())
     }
 
     fun update(playback: PlaybackView?, status: PlayerStatusView?, art: Bitmap?) {
         this.playback = playback
-        if (playback == null || status == null || !status.loaded) {
+        if (playback == null) {
             session.isActive = false
+            reported = null
             return
         }
-        paused = status.paused
-        val durationMs = (status.durationS * 1000).toLong()
+        val durationMs = ((status?.durationS ?: 0.0) * 1000).toLong()
         val wanted = Triple(playback.art.title, durationMs, art)
         if (metadata != wanted) {
             metadata = wanted
@@ -88,21 +73,28 @@ internal class PlaybackSession(private val context: Context, private val cineo: 
                     .build(),
             )
         }
-        val state = when {
-            status.paused -> PlaybackState.STATE_PAUSED
-            status.waiting -> PlaybackState.STATE_BUFFERING
-            else -> PlaybackState.STATE_PLAYING
-        }
-        val next = if (playback.next != null) PlaybackState.ACTION_SKIP_TO_NEXT else 0L
-        val step = playback.seekStepS.toInt()
-        session.setPlaybackState(
-            PlaybackState.Builder()
-                .setActions(ACTIONS or next)
-                .setState(state, (status.positionS * 1000).toLong(), if (state == PlaybackState.STATE_PLAYING) 1f else 0f)
-                .addCustomAction(REWIND, context.getString(R.string.seek_back_notification), backIcon(step))
-                .addCustomAction(FORWARD, context.getString(R.string.seek_forward_notification), forwardIcon(step))
-                .build(),
+        val now = Reported(
+            state = when {
+                status == null || !status.loaded || status.waiting -> PlaybackState.STATE_BUFFERING
+                status.paused -> PlaybackState.STATE_PAUSED
+                else -> PlaybackState.STATE_PLAYING
+            },
+            next = playback.next != null,
+            step = playback.seekStepS.toInt(),
+            positionMs = ((status?.positionS ?: 0.0) * 1000).toLong(),
+            atMs = SystemClock.elapsedRealtime(),
         )
+        if (reported?.stillHolds(now) != true) {
+            reported = now
+            session.setPlaybackState(
+                PlaybackState.Builder()
+                    .setActions(ACTIONS or if (now.next) PlaybackState.ACTION_SKIP_TO_NEXT else 0L)
+                    .setState(now.state, now.positionMs, if (now.state == PlaybackState.STATE_PLAYING) 1f else 0f, now.atMs)
+                    .addCustomAction(REWIND, context.getString(R.string.seek_back_notification), backIcon(now.step))
+                    .addCustomAction(FORWARD, context.getString(R.string.seek_forward_notification), forwardIcon(now.step))
+                    .build(),
+            )
+        }
         session.isActive = true
     }
 
@@ -135,5 +127,23 @@ internal class PlaybackSession(private val context: Context, private val cineo: 
             30 -> R.drawable.media_forward_30
             else -> R.drawable.media_forward_10
         }
+    }
+}
+
+internal data class Reported(
+    val state: Int,
+    val next: Boolean,
+    val step: Int,
+    val positionMs: Long,
+    val atMs: Long,
+) {
+    fun stillHolds(now: Reported): Boolean {
+        if (copy(positionMs = now.positionMs, atMs = now.atMs) != now) return false
+        val moved = if (state == PlaybackState.STATE_PLAYING) now.atMs - atMs else 0L
+        return abs(now.positionMs - (positionMs + moved)) <= DRIFT_MS
+    }
+
+    private companion object {
+        const val DRIFT_MS = 1500L
     }
 }

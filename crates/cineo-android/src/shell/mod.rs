@@ -91,6 +91,7 @@ impl SettingChange {
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct PlayerStatusView {
     pub loaded: bool,
+    pub started: bool,
     pub position_s: f64,
     pub duration_s: f64,
     pub paused: bool,
@@ -127,7 +128,6 @@ pub struct AddonSubtitleView {
 fn phone_settings() -> Settings {
     Settings {
         torrent_storage: TorrentStorage::Disk4096,
-        pause_on_minimize: true,
         ..Settings::default()
     }
 }
@@ -235,7 +235,6 @@ enum Msg {
     NetworkUsable {
         renew: bool,
     },
-    LeftApp,
     Shutdown,
 }
 
@@ -246,6 +245,9 @@ struct Screen {
     subtitles: Option<Subtitles>,
     wid: Option<i64>,
     art: Option<ArtView>,
+    started: bool,
+    away: bool,
+    pause_on_leave: bool,
 }
 
 #[derive(Debug)]
@@ -257,6 +259,7 @@ struct Subtitles {
 
 impl Screen {
     fn take_player(&mut self) -> (Option<Box<dyn Playback>>, Option<Subtitles>) {
+        self.started = false;
         (self.playback.take(), self.subtitles.take())
     }
 }
@@ -337,8 +340,15 @@ impl Cineo {
         self.filter(FilterChange::Sort(sort));
     }
 
-    pub fn left_app(&self) {
-        self.post(Msg::LeftApp);
+    pub fn app_visible(&self, visible: bool) {
+        let mut screen = lock(&self.screen);
+        screen.away = !visible;
+        if screen.away
+            && let Some(playback) = &screen.playback
+            && screen.pause_on_leave
+        {
+            playback.send(PlayerCommand::SetPause(true));
+        }
     }
 
     pub fn network_usable(&self, renew: bool) {
@@ -428,6 +438,10 @@ impl Cineo {
         self.command(PlayerCommand::SetPause(true));
     }
 
+    pub fn resume_playback(&self) {
+        self.command(PlayerCommand::SetPause(false));
+    }
+
     pub fn toggle_pause(&self) {
         self.command(PlayerCommand::TogglePause);
     }
@@ -440,10 +454,15 @@ impl Cineo {
         self.command(PlayerCommand::SeekBy(seconds));
     }
 
+    pub fn set_speed(&self, speed: f64) {
+        self.command(PlayerCommand::SetSpeed(speed));
+    }
+
     pub fn player_status(&self) -> Option<PlayerStatusView> {
         let mut screen = lock(&self.screen);
         let screen = &mut *screen;
         let status = screen.playback.as_ref()?.status();
+        screen.started = status.loaded && (screen.started || !status.is_waiting());
         let addon_subtitles = match &mut screen.subtitles {
             Some(subtitles) => {
                 let entries = subtitles.files.entries(&subtitles.groups, &status.tracks);
@@ -463,6 +482,7 @@ impl Cineo {
         };
         Some(PlayerStatusView {
             loaded: status.loaded,
+            started: screen.started,
             position_s: status.position_s,
             duration_s: status.duration_s,
             paused: status.paused,

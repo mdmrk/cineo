@@ -1,6 +1,8 @@
 package io.github.mdmrk.cineo
 
 import android.Manifest
+import android.app.PictureInPictureParams
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -37,15 +39,19 @@ import io.github.mdmrk.cineo.ui.LibraryScreen
 import io.github.mdmrk.cineo.ui.Page
 import io.github.mdmrk.cineo.ui.Pages
 import io.github.mdmrk.cineo.ui.Notices
+import io.github.mdmrk.cineo.ui.Pip
 import io.github.mdmrk.cineo.ui.PlayerScreen
+import io.github.mdmrk.cineo.ui.canPictureInPicture
+import io.github.mdmrk.cineo.ui.pictureInPictureParams
+import androidx.lifecycle.Lifecycle
 import io.github.mdmrk.cineo.ui.SettingsScreen
 import io.github.mdmrk.cineo.ui.StartFailed
 
 @Composable
-private fun TorrentForeground(active: Boolean, torrent: Boolean) {
+private fun PlaybackForeground(active: Boolean) {
     val context = LocalContext.current
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(active, torrent) {
+    LaunchedEffect(active) {
         if (active) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -53,9 +59,7 @@ private fun TorrentForeground(active: Boolean, torrent: Boolean) {
             ) {
                 ask.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-            TorrentService.start(context, torrent)
-        } else {
-            TorrentService.stop(context)
+            PlaybackService.start(context)
         }
     }
 }
@@ -67,15 +71,39 @@ class MainActivity : ComponentActivity() {
 
     private val cineo get() = (application as CineoApplication).cineo
 
+    private var inPip by mutableStateOf(false)
+    private var pipOnLeave: PictureInPictureParams? = null
+
     override fun onStart() {
         super.onStart()
         network.start()
+        cineo?.appVisible(true)
     }
 
     override fun onStop() {
         network.stop()
-        if (!isChangingConfigurations) cineo?.leftApp()
+        if (!isChangingConfigurations) cineo?.appVisible(false)
         super.onStop()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) pipOnLeave?.let(::enterPictureInPictureMode)
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        inPip = isInPictureInPictureMode
+        if (!inPip && !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            (application as CineoApplication).player?.pause()
+        }
+    }
+
+    private fun pictureInPicture(pip: Pip) {
+        if (!canPictureInPicture()) return
+        val params = pictureInPictureParams(pip)
+        setPictureInPictureParams(params)
+        pipOnLeave = params.takeIf { pip.auto }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,6 +119,7 @@ class MainActivity : ComponentActivity() {
                     is Started.Running -> {
                         val cineo = started.cineo
                         val view by app.view.collectAsStateWithLifecycle()
+                        val player = app.player ?: return@CineoTheme
                         val images = remember(cineo) { Images(cineo) }
                         var page by rememberSaveable { mutableStateOf(Page.HOME) }
                         val savedPages = rememberSaveableStateHolder()
@@ -98,14 +127,22 @@ class MainActivity : ComponentActivity() {
                         val playback = current?.playback
                         val detail = current?.detail
                         val connecting = current?.connecting
-                        TorrentForeground(
-                            active = current?.torrent != null ||
-                                (playback != null && !current.settings.pauseOnMinimize.on),
-                            torrent = current?.torrent != null,
-                        )
+                        PlaybackForeground(playback != null || connecting != null || current?.torrent != null)
+                        LaunchedEffect(inPip, playback == null && connecting == null) {
+                            if (inPip && playback == null && connecting == null) moveTaskToBack(true)
+                        }
                         UpdateNotification(current?.update, canAsk = playback == null && connecting == null)
                         when {
-                            playback != null -> PlayerScreen(playback, current.torrent, images, cineo)
+                            playback != null -> PlayerScreen(
+                                playback = playback,
+                                torrent = current.torrent,
+                                images = images,
+                                cineo = cineo,
+                                player = player,
+                                inPip = inPip,
+                                pipOnLeave = current.settings.onLeave.value == "pip",
+                                onPip = ::pictureInPicture,
+                            )
                             connecting != null -> ConnectingScreen(connecting, current.torrent, images, cineo::stopPlayback)
                             detail != null -> {
                                 BackHandler { cineo.closeDetail() }

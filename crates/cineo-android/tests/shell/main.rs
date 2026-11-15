@@ -6,6 +6,7 @@
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -75,6 +76,7 @@ struct FakePlayers {
     events: Mutex<Option<UnboundedSender<PlayerEvent>>>,
     calls: Arc<Mutex<Vec<String>>>,
     slow_release: Mutex<Option<SlowRelease>>,
+    loading: Arc<AtomicBool>,
 }
 
 #[derive(Debug)]
@@ -84,7 +86,11 @@ struct SlowRelease {
 }
 
 #[derive(Debug)]
-struct FakePlayback(Arc<Mutex<Vec<String>>>, Mutex<Option<SlowRelease>>);
+struct FakePlayback(
+    Arc<Mutex<Vec<String>>>,
+    Mutex<Option<SlowRelease>>,
+    Arc<AtomicBool>,
+);
 
 impl Drop for FakePlayback {
     fn drop(&mut self) {
@@ -129,7 +135,7 @@ impl Playback for FakePlayback {
 
     fn status(&self) -> Status {
         Status {
-            loaded: true,
+            loaded: !self.2.load(Ordering::SeqCst),
             position_s: 12.0,
             duration_s: 120.0,
             cached: Arc::from([(0.0, 30.0), (60.0, 120.0)]),
@@ -186,7 +192,11 @@ impl Players for FakePlayers {
         *self.events.lock().unwrap() = Some(tx);
         let slow = self.slow_release.lock().unwrap().take();
         Ok((
-            Box::new(FakePlayback(Arc::clone(&self.calls), Mutex::new(slow))),
+            Box::new(FakePlayback(
+                Arc::clone(&self.calls),
+                Mutex::new(slow),
+                Arc::clone(&self.loading),
+            )),
             rx,
         ))
     }

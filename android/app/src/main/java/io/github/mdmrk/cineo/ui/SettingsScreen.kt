@@ -133,10 +133,19 @@ fun SettingsScreen(settings: SettingsView, update: UpdateView?, cineo: Cineo, pa
                     set,
                 )
                 Divider()
-                Switch(
-                    stringResource(R.string.pause_on_leave),
-                    stringResource(R.string.pause_on_leave_help),
-                    settings.pauseOnMinimize,
+                Choice(
+                    stringResource(R.string.on_leave),
+                    stringResource(R.string.on_leave_help),
+                    settings.onLeave,
+                    {
+                        stringResource(
+                            when (it) {
+                                "pause" -> R.string.on_leave_pause
+                                "play" -> R.string.on_leave_play
+                                else -> R.string.on_leave_pip
+                            },
+                        )
+                    },
                     set,
                 )
                 Divider()

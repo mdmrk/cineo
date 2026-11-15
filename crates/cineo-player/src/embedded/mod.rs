@@ -48,6 +48,7 @@ pub enum PlayerCommand {
     SetAudio(Option<i64>),
     SetSubtitle(Option<i64>),
     SetSubtitleDelay(f64),
+    SetSpeed(f64),
     Stop,
 }
 
@@ -178,11 +179,14 @@ const SCRIPT_OPTIONS: &[&str] = &["load-scripts", "ytdl", "osc"];
 const SURFACE_OPTIONS: &[(&str, &str)] = &[
     ("vo", "null"),
     ("force-window", "no"),
+    ("vid", "no"),
     ("gpu-context", "android"),
     ("opengl-es", "yes"),
     ("profile", "fast"),
     ("vd-lavc-o", "ndk_codec=1"),
     ("vf", "format=fmt=yuv420p"),
+    ("cache-pause-initial", "yes"),
+    ("cache-pause-wait", "3"),
 ];
 
 const SURFACE_SUBTITLE_FONT: &str = "Inter";
@@ -252,6 +256,22 @@ fn selected_video(tracks: &[Track]) -> Option<i64> {
         .map(|t| t.id)
 }
 
+fn unpauses(command: PlayerCommand, paused: bool) -> bool {
+    match command {
+        PlayerCommand::SetPause(pause) => !pause,
+        PlayerCommand::TogglePause => paused,
+        _ => false,
+    }
+}
+
+const DEFAULT_VIDEO: &str = "auto";
+
+#[derive(Debug)]
+struct Surface {
+    attached: bool,
+    hidden: Option<String>,
+}
+
 fn load(core: &Core, url: &Url) -> Result<(), ffi::MpvError> {
     core.command(&["loadfile", url.as_str(), "replace"])?;
     info!(origin = %url.origin().ascii_serialization(), "libmpv playback started");
@@ -284,8 +304,7 @@ const OPTIONS: &[(&str, &str)] = &[
 
 pub struct Player {
     core: Arc<Core>,
-    pending: Mutex<Option<Url>>,
-    hidden_video: Mutex<Option<i64>>,
+    surface: Mutex<Surface>,
     status: Arc<Mutex<Status>>,
     finished: Arc<AtomicBool>,
     events_thread: Option<std::thread::JoinHandle<()>>,
@@ -342,36 +361,37 @@ impl Player {
     }
 
     pub fn attach_surface(&self, wid: i64) -> Result<(), PlayerError> {
+        let mut surface = self.surface();
         self.apply(&attach_steps(wid))?;
-        let pending = self
-            .pending
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .take();
-        if let Some(url) = pending {
-            load(&self.core, &url).map_err(|err| PlayerError::Libmpv(err.message))?;
-        }
-        let hidden = self
-            .hidden_video
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .take();
-        if let Some(id) = hidden {
-            self.apply(&[(Set::Property, "vid", id.to_string())])?;
+        surface.attached = true;
+        if let Some(video) = surface.hidden.take() {
+            self.apply(&[(Set::Property, "vid", video)])?;
         }
         Ok(())
     }
 
     pub fn detach_surface(&self) -> Result<(), PlayerError> {
-        let video = selected_video(&self.status().tracks);
-        if let Some(id) = video {
-            self.apply(&[(Set::Property, "vid", "no".into())])?;
-            *self
-                .hidden_video
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner) = Some(id);
+        let mut surface = self.surface();
+        surface.attached = false;
+        if !self.status().paused {
+            self.hide_video(&mut surface)?;
         }
         self.apply(&detach_steps())
+    }
+
+    fn surface(&self) -> std::sync::MutexGuard<'_, Surface> {
+        self.surface.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn hide_video(&self, surface: &mut Surface) -> Result<(), PlayerError> {
+        if surface.hidden.is_some() {
+            return Ok(());
+        }
+        let video = selected_video(&self.status().tracks)
+            .map_or_else(|| DEFAULT_VIDEO.to_owned(), |id| id.to_string());
+        self.apply(&[(Set::Property, "vid", "no".into())])?;
+        surface.hidden = Some(video);
+        Ok(())
     }
 
     pub fn resize_surface(&self, width: u32, height: u32) -> Result<(), PlayerError> {
@@ -444,7 +464,7 @@ impl Player {
         for (id, name, format) in OBSERVED {
             core.observe(id, name, format).map_err(fail)?;
         }
-        let waits_for_surface = matches!(output, Output::Surface);
+        let on_surface = matches!(output, Output::Surface);
         let renderer = output
             .into_video()
             .map(|video| {
@@ -469,11 +489,7 @@ impl Player {
         }
         core.set_property("force-media-title", &request.title)
             .map_err(fail)?;
-        if waits_for_surface {
-            info!("libmpv waits for a surface");
-        } else {
-            load(&core, &request.url).map_err(fail)?;
-        }
+        load(&core, &request.url).map_err(fail)?;
 
         let status = Arc::new(Mutex::new(Status::default()));
         let finished = Arc::new(AtomicBool::new(false));
@@ -494,8 +510,10 @@ impl Player {
         Ok((
             Self {
                 core,
-                pending: Mutex::new(waits_for_surface.then(|| request.url.clone())),
-                hidden_video: Mutex::new(None),
+                surface: Mutex::new(Surface {
+                    attached: !on_surface,
+                    hidden: on_surface.then(|| DEFAULT_VIDEO.to_owned()),
+                }),
                 status,
                 finished,
                 events_thread: joins_on_drop.then_some(events_thread),
@@ -539,6 +557,19 @@ impl Player {
             return;
         };
         let args: Vec<&str> = args.iter().map(String::as_str).collect();
+        if let PlayerCommand::SetPause(paused) = command {
+            self.status
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .paused = paused;
+        } else if unpauses(command, self.status().paused) {
+            let mut surface = self.surface();
+            if !surface.attached
+                && let Err(err) = self.hide_video(&mut surface)
+            {
+                warn!(%err, "the video track was not hidden");
+            }
+        }
         debug!(?command, "mpv command");
         if let Err(err) = self.core.command_async(&args) {
             warn!(%err, ?command, "mpv command failed");

@@ -1,7 +1,7 @@
 use cineo_core::app::{
-    DownloadLimit, HideControls, Language, NextVideoNotice, PeerLimit, Ranged, SeekStep, Setting,
-    Settings, SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOutline, TorrentStorage,
-    UploadLimit, WatchedAt,
+    DownloadLimit, HideControls, Language, NextVideoNotice, OnLeave, PeerLimit, Ranged, SeekStep,
+    Setting, Settings, SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOutline,
+    TorrentStorage, UploadLimit, WatchedAt,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -20,7 +20,7 @@ pub struct SettingsView {
     pub p2p_enabled: bool,
     pub hide_controls: ChoiceView,
     pub binge_watching: ToggleView,
-    pub pause_on_minimize: ToggleView,
+    pub on_leave: ChoiceView,
     pub next_video_notice: ChoiceView,
     pub subtitle_size: RangeView,
     pub subtitle_font: ChoiceView,
@@ -94,7 +94,7 @@ pub(super) fn settings(settings: &Settings) -> SettingsView {
             Setting::HideControls,
         ),
         binge_watching: toggle(settings.binge_watching, Setting::BingeWatching),
-        pause_on_minimize: toggle(settings.pause_on_minimize, Setting::PauseOnMinimize),
+        on_leave: choice(settings.on_leave, OnLeave::ALL, Setting::OnLeave),
         next_video_notice: choice(
             settings.next_video_notice,
             NextVideoNotice::ALL,

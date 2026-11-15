@@ -456,7 +456,7 @@ Format:
 
 ### Android: torrents use mobile data and battery without limits
 - Where: [shell/mod.rs](../crates/cineo-android/src/shell/mod.rs),
-  [TorrentService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/TorrentService.kt)
+  [PlaybackService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/PlaybackService.kt)
 - Gap: a torrent streams over any network, mobile data included, and
   keeps DHT and uploads on with the desktop's defaults; how much battery
   and data this uses on a phone is UNKNOWN.
@@ -493,37 +493,50 @@ Format:
 - Exit: a libass font provider for Android, or a font for the subtitle's
   language picked from the system fonts.
 
-### Android: audio focus is only taken and given up
-- Where: [PlayerScreen.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/PlayerScreen.kt) (`PlaybackFocus`)
-- Gap: playback pauses when another app takes the audio focus, but does not
-  resume when the focus comes back after a short loss, does not duck, and
-  does not pause when headphones are unplugged (`ACTION_AUDIO_BECOMING_NOISY`).
-  The `MediaSession` (`PlaybackSession.kt`) only exists while the foreground
-  service runs, so with "Pause when leaving the app" on an HTTP stream has
-  no lock-screen or headset controls. The session, its notification buttons
-  and headset buttons, its artwork and the Tabler icons it draws were not
-  tried on a phone.
-- Why: the first slice only stops Cineo and other apps playing at once.
-- Exit: resume after `AUDIOFOCUS_GAIN` when the loss paused it, a
-  becoming-noisy receiver, and a session for every playback, tried on a
-  phone.
+### Android: parts of the player's system integration were not tried
+- Where: [PlaybackFocus.kt](../android/app/src/main/java/io/github/mdmrk/cineo/PlaybackFocus.kt),
+  [PlaybackService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/PlaybackService.kt),
+  [MainActivity.kt](../android/app/src/main/java/io/github/mdmrk/cineo/MainActivity.kt) (`onUserLeaveHint`)
+- Gap: pausing and resuming around another app's audio focus, pausing when
+  headphones are unplugged and headset buttons have unit tests or none, and
+  were not tried on a phone. Picture-in-picture was tried on Android 13
+  only; below Android 12 it is entered from `onUserLeaveHint`, which was
+  never run. A phone without picture-in-picture keeps playing instead.
+  Nobody listened to the sound during the 2026-11-15 tests: positions and
+  states were read from the media session.
+- Why: one phone, driven over adb.
+- Exit: try a call, a second media app, wired and Bluetooth headsets, and a
+  phone below Android 12.
 
-### Android: background playback with the video track off is untested
-- Where: [embedded/mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`detach_surface`, `attach_surface`),
-  [MainActivity.kt](../android/app/src/main/java/io/github/mdmrk/cineo/MainActivity.kt) (`TorrentForeground`)
-- Gap: leaving the app sets `vid=no` and returning selects the same track
-  again. The report was that playback stopped after leaving the app in
-  landscape but not in portrait, and that the loading logo showed on return.
-  The cause is INFERRED: without a surface mpv kept decoding the video in
-  software (ADR-0028) on a backgrounded process. Why only landscape is
-  UNKNOWN. The fix was not tried on a phone, and the loading logo may still
-  show on return while mpv selects the video track again.
-  Any playback now holds the foreground service unless "Pause when leaving
-  the app" is on, not only a torrent; whether that keeps an HTTP stream
-  playing in the background is UNKNOWN. The notification channel keeps the
-  id `torrents` under its new name, Playback.
-- Why: the change was made without a device.
-- Exit: try both orientations on a phone with HTTP and torrent streams.
+### Android: a paused video keeps the foreground service
+- Where: [PlaybackService.kt](../android/app/src/main/java/io/github/mdmrk/cineo/PlaybackService.kt)
+- Gap: the service and its notification stay for as long as a video or a
+  torrent is open, also paused in the background for hours; a torrent keeps
+  its connections meanwhile. The wake and Wi-Fi locks are given up when
+  paused.
+- Why: the playback, its position and the torrent live in the process, and
+  the service is what keeps the process.
+- Exit: stop the playback after a long pause in the background, keeping its
+  position.
+
+### Android: a stream that ends early counts as ended
+- Where: [tracker.rs](../crates/cineo-player/src/tracker.rs) (`EndReason::Eof`)
+- Gap: when the source stops delivering and mpv reports the end of the
+  file, the episode is taken as finished wherever it was, and binge
+  watching starts the next one. Seen on 2026-11-15 with a faulty test
+  server (Python's `http.server`), 20 s into a 4 minute file; not seen with
+  nginx or the torrent engine. The desktop shares the code.
+- Why: found while testing something else.
+- Exit: treat an end far from the duration as a failure, or reload at the
+  position, with a test.
+
+### Android: 5.1 sound starts with an AudioTrack error
+- Where: [mod.rs](../crates/cineo-player/src/embedded/mod.rs) (`OPTIONS`)
+- Gap: with a 5.1 AAC stream mpv logged `Invalid audio buffer size`,
+  `AudioTrack Init failed` and went on playing (Redmi 9, 2026-11-15).
+  Whether it then plays stereo, or nothing, is UNKNOWN.
+- Why: seen in the log only.
+- Exit: listen to a 5.1 stream, and set `audio-channels` if needed.
 
 ### Android: what the automatic retry leaves out
 - Where: [refresh.rs](../crates/cineo-core/src/app/refresh.rs) (`retry_failed`),

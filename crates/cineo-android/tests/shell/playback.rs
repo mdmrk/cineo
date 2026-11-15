@@ -415,45 +415,99 @@ async fn a_favourite_stays_after_a_restart_until_it_is_unmarked_or_cleared() {
     );
 }
 
+fn pauses(players: &FakePlayers) -> usize {
+    players
+        .calls
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|c| *c == "SetPause(true)")
+        .count()
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn leaving_the_app_pauses_the_video_unless_turned_off() {
+async fn leaving_the_app_pauses_the_video_only_when_set_to_pause() {
     let server = MockServer::start().await;
     let manifest = movie_addon(&server).await;
     let dir = local_data_dir();
     let players = Arc::new(FakePlayers::default());
-    let pauses = || {
-        players
-            .calls
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|c| *c == "SetPause(true)")
-            .count()
-    };
 
     tokio::task::block_in_place(|| {
         let (cineo, views) = start_with(dir.path(), &players);
-        cineo.change_setting(SettingChange::Value {
-            key: "pause_on_minimize".into(),
-            value: "true".into(),
-        });
-        wait_for(&views, |v| v.settings.pause_on_minimize.on);
+        let settings = wait_for(&views, |_| true).settings;
+        assert_eq!(settings.on_leave.value, "pip");
+        assert_eq!(settings.on_leave.options, ["pause", "play", "pip"]);
         open_movie(&cineo, &views, manifest);
+        players.loading.store(true, Ordering::SeqCst);
         cineo.play(0, 0);
         wait_for(&views, |v| v.playback.is_some());
+        assert!(!cineo.player_status().unwrap().started);
 
-        cineo.left_app();
+        cineo.app_visible(false);
         shell_caught_up(&cineo, &views);
-        assert_eq!(pauses(), 1);
+        assert_eq!(pauses(&players), 0);
+
+        cineo.app_visible(true);
+        players.loading.store(false, Ordering::SeqCst);
+        assert!(cineo.player_status().unwrap().started);
+        cineo.app_visible(false);
+        shell_caught_up(&cineo, &views);
+        assert_eq!(pauses(&players), 0);
+
+        cineo.app_visible(true);
+        cineo.change_setting(SettingChange::Value {
+            key: "on_leave".into(),
+            value: "pause".into(),
+        });
+        wait_for(&views, |v| v.settings.on_leave.value == "pause");
+        cineo.app_visible(false);
+        shell_caught_up(&cineo, &views);
+        assert_eq!(pauses(&players), 1);
+
+        cineo.stop_playback();
+        play_a_minute_and_close(&players);
+        wait_for(&views, |v| v.playback.is_none());
+        drop(cineo);
+    });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_video_that_starts_while_the_app_is_away_plays_unless_set_to_pause() {
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+
+    tokio::task::block_in_place(|| {
+        let (cineo, views) = start_with(dir.path(), &players);
+        open_movie(&cineo, &views, manifest);
+        cineo.app_visible(false);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+        shell_caught_up(&cineo, &views);
+        assert_eq!(pauses(&players), 0);
+
+        cineo.app_visible(true);
+        cineo.resume_playback();
+        cineo.set_speed(2.0);
+        shell_caught_up(&cineo, &views);
+        let calls = players.calls.lock().unwrap().clone();
+        assert!(calls.contains(&"SetPause(false)".to_owned()));
+        assert!(calls.contains(&"SetSpeed(2.0)".to_owned()));
+
+        cineo.stop_playback();
+        play_a_minute_and_close(&players);
+        wait_for(&views, |v| v.playback.is_none());
 
         cineo.change_setting(SettingChange::Value {
-            key: "pause_on_minimize".into(),
-            value: "false".into(),
+            key: "on_leave".into(),
+            value: "pause".into(),
         });
-        wait_for(&views, |v| !v.settings.pause_on_minimize.on);
-        cineo.left_app();
-        shell_caught_up(&cineo, &views);
-        assert_eq!(pauses(), 1);
+        wait_for(&views, |v| v.settings.on_leave.value == "pause");
+        cineo.app_visible(false);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+        assert_eq!(pauses(&players), 1);
 
         cineo.stop_playback();
         play_a_minute_and_close(&players);

@@ -258,8 +258,11 @@
     </plurals>
     <string name="binge_watching">Lire automatiquement l\'épisode suivant</string>
     <string name="binge_watching_help">Quand un épisode se termine, le suivant est lu depuis la même extension, ou ses flux s\'ouvrent.</string>
-    <string name="pause_on_leave">Mettre en pause en quittant l\'app</string>
-    <string name="pause_on_leave_help">La vidéo se met en pause quand l\'app passe en arrière-plan ou que l\'écran s\'éteint.</string>
+    <string name="on_leave">En quittant l\'app</string>
+    <string name="on_leave_help">Ce que fait une vidéo en cours de lecture quand l\'app passe en arrière-plan.</string>
+    <string name="on_leave_pause">Mettre en pause</string>
+    <string name="on_leave_play">Continuer la lecture</string>
+    <string name="on_leave_pip">Image dans l\'image</string>
     <string name="next_notice">Annonce de l\'épisode suivant</string>
     <string name="next_notice_help">Combien de temps avant la fin l\'épisode suivant est proposé.</string>
     <string name="next_notice_off">Désactivée</string>

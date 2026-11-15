@@ -1,49 +1,28 @@
 package io.github.mdmrk.cineo.ui
 
-import android.content.Context
 import android.content.pm.ActivityInfo
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
 import android.os.SystemClock
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,78 +31,122 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import io.github.mdmrk.cineo.rust.CachedSpanView
-import io.github.mdmrk.cineo.rust.NextView
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mdmrk.cineo.Native
-import io.github.mdmrk.cineo.R
+import io.github.mdmrk.cineo.Player
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.PlaybackView
-import io.github.mdmrk.cineo.rust.PlayerStatusView
 import io.github.mdmrk.cineo.rust.TorrentView
-import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
+
+private const val FAST_SPEED = 2.0
+private const val BUFFERING_AFTER_MS = 400L
 
 @Composable
-fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, cineo: Cineo) {
-    var status by remember { mutableStateOf<PlayerStatusView?>(null) }
+fun PlayerScreen(
+    playback: PlaybackView,
+    torrent: TorrentView?,
+    images: Images,
+    cineo: Cineo,
+    player: Player,
+    inPip: Boolean,
+    pipOnLeave: Boolean,
+    onPip: (Pip) -> Unit,
+) {
+    val status by player.status.collectAsStateWithLifecycle()
+    val current = status
     var controls by remember { mutableStateOf(true) }
-    var started by remember { mutableStateOf(false) }
+    var touches by remember { mutableIntStateOf(0) }
+    var buffering by remember { mutableStateOf(false) }
     var hold by remember { mutableStateOf(SeekHold()) }
     var stats by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(lifecycle) {
-        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            while (true) {
-                val latest = withContext(Dispatchers.Default) { cineo.playerStatus() }
-                status = latest
-                started = playerStarted(started, latest?.loaded == true, latest?.waiting == true)
-                if (latest != null) hold = hold.settle(latest.positionS, latest.waiting, SystemClock.elapsedRealtime())
-                delay(250)
-            }
+    var fast by remember { mutableStateOf(false) }
+    val started = current?.started == true
+    val paused = current?.paused == true
+    val waiting = current?.waiting == true
+
+    LaunchedEffect(current) {
+        if (current != null) hold = hold.settle(current.positionS, waiting, SystemClock.elapsedRealtime())
+    }
+    LaunchedEffect(started && waiting) {
+        buffering = false
+        if (started && waiting) {
+            delay(BUFFERING_AFTER_MS)
+            buffering = true
         }
     }
-    LaunchedEffect(controls, status?.paused, menu, started) {
-        if (controls && started && !menu && status?.paused == false) {
+    LaunchedEffect(paused) {
+        if (paused) controls = true
+    }
+    LifecycleStartEffect(Unit) {
+        controls = true
+        onStopOrDispose {}
+    }
+    LaunchedEffect(controls, touches, paused, menu, started, hold.drag != null) {
+        if (controls && started && !paused && !menu && hold.drag == null) {
             delay(playback.hideControlsMs.toLong())
             controls = false
         }
     }
-    val context = LocalContext.current
-    val focus = remember(context) { PlaybackFocus(context) { cineo.pause() } }
-    DisposableEffect(focus) { onDispose { focus.abandon() } }
-    LaunchedEffect(status?.paused) {
-        if (status?.paused == false) focus.request()
+
+    val size = current?.stats?.resolution
+    val pip = Pip(
+        auto = pipOnLeave && started && !paused,
+        width = size?.width?.toInt() ?: 0,
+        height = size?.height?.toInt() ?: 0,
+        paused = paused,
+        step = playback.seekStepS.toInt(),
+    )
+    LaunchedEffect(pip) { onPip(pip) }
+    DisposableEffect(Unit) {
+        onDispose {
+            onPip(Pip.Off)
+            if (fast) player.speed(1.0)
+        }
     }
-    BackHandler { cineo.stopPlayback() }
+
+    BackHandler { player.stop() }
     FullScreen()
     val onRotate = rememberRotate()
+    val haptics = LocalHapticFeedback.current
+    val canSpeedUp by rememberUpdatedState(started && !paused)
     Box(
         Modifier
             .fillMaxSize()
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                if (started) controls = !controls
+            .background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        tryAwaitRelease()
+                        if (fast) {
+                            fast = false
+                            player.speed(1.0)
+                        }
+                    },
+                    onLongPress = {
+                        if (canSpeedUp) {
+                            fast = true
+                            controls = false
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            player.speed(FAST_SPEED)
+                        }
+                    },
+                    onTap = { controls = !controls },
+                )
             },
     ) {
         AndroidView(
@@ -132,17 +155,20 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                     holder.addCallback(SurfaceCallback(cineo))
                 }
             },
-            update = { it.keepScreenOn = status?.paused != true },
+            update = { it.keepScreenOn = !paused },
             modifier = Modifier.fillMaxSize(),
         )
-        val current = status
-        if (!started) {
-            LoadingWithBack(playback.art, images, onBack = { cineo.stopPlayback() })
+        when {
+            !started && inPip -> Box(Modifier.fillMaxSize().background(Color.Black)) {
+                LoadingBackdrop(playback.art, images, firstLoad = true)
+            }
+            !started -> LoadingWithBack(playback.art, images, onBack = player::stop)
+            buffering -> Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))) {
+                LoadingBackdrop(playback.art, images, firstLoad = false)
+            }
         }
-        if (started && current?.waiting == true) {
-            LoadingBackdrop(playback.art, images, firstLoad = false)
-        }
-        if (controls && started && current != null) {
+        if (inPip || !started || current == null) return@Box
+        AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
             Controls(
                 title = playback.art.title,
                 status = current,
@@ -151,44 +177,54 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
                 onSeekDone = {
                     hold.drag?.let {
                         hold = hold.commit(it, SystemClock.elapsedRealtime())
-                        cineo.seekTo(it)
+                        player.seekTo(it)
                     }
                 },
-                onBack = { cineo.stopPlayback() },
+                onBack = player::stop,
                 onTogglePause = {
-                    cineo.togglePause()
-                    status = current.copy(paused = !current.paused)
+                    touches++
+                    player.togglePause()
                 },
                 seekStep = playback.seekStepS.toInt(),
                 onSeekBy = {
+                    touches++
                     hold = hold.commitBy(it.toDouble(), current.positionS, current.durationS, SystemClock.elapsedRealtime())
-                    cineo.seekBy(it.toDouble())
+                    player.seekBy(it.toDouble())
                 },
-                onNext = playback.next?.let { { cineo.playNext() } },
-                onToggleStats = { stats = !stats },
-                onRotate = onRotate,
+                onNext = playback.next?.let { { player.next() } },
+                onToggleStats = {
+                    touches++
+                    stats = !stats
+                },
+                onRotate = {
+                    touches++
+                    onRotate()
+                },
                 onAudio = { cineo.selectAudio(it) },
                 onSubtitle = { cineo.selectSubtitle(it) },
                 onAddonSubtitle = { cineo.selectAddonSubtitle(it) },
                 onMenu = { menu = it },
             )
         }
+        if (fast) {
+            FastBadge(Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp))
+        }
         val next = playback.next
-        if (next != null && current != null) {
+        if (next != null) {
             NextEpisode(
                 next = next,
                 status = current,
                 noticeS = playback.nextNoticeS.toInt(),
                 auto = playback.bingeWatching,
                 images = images,
-                onPlay = { cineo.playNext() },
+                onPlay = player::next,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .safeDrawingPadding()
                     .padding(end = 16.dp, bottom = 120.dp),
             )
         }
-        if (stats && current != null) {
+        if (stats) {
             StatsPanel(
                 torrent,
                 current.stats,
@@ -199,230 +235,19 @@ fun PlayerScreen(playback: PlaybackView, torrent: TorrentView?, images: Images, 
 }
 
 @Composable
-private fun Controls(
-    title: String,
-    status: PlayerStatusView,
-    position: Float,
-    onSeekDrag: (Float) -> Unit,
-    onSeekDone: () -> Unit,
-    onBack: () -> Unit,
-    onTogglePause: () -> Unit,
-    seekStep: Int,
-    onSeekBy: (Int) -> Unit,
-    onNext: (() -> Unit)?,
-    onToggleStats: () -> Unit,
-    onRotate: () -> Unit,
-    onAudio: (Long) -> Unit,
-    onSubtitle: (Long?) -> Unit,
-    onAddonSubtitle: (String) -> Unit,
-    onMenu: (Boolean) -> Unit,
-) {
-    val (back, forward) = when (seekStep) {
-        5 -> Icon.REWIND_BACKWARD_5 to Icon.REWIND_FORWARD_5
-        15 -> Icon.REWIND_BACKWARD_15 to Icon.REWIND_FORWARD_15
-        30 -> Icon.REWIND_BACKWARD_30 to Icon.REWIND_FORWARD_30
-        else -> Icon.REWIND_BACKWARD_10 to Icon.REWIND_FORWARD_10
-    }
-    Box(Modifier.fillMaxSize()) {
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.7f),
-                    0.25f to Color.Transparent,
-                    0.7f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.8f),
-                ),
-            ),
-        )
-        Row(
-            Modifier.align(Alignment.TopStart).fillMaxWidth().safeDrawingPadding().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Color.White, label = stringResource(R.string.back)) }
-            Text(
-                title,
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            SubtitlesMenu(status, onTrack = onSubtitle, onAddon = onAddonSubtitle, onOpen = onMenu)
-            AudioMenu(status, onTrack = onAudio, onOpen = onMenu)
-            val statsLabel = stringResource(R.string.player_stats)
-            IconButton(onClick = onToggleStats, modifier = Modifier.semantics { contentDescription = statsLabel }) {
-                CineoIcon(Icon.ACTIVITY, tint = Color.White)
-            }
-            IconButton(onClick = onRotate) {
-                CineoIcon(Icon.DEVICE_MOBILE_ROTATED, tint = Color.White, label = stringResource(R.string.player_rotate))
-            }
-        }
-        Row(
-            Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(40.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { onSeekBy(-seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(back, tint = Color.White, size = 36.sp, label = pluralStringResource(R.plurals.seek_back, seekStep, seekStep))
-            }
-            IconButton(
-                onClick = onTogglePause,
-                modifier = Modifier.size(76.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f)),
-            ) {
-                CineoIcon(
-                    if (status.paused) Icon.PLAYER_PLAY else Icon.PLAYER_PAUSE,
-                    filled = true,
-                    tint = Color.White,
-                    size = 40.sp,
-                    label = stringResource(if (status.paused) R.string.play else R.string.pause),
-                )
-            }
-            IconButton(onClick = { onSeekBy(seekStep) }, modifier = Modifier.size(56.dp)) {
-                CineoIcon(forward, tint = Color.White, size = 36.sp, label = pluralStringResource(R.plurals.seek_forward, seekStep, seekStep))
-            }
-        }
-
-        Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            if (onNext != null) {
-                Row(
-                    Modifier
-                        .align(Alignment.End)
-                        .clip(CircleShape)
-                        .clickable(onClick = onNext)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CineoIcon(Icon.PLAYER_SKIP_FORWARD, filled = true, tint = Color.White, size = 16.sp)
-                    Text(
-                        stringResource(R.string.next_episode),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
-                }
-            }
-            val duration = status.durationS.toFloat().coerceAtLeast(0f)
-            SeekBar(
-                position = position,
-                duration = duration,
-                cached = status.cached,
-                onDrag = onSeekDrag,
-                onDone = onSeekDone,
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(clock(position.toDouble()), color = Color.White, style = MaterialTheme.typography.labelMedium)
-                Text(clock(status.durationS), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun NextEpisode(
-    next: NextView,
-    status: PlayerStatusView,
-    noticeS: Int,
-    auto: Boolean,
-    images: Images,
-    onPlay: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var dismissed by remember(next.title) { mutableStateOf(false) }
-    val notice = remember(next.title) { NoticeClock() }
-    var requested by remember(next.title) { mutableStateOf(false) }
-    val remaining = status.durationS - status.positionS
-    val inNotice = status.loaded && status.durationS > 0.0 && remaining > 0.0 && remaining <= noticeS
-    val since = if (inNotice) notice.shownAt?.takeIf { it <= status.positionS } ?: status.positionS else null
-    SideEffect { notice.shownAt = since }
-    if (since == null || dismissed) return
-    val left = (AUTO_NEXT_S - (status.positionS - since)).coerceAtLeast(0.0)
-    LaunchedEffect(auto, left <= 0.0) {
-        if (auto && left <= 0.0 && !requested) {
-            requested = true
-            onPlay()
-        }
-    }
-    Box(
+private fun FastBadge(modifier: Modifier = Modifier) {
+    Row(
         modifier
-            .width(280.dp)
-            .height(158.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Brand.Panel)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        NetImage(images, next.image, 280.dp, Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)))
-        IconButton(onClick = { dismissed = true }, modifier = Modifier.align(Alignment.TopEnd)) {
-            CineoIcon(Icon.X, tint = Color.White, label = stringResource(R.string.dismiss))
-        }
-        Column(
-            Modifier.align(Alignment.Center).padding(horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                if (auto) stringResource(R.string.next_episode_in, kotlin.math.ceil(left).toInt())
-                else stringResource(R.string.next_episode),
-                color = Brand.Text,
-                style = MaterialTheme.typography.labelMedium,
-            )
-            Text(
-                next.title,
-                color = Brand.TextBright,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Button(
-                onClick = {
-                    requested = true
-                    onPlay()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Brand.Accent, contentColor = Brand.OnAccent),
-            ) {
-                CineoIcon(Icon.PLAYER_PLAY, filled = true, tint = Brand.OnAccent)
-                Text(stringResource(R.string.play), modifier = Modifier.padding(start = 6.dp))
-            }
-        }
-    }
-}
-
-private const val AUTO_NEXT_S = 10.0
-
-private class NoticeClock {
-    var shownAt: Double? = null
-}
-
-private class PlaybackFocus(context: Context, private val onLoss: () -> Unit) :
-    AudioManager.OnAudioFocusChangeListener {
-    private val audio = context.getSystemService(AudioManager::class.java)
-    private val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                .build(),
-        )
-        .setOnAudioFocusChangeListener(this)
-        .build()
-    private var held = false
-
-    fun request() {
-        if (!held) held = audio?.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-    }
-
-    fun abandon() {
-        audio?.abandonAudioFocusRequest(request)
-        held = false
-    }
-
-    override fun onAudioFocusChange(change: Int) {
-        if (change == AudioManager.AUDIOFOCUS_LOSS || change == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
-            held = false
-            onLoss()
+        Text("2×", color = Color.White, style = MaterialTheme.typography.labelLarge)
+        Row {
+            CineoIcon(Icon.PLAYER_PLAY, filled = true, tint = Color.White, size = 12.sp)
+            CineoIcon(Icon.PLAYER_PLAY, filled = true, tint = Color.White, size = 12.sp)
         }
     }
 }
@@ -462,61 +287,5 @@ private class SurfaceCallback(private val cineo: Cineo) : SurfaceHolder.Callback
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         cineo.detachSurface()
         Native.releaseSurface()
-    }
-}
-
-private fun clock(seconds: Double): String {
-    val total = seconds.toLong().coerceAtLeast(0)
-    val (h, m, s) = Triple(total / 3600, total / 60 % 60, total % 60)
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-}
-
-@Composable
-private fun SeekBar(position: Float, duration: Float, cached: List<CachedSpanView>, onDrag: (Float) -> Unit, onDone: () -> Unit) {
-    var width by remember { mutableIntStateOf(1) }
-    val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
-    val latestDuration by rememberUpdatedState(duration)
-    val seekable = duration > 0f
-    val at = { x: Float -> (x / width).coerceIn(0f, 1f) * latestDuration }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(32.dp)
-            .onSizeChanged { width = it.width.coerceAtLeast(1) }
-            .pointerInput(seekable) {
-                if (!seekable) return@pointerInput
-                detectTapGestures { offset ->
-                    onDrag(at(offset.x))
-                    onDone()
-                }
-            }
-            .pointerInput(seekable) {
-                if (!seekable) return@pointerInput
-                detectHorizontalDragGestures(
-                    onDragStart = { onDrag(at(it.x)) },
-                    onDragEnd = onDone,
-                    onDragCancel = onDone,
-                ) { change, _ -> onDrag(at(change.position.x)) }
-            },
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Canvas(Modifier.fillMaxWidth().height(2.dp).offset(y = 5.dp)) {
-            cached.forEach {
-                drawRect(
-                    Color.White.copy(alpha = 0.6f),
-                    topLeft = Offset(it.start * size.width, 0f),
-                    size = Size((it.end - it.start) * size.width, size.height),
-                )
-            }
-        }
-        Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)))
-        Box(Modifier.fillMaxWidth(fraction).height(4.dp).clip(CircleShape).background(Brand.Accent))
-        Box(
-            Modifier
-                .offset { IntOffset((fraction * width).roundToInt() - 7.dp.roundToPx(), 0) }
-                .size(14.dp)
-                .clip(CircleShape)
-                .background(Brand.Accent),
-        )
     }
 }

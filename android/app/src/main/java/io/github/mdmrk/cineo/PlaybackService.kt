@@ -5,43 +5,64 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
+import android.media.AudioManager
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import io.github.mdmrk.cineo.rust.ArtView
+import io.github.mdmrk.cineo.rust.AppView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.ImageException
-import io.github.mdmrk.cineo.rust.PlaybackView
 import io.github.mdmrk.cineo.rust.PlayerStatusView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-class TorrentService : Service() {
+class PlaybackService : Service() {
     private val scope = MainScope()
+    private val art = MutableStateFlow<Bitmap?>(null)
+    private var player: Player? = null
     private var session: PlaybackSession? = null
-    private var torrent = true
+    private var focus: PlaybackFocus? = null
     private var shown: Shown? = null
     private var artUrl: String? = null
-    private var art: Bitmap? = null
     private var artJob: Job? = null
+    private val wake by lazy {
+        getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "cineo:playback")
+            .apply { setReferenceCounted(false) }
+    }
+    private val wifi by lazy {
+        applicationContext.getSystemService(WifiManager::class.java)
+            .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "cineo:playback")
+            .apply { setReferenceCounted(false) }
+    }
+    private val noisy = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            player?.pause()
+        }
+    }
 
     private data class Shown(
         val torrent: Boolean,
         val title: String?,
+        val controls: Boolean,
         val paused: Boolean,
         val next: Boolean,
         val step: Int,
@@ -54,34 +75,36 @@ class TorrentService : Service() {
         super.onCreate()
         val app = application as CineoApplication
         val cineo = app.cineo ?: return
-        val session = PlaybackSession(this, cineo).also { session = it }
+        val player = app.player ?: return
+        this.player = player
+        session = PlaybackSession(this, player)
+        focus = PlaybackFocus(this, player)
+        ContextCompat.registerReceiver(
+            this,
+            noisy,
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         scope.launch {
-            while (isActive) {
-                val status = withContext(Dispatchers.Default) { cineo.playerStatus() }
-                val playback = app.view.value?.playback
-                loadArt(cineo, playback?.art)
-                session.update(playback, status, art)
-                show(playback, status)
-                delay(1000)
-            }
+            combine(app.view, player.status, art) { view, status, art -> Triple(view, status, art) }
+                .collect { (view, status, art) -> render(cineo, view, status, art) }
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            TOGGLE -> session?.togglePause()
+            TOGGLE -> player?.togglePause()
             REWIND -> session?.seekBy(-1)
             FORWARD -> session?.seekBy(1)
-            NEXT -> (application as CineoApplication).cineo?.playNext()
+            NEXT -> player?.next()
             else -> {
-                torrent = intent?.getBooleanExtra(TORRENT, true) ?: true
-                val kept = shown?.takeIf { it.title != null }?.copy(torrent = torrent)
-                    ?: Shown(torrent, null, paused = false, next = false, step = 0, art = null)
-                shown = kept
+                val app = application as CineoApplication
+                val now = shown(app.view.value, player?.status?.value, art.value)
+                shown = now
                 ServiceCompat.startForeground(
                     this,
                     NOTIFICATION,
-                    notification(kept),
+                    notification(now),
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0,
                 )
             }
@@ -91,20 +114,49 @@ class TorrentService : Service() {
 
     override fun onDestroy() {
         scope.cancel()
+        if (player != null) unregisterReceiver(noisy)
+        focus?.abandon()
         session?.release()
+        keepAwake(false)
         super.onDestroy()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        (application as CineoApplication).cineo?.stopPlayback()
+        player?.stop()
         stopSelf()
     }
 
-    private fun loadArt(cineo: Cineo, view: ArtView?) {
-        val url = view?.background ?: view?.logo
+    private fun render(cineo: Cineo, view: AppView?, status: PlayerStatusView?, art: Bitmap?) {
+        val playback = view?.playback
+        if (playback == null && view?.connecting == null && view?.torrent == null) {
+            stopSelf()
+            return
+        }
+        loadArt(cineo, (playback?.art ?: view?.connecting)?.let { it.background ?: it.logo })
+        session?.update(playback, status, art)
+        if (status?.loaded == true && !status.paused) focus?.playing()
+        keepAwake(status?.paused != true)
+        val now = shown(view, status, art)
+        if (now != shown) {
+            shown = now
+            getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(now))
+        }
+    }
+
+    private fun keepAwake(awake: Boolean) {
+        if (awake) {
+            wake.acquire(AWAKE_LEASE_MS)
+            wifi.acquire()
+        } else {
+            if (wake.isHeld) wake.release()
+            if (wifi.isHeld) wifi.release()
+        }
+    }
+
+    private fun loadArt(cineo: Cineo, url: String?) {
         if (url == artUrl) return
         artUrl = url
-        art = null
+        art.value = null
         artJob?.cancel()
         if (url == null) return
         artJob = scope.launch {
@@ -113,28 +165,21 @@ class TorrentService : Service() {
             } catch (e: ImageException) {
                 return@launch
             }
-            val decoded = withContext(Dispatchers.Default) { decodeArt(bytes) }
-            if (artUrl == url) art = decoded
+            art.value = withContext(Dispatchers.Default) { decodeArt(bytes) }
         }
     }
 
-    private fun show(playback: PlaybackView?, status: PlayerStatusView?) {
-        val playing = playback != null && status?.loaded == true
-        val wanted = if (playing) {
-            Shown(
-                torrent,
-                playback?.art?.title,
-                status?.paused == true,
-                playback?.next != null,
-                playback?.seekStepS?.toInt() ?: 0,
-                art,
-            )
-        } else {
-            Shown(torrent, null, paused = false, next = false, step = 0, art = null)
-        }
-        if (wanted == shown) return
-        shown = wanted
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(wanted))
+    private fun shown(view: AppView?, status: PlayerStatusView?, art: Bitmap?): Shown {
+        val playback = view?.playback
+        return Shown(
+            torrent = view?.torrent != null,
+            title = (playback?.art ?: view?.connecting)?.title,
+            controls = playback != null,
+            paused = status?.paused == true,
+            next = playback?.next != null,
+            step = playback?.seekStepS?.toInt() ?: 0,
+            art = art,
+        )
     }
 
     private fun notification(shown: Shown): Notification {
@@ -159,12 +204,10 @@ class TorrentService : Service() {
             .setShowWhen(false)
             .setCategory(Notification.CATEGORY_TRANSPORT)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-        if (shown.title == null) {
-            return builder.setContentTitle(text).build()
-        }
-        builder.setContentTitle(shown.title)
-        if (shown.torrent) builder.setContentText(text)
+            .setContentTitle(shown.title ?: text)
+        if (shown.title != null && shown.torrent) builder.setContentText(text)
         shown.art?.let { builder.setLargeIcon(it) }
+        if (!shown.controls) return builder.build()
         builder.addAction(action(PlaybackSession.backIcon(shown.step), R.string.seek_back_notification, REWIND))
         builder.addAction(
             if (shown.paused) action(R.drawable.media_play, R.string.play, TOGGLE)
@@ -177,36 +220,29 @@ class TorrentService : Service() {
         return builder.setStyle(style).build()
     }
 
-    private fun action(icon: Int, label: Int, name: String): Notification.Action {
-        val intent = PendingIntent.getService(
-            this,
-            name.hashCode(),
-            Intent(this, TorrentService::class.java).setAction(name),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
-        return Notification.Action.Builder(Icon.createWithResource(this, icon), getString(label), intent).build()
-    }
+    private fun action(icon: Int, label: Int, name: String): Notification.Action =
+        Notification.Action.Builder(Icon.createWithResource(this, icon), getString(label), order(this, name)).build()
 
     companion object {
+        const val TOGGLE = "io.github.mdmrk.cineo.TOGGLE"
+        const val REWIND = "io.github.mdmrk.cineo.REWIND"
+        const val FORWARD = "io.github.mdmrk.cineo.FORWARD"
+        private const val NEXT = "io.github.mdmrk.cineo.NEXT"
         private const val CHANNEL = "torrents"
         private const val NOTIFICATION = 1
-        private const val TORRENT = "torrent"
-        private const val TOGGLE = "io.github.mdmrk.cineo.TOGGLE"
-        private const val REWIND = "io.github.mdmrk.cineo.REWIND"
-        private const val FORWARD = "io.github.mdmrk.cineo.FORWARD"
-        private const val NEXT = "io.github.mdmrk.cineo.NEXT"
         private const val ART_SIDE = 512
+        private const val AWAKE_LEASE_MS = 10 * 60 * 1000L
 
-        fun start(context: Context, torrent: Boolean) {
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, TorrentService::class.java).putExtra(TORRENT, torrent),
-            )
+        fun start(context: Context) {
+            ContextCompat.startForegroundService(context, Intent(context, PlaybackService::class.java))
         }
 
-        fun stop(context: Context) {
-            context.stopService(Intent(context, TorrentService::class.java))
-        }
+        fun order(context: Context, name: String): PendingIntent = PendingIntent.getService(
+            context,
+            name.hashCode(),
+            Intent(context, PlaybackService::class.java).setAction(name),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
 
         private fun decodeArt(bytes: ByteArray): Bitmap? {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

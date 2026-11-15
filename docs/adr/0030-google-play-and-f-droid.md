@@ -124,6 +124,9 @@ F-Droid route:
   policy is published at a public URL in this repository.
   `TorrentService` is declared as `mediaPlayback`: it runs only while a
   torrent is open for playback.
+  **Amended 2026-11-15:** the service is now `PlaybackService` and runs
+  while any video plays, loads or is paused, or a torrent is open, with a
+  media notification and session (`docs/COMPATIBILITY.md`, Android).
 - Before the first review in either store, the owner decides whether
   store builds list the Community addon catalog.
 

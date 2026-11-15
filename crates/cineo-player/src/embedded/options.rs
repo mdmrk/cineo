@@ -131,8 +131,14 @@ pub(super) fn command_args(command: PlayerCommand) -> Option<Vec<String>> {
         PlayerCommand::SetSubtitleDelay(seconds) if seconds.is_finite() => {
             vec!["set".into(), "sub-delay".into(), format!("{seconds:.3}")]
         }
+        PlayerCommand::SetSpeed(speed) if speed.is_finite() => vec![
+            "set".into(),
+            "speed".into(),
+            format!("{:.2}", speed.clamp(0.25, 4.0)),
+        ],
         PlayerCommand::SeekTo(_)
         | PlayerCommand::SeekBy(_)
+        | PlayerCommand::SetSpeed(_)
         | PlayerCommand::SetVolume(_)
         | PlayerCommand::SetSubtitleDelay(_) => return None,
         PlayerCommand::ToggleMute => vec!["cycle".into(), "mute".into()],

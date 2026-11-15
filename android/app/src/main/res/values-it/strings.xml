@@ -258,8 +258,11 @@
     </plurals>
     <string name="binge_watching">Riproduci automaticamente l\'episodio successivo</string>
     <string name="binge_watching_help">Al termine di un episodio, il successivo parte dallo stesso add-on, oppure si aprono i suoi flussi.</string>
-    <string name="pause_on_leave">Metti in pausa all\'uscita dall\'app</string>
-    <string name="pause_on_leave_help">Il video va in pausa quando l\'app passa in background o lo schermo si spegne.</string>
+    <string name="on_leave">All\'uscita dall\'app</string>
+    <string name="on_leave_help">Cosa fa un video in riproduzione quando l\'app passa in background.</string>
+    <string name="on_leave_pause">Metti in pausa</string>
+    <string name="on_leave_play">Continua a riprodurre</string>
+    <string name="on_leave_pip">Picture-in-picture</string>
     <string name="next_notice">Avviso dell\'episodio successivo</string>
     <string name="next_notice_help">Quanto prima della fine viene proposto l\'episodio successivo.</string>
     <string name="next_notice_off">Disattivato</string>

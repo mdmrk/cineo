@@ -76,7 +76,6 @@ async fn changed_settings_reach_the_player_and_survive_a_restart_until_reset() {
         saved,
         Settings {
             torrent_storage: TorrentStorage::Disk4096,
-            pause_on_minimize: true,
             ..Settings::default()
         }
     );
@@ -93,7 +92,7 @@ fn a_new_install_keeps_torrent_data_on_disk_until_changed_and_again_after_a_rese
     let (cineo, views) = start(dir.path());
     let first = wait_for(&views, |_| true).settings;
     assert_eq!(first.torrent_storage.value, "disk");
-    assert!(first.pause_on_minimize.on);
+    assert_eq!(first.on_leave.value, "pip");
     cineo.change_setting(SettingChange::Value {
         key: "torrent_storage".into(),
         value: "ram-512".into(),

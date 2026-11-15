@@ -643,9 +643,14 @@ The full evidence for the rows above whose notes do not fit in the table.
   video can take the surface
   (`real_libmpv_is_destroyed_before_an_ended_player_is_dropped`).
 - While a video plays the app holds Android's audio focus, so other apps'
-  music pauses, and it pauses itself when another app takes the focus
-  (`commands_are_built_from_typed_values` for the pause command; the focus
-  handling has no test and was not yet seen on the phone).
+  music pauses. It pauses when another app takes the focus, plays again
+  after a short loss such as a call if that loss paused it, leaves ducking
+  to the system, and pauses when headphones are unplugged
+  (`aShortLossPausesAndPlaysAgainWhenTheFocusReturns`,
+  `aVideoThatWasPausedBeforeAShortLossStaysPaused`,
+  `aSecondShortLossWhilePausedByTheFirstStillPlaysAgain`,
+  `aLastingLossPausesAndGivesUpTheFocusForGood`, `duckingIsLeftToTheSystem`;
+  not yet seen on the phone).
 - A 2 dp strip under the seek bar shows the cached parts of the stream, as
   on the desktop (`cached_ranges_become_fractions_of_the_duration`,
   `a_stream_plays_on_the_surface_and_its_progress_reaches_the_library`).
@@ -664,15 +669,58 @@ The full evidence for the rows above whose notes do not fit in the table.
   playback and the torrent (no test, not yet seen on the phone).
 - A stream shows one loading screen, with only a back button, until the
   video has started, and only then the picture and the controls show, as on
-  the desktop (`aPlayerThatIsStillLoadingOrBufferingHasNotStarted`,
-  `aLoadedPlayerThatIsNotWaitingHasStarted`,
-  `bufferingAfterTheStartKeepsItStarted`,
-  `aNewVideoThatIsNotLoadedStartsOver`; not yet seen on the phone).
-- The video pauses when the app leaves the screen or the screen turns off,
-  and stays paused on coming back; a Settings switch, on by default on
-  Android, turns this off
-  (`leaving_the_app_pauses_the_video_unless_turned_off`; not yet seen on the
-  phone).
+  the desktop. mpv starts once it holds 3 s of video and, after running out,
+  waits for 3 s again, and a rebuffer dims the picture under the loading
+  logo once it lasts 0.4 s
+  (`leaving_the_app_pauses_the_video_only_when_set_to_pause`
+  for the start,
+  `surface_playback_starts_without_video_output_decodes_through_the_ndk_and_draws_8_bit`
+  for the options; on the Redmi 9, 2026-11-15, a local 1080p stream started
+  in about 0.6 s and one served at two thirds of its bitrate played about
+  7 s between waits of about 5 s).
+- Settings → "When leaving the app" chooses what a playing video does:
+  picture-in-picture (the default), keep playing, or pause. With
+  picture-in-picture, leaving the app with Home keeps the video in a window
+  shaped like the video, with rewind, play or pause and forward buttons;
+  closing that window pauses, and the next episode starts inside it. In the
+  first two modes the sound goes on with the screen off, and a video that
+  has not started when the app is left, or that starts while the app is
+  away, a connecting torrent included, loads and plays its sound without a
+  picture or a window until the app is opened again; set to pause, it loads
+  and waits paused
+  (`leaving_the_app_pauses_the_video_only_when_set_to_pause`,
+  `a_video_that_starts_while_the_app_is_away_plays_unless_set_to_pause`,
+  `theWindowTakesTheShapeOfTheVideo`,
+  `aShapeAndroidWouldRefuseIsNarrowedToItsLimit`,
+  `theVideoIsCentredInTheScreenWithBarsOnTheLongSide`; all three modes, the
+  window's buttons, closing it and an episode change inside it seen on the
+  Redmi 9, Android 13, 2026-11-15; entering it below Android 12 was not
+  tried; a torrent left with Home while it loaded started playing about
+  20 s later and showed its picture on coming back, Redmi 9, 2026-11-15; a
+  video created while the app is away not yet seen on the phone).
+- Playback loads without waiting for the video surface. Without a surface
+  the video track stays selected while paused, so the picture is there on
+  coming back, and is deselected while playing, so nothing is decoded for a
+  picture nobody sees (`only_a_command_that_resumes_playback_unpauses`; on
+  the Redmi 9, 2026-11-15, a paused video showed its picture within about
+  0.5 s of returning, and one playing in the background within about 1 s
+  with the sound going on, at 6 to 9 % of one core in the background).
+- Any playback, a connecting torrent included, holds the foreground service
+  with a media notification and a media session, so the system's media
+  controls and the lock screen show the title, artwork, position, rewind,
+  forward and next episode, and headset buttons reach the player; while it
+  is not paused the service also holds a wake lock and a Wi-Fi lock. The
+  service stops when playback ends
+  (`aPositionThatAdvancesWithTheClockIsNotReportedAgain`,
+  `aSeekOrAStallIsReportedAgain`, `aPausedPositionHoldsUntilItMoves`,
+  `aChangeOfStateOrButtonsIsReportedAgain`; the controls in the shade and on
+  the lock screen, and the service, notification and locks gone after Back,
+  seen on the Redmi 9, 2026-11-15; headset buttons were not tried).
+- Holding a finger on the video plays it at 2× until the finger lifts
+  (`commands_are_built_from_typed_values`; seen on the Redmi 9, 2026-11-15).
+- The controls fade in and out, show whenever the video is paused or the
+  app comes back, and stay while they are being used (seen on the Redmi 9,
+  2026-11-15; no automated test).
 - The player has a rotate button that turns the screen between portrait and
   landscape, also with the system's auto-rotate off, and gives the
   orientation back to the system on leaving the player

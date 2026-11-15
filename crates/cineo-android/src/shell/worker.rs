@@ -2,7 +2,9 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use cineo_core::addon::ContentType;
-use cineo_core::app::{Action, Effect, LibraryItem, Notice, PlayRequest, find_subtitle, update};
+use cineo_core::app::{
+    Action, Effect, LibraryItem, Notice, OnLeave, PlayRequest, find_subtitle, update,
+};
 use cineo_net::fetch_task;
 use cineo_player::embedded::PlayerCommand;
 use cineo_player::subtitles::SubtitleFiles;
@@ -53,13 +55,6 @@ impl Shell {
                     warn!(%err, "the HTTP connections were not reset");
                 }
                 self.dispatch(Action::RetryFailed);
-            }
-            Msg::LeftApp => {
-                if self.state.settings.pause_on_minimize
-                    && let Some(playback) = &lock(&self.screen).playback
-                {
-                    playback.send(PlayerCommand::SetPause(true));
-                }
             }
             Msg::Shutdown => return false,
         }
@@ -155,6 +150,9 @@ impl Shell {
                     auto: request.settings.subtitle_languages().collect(),
                 };
                 let mut screen = lock(&self.screen);
+                if screen.away && self.state.settings.on_leave == OnLeave::Pause {
+                    playback.send(PlayerCommand::SetPause(true));
+                }
                 screen.subtitles = Some(subtitles);
                 if let Some(wid) = screen.wid
                     && let Err(err) = playback.attach_surface(wid)
@@ -249,6 +247,7 @@ impl Shell {
     fn publish(&mut self) {
         let (playing, finished) = {
             let mut screen = lock(&self.screen);
+            screen.pause_on_leave = self.state.settings.on_leave == OnLeave::Pause;
             let finished = if self.state.playing.is_none() {
                 screen.art = None;
                 screen.take_player()

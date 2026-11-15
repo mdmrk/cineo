@@ -9,6 +9,7 @@ import io.github.mdmrk.cineo.rust.StartException
 import io.github.mdmrk.cineo.rust.StateListener
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,6 +21,8 @@ class CineoApplication : Application() {
         private set
 
     val cineo: Cineo? get() = (started as? Started.Running)?.cineo
+
+    val player: Player? by lazy { cineo?.let { Player(it, view, MainScope()) } }
 
     override fun onCreate() {
         super.onCreate()

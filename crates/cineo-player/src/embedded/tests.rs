@@ -76,6 +76,16 @@ fn the_video_track_hidden_without_a_surface_is_the_selected_one() {
 }
 
 #[test]
+fn only_a_command_that_resumes_playback_unpauses() {
+    assert!(unpauses(PlayerCommand::SetPause(false), true));
+    assert!(unpauses(PlayerCommand::SetPause(false), false));
+    assert!(unpauses(PlayerCommand::TogglePause, true));
+    assert!(!unpauses(PlayerCommand::TogglePause, false));
+    assert!(!unpauses(PlayerCommand::SetPause(true), true));
+    assert!(!unpauses(PlayerCommand::SeekBy(10.0), true));
+}
+
+#[test]
 fn only_missing_script_options_are_tolerated() {
     let missing = ffi::MpvError {
         message: "option not found".into(),
@@ -104,6 +114,9 @@ fn surface_playback_starts_without_video_output_decodes_through_the_ndk_and_draw
             .map(|(_, v)| *v)
     };
     assert_eq!(option("vo"), Some("null"));
+    assert_eq!(option("vid"), Some("no"));
+    assert_eq!(option("cache-pause-initial"), Some("yes"));
+    assert_eq!(option("cache-pause-wait"), Some("3"));
     assert_eq!(option("gpu-context"), Some("android"));
     assert_eq!(option("vd-lavc-o"), Some("ndk_codec=1"));
     assert_eq!(option("profile"), Some("fast"));
@@ -160,6 +173,15 @@ fn commands_are_built_from_typed_values() {
         args(PlayerCommand::SetMute(false)).as_deref(),
         Some("set mute no")
     );
+    assert_eq!(
+        args(PlayerCommand::SetSpeed(2.0)).as_deref(),
+        Some("set speed 2.00")
+    );
+    assert_eq!(
+        args(PlayerCommand::SetSpeed(40.0)).as_deref(),
+        Some("set speed 4.00")
+    );
+    assert_eq!(args(PlayerCommand::SetSpeed(f64::NAN)), None);
     assert_eq!(
         args(PlayerCommand::SeekTo(61.5)).as_deref(),
         Some("seek 61.500 absolute")

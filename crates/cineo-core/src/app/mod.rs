@@ -18,8 +18,8 @@ pub use message::{Notice, PlaybackFailure, Problem};
 pub use plan::{CatalogTarget, board_targets};
 pub use release::{LATEST_RELEASE_URL, ReleaseError, parse_release, release_page};
 pub use settings::{
-    AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, PeerLimit, Percent,
-    Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
+    AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, OnLeave, PeerLimit,
+    Percent, Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
     SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
     SubtitlePosition, SubtitleSize, TorrentPort, TorrentStorage, UiLanguage, UploadLimit,
     WatchedAt,

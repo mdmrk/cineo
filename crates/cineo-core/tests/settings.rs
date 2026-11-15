@@ -1,8 +1,8 @@
 #![allow(clippy::unwrap_used, reason = "test helpers panic on purpose")]
 
 use cineo_core::app::{
-    AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice, PeerLimit,
-    Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
+    AudioOutput, DownloadLimit, HideControls, InterfaceScale, Language, NextVideoNotice, OnLeave,
+    PeerLimit, Percent, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
     SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
     SubtitlePosition, SubtitleSize, TorrentPort, TorrentStorage, UiLanguage, UploadLimit,
     WatchedAt,
@@ -24,6 +24,7 @@ fn every_setting_reads_back_what_it_saves() {
         Setting::ShortSeekStep(ShortSeekStep::S1),
         Setting::EscapeLeavesFullscreen(false),
         Setting::PauseOnMinimize(true),
+        Setting::OnLeave(OnLeave::Play),
         Setting::HideControls(HideControls::Long),
         Setting::RememberVolume(false),
         Setting::Volume(Percent::new(35)),
@@ -96,6 +97,7 @@ fn saved_keys_never_change() {
             "escape_leaves_fullscreen",
             "pause_on_minimize",
             "hide_controls",
+            "on_leave",
             "remember_volume",
             "volume",
             "subtitle_size",

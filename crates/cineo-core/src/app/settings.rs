@@ -157,6 +157,10 @@ impl HideControls {
 }
 
 choice! {
+    OnLeave { Pause = "pause", Play = "play", PictureInPicture = "pip", }
+}
+
+choice! {
     SubtitleFont { Sans = "sans", Serif = "serif", Mono = "mono", }
 }
 
@@ -433,6 +437,7 @@ settings! {
     escape_leaves_fullscreen: bool = true => EscapeLeavesFullscreen("escape_leaves_fullscreen"),
     pause_on_minimize: bool = false => PauseOnMinimize("pause_on_minimize"),
     hide_controls: HideControls = HideControls::Normal => HideControls("hide_controls"),
+    on_leave: OnLeave = OnLeave::PictureInPicture => OnLeave("on_leave"),
     remember_volume: bool = true => RememberVolume("remember_volume"),
     volume: Percent = Percent::new(100) => Volume("volume"),
     subtitle_size: SubtitleSize = SubtitleSize::new(100) => SubtitleSize("subtitle_size"),
