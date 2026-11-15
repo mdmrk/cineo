@@ -1,5 +1,6 @@
 package io.github.mdmrk.cineo.ui
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -186,7 +187,7 @@ private fun LoadingArt(title: String, logo: String?, images: Images) {
     val phase by pulse.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(PULSE_PERIOD), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(PULSE_PERIOD, easing = LinearEasing), RepeatMode.Restart),
         label = "pulse",
     )
     Box(
