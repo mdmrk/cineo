@@ -4,7 +4,9 @@ use std::path::Path;
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 
-use super::events::{apply_stat, parse_cached_ranges, parse_tracks, replace_shared};
+use super::events::{
+    apply_stat, parse_buffered_bitrate, parse_cached_ranges, parse_tracks, replace_shared,
+};
 use super::ffi::Value;
 use super::*;
 use cineo_core::app::{
@@ -297,6 +299,22 @@ fn cached_ranges_become_fractions_of_the_duration() {
         status.cached_spans().collect::<Vec<_>>(),
         vec![(0.0, 0.25), (0.5, 1.0)]
     );
+}
+
+#[test]
+fn the_buffered_bitrate_needs_ten_seconds_of_one_cache_state() {
+    let state = |bytes: &str, seconds: &str| {
+        parse_buffered_bitrate(&format!(
+            r#"{{"fw-bytes":{bytes},"cache-duration":{seconds},"cache-end":40}}"#
+        ))
+    };
+    assert_eq!(state("30000000", "20.0"), Some(1_500_000));
+    assert_eq!(state("30000000", "9.9"), None, "too short to measure");
+    assert_eq!(state("0", "20.0"), None);
+    assert_eq!(state("-5", "20.0"), None);
+    assert_eq!(parse_buffered_bitrate(r#"{"fw-bytes":30000000}"#), None);
+    assert_eq!(parse_buffered_bitrate(r#"{"cache-duration":20.0}"#), None);
+    assert_eq!(parse_buffered_bitrate("not json"), None);
 }
 
 #[test]

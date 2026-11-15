@@ -10,7 +10,10 @@ pub(crate) enum Input {
     Duration(f64),
     FileLoaded,
     EndFile(EndReason),
-    Buffered(f64),
+    Buffered {
+        seconds: f64,
+        bytes_per_second: Option<u64>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -69,13 +72,19 @@ impl Tracker {
             ))),
             Input::EndFile(EndReason::Other) if self.started => finish(self.closed()),
             Input::EndFile(EndReason::Other) => Step::default(),
-            Input::Buffered(seconds) => {
+            Input::Buffered {
+                seconds,
+                bytes_per_second,
+            } => {
                 let seconds = seconds_to_ms(seconds) / 1000;
                 if self.buffered_s.replace(seconds) == Some(seconds) {
                     return Step::default();
                 }
                 Step {
-                    event: Some(PlayerEvent::Buffered { seconds }),
+                    event: Some(PlayerEvent::Buffered {
+                        seconds,
+                        bytes_per_second,
+                    }),
                     ..Step::default()
                 }
             }
@@ -136,11 +145,27 @@ mod tests {
     fn buffered_seconds_are_reported_when_the_whole_second_changes() {
         let mut tracker = Tracker::new();
         let t0 = Instant::now();
-        let buffered = |seconds| Some(PlayerEvent::Buffered { seconds });
-        assert_eq!(tracker.on(Input::Buffered(0.4), t0).event, buffered(0));
-        assert_eq!(tracker.on(Input::Buffered(0.9), t0).event, None);
-        assert_eq!(tracker.on(Input::Buffered(29.7), t0).event, buffered(29));
-        assert_eq!(tracker.on(Input::Buffered(f64::NAN), t0).event, buffered(0));
+        let input = |seconds, bytes_per_second| Input::Buffered {
+            seconds,
+            bytes_per_second,
+        };
+        let buffered = |seconds, bytes_per_second| {
+            Some(PlayerEvent::Buffered {
+                seconds,
+                bytes_per_second,
+            })
+        };
+        assert_eq!(tracker.on(input(0.4, None), t0).event, buffered(0, None));
+        assert_eq!(tracker.on(input(0.9, Some(7)), t0).event, None);
+        assert_eq!(
+            tracker.on(input(29.7, Some(9)), t0).event,
+            buffered(29, Some(9)),
+            "the measured bitrate goes with the seconds"
+        );
+        assert_eq!(
+            tracker.on(input(f64::NAN, None), t0).event,
+            buffered(0, None)
+        );
     }
 
     fn progress(time_ms: u64, duration_ms: u64) -> PlayerEvent {

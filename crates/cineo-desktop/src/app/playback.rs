@@ -280,7 +280,10 @@ fn volume_to_save(settings: &Settings, volume: Option<f64>) -> Option<Percent> {
 
 fn feed_player(feed: &PlayerFeed, event: &PlayerEvent) {
     match event {
-        PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
+        PlayerEvent::Buffered {
+            seconds,
+            bytes_per_second,
+        } => feed.buffered(*seconds, *bytes_per_second),
         PlayerEvent::Progress { duration_ms, .. }
         | PlayerEvent::Ended { duration_ms, .. }
         | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),

@@ -9,11 +9,23 @@ pub use text::plain_text;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PlayerEvent {
-    Progress { time_ms: u64, duration_ms: u64 },
-    Ended { time_ms: u64, duration_ms: u64 },
+    Progress {
+        time_ms: u64,
+        duration_ms: u64,
+    },
+    Ended {
+        time_ms: u64,
+        duration_ms: u64,
+    },
     Failed(String),
-    Closed { time_ms: u64, duration_ms: u64 },
-    Buffered { seconds: u64 },
+    Closed {
+        time_ms: u64,
+        duration_ms: u64,
+    },
+    Buffered {
+        seconds: u64,
+        bytes_per_second: Option<u64>,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]

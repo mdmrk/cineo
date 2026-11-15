@@ -10,7 +10,7 @@ use cineo_core::addon::{
     parse_stream_response, parse_subtitles_response,
 };
 use cineo_core::app::{
-    Action, Effect, Language, LibraryItem, Loadable, Lookahead, ManifestOrigin, Notice,
+    Action, Buffered, Effect, Language, LibraryItem, Loadable, Lookahead, ManifestOrigin, Notice,
     PlaybackFailure, Problem, SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest,
     TorrentStatus, TorrentStorage, WatchedAt, continue_watching, find_subtitle, update,
 };

@@ -32,6 +32,24 @@ pub(super) fn parse_cached_ranges(json: &str) -> Vec<(f64, f64)> {
         .collect()
 }
 
+const BITRATE_OVER_S: f64 = 10.0;
+
+pub(super) fn parse_buffered_bitrate(json: &str) -> Option<u64> {
+    let state = serde_json::from_str::<Json>(json).ok()?;
+    let bytes = state.get("fw-bytes")?.as_f64()?;
+    let seconds = state.get("cache-duration")?.as_f64()?;
+    if !(bytes > 0.0 && seconds >= BITRATE_OVER_S && seconds.is_finite()) {
+        return None;
+    }
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "a positive, finite byte rate"
+    )]
+    let rate = (bytes / seconds) as u64;
+    Some(rate)
+}
+
 pub(super) fn parse_tracks(json: &str) -> Vec<Track> {
     let Ok(Json::Array(items)) = serde_json::from_str::<Json>(json) else {
         return Vec::new();
@@ -95,6 +113,7 @@ pub(super) struct EventLoop {
     pub(super) notify: Arc<dyn Fn() + Send + Sync>,
     pub(super) events: mpsc::UnboundedSender<PlayerEvent>,
     pub(super) tracker: Tracker,
+    pub(super) buffered_bitrate: Option<u64>,
 }
 
 pub(super) fn log_level(mpv_level: &str) -> tracing::Level {
@@ -159,7 +178,7 @@ impl EventLoop {
         debug!("mpv event loop ended");
     }
 
-    fn property(&self, id: u64, value: &Value) -> Option<Input> {
+    fn property(&mut self, id: u64, value: &Value) -> Option<Input> {
         let number = match *value {
             Value::Double(x) if x.is_finite() => x,
             _ => 0.0,
@@ -187,15 +206,19 @@ impl EventLoop {
                 self.update(|s| replace_shared(&mut s.tracks, tracks));
             }
             CACHE_STATE => {
-                let ranges = match value {
-                    Value::Text(json) => parse_cached_ranges(json),
-                    _ => Vec::new(),
+                let (ranges, bitrate) = match value {
+                    Value::Text(json) => (parse_cached_ranges(json), parse_buffered_bitrate(json)),
+                    _ => (Vec::new(), None),
                 };
+                self.buffered_bitrate = bitrate;
                 self.update(|s| replace_shared(&mut s.cached, ranges));
             }
             CACHE_DURATION => {
                 self.update(|s| apply_stat(&mut s.stats, id, value));
-                return Some(Input::Buffered(number));
+                return Some(Input::Buffered {
+                    seconds: number,
+                    bytes_per_second: self.buffered_bitrate,
+                });
             }
             _ => self.update(|s| apply_stat(&mut s.stats, id, value)),
         }

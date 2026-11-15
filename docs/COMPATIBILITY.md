@@ -139,6 +139,16 @@ The full evidence for the rows above whose notes do not fit in the table.
   `a_lookahead_of_one_byte_still_streams_the_whole_file`); the torrent data
   already held stays as a cache up to the configured size; not seen with a
   real swarm.
+- A refill is sized at the larger of the file's average bitrate and the
+  bitrate of what mpv holds, measured once it holds 10 s
+  (`fw-bytes` / `cache-duration` of one `demuxer-cache-state`), so a
+  high-bitrate scene is filled in one go and a stream without a known
+  duration fills in bursts too
+  (`a_measured_bitrate_above_the_average_sizes_the_refill`,
+  `without_a_duration_the_measured_bitrate_sizes_the_refill`,
+  `the_buffered_bitrate_needs_ten_seconds_of_one_cache_state`; libmpv 0.41
+  reported a steady rate for a 14 s WAV, 2026-11-15); not seen with a real
+  swarm.
 - With a window the torrent is added unpaused, so the peers found for the
   metadata start the download, and it downloads nothing until the player
   reads

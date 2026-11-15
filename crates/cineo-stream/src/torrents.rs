@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use cineo_core::app::{Action, Lookahead, Settings, TorrentRequest, TorrentStatus};
+use cineo_core::app::{Action, Buffered, Lookahead, Settings, TorrentRequest, TorrentStatus};
 use tokio::runtime::Handle;
 use tokio::sync::{Mutex, watch};
 use tokio::task::AbortHandle;
@@ -17,7 +17,7 @@ const STATUS_INTERVAL: Duration = Duration::from_secs(1);
 #[derive(Debug, Clone, PartialEq)]
 struct Feed {
     url: Url,
-    buffered_s: Option<u64>,
+    buffered: Option<Buffered>,
     duration_ms: u64,
 }
 
@@ -28,15 +28,19 @@ impl PlayerFeed {
     pub fn playing(&self, url: &Url) {
         self.0.send_replace(Some(Feed {
             url: url.clone(),
-            buffered_s: None,
+            buffered: None,
             duration_ms: 0,
         }));
     }
 
-    pub fn buffered(&self, seconds: u64) {
+    pub fn buffered(&self, seconds: u64, bytes_per_second: Option<u64>) {
+        let buffered = Buffered {
+            seconds,
+            bytes_per_second,
+        };
         self.0.send_if_modified(|feed| {
             feed.as_mut()
-                .is_some_and(|feed| feed.buffered_s.replace(seconds) != Some(seconds))
+                .is_some_and(|feed| feed.buffered.replace(buffered) != Some(buffered))
         });
     }
 
@@ -156,9 +160,9 @@ impl Torrents {
                     .borrow_and_update()
                     .as_ref()
                     .filter(|feed| feed.url == url)
-                    .and_then(|feed| Some((feed.buffered_s?, feed.duration_ms)));
-                if let (Some((buffered_s, duration_ms)), Some(size)) = (player, size)
-                    && let Some(bytes) = lookahead.update(buffered_s, size, duration_ms)
+                    .and_then(|feed| Some((feed.buffered?, feed.duration_ms)));
+                if let (Some((buffered, duration_ms)), Some(size)) = (player, size)
+                    && let Some(bytes) = lookahead.update(buffered, size, duration_ms)
                 {
                     running.set_lookahead(&info_hash, bytes);
                 }

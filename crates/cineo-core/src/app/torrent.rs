@@ -132,15 +132,24 @@ impl TorrentPlayback {
     }
 }
 
-fn lookahead_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
-    if size == 0 || duration_ms == 0 {
-        return None;
-    }
-    if seconds == 0 {
-        return Some(0);
-    }
-    let bytes = u128::from(size) * u128::from(seconds) * 1000 / u128::from(duration_ms);
-    Some(u64::try_from(bytes).unwrap_or(u64::MAX).max(1))
+fn scaled(bytes: u64, seconds: u64, over: u64) -> u64 {
+    let scaled = u128::from(bytes) * u128::from(seconds) / u128::from(over);
+    u64::try_from(scaled).unwrap_or(u64::MAX)
+}
+
+fn average_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
+    (size > 0 && duration_ms > 0).then(|| scaled(size.saturating_mul(1000), seconds, duration_ms))
+}
+
+fn measured_bytes(buffered: Buffered, seconds: u64) -> Option<u64> {
+    let rate = buffered.bytes_per_second.filter(|rate| *rate > 0)?;
+    Some(rate.saturating_mul(seconds))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Buffered {
+    pub seconds: u64,
+    pub bytes_per_second: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -162,18 +171,20 @@ impl Lookahead {
     pub(crate) const FULL_S: u64 = 120;
     pub const RESUME_S: u64 = 100;
 
-    pub fn update(&mut self, buffered_s: u64, size: u64, duration_ms: u64) -> Option<u64> {
-        if buffered_s >= Self::FULL_S {
+    pub fn update(&mut self, buffered: Buffered, size: u64, duration_ms: u64) -> Option<u64> {
+        if buffered.seconds >= Self::FULL_S {
             self.filling = false;
-        } else if buffered_s <= Self::RESUME_S {
+        } else if buffered.seconds <= Self::RESUME_S {
             self.filling = true;
         }
         let seconds = if self.filling {
-            Self::FULL_S.saturating_sub(buffered_s)
+            Self::FULL_S.saturating_sub(buffered.seconds)
         } else {
             0
         };
-        let bytes = lookahead_bytes(size, duration_ms, seconds)?;
+        let bytes = average_bytes(size, duration_ms, seconds)
+            .max(measured_bytes(buffered, seconds))?
+            .max(u64::from(seconds > 0));
         if self.sent == Some(bytes) {
             return None;
         }

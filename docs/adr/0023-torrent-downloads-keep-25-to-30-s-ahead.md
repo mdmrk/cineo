@@ -48,6 +48,14 @@ size (`TorrentStatus::Streaming`) and the duration (`PlaybackProgress`).
   `Engine::set_lookahead` applies it.
 - Until the size, the duration and the buffer are known, the default
   lookahead stays.
+- **Amended 2026-11-15 (owner decision): the bitrate is the larger of the
+  average and the one measured in mpv's buffer.** `cineo-player` reads
+  `fw-bytes` and `cache-duration` from one `demuxer-cache-state` value and,
+  once mpv holds 10 s, reports bytes per second with
+  `PlayerEvent::Buffered`. A stream without a known duration then uses the
+  measured bitrate alone instead of the default lookahead. The lookahead
+  state now lives in `cineo-stream`'s torrent task (`Lookahead`,
+  `PlayerFeed`), not in core effects.
 
 ## Consequences
 - mpv's buffer moves between about 25 and 30 s instead of staying at 30 s.
@@ -60,6 +68,12 @@ size (`TorrentStatus::Streaming`) and the duration (`PlaybackProgress`).
   as mpv does.
 - The average bitrate is an estimate: in a high-bitrate scene a refill
   covers fewer seconds than asked, and the next buffer report asks again.
+  Since 2026-11-15 the measured bitrate covers that case once mpv holds
+  10 s. mpv's `fw-bytes` counts its own per-packet overhead (VERIFIED:
+  24.5 kB/s reported for a 16 kB/s WAV, libmpv 0.41), so a refill can
+  reach somewhat past 120 s, most with small packets; the lookahead only
+  ever grows from the average, and the fork still caps it at three
+  quarters of the window.
 - The fork carries a third change to port on upstream updates.
 - Docs: COMPATIBILITY.md, DEVELOPMENT.md (fork commit), ADR-0019 (the
   lookahead is no longer fixed at three quarters of the window).

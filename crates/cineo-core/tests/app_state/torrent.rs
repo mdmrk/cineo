@@ -109,34 +109,107 @@ fn a_served_torrent_plays_from_the_loopback_url_and_stopping_playback_stops_the_
     assert!(update(&mut state, Action::PlaybackStopped).is_empty());
 }
 
+fn seconds(seconds: u64) -> Buffered {
+    Buffered {
+        seconds,
+        bytes_per_second: None,
+    }
+}
+
+fn holding(seconds: u64, bytes_per_second: u64) -> Buffered {
+    Buffered {
+        seconds,
+        bytes_per_second: Some(bytes_per_second),
+    }
+}
+
 #[test]
 fn the_torrent_fills_up_to_two_minutes_and_resumes_at_100_seconds() {
     let mut fill = Lookahead::default();
     let (size, duration_ms) = (1_440_000_000, 7_200_000);
-    assert_eq!(fill.update(0, 0, duration_ms), None, "no size yet");
-    assert_eq!(fill.update(0, size, 0), None, "no duration yet");
+    assert_eq!(fill.update(seconds(0), 0, duration_ms), None, "no size yet");
+    assert_eq!(fill.update(seconds(0), size, 0), None, "no duration yet");
     assert_eq!(
-        fill.update(0, size, duration_ms),
+        fill.update(seconds(0), size, duration_ms),
         Some(24_000_000),
         "120 s at 200 kB/s while nothing is buffered"
     );
-    assert_eq!(fill.update(0, size, duration_ms), None, "unchanged");
-    assert_eq!(fill.update(10, size, duration_ms), Some(22_000_000));
-    assert_eq!(fill.update(119, size, duration_ms), Some(200_000));
-    assert_eq!(fill.update(120, size, duration_ms), Some(0), "full");
-    assert_eq!(fill.update(117, size, duration_ms), None, "stays stopped");
-    assert_eq!(fill.update(101, size, duration_ms), None);
     assert_eq!(
-        fill.update(100, size, duration_ms),
+        fill.update(seconds(0), size, duration_ms),
+        None,
+        "unchanged"
+    );
+    assert_eq!(
+        fill.update(seconds(10), size, duration_ms),
+        Some(22_000_000)
+    );
+    assert_eq!(fill.update(seconds(119), size, duration_ms), Some(200_000));
+    assert_eq!(
+        fill.update(seconds(120), size, duration_ms),
+        Some(0),
+        "full"
+    );
+    assert_eq!(
+        fill.update(seconds(117), size, duration_ms),
+        None,
+        "stays stopped"
+    );
+    assert_eq!(fill.update(seconds(101), size, duration_ms), None);
+    assert_eq!(
+        fill.update(seconds(100), size, duration_ms),
         Some(4_000_000),
         "at 100 s it fills up to 120 s again"
     );
-    assert_eq!(fill.update(101, size, duration_ms), Some(3_800_000));
     assert_eq!(
-        fill.update(0, size, duration_ms),
+        fill.update(seconds(101), size, duration_ms),
+        Some(3_800_000)
+    );
+    assert_eq!(
+        fill.update(seconds(0), size, duration_ms),
         Some(24_000_000),
         "a seek"
     );
+}
+
+#[test]
+fn a_measured_bitrate_above_the_average_sizes_the_refill() {
+    let mut fill = Lookahead::default();
+    let (size, duration_ms) = (1_440_000_000, 7_200_000);
+    assert_eq!(
+        fill.update(holding(20, 1_000_000), size, duration_ms),
+        Some(100_000_000),
+        "100 s at the 1 MB/s mpv holds, not at the 200 kB/s average"
+    );
+    assert_eq!(
+        fill.update(holding(20, 50_000), size, duration_ms),
+        Some(20_000_000),
+        "a measure under the average does not shrink the refill"
+    );
+    assert_eq!(
+        fill.update(holding(20, 0), size, duration_ms),
+        None,
+        "nothing measured, the same as the average"
+    );
+    assert_eq!(
+        fill.update(holding(120, 1_000_000), size, duration_ms),
+        Some(0),
+        "full"
+    );
+}
+
+#[test]
+fn without_a_duration_the_measured_bitrate_sizes_the_refill() {
+    let mut fill = Lookahead::default();
+    let size = 1_440_000_000;
+    assert_eq!(fill.update(seconds(5), size, 0), None, "no bitrate yet");
+    assert_eq!(
+        fill.update(holding(60, 500_000), size, 0),
+        Some(30_000_000),
+        "60 s at 500 kB/s"
+    );
+    assert_eq!(fill.update(holding(120, 500_000), 0, 0), Some(0), "full");
+    assert_eq!(fill.update(holding(110, 500_000), 0, 0), None);
+    assert_eq!(fill.update(holding(100, 500_000), 0, 0), Some(10_000_000));
 }
 
 #[test]

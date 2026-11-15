@@ -171,7 +171,10 @@ impl Shell {
                     meta_id,
                     video_id,
                     move |event| match event {
-                        PlayerEvent::Buffered { seconds } => feed.buffered(*seconds),
+                        PlayerEvent::Buffered {
+                            seconds,
+                            bytes_per_second,
+                        } => feed.buffered(*seconds, *bytes_per_second),
                         PlayerEvent::Progress { duration_ms, .. }
                         | PlayerEvent::Ended { duration_ms, .. }
                         | PlayerEvent::Closed { duration_ms, .. } => feed.duration(*duration_ms),

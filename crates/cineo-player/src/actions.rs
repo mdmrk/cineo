@@ -153,7 +153,10 @@ mod tests {
             }
         );
         assert_eq!(
-            run(PlayerEvent::Buffered { seconds: 3 }),
+            run(PlayerEvent::Buffered {
+                seconds: 3,
+                bytes_per_second: None,
+            }),
             EventActions {
                 actions: vec![],
                 last: false
@@ -165,12 +168,18 @@ mod tests {
     async fn forwarding_stops_after_the_last_event() {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         for event in [
-            PlayerEvent::Buffered { seconds: 4 },
+            PlayerEvent::Buffered {
+                seconds: 4,
+                bytes_per_second: None,
+            },
             PlayerEvent::Closed {
                 time_ms: 0,
                 duration_ms: 9_000,
             },
-            PlayerEvent::Buffered { seconds: 5 },
+            PlayerEvent::Buffered {
+                seconds: 5,
+                bytes_per_second: None,
+            },
         ] {
             tx.send(event).unwrap();
         }

@@ -501,6 +501,7 @@ impl Player {
             notify,
             events: tx,
             tracker: Tracker::new(),
+            buffered_bitrate: None,
         };
         let joins_on_drop = renderer.is_none();
         let events_thread = std::thread::Builder::new()

@@ -113,6 +113,21 @@ Format:
 - Exit: a librqbit hook for abandoned pieces, and skipping unreadable
   upload requests instead of disconnecting.
 
+### Streaming engine: the measured bitrate includes mpv's overhead
+- Where: [events.rs](../crates/cineo-player/src/embedded/events.rs) (`parse_buffered_bitrate`),
+  [torrent.rs](../crates/cineo-core/src/app/torrent.rs) (`Lookahead`)
+- Gap: the bitrate used to size a torrent refill comes from mpv's
+  `fw-bytes`, which adds per-packet overhead and leaves out tracks that
+  are not selected. libmpv 0.41 reported 24.5 kB/s for a 16 kB/s WAV
+  (2026-11-15); how far it is off for video is UNKNOWN. The value sent
+  with a buffer report is the one of the previous cache state.
+- Why: mpv exposes no byte position for the end of its buffer.
+- Instead: the larger of this and the average bitrate is used, so a
+  refill is never smaller than before; it can download somewhat more
+  than 120 s ahead, up to three quarters of the window.
+- Exit: measure from the engine's own read position and mpv's
+  `demuxer-cache-time`.
+
 ### Streaming engine: shared urgent pieces waste some bandwidth and blame
 - Where: `crates/librqbit/src/piece_tracker.rs` in our librqbit fork
   ([commit be52c57a](https://github.com/mdmrk/rqbit/commit/be52c57a0d6c85d6d35467a2c8d5d60f66924aea), ADR-0016)
