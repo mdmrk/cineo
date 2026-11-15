@@ -133,11 +133,11 @@ class PlaybackService : Service() {
             return
         }
         loadArt(cineo, (playback?.art ?: view?.connecting)?.let { it.background ?: it.logo })
-        session?.update(playback, status, art)
+        val reported = session?.update(playback, status, art) == true
         if (status?.loaded == true && !status.paused) focus?.playing()
         keepAwake(status?.paused != true)
         val now = shown(view, status, art)
-        if (now != shown) {
+        if (now != shown || reported) {
             shown = now
             getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(now))
         }

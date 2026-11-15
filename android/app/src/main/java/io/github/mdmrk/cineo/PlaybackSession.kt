@@ -53,17 +53,19 @@ internal class PlaybackSession(private val context: Context, private val player:
         player.seekBy((direction * step).toDouble())
     }
 
-    fun update(playback: PlaybackView?, status: PlayerStatusView?, art: Bitmap?) {
+    fun update(playback: PlaybackView?, status: PlayerStatusView?, art: Bitmap?): Boolean {
         this.playback = playback
         if (playback == null) {
             session.isActive = false
             reported = null
-            return
+            return false
         }
+        var changed = false
         val durationMs = ((status?.durationS ?: 0.0) * 1000).toLong()
         val wanted = Triple(playback.art.title, durationMs, art)
         if (metadata != wanted) {
             metadata = wanted
+            changed = true
             session.setMetadata(
                 MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_TITLE, playback.art.title)
@@ -86,6 +88,7 @@ internal class PlaybackSession(private val context: Context, private val player:
         )
         if (reported?.stillHolds(now) != true) {
             reported = now
+            changed = true
             session.setPlaybackState(
                 PlaybackState.Builder()
                     .setActions(ACTIONS or if (now.next) PlaybackState.ACTION_SKIP_TO_NEXT else 0L)
@@ -96,6 +99,7 @@ internal class PlaybackSession(private val context: Context, private val player:
             )
         }
         session.isActive = true
+        return changed
     }
 
     fun release() {
