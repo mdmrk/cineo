@@ -761,7 +761,9 @@ async fn the_download_limit_slows_the_torrent_down() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_download_pace_slows_the_torrent_down_until_the_next_open() {
     let seeder = seeder("pace").await;
-    let engine = Engine::start(options("pace", &seeder)).await.unwrap();
+    let engine = Engine::start(memory_options("pace", &seeder))
+        .await
+        .unwrap();
     let mut elapsed = Vec::new();
     for paced in [true, false] {
         let url = engine.open(&request(&seeder)).await.unwrap();
