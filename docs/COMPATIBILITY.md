@@ -149,6 +149,15 @@ The full evidence for the rows above whose notes do not fit in the table.
   `the_buffered_bitrate_needs_ten_seconds_of_one_cache_state`; libmpv 0.41
   reported a steady rate for a 14 s WAV, 2026-11-15); not seen with a real
   swarm.
+- Once mpv holds 30 s, a refill downloads at no more than twice that
+  bitrate (at least 256 KiB/s, and never above the download limit of
+  Settings), so it does not take the whole connection; a start, a seek or
+  a buffer under 30 s downloads without that pace, and a stop or the next
+  torrent lifts it
+  (`a_refill_is_paced_at_twice_the_bitrate_once_30_seconds_are_held`,
+  `the_pace_never_exceeds_the_download_limit_setting`,
+  `a_download_pace_slows_the_torrent_down_until_the_next_open`); not seen
+  with a real swarm.
 - With a window the torrent is added unpaused, so the peers found for the
   metadata start the download, and it downloads nothing until the player
   reads

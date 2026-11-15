@@ -32,6 +32,6 @@ pub use streams::{
     Facts as StreamFacts, Quality, Resolution, StreamSort, Tier, matcher as stream_matcher,
 };
 pub use torrent::{
-    Buffered, Lookahead, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus, choose_file,
-    is_engine_url,
+    Buffered, Lookahead, Refill, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus,
+    choose_file, is_engine_url,
 };

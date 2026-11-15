@@ -162,9 +162,10 @@ impl Torrents {
                     .filter(|feed| feed.url == url)
                     .and_then(|feed| Some((feed.buffered?, feed.duration_ms)));
                 if let (Some((buffered, duration_ms)), Some(size)) = (player, size)
-                    && let Some(bytes) = lookahead.update(buffered, size, duration_ms)
+                    && let Some(refill) = lookahead.update(buffered, size, duration_ms)
                 {
-                    running.set_lookahead(&info_hash, bytes);
+                    running.set_download_pace(&info_hash, refill.bytes_per_second);
+                    running.set_lookahead(&info_hash, refill.lookahead);
                 }
             }
         });

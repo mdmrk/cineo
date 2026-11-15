@@ -123,49 +123,65 @@ fn holding(seconds: u64, bytes_per_second: u64) -> Buffered {
     }
 }
 
+fn ahead(fill: &mut Lookahead, buffered: Buffered, size: u64, duration_ms: u64) -> Option<u64> {
+    fill.update(buffered, size, duration_ms)
+        .map(|refill| refill.lookahead)
+}
+
 #[test]
 fn the_torrent_fills_up_to_two_minutes_and_resumes_at_100_seconds() {
     let mut fill = Lookahead::default();
     let (size, duration_ms) = (1_440_000_000, 7_200_000);
-    assert_eq!(fill.update(seconds(0), 0, duration_ms), None, "no size yet");
-    assert_eq!(fill.update(seconds(0), size, 0), None, "no duration yet");
     assert_eq!(
-        fill.update(seconds(0), size, duration_ms),
+        ahead(&mut fill, seconds(0), 0, duration_ms),
+        None,
+        "no size yet"
+    );
+    assert_eq!(
+        ahead(&mut fill, seconds(0), size, 0),
+        None,
+        "no duration yet"
+    );
+    assert_eq!(
+        ahead(&mut fill, seconds(0), size, duration_ms),
         Some(24_000_000),
         "120 s at 200 kB/s while nothing is buffered"
     );
     assert_eq!(
-        fill.update(seconds(0), size, duration_ms),
+        ahead(&mut fill, seconds(0), size, duration_ms),
         None,
         "unchanged"
     );
     assert_eq!(
-        fill.update(seconds(10), size, duration_ms),
+        ahead(&mut fill, seconds(10), size, duration_ms),
         Some(22_000_000)
     );
-    assert_eq!(fill.update(seconds(119), size, duration_ms), Some(200_000));
     assert_eq!(
-        fill.update(seconds(120), size, duration_ms),
+        ahead(&mut fill, seconds(119), size, duration_ms),
+        Some(200_000)
+    );
+    assert_eq!(
+        ahead(&mut fill, seconds(120), size, duration_ms),
         Some(0),
         "full"
     );
     assert_eq!(
-        fill.update(seconds(117), size, duration_ms),
+        ahead(&mut fill, seconds(117), size, duration_ms),
         None,
         "stays stopped"
     );
-    assert_eq!(fill.update(seconds(101), size, duration_ms), None);
+    assert_eq!(ahead(&mut fill, seconds(101), size, duration_ms), None);
     assert_eq!(
-        fill.update(seconds(100), size, duration_ms),
+        ahead(&mut fill, seconds(100), size, duration_ms),
         Some(4_000_000),
         "at 100 s it fills up to 120 s again"
     );
     assert_eq!(
-        fill.update(seconds(101), size, duration_ms),
+        ahead(&mut fill, seconds(101), size, duration_ms),
         Some(3_800_000)
     );
     assert_eq!(
-        fill.update(seconds(0), size, duration_ms),
+        ahead(&mut fill, seconds(0), size, duration_ms),
         Some(24_000_000),
         "a seek"
     );
@@ -176,22 +192,22 @@ fn a_measured_bitrate_above_the_average_sizes_the_refill() {
     let mut fill = Lookahead::default();
     let (size, duration_ms) = (1_440_000_000, 7_200_000);
     assert_eq!(
-        fill.update(holding(20, 1_000_000), size, duration_ms),
+        ahead(&mut fill, holding(20, 1_000_000), size, duration_ms),
         Some(100_000_000),
         "100 s at the 1 MB/s mpv holds, not at the 200 kB/s average"
     );
     assert_eq!(
-        fill.update(holding(20, 50_000), size, duration_ms),
+        ahead(&mut fill, holding(20, 50_000), size, duration_ms),
         Some(20_000_000),
         "a measure under the average does not shrink the refill"
     );
     assert_eq!(
-        fill.update(holding(20, 0), size, duration_ms),
+        ahead(&mut fill, holding(20, 0), size, duration_ms),
         None,
         "nothing measured, the same as the average"
     );
     assert_eq!(
-        fill.update(holding(120, 1_000_000), size, duration_ms),
+        ahead(&mut fill, holding(120, 1_000_000), size, duration_ms),
         Some(0),
         "full"
     );
@@ -201,15 +217,77 @@ fn a_measured_bitrate_above_the_average_sizes_the_refill() {
 fn without_a_duration_the_measured_bitrate_sizes_the_refill() {
     let mut fill = Lookahead::default();
     let size = 1_440_000_000;
-    assert_eq!(fill.update(seconds(5), size, 0), None, "no bitrate yet");
     assert_eq!(
-        fill.update(holding(60, 500_000), size, 0),
+        ahead(&mut fill, seconds(5), size, 0),
+        None,
+        "no bitrate yet"
+    );
+    assert_eq!(
+        ahead(&mut fill, holding(60, 500_000), size, 0),
         Some(30_000_000),
         "60 s at 500 kB/s"
     );
-    assert_eq!(fill.update(holding(120, 500_000), 0, 0), Some(0), "full");
-    assert_eq!(fill.update(holding(110, 500_000), 0, 0), None);
-    assert_eq!(fill.update(holding(100, 500_000), 0, 0), Some(10_000_000));
+    assert_eq!(
+        ahead(&mut fill, holding(120, 500_000), 0, 0),
+        Some(0),
+        "full"
+    );
+    assert_eq!(ahead(&mut fill, holding(110, 500_000), 0, 0), None);
+    assert_eq!(
+        ahead(&mut fill, holding(100, 500_000), 0, 0),
+        Some(10_000_000)
+    );
+}
+
+#[test]
+fn a_refill_is_paced_at_twice_the_bitrate_once_30_seconds_are_held() {
+    let mut fill = Lookahead::default();
+    let (size, duration_ms) = (7_200_000_000, 7_200_000);
+    let refill = |lookahead, bytes_per_second| {
+        Some(Refill {
+            lookahead,
+            bytes_per_second,
+        })
+    };
+    assert_eq!(
+        fill.update(seconds(0), size, duration_ms),
+        refill(120_000_000, None),
+        "a start or a seek downloads as fast as it can"
+    );
+    assert_eq!(
+        fill.update(seconds(29), size, duration_ms),
+        refill(91_000_000, None)
+    );
+    assert_eq!(
+        fill.update(seconds(30), size, duration_ms),
+        refill(90_000_000, Some(2_000_000)),
+        "twice the 1 MB/s average"
+    );
+    assert_eq!(
+        fill.update(holding(31, 1_100_000), size, duration_ms),
+        refill(97_900_000, Some(2_000_000)),
+        "a bitrate within an eighth keeps the pace"
+    );
+    assert_eq!(
+        fill.update(holding(32, 3_000_000), size, duration_ms),
+        refill(264_000_000, Some(6_000_000)),
+        "a high-bitrate scene raises it"
+    );
+    assert_eq!(
+        fill.update(holding(120, 3_000_000), size, duration_ms),
+        refill(0, Some(6_000_000)),
+        "full"
+    );
+    assert_eq!(
+        fill.update(seconds(5), size, duration_ms),
+        refill(115_000_000, None),
+        "a seek lifts the pace"
+    );
+    assert_eq!(
+        fill.update(holding(40, 50_000), 0, 0),
+        refill(4_000_000, Some(262_144)),
+        "never slower than 256 KiB/s"
+    );
 }
 
 #[test]

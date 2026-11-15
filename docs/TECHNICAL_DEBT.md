@@ -128,6 +128,20 @@ Format:
 - Exit: measure from the engine's own read position and mpv's
   `demuxer-cache-time`.
 
+### Streaming engine: the download pace is not tuned
+- Where: [torrent.rs](../crates/cineo-core/src/app/torrent.rs) (`Lookahead`),
+  [engine.rs](../crates/cineo-stream/src/engine.rs) (`set_download_pace`)
+- Gap: a refill is paced at twice the bitrate once mpv holds 30 s
+  (ADR-0023). Both numbers are a first choice; whether playback stalls
+  more or less with them than with unpaced bursts is UNKNOWN. The pace
+  follows the bitrate of the last buffer report, which includes mpv's
+  overhead (entry above).
+- Why: no measurement with a real swarm yet.
+- Instead: under 30 s there is no pace, and the pace is never under
+  256 KiB/s.
+- Exit: compare stalls and refill times with the manual torrent test and
+  adjust.
+
 ### Streaming engine: shared urgent pieces waste some bandwidth and blame
 - Where: `crates/librqbit/src/piece_tracker.rs` in our librqbit fork
   ([commit be52c57a](https://github.com/mdmrk/rqbit/commit/be52c57a0d6c85d6d35467a2c8d5d60f66924aea), ADR-0016)

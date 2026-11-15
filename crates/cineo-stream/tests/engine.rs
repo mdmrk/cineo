@@ -694,6 +694,32 @@ async fn the_download_limit_slows_the_torrent_down() {
     );
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn a_download_pace_slows_the_torrent_down_until_the_next_open() {
+    let seeder = seeder("pace").await;
+    let engine = Engine::start(options("pace", &seeder)).await.unwrap();
+    let mut elapsed = Vec::new();
+    for paced in [true, false] {
+        let url = engine.open(&request(&seeder)).await.unwrap();
+        if paced {
+            engine.set_download_pace("0".repeat(40).as_str(), Some(1));
+            engine.set_download_pace(&seeder.info_hash, Some(400_000));
+        }
+        let start = std::time::Instant::now();
+        let full = http(engine.local_addr(), "GET", url.path(), &[]).await;
+        elapsed.push(start.elapsed());
+        assert!(full.body == seeder.film);
+    }
+    engine.shutdown().await;
+    let [on, off] = elapsed[..] else {
+        unreachable!()
+    };
+    assert!(
+        on >= Duration::from_millis(1500) && on > off * 2,
+        "1.5 MB at 400 kB/s after a one-second burst: on {on:?}, off {off:?}"
+    );
+}
+
 fn free_port() -> u16 {
     std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
         .unwrap()

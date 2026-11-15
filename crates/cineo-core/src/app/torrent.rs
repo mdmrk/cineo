@@ -132,18 +132,12 @@ impl TorrentPlayback {
     }
 }
 
-fn scaled(bytes: u64, seconds: u64, over: u64) -> u64 {
-    let scaled = u128::from(bytes) * u128::from(seconds) / u128::from(over);
-    u64::try_from(scaled).unwrap_or(u64::MAX)
-}
-
-fn average_bytes(size: u64, duration_ms: u64, seconds: u64) -> Option<u64> {
-    (size > 0 && duration_ms > 0).then(|| scaled(size.saturating_mul(1000), seconds, duration_ms))
-}
-
-fn measured_bytes(buffered: Buffered, seconds: u64) -> Option<u64> {
-    let rate = buffered.bytes_per_second.filter(|rate| *rate > 0)?;
-    Some(rate.saturating_mul(seconds))
+fn average_bitrate(size: u64, duration_ms: u64) -> Option<u64> {
+    if size == 0 || duration_ms == 0 {
+        return None;
+    }
+    let rate = u128::from(size) * 1000 / u128::from(duration_ms);
+    Some(u64::try_from(rate).unwrap_or(u64::MAX))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -152,16 +146,24 @@ pub struct Buffered {
     pub bytes_per_second: Option<u64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Refill {
+    pub lookahead: u64,
+    pub bytes_per_second: Option<u64>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lookahead {
     filling: bool,
-    sent: Option<u64>,
+    pace: Option<u64>,
+    sent: Option<Refill>,
 }
 
 impl Default for Lookahead {
     fn default() -> Self {
         Self {
             filling: true,
+            pace: None,
             sent: None,
         }
     }
@@ -170,8 +172,11 @@ impl Default for Lookahead {
 impl Lookahead {
     pub(crate) const FULL_S: u64 = 120;
     pub const RESUME_S: u64 = 100;
+    pub(crate) const PACED_FROM_S: u64 = 30;
+    pub(crate) const PACE: u64 = 2;
+    pub(crate) const SLOWEST_PACE: u64 = 256 * 1024;
 
-    pub fn update(&mut self, buffered: Buffered, size: u64, duration_ms: u64) -> Option<u64> {
+    pub fn update(&mut self, buffered: Buffered, size: u64, duration_ms: u64) -> Option<Refill> {
         if buffered.seconds >= Self::FULL_S {
             self.filling = false;
         } else if buffered.seconds <= Self::RESUME_S {
@@ -182,14 +187,26 @@ impl Lookahead {
         } else {
             0
         };
-        let bytes = average_bytes(size, duration_ms, seconds)
-            .max(measured_bytes(buffered, seconds))?
-            .max(u64::from(seconds > 0));
-        if self.sent == Some(bytes) {
+        let bitrate = average_bitrate(size, duration_ms)
+            .max(buffered.bytes_per_second)
+            .filter(|rate| *rate > 0)?;
+        let refill = Refill {
+            lookahead: bitrate.saturating_mul(seconds).max(u64::from(seconds > 0)),
+            bytes_per_second: (buffered.seconds >= Self::PACED_FROM_S).then(|| self.paced(bitrate)),
+        };
+        if self.sent == Some(refill) {
             return None;
         }
-        self.sent = Some(bytes);
-        Some(bytes)
+        self.sent = Some(refill);
+        Some(refill)
+    }
+
+    fn paced(&mut self, bitrate: u64) -> u64 {
+        let held = match self.pace {
+            Some(held) if bitrate.abs_diff(held) <= held / 8 => held,
+            _ => *self.pace.insert(bitrate),
+        };
+        held.saturating_mul(Self::PACE).max(Self::SLOWEST_PACE)
     }
 }
 

@@ -57,6 +57,19 @@ size (`TorrentStatus::Streaming`) and the duration (`PlaybackProgress`).
   state now lives in `cineo-stream`'s torrent task (`Lookahead`,
   `PlayerFeed`), not in core effects.
 
+- **Amended 2026-11-15 (owner decision): a refill is paced.** The limit
+  on what is downloaded ahead exists so that a torrent does not saturate
+  the network; a burst at the swarm's full speed still did, for a few
+  seconds each time. Once mpv holds 30 s, `Lookahead` also returns a
+  download rate of twice the bitrate (`Refill`), never under 256 KiB/s,
+  and `Engine::set_download_pace` sets it as librqbit's session download
+  limit (`Limits::set_download_bps`, no fork change), capped by the
+  download limit of Settings. Under 30 s (a start, a seek, a swarm slower
+  than the video) there is no pace. A bitrate within an eighth of the one
+  in use keeps the pace, so the limiter is not replaced every second.
+  `Engine::stop` restores the limit of Settings. 30 s and the factor of
+  two are a first choice, not measured with a real swarm.
+
 ## Consequences
 - mpv's buffer moves between about 25 and 30 s instead of staying at 30 s.
   Each refill asks for several seconds at once, so several pieces and peers
@@ -74,6 +87,11 @@ size (`TorrentStatus::Streaming`) and the duration (`PlaybackProgress`).
   reach somewhat past 120 s, most with small packets; the lookahead only
   ever grows from the average, and the fork still caps it at three
   quarters of the window.
+- With the pace, filling from 100 to 120 s takes 20 s or more instead of
+  as little as the swarm allows, with at least 100 s held meanwhile, and
+  peers stay in use for longer. Each change of the limit starts a new
+  limiter, which lets through up to one second of the new rate at once
+  (INFERRED from `governor`'s `Quota::per_second`).
 - The fork carries a third change to port on upstream updates.
 - Docs: COMPATIBILITY.md, DEVELOPMENT.md (fork commit), ADR-0019 (the
   lookahead is no longer fixed at three quarters of the window).

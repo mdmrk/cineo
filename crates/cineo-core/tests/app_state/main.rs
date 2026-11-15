@@ -11,8 +11,9 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{
     Action, Buffered, Effect, Language, LibraryItem, Loadable, Lookahead, ManifestOrigin, Notice,
-    PlaybackFailure, Problem, SavedStream, Setting, Settings, State, SubtitleGroup, TorrentRequest,
-    TorrentStatus, TorrentStorage, WatchedAt, continue_watching, find_subtitle, update,
+    PlaybackFailure, Problem, Refill, SavedStream, Setting, Settings, State, SubtitleGroup,
+    TorrentRequest, TorrentStatus, TorrentStorage, WatchedAt, continue_watching, find_subtitle,
+    update,
 };
 
 mod addons;

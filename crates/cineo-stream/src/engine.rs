@@ -387,10 +387,27 @@ impl Engine {
         }
     }
 
+    pub fn set_download_pace(&self, info_hash: &str, bytes_per_second: Option<u64>) {
+        let serving = self
+            .ctx
+            .current
+            .read()
+            .is_ok_and(|current| current.as_ref().is_some_and(|s| s.info_hash == info_hash));
+        if !serving {
+            return;
+        }
+        let limit = paced_limit(self.options.download_limit_bps, bytes_per_second);
+        self.session.ratelimits.set_download_bps(limit);
+        debug!(?limit, "torrent download pace set");
+    }
+
     pub async fn stop(&self) {
         if let Ok(mut current) = self.ctx.current.write() {
             *current = None;
         }
+        self.session
+            .ratelimits
+            .set_download_bps(self.options.download_limit_bps);
         let torrents: Vec<(usize, String)> = self.session.with_torrents(|all| {
             all.map(|(id, torrent)| (id, torrent.info_hash().as_string()))
                 .collect()
@@ -421,6 +438,14 @@ impl Engine {
 
 pub(crate) fn elapsed_ms(since: Instant) -> u64 {
     u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
+fn paced_limit(setting: Option<NonZeroU32>, pace: Option<u64>) -> Option<NonZeroU32> {
+    let pace = pace.and_then(|pace| NonZeroU32::new(u32::try_from(pace).unwrap_or(u32::MAX)));
+    match (setting, pace) {
+        (Some(setting), Some(pace)) => Some(setting.min(pace)),
+        (setting, pace) => setting.or(pace),
+    }
 }
 
 fn add_failed(err: impl std::fmt::Display) -> StreamError {
@@ -470,6 +495,21 @@ mod tests {
             assert!(tracker.port().is_some(), "{tracker}");
         }
         assert_eq!(EngineOptions::new(PathBuf::from("/tmp")).trackers, trackers);
+    }
+
+    #[test]
+    fn the_pace_never_exceeds_the_download_limit_setting() {
+        let setting = NonZeroU32::new(1_000_000);
+        assert_eq!(paced_limit(None, None), None);
+        assert_eq!(paced_limit(setting, None), setting);
+        assert_eq!(paced_limit(None, Some(400_000)), NonZeroU32::new(400_000));
+        assert_eq!(
+            paced_limit(setting, Some(400_000)),
+            NonZeroU32::new(400_000)
+        );
+        assert_eq!(paced_limit(setting, Some(4_000_000)), setting);
+        assert_eq!(paced_limit(None, Some(u64::MAX)), NonZeroU32::new(u32::MAX));
+        assert_eq!(paced_limit(setting, Some(0)), setting);
     }
 
     #[test]
