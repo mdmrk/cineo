@@ -667,6 +667,70 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_seek_abandons_the_pieces_in_flight_at_the_old_position() {
+    const PIECE: usize = 2 * 1024 * 1024;
+    let content = temp_dir("seek-seed").join("content");
+    std::fs::create_dir_all(&content).unwrap();
+    let film: Vec<u8> = (0..8 * PIECE as u32)
+        .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
+        .collect();
+    std::fs::write(content.join("film.mkv"), &film).unwrap();
+    let torrent = create_torrent(
+        &content,
+        CreateTorrentOptions {
+            piece_length: Some(PIECE as u32),
+            ..CreateTorrentOptions::default()
+        },
+        &BlockingSpawner::new(1),
+    )
+    .await
+    .unwrap();
+    let bytes = torrent.as_bytes().unwrap().to_vec();
+    let (_one_session, one) = seed_limited(&content, &bytes, Some(256 * 1024)).await;
+    let (_two_session, two) = seed_limited(&content, &bytes, Some(256 * 1024)).await;
+
+    let engine = Engine::start(EngineOptions {
+        allow_private_network: true,
+        dht: false,
+        extra_peers: vec![one, two],
+        metadata_timeout: Duration::from_secs(20),
+        trackers: Vec::new(),
+        window: std::num::NonZeroU64::new(8 * PIECE as u64),
+        in_memory: true,
+        ..EngineOptions::new(temp_dir("seek-cache"))
+    })
+    .await
+    .unwrap();
+    let url = engine
+        .open(&TorrentRequest {
+            info_hash: torrent.info_hash().as_string(),
+            file_idx: None,
+            filename: None,
+            trackers: Vec::new(),
+        })
+        .await
+        .unwrap();
+    let addr = engine.local_addr();
+
+    let mut start = TcpStream::connect(addr).await.unwrap();
+    let request = format!("GET {} HTTP/1.1\r\nHost: {addr}\r\n\r\n", url.path());
+    start.write_all(request.as_bytes()).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    drop(start);
+
+    let last = film.len() - PIECE;
+    let range = format!("bytes={last}-");
+    let end = http(addr, "GET", url.path(), &[("Range", &range)]).await;
+    assert!(end.body == film[last..]);
+    assert_eq!(
+        downloaded(&engine),
+        PIECE as u64,
+        "the first piece was given up for the one the seek needs"
+    );
+    engine.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn the_download_limit_slows_the_torrent_down() {
     let seeder = seeder("limit").await;
     let mut elapsed = Vec::new();

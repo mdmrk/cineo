@@ -158,6 +158,12 @@ The full evidence for the rows above whose notes do not fit in the table.
   `the_pace_never_exceeds_the_download_limit_setting`,
   `a_download_pace_slows_the_torrent_down_until_the_next_open`); not seen
   with a real swarm.
+- A seek gives up the pieces in flight that no stream wants any more and
+  cancels their requests, so peers serve the new position at once
+  instead of finishing those pieces first
+  (`a_seek_abandons_the_pieces_in_flight_at_the_old_position` with two
+  slow local seeders, and unit tests in the fork); not seen with a real
+  swarm.
 - With a window the torrent is added unpaused, so the peers found for the
   metadata start the download, and it downloads nothing until the player
   reads

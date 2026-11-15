@@ -113,6 +113,22 @@ Format:
 - Exit: a librqbit hook for abandoned pieces, and skipping unreadable
   upload requests instead of disconnecting.
 
+### Streaming engine: a seek throws away partial pieces
+- Where: `torrent_state/live/mod.rs` (`abandon_unwanted_pieces`) and
+  `piece_tracker.rs` (`abandon_piece`) in our librqbit fork
+  ([commit 8981a054](https://github.com/mdmrk/rqbit/commit/8981a0549427666a58f394d6b310d67315669f28))
+- Gap: a piece given up after a seek loses the chunks it already had,
+  so a seek back downloads it whole again. A peer that ignores `cancel`
+  (librqbit before the fork's `d8a64df8` does) still sends the chunks
+  asked for, which are dropped, before it serves the new position. A
+  piece whose chunk is being written at that moment is not given up.
+  How peers of other clients react is not seen with a real swarm.
+- Why: keeping partial pieces needs them counted in the window
+  ("torrent data can exceed its window" above).
+- Instead: only pieces outside every stream's span are given up, and
+  only when a stream seeks.
+- Exit: keep the chunks of a given-up piece while the window has room.
+
 ### Streaming engine: the measured bitrate includes mpv's overhead
 - Where: [events.rs](../crates/cineo-player/src/embedded/events.rs) (`parse_buffered_bitrate`),
   [torrent.rs](../crates/cineo-core/src/app/torrent.rs) (`Lookahead`)

@@ -3328,7 +3328,7 @@ dependencies = [
 [[package]]
 name = "librqbit"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "arc-swap",
@@ -3391,7 +3391,7 @@ dependencies = [
 [[package]]
 name = "librqbit-bencode"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "arrayvec",
@@ -3407,7 +3407,7 @@ dependencies = [
 [[package]]
 name = "librqbit-buffers"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "bytes",
  "librqbit-clone-to-owned",
@@ -3418,7 +3418,7 @@ dependencies = [
 [[package]]
 name = "librqbit-clone-to-owned"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "bytes",
 ]
@@ -3426,7 +3426,7 @@ dependencies = [
 [[package]]
 name = "librqbit-core"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "bytes",
@@ -3455,7 +3455,7 @@ dependencies = [
 [[package]]
 name = "librqbit-dht"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "backon",
@@ -3502,7 +3502,7 @@ dependencies = [
 [[package]]
 name = "librqbit-lsd"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "atoi",
@@ -3521,7 +3521,7 @@ dependencies = [
 [[package]]
 name = "librqbit-peer-protocol"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "bitvec",
@@ -3541,7 +3541,7 @@ dependencies = [
 [[package]]
 name = "librqbit-sha1-wrapper"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "assert_cfg",
  "aws-lc-rs",
@@ -3550,7 +3550,7 @@ dependencies = [
 [[package]]
 name = "librqbit-tracker-comms"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -3578,7 +3578,7 @@ dependencies = [
 [[package]]
 name = "librqbit-upnp"
 version = "9.1.0"
-source = "git+https://github.com/mdmrk/rqbit?branch=main#87ea5b88a79cab4aacc0c9bb985d10cac149942a"
+source = "git+https://github.com/mdmrk/rqbit?branch=main#8981a0549427666a58f394d6b310d67315669f28"
 dependencies = [
  "anyhow",
  "bstr",
