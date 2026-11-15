@@ -73,7 +73,6 @@ private const val STRIP_PERIOD = 1.0 / 3.0
 private const val PULSE_PERIOD = 1600
 
 private val LoadingWidth = 128.dp
-private val PlayerLoadingWidth = 176.dp
 private val LoadingBackdropDim = Color.Black.copy(alpha = 1f - 70f / 255f)
 
 private class Layers(
@@ -158,7 +157,7 @@ fun LoadingBackdrop(art: ArtView?, images: Images, firstLoad: Boolean, modifier:
         val title = art?.title?.trim().orEmpty()
         when {
             firstLoad && (art?.logo != null || title.isNotEmpty()) -> LoadingArt(title, art?.logo, images)
-            else -> CineoLoading(width = PlayerLoadingWidth, tint = Brand.TextBright)
+            else -> CineoLoading(tint = Brand.TextBright)
         }
     }
 }
