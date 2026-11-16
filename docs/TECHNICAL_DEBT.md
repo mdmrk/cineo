@@ -622,7 +622,7 @@ Format:
 - Exit: a `versionCode` that also counts prereleases and that F-Droid
   reads, with the check in `scripts/package.sh` kept.
 
-### Android: no F-Droid build has matched a release yet
+### Android: nothing checks reproducibility on every release
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
   [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
 - Gap: two release builds from different directories and `CARGO_HOME`s on
@@ -635,8 +635,9 @@ Format:
   the `libmpv.md` that holds its hash, because pkgconf 1.8.1 and 2.5.1 order
   OpenSSL's `-ldl` and `-lcrypto` differently. With the libraries written
   into `openssl.pc`, Debian 13 and Ubuntu 26.04 build the seven libmpv
-  libraries of v1.9.5 byte for byte (VERIFIED 2026-11-16), but no tag with
-  that fix has been built by F-Droid yet. Rust is the version
+  libraries of v1.9.5 byte for byte, and `fdroid build` of v1.9.6 matched
+  the GitHub release (VERIFIED 2026-11-16). Each later release is only
+  checked when F-Droid builds it. Rust is the version
   `rust-toolchain.toml` pins at the tag (ADR-0036), which the recipe must
   name and `release-android.sh` prints. libmpv is built in the fixed
   `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
@@ -647,8 +648,8 @@ Format:
 - Instead: `scripts/package.sh android` fails if a native library holds the
   build path, `HOME`, `CARGO_HOME`, `RUSTUP_HOME` or an OpenSSL build date;
   nothing compares two whole builds in CI.
-- Exit: an F-Droid build of a tag that matches the release, then a CI job
-  that builds twice and compares.
+- Exit: a CI job that builds the APK in fdroidserver's `buildserver` image
+  and compares it with the release.
 
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),

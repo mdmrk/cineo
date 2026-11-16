@@ -16,9 +16,9 @@ Repo: https://github.com/mdmrk/cineo.git
 Binaries: https://github.com/mdmrk/cineo/releases/download/v%v/cineo-arm64-android.apk
 
 Builds:
-  - versionName: 1.9.4
-    versionCode: 10904
-    commit: v1.9.4
+  - versionName: 1.9.6
+    versionCode: 10906
+    commit: 7164ea9060b922412fec43ee75d23bf74d636f31
     subdir: android/app
     sudo:
       - apt-get update
@@ -42,5 +42,5 @@ AllowedAPKSigningKeys: 757268eddeaabc68285f7728b5b10fb5d380c4ba6ddb93a5ad687a911
 
 AutoUpdateMode: None
 UpdateCheckMode: None
-CurrentVersion: 1.9.4
-CurrentVersionCode: 10904
+CurrentVersion: 1.9.6
+CurrentVersionCode: 10906

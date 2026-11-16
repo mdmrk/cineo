@@ -671,8 +671,10 @@ Debian and 2.5.1 on GitHub's runner ordered OpenSSL's `-ldl` and
 into `openssl.pc` and fails if `pkg-config` gives them in another order;
 with that, Debian 13 builds the seven libmpv libraries of the GitHub
 release byte for byte (VERIFIED 2026-11-16). The recipe keeps `Binaries`
-and `AllowedAPKSigningKeys` and must point at the first release with that
-fix.
+and `AllowedAPKSigningKeys`. For v1.9.6, the first release with that fix,
+`fdroid build` matched the GitHub APK and accepted its signer (VERIFIED
+2026-11-16: "compared built binary to supplied reference binary
+successfully").
 `fdroid build` needs the recipe committed in the `fdroiddata` clone,
 because it takes `SOURCE_DATE_EPOCH` from the last commit that touches
 it; an uncommitted recipe gives an empty value and Gradle and clang
