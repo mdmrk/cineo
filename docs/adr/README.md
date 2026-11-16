@@ -45,7 +45,7 @@ old one *Superseded by NNNN*.
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted (media keys: superseded by 0031; handover channel: superseded by 0032; macOS: superseded by 0035) |
 | [0028](0028-android-port.md) | Android port | Accepted (LGPL in a signed APK: settled by 0029; Maven AAR for the TLS verifier: superseded by 0037) |
 | [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030; libmpv cache on tags: amended 2026-11-13) |
-| [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted |
+| [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted (F-Droid route: amended 2026-11-16) |
 | [0031](0031-media-controls-through-fastframe.md) | Media controls through fastframe-now-playing | Accepted |
 | [0032](0032-link-handover-and-file-replacement-through-fastframe.md) | Link handover, file replacement, system sleep and panic log through fastframe | Accepted |
 | [0033](0033-egui-0-36-for-fastframe.md) | egui 0.36.2 so that fastframe's egui crates can be used | Accepted |

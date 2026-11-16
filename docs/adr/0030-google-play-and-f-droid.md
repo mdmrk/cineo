@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-05
 - Amends: 0029 (which rejected a store "not now")
+- Amended 2026-11-16: F-Droid route 1 instead of route 2 (below)
 
 ## Context
 ADR-0029 releases a signed `cineo-arm64-android.apk` on GitHub and left
@@ -99,6 +100,9 @@ F-Droid route:
   once the owner opens a developer account.
 - F-Droid route 2: IzzyOnDroid from the next release, the main repository
   once the build reproduces.
+  **Amended 2026-11-16:** route 1. The owner dropped IzzyOnDroid, and the
+  build reproduces from v1.9.6 (ADR-0037), so the recipe goes straight to
+  the main repository.
 - One key everywhere (signing option 1): the F-Droid recipe names our
   release certificate as the only allowed signer, so F-Droid publishes
   only builds that reproduce ours. When Play is added, our release key
@@ -136,9 +140,8 @@ F-Droid route:
   updates on every channel.
 - F-Droid needs no new secret. Play will add the upload keystore and its
   passwords, and the service account's JSON key (`docs/SECURITY.md`).
-- Until the F-Droid build reproduces, the app is not in the main F-Droid
-  repository. Reproducibility must then be kept on every release, or
-  F-Droid stops publishing updates.
+- Reproducibility must be kept on every release, or F-Droid stops
+  publishing updates (`docs/TECHNICAL_DEBT.md`).
 - A personal Play account needs 12 testers for 14 days before production,
   and costs a one-time registration fee.
 - `docs/DEVELOPMENT.md`, `docs/COMPATIBILITY.md`, `docs/LEGAL.md`,
@@ -150,6 +153,7 @@ F-Droid route:
 - Signing option 2: three builds that cannot update each other; a user
   switching channels loses their library.
 - F-Droid route 1 alone: the app stays out of every F-Droid client until a
-  reproducible build works, which has never been tried.
+  reproducible build works, which has never been tried. (Chosen on
+  2026-11-16, once it worked.)
 - Play or F-Droid only, no GitHub APK: drops users of the other channel
   and ADR-0029's attested release.
