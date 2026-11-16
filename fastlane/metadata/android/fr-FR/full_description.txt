@@ -1,0 +1,15 @@
+Cineo est un centre multimédia natif pour les addons du protocole Stremio, écrit en Rust. Installez les addons de votre choix, parcourez et recherchez dans leurs catalogues, et lisez leurs flux dans un lecteur intégré, en HTTP ou BitTorrent. Pas de compte, pas de cloud, pas de publicité, pas d'analyse : votre bibliothèque et vos réglages restent sur votre téléphone.
+
+Cineo ne fournit aucun contenu. Au premier lancement, il installe Cinemeta, le catalogue de métadonnées de Stremio, pour que l'écran d'accueil affiche quelque chose ; tous les autres addons sont votre choix.
+
+<ul>
+<li>Parcourez et recherchez dans les catalogues de tous vos addons</li>
+<li>Lecteur basé sur libmpv, avec décodage matériel, sous-titres et pistes audio</li>
+<li>Streaming de torrents avec le moteur propre à Cineo : la lecture démarre pendant le téléchargement</li>
+<li>Reprendre la lecture, favoris et historique</li>
+<li>Disponible en anglais, espagnol, portugais, russe, italien, allemand et français</li>
+</ul>
+
+Le streaming pair-à-pair partage des données avec d'autres pairs et leur montre votre adresse IP. Cineo demande confirmation avant le premier torrent, et les flux torrent peuvent être désactivés entièrement. Vous êtes responsable des addons que vous installez et de ce que vous regardez avec eux.
+
+Pour les téléphones avec processeur ARM 64 bits. Logiciel libre sous licence MIT ; il embarque libmpv et FFmpeg sous LGPL-2.1.

@@ -1,0 +1,15 @@
+Cineo ist ein natives Mediencenter für Addons des Stremio-Protokolls, geschrieben in Rust. Installiere die Addons deiner Wahl, durchsuche ihre Kataloge und spiele ihre Streams in einem integrierten Player ab, per HTTP oder BitTorrent. Kein Konto, keine Cloud, keine Werbung, keine Analyse: Deine Bibliothek und Einstellungen bleiben auf deinem Telefon.
+
+Cineo liefert keine Inhalte mit. Beim ersten Start installiert es Cinemeta, den Metadatenkatalog von Stremio, damit der Startbildschirm etwas anzeigt; alle weiteren Addons wählst du selbst.
+
+<ul>
+<li>Kataloge aller deiner Addons durchsuchen</li>
+<li>Player auf Basis von libmpv mit Hardware-Dekodierung, Untertiteln und Tonspuren</li>
+<li>Torrent-Streaming mit Cineos eigener Engine: Die Wiedergabe startet während des Downloads</li>
+<li>Weiterschauen, Favoriten und Verlauf</li>
+<li>Verfügbar auf Englisch, Spanisch, Portugiesisch, Russisch, Italienisch, Deutsch und Französisch</li>
+</ul>
+
+Peer-to-Peer-Streaming teilt Daten mit anderen Peers und zeigt ihnen deine IP-Adresse. Cineo fragt vor dem ersten Torrent nach, und Torrent-Streams lassen sich komplett abschalten. Du bist für die Addons verantwortlich, die du installierst, und für das, was du damit ansiehst.
+
+Für Telefone mit 64-Bit-ARM-Prozessor. Freie Software unter der MIT-Lizenz; enthält libmpv und FFmpeg unter LGPL-2.1.
