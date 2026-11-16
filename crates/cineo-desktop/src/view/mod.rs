@@ -11,10 +11,7 @@ use cineo_core::app::{
     Action, InterfaceScale, Notice, PlaybackFailure, Problem, Resolution, Route, StartPage, State,
     StreamFacts as Facts, StreamSort, board_targets, stream_matcher,
 };
-use eframe::egui::{
-    self, Align, Frame, Key, Label, Layout, Margin, Modifiers, RichText, ScrollArea, Sense, Stroke,
-    Ui, Vec2, vec2,
-};
+use eframe::egui::{self, Frame, Key, Margin, Modifiers, ScrollArea, Sense, Stroke, Ui, vec2};
 
 mod addons;
 mod cards;
@@ -328,39 +325,67 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
                 .inner_margin(Margin::symmetric(0, 6)),
         )
         .show(ui, |ui| {
-            let full = ui.max_rect();
+            let x_range = ui.max_rect().x_range();
+            column(ui, |ui| {
+                let font = egui::TextStyle::Body.resolve(ui.style());
+                let dismiss = t!("Dismiss");
+                let pad = ui.spacing().button_padding;
+                let btn_size = vec2(
+                    ui.painter()
+                        .layout_no_wrap((*dismiss).to_owned(), font.clone(), theme::TEXT_BRIGHT)
+                        .size()
+                        .x
+                        + 2.0 * pad.x,
+                    ui.spacing().interact_size.y,
+                );
+                let text_left = 26.0;
+                let text_width = (ui.available_width() - btn_size.x - text_left - 12.0).max(40.0);
+                let galley =
+                    ui.painter()
+                        .layout((*notice).to_owned(), font, theme::TEXT_BRIGHT, text_width);
+                let height = galley.size().y.max(btn_size.y);
+                let (row, _) =
+                    ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
+                paint_icon(
+                    ui.painter(),
+                    Icon::Alert,
+                    egui::pos2(row.left() + 9.0, row.center().y),
+                    18.0,
+                    theme::WARNING,
+                );
+                let text_rect = egui::Rect::from_min_size(
+                    egui::pos2(
+                        row.left() + text_left,
+                        row.center().y - galley.size().y / 2.0,
+                    ),
+                    vec2(text_width, galley.size().y),
+                );
+                ui.scope_builder(
+                    egui::UiBuilder::new()
+                        .max_rect(text_rect)
+                        .layout(egui::Layout::top_down(egui::Align::Min)),
+                    |ui| {
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(&*notice).color(theme::TEXT_BRIGHT),
+                            )
+                            .wrap(),
+                        );
+                    },
+                );
+                let button = egui::Rect::from_min_size(
+                    egui::pos2(row.right() - btn_size.x, row.center().y - btn_size.y / 2.0),
+                    btn_size,
+                );
+                if ui.put(button, egui::Button::new(dismiss)).clicked() {
+                    out.push(Action::DismissNotice);
+                }
+            });
             ui.painter().hline(
-                full.x_range(),
-                full.bottom() + 5.5,
+                x_range,
+                ui.min_rect().bottom() + 5.5,
                 Stroke::new(1.0, theme::WARNING),
             );
-            column(ui, |ui| {
-                ui.horizontal(|ui| {
-                    let (slot, _) = ui.allocate_exact_size(Vec2::splat(18.0), Sense::hover());
-                    paint_icon(
-                        ui.painter(),
-                        Icon::Alert,
-                        slot.center(),
-                        18.0,
-                        theme::WARNING,
-                    );
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if ui.button(t!("Dismiss")).clicked() {
-                            out.push(Action::DismissNotice);
-                        }
-                        ui.allocate_ui_with_layout(
-                            vec2(ui.available_width(), 0.0),
-                            Layout::left_to_right(Align::Center),
-                            |ui| {
-                                ui.add(
-                                    Label::new(RichText::new(&*notice).color(theme::TEXT_BRIGHT))
-                                        .wrap(),
-                                );
-                            },
-                        );
-                    });
-                });
-            });
         });
 }
 
