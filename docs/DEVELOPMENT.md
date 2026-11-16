@@ -661,9 +661,18 @@ The Android store listing (title, short and full description) lives in
 
 `docs/fdroid/io.github.mdmrk.cineo.yml` is the draft build recipe for
 F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint`
-(fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05) but
-has never been built by F-Droid, which publishes only an APK that
-reproduces ours (`Binaries`, `AllowedAPKSigningKeys`). The build is
+(fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05).
+`fdroid build --on-server` in fdroidserver's `buildserver` image
+(2026-11-16) compiled v1.9.4 with these steps, but the recipe still pins
+v1.9.4, whose `settings.gradle.kts` the scanner rejects (the Maven
+repository ADR-0037 removed) and whose APK differs from the release in
+`libavformat.so`, so its `commit`, `versionName` and `versionCode` must move
+to the first release that has ADR-0037 before it is submitted. F-Droid
+publishes only an APK that reproduces ours (`Binaries`,
+`AllowedAPKSigningKeys`); that match is UNKNOWN until such a release
+exists. Rust goes in `~/.cargo` and `~/.rustup` because `CargoNdk` maps
+the canonical path of those directories: a symlink to `/opt` leaves the
+real paths in `libcineo_android.so` (VERIFIED 2026-11-16). The build is
 reproducible across directories on one machine: Rust maps `CARGO_HOME`,
 `RUSTUP_HOME` and the checkout to `/cargo`, `/rustup` and `/cineo`
 (`--remap-path-prefix`), and libmpv is built in the fixed
