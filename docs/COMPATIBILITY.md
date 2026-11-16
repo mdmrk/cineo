@@ -302,8 +302,9 @@ The full evidence for the rows above whose notes do not fit in the table.
 - The video pauses when the computer is about to sleep or the session ends
   (`a_suspend_or_session_end_pauses_and_is_answered`; not seen on a real
   suspend).
-- While a video plays, the window title is `Cineo - <title>`
-  (`the_window_title_names_what_is_playing`).
+- While a video plays, or a torrent connects before it plays, the window
+  title is `Cineo - <title>` (`the_window_title_names_what_is_playing`,
+  `the_window_title_names_a_torrent_while_it_connects`).
 - While a video plays, Cineo also serves MPRIS on the session D-Bus, so
   headphone and keyboard media keys and the desktop's media controls can
   play, pause, stop and seek it and set its volume, and they show its

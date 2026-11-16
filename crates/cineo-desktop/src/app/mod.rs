@@ -438,11 +438,6 @@ impl eframe::App for CineoApp {
                 volume: if s.muted { 0.0 } else { s.volume },
             });
         self.media_keys.set(shown);
-        let playing = self.playback.as_ref().map(|e| e.title.as_str());
-        if self.titled_after.as_deref() != playing {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Title(window_title(playing)));
-            self.titled_after = playing.map(str::to_owned);
-        }
         while let Ok(msg) = self.results_rx.try_recv() {
             match msg {
                 Msg::Action(action) => self.dispatch(action),
@@ -465,6 +460,18 @@ impl eframe::App for CineoApp {
             && let Some(link) = self.pending_link.take()
         {
             self.open_link(&link);
+        }
+        let playing = titled(
+            self.playback.as_ref().map(|e| e.title.as_str()),
+            self.state
+                .torrent
+                .as_ref()
+                .and_then(|t| t.connecting())
+                .map(|r| r.title.as_str()),
+        );
+        if self.titled_after.as_deref() != playing {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(window_title(playing)));
+            self.titled_after = playing.map(str::to_owned);
         }
     }
 
@@ -567,6 +574,10 @@ fn follow_desktop_text(
     }) {
         debug!(?err, "the desktop's text size is not followed");
     }
+}
+
+fn titled<'a>(playing: Option<&'a str>, connecting: Option<&'a str>) -> Option<&'a str> {
+    playing.or(connecting)
 }
 
 fn window_title(playing: Option<&str>) -> String {
@@ -743,6 +754,13 @@ mod tests {
             "Cineo - The Matrix"
         );
         assert_eq!(super::window_title(Some("  ")), "Cineo");
+    }
+
+    #[test]
+    fn the_window_title_names_a_torrent_while_it_connects() {
+        assert_eq!(super::titled(None, Some("Dune")), Some("Dune"));
+        assert_eq!(super::titled(Some("Alien"), Some("Dune")), Some("Alien"));
+        assert_eq!(super::titled(None, None), None);
     }
 
     #[test]
