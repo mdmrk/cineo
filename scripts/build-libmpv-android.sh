@@ -139,7 +139,8 @@ step "mpv"
   -Dc_link_args="['-Wl,--no-undefined', '-lc++_static', '-lc++abi']" \
   -Dgpl=false -Dlibmpv=true -Dcplayer=false -Dtests=false -Dbuild-date=false \
   -Dlua=disabled -Djavascript=disabled -Diconv=disabled -Dlibarchive=disabled \
-  -Dlibbluray=disabled -Ddvdnav=disabled -Dcdda=disabled -Duchardet=disabled \
+  -Dlibbluray=disabled -Ddvdnav=disabled -Ddvda=disabled -Dcdda=disabled -Duchardet=disabled \
+  -Dlibcurl=disabled -Dsubrandr=disabled \
   -Drubberband=disabled -Dlcms2=disabled -Dzimg=disabled -Dvapoursynth=disabled \
   -Djpeg=disabled -Dlibavdevice=disabled -Dcplugins=disabled \
   -Dvulkan=disabled -Dshaderc=disabled -Dspirv-cross=disabled \

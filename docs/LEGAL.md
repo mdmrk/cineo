@@ -93,7 +93,7 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
 - The Android app packages the libmpv build below, and every release
   ships it in `cineo-arm64-android.apk` (ADR-0029).
   `scripts/build-libmpv-android.sh` builds it (2026-11-03, ADR-0028), from the sources
-  pinned in `scripts/libmpv-android.env`: mpv 0.41.0 with `-Dgpl=false`
+  pinned in `scripts/libmpv-android.env`: mpv 0.42.0 with `-Dgpl=false`
   and FFmpeg 8.1.3 without `--enable-gpl`, `--enable-version3` or
   `--enable-nonfree`, so both are LGPL-2.1-or-later (VERIFIED:
   `libavutil` reports "LGPL version 2.1 or later" and mpv's `HAVE_GPL` is
