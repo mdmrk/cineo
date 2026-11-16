@@ -130,7 +130,7 @@ fn seconds_to_ms(seconds: f64) -> u64 {
             clippy::cast_sign_loss,
             reason = "positive, finite, sub-2^53"
         )]
-        let ms = (seconds * 1000.0) as u64;
+        let ms = (seconds * 1000.0).round() as u64;
         ms
     } else {
         0
@@ -251,5 +251,11 @@ mod tests {
         assert_eq!(seconds_to_ms(f64::NAN), 0);
         assert_eq!(seconds_to_ms(-1.0), 0);
         assert_eq!(seconds_to_ms(1.25), 1250);
+    }
+
+    #[test]
+    fn a_position_just_below_a_millisecond_rounds_to_it() {
+        assert_eq!(seconds_to_ms(29.999_999), 30_000);
+        assert_eq!(seconds_to_ms(0.000_4), 0);
     }
 }
