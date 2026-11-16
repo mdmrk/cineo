@@ -662,14 +662,21 @@ The Android store listing (title, short and full description) lives in
 F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint`
 (fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05).
 `fdroid build --on-server` in fdroidserver's `buildserver` image
-(2026-11-16) compiled v1.9.4 with these steps, but the recipe still pins
-v1.9.4, whose `settings.gradle.kts` the scanner rejects (the Maven
-repository ADR-0037 removed) and whose APK differs from the release in
-`libavformat.so`, so its `commit`, `versionName` and `versionCode` must move
-to the first release that has ADR-0037 before it is submitted. F-Droid
-publishes only an APK that reproduces ours (`Binaries`,
-`AllowedAPKSigningKeys`); that match is UNKNOWN until such a release
-exists. Rust goes in `~/.cargo` and `~/.rustup` because `CargoNdk` maps
+(2026-11-16) built v1.9.5, the first release without the Maven repository
+that ADR-0037 removed, and its scanner passed. Its unsigned APK matched the
+GitHub release except for `libavformat.so` and the `libmpv.md` that holds
+its hash (VERIFIED: `diff -r` of both APKs): pkgconf 1.8.1 on F-Droid's
+Debian and 2.5.1 on GitHub's runner ordered OpenSSL's `-ldl` and
+`-lcrypto` differently. `build-libmpv-android.sh` now writes the libraries
+into `openssl.pc` and fails if `pkg-config` gives them in another order;
+with that, Debian 13 builds the seven libmpv libraries of the GitHub
+release byte for byte (VERIFIED 2026-11-16). The recipe keeps `Binaries`
+and `AllowedAPKSigningKeys` and must point at the first release with that
+fix.
+`fdroid build` needs the recipe committed in the `fdroiddata` clone,
+because it takes `SOURCE_DATE_EPOCH` from the last commit that touches
+it; an uncommitted recipe gives an empty value and Gradle and clang
+fail on it (VERIFIED 2026-11-16). Rust goes in `~/.cargo` and `~/.rustup` because `CargoNdk` maps
 the canonical path of those directories: a symlink to `/opt` leaves the
 real paths in `libcineo_android.so` (VERIFIED 2026-11-16). The build is
 reproducible across directories on one machine: Rust maps `CARGO_HOME`,

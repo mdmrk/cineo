@@ -96,6 +96,13 @@ mkdir -p "$build/openssl"
     no-shared no-tests no-apps no-docs no-module >/dev/null
   make -j"$jobs" build_libs >/dev/null
   make install_dev >/dev/null
+  sed -i 's|^Requires:.*|Libs: -L${libdir} -lssl -lcrypto\nLibs.private: -ldl -pthread\nCflags: -I${includedir}|' \
+    "$prefix/lib/pkgconfig/openssl.pc"
+  openssl_libs=$(pkg-config --static --libs openssl | xargs)
+  if [[ $openssl_libs != "-L$prefix/lib -lssl -lcrypto -ldl -pthread" ]]; then
+    echo "pkg-config gives OpenSSL's libraries as '$openssl_libs'" >&2
+    exit 1
+  fi
 )
 
 meson_build dav1d -Denable_tools=false -Denable_tests=false -Denable_examples=false -Denable_docs=false

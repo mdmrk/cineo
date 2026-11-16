@@ -622,20 +622,21 @@ Format:
 - Exit: a `versionCode` that also counts prereleases and that F-Droid
   reads, with the check in `scripts/package.sh` kept.
 
-### Android: the build is reproducible on one machine only
+### Android: no F-Droid build has matched a release yet
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
   [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
 - Gap: two release builds from different directories and `CARGO_HOME`s on
   the same machine give the same unsigned APK (VERIFIED 2026-11-05, SHA-256
   `2fe745f8…dbe0a7`). libmpv built from the pinned sources gives the same
   `libavformat.so` on Debian 13 with 12 and with 4 CPUs and on Ubuntu 24.04
-  with 4 CPUs (VERIFIED 2026-11-16). The v1.9.4 APK on GitHub differs from an
-  F-Droid-style build only in `libavformat.so` (the order of `dlopen`,
-  `dlclose`, `dlerror` and `dlsym` in its dynamic symbols) and in what
-  follows from it; its libmpv came from an Actions cache saved by an earlier
-  run, and what differed in that run is UNKNOWN. Tag builds skip that cache
-  since ADR-0037, but no tag has been built that way yet, so whether a
-  release matches an F-Droid build is UNKNOWN. Rust is the version
+  with 4 CPUs (VERIFIED 2026-11-16). The v1.9.4 and v1.9.5 APKs on GitHub
+  differ from an F-Droid build only in `libavformat.so` (the order of
+  `dlopen`, `dlclose`, `dlerror` and `dlsym` in its dynamic symbols) and in
+  the `libmpv.md` that holds its hash, because pkgconf 1.8.1 and 2.5.1 order
+  OpenSSL's `-ldl` and `-lcrypto` differently. With the libraries written
+  into `openssl.pc`, Debian 13 and Ubuntu 26.04 build the seven libmpv
+  libraries of v1.9.5 byte for byte (VERIFIED 2026-11-16), but no tag with
+  that fix has been built by F-Droid yet. Rust is the version
   `rust-toolchain.toml` pins at the tag (ADR-0036), which the recipe must
   name and `release-android.sh` prints. libmpv is built in the fixed
   `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
