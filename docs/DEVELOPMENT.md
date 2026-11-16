@@ -631,8 +631,9 @@ provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
 named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
 `.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
 tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
-the hash of the script and its `.env`, also on tags; only runs on `main`
-save it) and runs
+the hash of the script and its `.env`; only runs on `main` save it, and tag
+builds do not restore it, so a release builds libmpv from the pinned
+sources, ADR-0037) and runs
 `scripts/release-android.sh`: it builds libmpv if needed, a signed
 `assembleRelease`, and runs `scripts/package.sh android`, which checks that
 the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
