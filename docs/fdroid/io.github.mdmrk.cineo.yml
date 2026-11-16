@@ -30,10 +30,10 @@ Builds:
       - /home/vagrant/.cargo/bin/cargo install cargo-ndk --version 4.1.2 --locked
       - chown -R vagrant:vagrant /home/vagrant/.cargo /home/vagrant/.rustup
       - ln -s /home/vagrant/.cargo/bin/* /usr/local/bin/
-    rm:
-      - tests/net/zeros-1mib.json.gz
     gradle:
       - yes
+    rm:
+      - tests/net/zeros-1mib.json.gz
     build: RUSTUP_HOME=/home/vagrant/.rustup CARGO_HOME=/home/vagrant/.cargo ANDROID_NDK_HOME=$$NDK$$
       ../../scripts/build-libmpv-android.sh
     ndk: 30.0.16248370
