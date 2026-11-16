@@ -44,7 +44,7 @@ old one *Superseded by NNNN*.
 | [0026](0026-torrent-listener-utp-and-fallback-trackers.md) | Torrent engine: a listening port, uTP and fallback trackers | Accepted |
 | [0027](0027-windows-support.md) | Windows x86_64 support | Accepted (media keys: superseded by 0031; handover channel: superseded by 0032; macOS: superseded by 0035) |
 | [0028](0028-android-port.md) | Android port | Accepted (LGPL in a signed APK: settled by 0029; Maven AAR for the TLS verifier: superseded by 0037) |
-| [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030; libmpv cache on tags: amended 2026-11-13, superseded by 0037) |
+| [0029](0029-android-releases.md) | Android releases | Accepted (`versionCode`: superseded by 0030; libmpv cache on tags: amended 2026-11-13) |
 | [0030](0030-google-play-and-f-droid.md) | Google Play and F-Droid | Accepted |
 | [0031](0031-media-controls-through-fastframe.md) | Media controls through fastframe-now-playing | Accepted |
 | [0032](0032-link-handover-and-file-replacement-through-fastframe.md) | Link handover, file replacement, system sleep and panic log through fastframe | Accepted |
@@ -52,7 +52,7 @@ old one *Superseded by NNNN*.
 | [0034](0034-i18n-and-dirs-through-fastframe.md) | Translations and folders through fastframe | Accepted |
 | [0035](0035-macos-support.md) | macOS support | Accepted |
 | [0036](0036-pinned-toolchain-for-the-ci-cache.md) | A pinned stable toolchain, bumped by hand | Accepted |
-| [0037](0037-vendored-tls-verifier-and-source-built-releases.md) | The TLS verifier's Kotlin source in the tree, and releases built from source | Accepted |
+| [0037](0037-vendored-tls-verifier.md) | The TLS verifier's Kotlin source in the tree | Accepted (libmpv cache on tags: withdrawn) |
 
 ## What we took from the reference projects
 

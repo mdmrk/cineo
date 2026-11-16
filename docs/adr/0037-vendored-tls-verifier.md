@@ -1,8 +1,9 @@
-# 0037. The TLS verifier's Kotlin source in the tree, and releases built from source
+# 0037. The TLS verifier's Kotlin source in the tree
 
 - Status: Accepted
 - Date: 2026-11-16
-- Supersedes: the Maven part of 0028 and the libmpv cache on tags in 0029
+- Supersedes: the Maven part of 0028
+- Amended 2026-11-16: the part about the libmpv cache on tags was withdrawn (below)
 
 ## Context
 Cineo is being submitted to the main F-Droid repository. Checking the
@@ -30,8 +31,16 @@ found three things.
   deterministic. In the v1.9.4 release run, `build (android)` skipped the
   step that installs ninja, which only runs on a cache miss, so libmpv came
   from the Actions cache that an earlier run on `main` saved (VERIFIED:
-  GitHub API job steps). Which property of that earlier run caused the
-  different order is UNKNOWN: its logs were not read.
+  GitHub API job steps). This ADR first took that cache to be the cause.
+  **Withdrawn 2026-11-16:** the v1.9.5 release run built libmpv without the
+  cache and gave the same `libavformat.so` as v1.9.4 (`6ce36177…`), so the
+  cache is not the cause (VERIFIED: job steps and hashes). The cause is
+  `pkg-config`: OpenSSL's `openssl.pc` only `Requires` `libssl` and
+  `libcrypto`, and pkgconf 1.8.1 (Debian 13, Ubuntu 24.04) and 2.5.1 (Ubuntu
+  26.04, which GitHub's runner gives the same result as) put `-ldl` before
+  and after `-lcrypto`. With the libraries written into `openssl.pc`, both
+  give `6ce36177…` and all seven libmpv libraries match the v1.9.5 release
+  (VERIFIED: Debian 13 and Ubuntu 26.04 builds, 2026-11-16).
 
 ## Options considered
 1. Keep the AAR and ask F-Droid to allow the repository: not up to us, and
@@ -42,7 +51,8 @@ found three things.
 4. Leave the libmpv cache on tags and drop `Binaries:` from the recipe, so
    F-Droid signs its own build: no reproducibility check, and users of the
    GitHub APK cannot update to the F-Droid one.
-5. Skip the libmpv cache on tags, as `rust-cache` is already skipped.
+5. Skip the libmpv cache on tags, as `rust-cache` is already skipped
+   (tried in v1.9.5 and withdrawn: it did not change the result).
 
 ## Decision
 - `android/rustls-platform-verifier` holds the three upstream files that the
@@ -57,21 +67,15 @@ found three things.
 - Gradle fails the build when the version on the first line of `UPSTREAM`
   differs from `rustls-platform-verifier-android` in `Cargo.lock`, so a
   crate bump cannot leave the Kotlin side behind.
-- On tags, `build (android)` does not restore the libmpv cache, so a
-  release builds libmpv from the pinned sources. Pushes to `main` still
-  restore and save it.
+- ADR-0029's libmpv cache on tags stays as it was.
 
 ## Consequences
 The scanner finding for the Maven repository goes away and the build no
 longer needs network access to GitHub for Kotlin classes. Updating the
 verifier means copying the files from a new upstream commit and changing
-`UPSTREAM`. A release takes the time of a libmpv build longer, about 7
-minutes on a 12 core machine. The first release built this way is the first
-one an F-Droid build can match; v1.9.4 cannot be matched. Docs that change:
-`docs/DEVELOPMENT.md`, `docs/LEGAL.md`, `docs/TECHNICAL_DEBT.md`,
+`UPSTREAM`. Docs that change: `docs/DEVELOPMENT.md`, `docs/LEGAL.md`,
 `docs/fdroid/io.github.mdmrk.cineo.yml`, ADR-0028's index row.
 
 ## Rejected alternatives
 The AAR, for F-Droid's scanner. Building it in the recipe, for the second
-Gradle build it adds to every recipe change. Dropping `Binaries:`, because
-it gives up the one check that ties the F-Droid build to the released one.
+Gradle build it adds to every recipe change.
