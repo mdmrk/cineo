@@ -77,7 +77,7 @@ _Last reviewed: 2026-10-13._
 | Detail page | Supported | Meta, seasons/episodes, streams per addon; unplayable sources disabled with a reason (`detail_lists_streams_and_only_playable_ones_can_be_played`). An open detail follows addons that load late, are removed or are reordered (`an_addon_restored_late_answers_a_detail_opened_before_it`, `a_removed_addon_leaves_the_streams_of_the_open_detail`, `moving_an_addon_reorders_the_open_streams_without_asking_again`) |
 | Stream list aggregated across addons | Supported | Partial failure kept per addon; GUI search, filters and sorting by quality, seeders or size. [Details](#stream-list) |
 | Stream search and filters | Supported | Cineo-only: search by name and description (every word, any case), filter by detected quality and by addon (`stream_search_and_quality_filter_narrow_the_list_and_keep_stream_indexes`, `stream_filter_needs_every_word_and_the_quality`) |
-| Playback in the window (libmpv) | Partial | libmpv loaded at runtime, checked against libmpv 0.41; several parts not seen with a real stream. [Details](#playback) |
+| Playback in the window (libmpv) | Partial | libmpv loaded at runtime, checked against libmpv 0.41 and 0.42; several parts not seen with a real stream. [Details](#playback) |
 | Audio and subtitle track selection | Partial | Audio and Subtitles menus; preferred and second languages. [Details](#audio-and-subtitle-tracks) |
 | Settings (stremio-core `Settings` equivalents) | Partial | Player, subtitle, torrent and interface settings; some Stremio options not offered. [Details](#settings) |
 | Interface language | Supported | Nine languages, from the OS locale or Settings; Chinese not yet seen on screen. [Details](#interface-language) |
@@ -248,7 +248,9 @@ The full evidence for the rows above whose notes do not fit in the table.
   message.
 - The external mpv player was removed 2026-10-07.
 - Playback, headers, resume, stop (also before the file loads) and tracks
-  against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07);
+  against real libmpv 0.41 (`real_libmpv_*`, `#[ignore]`, run 2026-10-07)
+  and 0.42.0 (all ten, run 2026-11-16 on Linux; Android and Windows bundle
+  0.42.0 from then and were not run on a device);
   controls (`crates/cineo-desktop/tests/player_ui.rs`); until playback first
   starts (the file has loaded and mpv no longer waits), the meta `logo`
   pulses in the middle, or the title without one, over the dimmed meta
