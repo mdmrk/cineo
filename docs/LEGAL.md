@@ -79,10 +79,13 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
 - `kotlinx-coroutines-android` 1.11.0: Apache-2.0.
 - JNA 5.19.1, needed by the UniFFI Kotlin code: Apache-2.0 or
   LGPL-2.1-or-later, used under Apache-2.0.
-- `org.rustls:rustls-platform-verifier` 0.2.0, the Kotlin half of
-  `rustls-platform-verifier`: its crate `rustls-platform-verifier-android`
-  0.2.0 is MIT or Apache-2.0; the Maven artifact is built from the same
-  repository and its POM names no license (INFERRED: same license).
+- The Kotlin half of `rustls-platform-verifier`, copied unchanged into
+  `android/rustls-platform-verifier` from upstream commit `2885f2fff6`
+  (2026-11-16, ADR-0037): `AndroidManifest.xml`, `CertificateVerifier.kt`
+  and `network_security_config.xml`. Its crate
+  `rustls-platform-verifier-android` 0.2.0 is MIT or Apache-2.0, and both
+  license texts are in that folder (VERIFIED: the upstream repository at
+  that commit).
 - JUnit 4.13.2 (EPL-1.0) and its dependency Hamcrest Core 1.3
   (BSD-3-Clause), for the Kotlin unit tests only (`testImplementation`,
   2026-11-04: their POMs on Maven Central). They are not in the APK.

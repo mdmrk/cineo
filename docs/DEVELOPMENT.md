@@ -91,6 +91,10 @@ holds the details it links to.
    `dist/cineo-arm64-android.apk`. Release builds run R8 with the keep
    rules in `android/app/proguard-rules.pro` for JNA, the UniFFI bindings
    and rustls-platform-verifier, and store the `.so` files compressed.
+   `android/rustls-platform-verifier` is the verifier's Kotlin half, copied
+   unchanged from upstream (`UPSTREAM` names the commit); Gradle fails if
+   its version differs from `rustls-platform-verifier-android` in
+   `Cargo.lock` (ADR-0037).
    AGP keeps the libmpv and FFmpeg `.so` files unstripped, so they match
    the hashes in `libmpv.md`.
 

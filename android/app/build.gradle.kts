@@ -195,6 +195,19 @@ androidComponents {
     }
 }
 
+val checkVerifierSources = tasks.register("checkVerifierSources") {
+    val upstream = rootProject.layout.projectDirectory.file("rustls-platform-verifier/UPSTREAM")
+    val locked = cargoLockVersion("rustls-platform-verifier-android")
+    doLast {
+        val vendored = upstream.asFile.readLines().first().substringAfterLast(' ')
+        check(vendored == locked) {
+            "Cargo.lock has rustls-platform-verifier-android $locked, but android/rustls-platform-verifier is $vendored"
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(checkVerifierSources) }
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.material3:material3")
@@ -203,7 +216,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("net.java.dev.jna:jna:5.19.1@aar")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    implementation("org.rustls:rustls-platform-verifier:${cargoLockVersion("rustls-platform-verifier-android")}")
+    implementation(project(":rustls-platform-verifier"))
     testImplementation("junit:junit:4.13.2")
 }
 

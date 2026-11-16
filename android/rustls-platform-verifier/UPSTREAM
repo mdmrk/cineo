@@ -1,0 +1,4 @@
+crate rustls-platform-verifier-android 0.2.0
+source https://github.com/rustls/rustls-platform-verifier
+commit 2885f2fff6
+files src/main/AndroidManifest.xml src/main/java/org/rustls/platformverifier/CertificateVerifier.kt src/main/res/xml/network_security_config.xml
