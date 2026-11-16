@@ -658,39 +658,36 @@ The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and IzzyOnDroid read
 (ADR-0030), with a 512 × 512 icon (`images/icon.png`, the brand logo on the launcher background) and six phone screenshots in `images/phoneScreenshots/` that show only Creative Commons films (their credits are in `docs/LEGAL.md`).
 
-`docs/fdroid/io.github.mdmrk.cineo.yml` is the draft build recipe for
-F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint`
-(fdroidserver 2.4.5, against `fdroiddata`'s `config/` on 2026-11-05).
-`fdroid build --on-server` in fdroidserver's `buildserver` image
-(2026-11-16) built v1.9.5, the first release without the Maven repository
-that ADR-0037 removed, and its scanner passed. Its unsigned APK matched the
-GitHub release except for `libavformat.so` and the `libmpv.md` that holds
-its hash (VERIFIED: `diff -r` of both APKs): pkgconf 1.8.1 on F-Droid's
-Debian and 2.5.1 on GitHub's runner ordered OpenSSL's `-ldl` and
-`-lcrypto` differently. `build-libmpv-android.sh` now writes the libraries
-into `openssl.pc` and fails if `pkg-config` gives them in another order;
-with that, Debian 13 builds the seven libmpv libraries of the GitHub
-release byte for byte (VERIFIED 2026-11-16). The recipe keeps `Binaries`
-and `AllowedAPKSigningKeys`. For v1.9.6, the first release with that fix,
-`fdroid build` matched the GitHub APK and accepted its signer (VERIFIED
-2026-11-16: "compared built binary to supplied reference binary
-successfully").
-`fdroid build` needs the recipe committed in the `fdroiddata` clone,
-because it takes `SOURCE_DATE_EPOCH` from the last commit that touches
-it; an uncommitted recipe gives an empty value and Gradle and clang
-fail on it (VERIFIED 2026-11-16). Rust goes in `~/.cargo` and `~/.rustup` because `CargoNdk` maps
-the canonical path of those directories: a symlink to `/opt` leaves the
-real paths in `libcineo_android.so` (VERIFIED 2026-11-16). The build is
-reproducible across directories on one machine: Rust maps `CARGO_HOME`,
-`RUSTUP_HOME` and the checkout to `/cargo`, `/rustup` and `/cineo`
-(`--remap-path-prefix`), and libmpv is built in the fixed
-`/tmp/cineo-libmpv-android` with `SOURCE_DATE_EPOCH=0` and the NDK
-compilers named without their path (`docs/TECHNICAL_DEBT.md`). Updates are manual
-(`UpdateCheckMode: None`), because F-Droid reads the version with a regular
-expression and Gradle computes it. Each release changes `versionName`,
-`versionCode`, `commit`, `CurrentVersion` and `CurrentVersionCode`, and the
-Rust and cargo-ndk versions the release was built with, which
-`scripts/release-android.sh` prints as its `F-Droid recipe:` line.
+`docs/fdroid/io.github.mdmrk.cineo.yml` is the build recipe submitted to
+F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint` and
+`fdroid rewritemeta` (fdroidserver 2.4.5). `Binaries` and
+`AllowedAPKSigningKeys` make F-Droid publish our signed APK only when its
+own build matches it: for v1.9.6, `fdroid build --on-server` in
+fdroidserver's `buildserver` image passed the scanner and matched the
+GitHub APK (VERIFIED 2026-11-16: "compared built binary to supplied
+reference binary successfully"). Why earlier releases did not match is in
+ADR-0037.
+
+To check a release the same way:
+- Commit the recipe in a `fdroiddata` clone first: `fdroid build` takes
+  `SOURCE_DATE_EPOCH` from the last commit that touches it, and an empty
+  value makes Gradle and clang fail (VERIFIED 2026-11-16).
+- Install Rust in `~/.cargo` and `~/.rustup`, not behind a symlink: `CargoNdk`
+  maps the canonical path of those directories, so a symlink leaves the real
+  paths in `libcineo_android.so` (VERIFIED 2026-11-16).
+
+The build is reproducible across directories on one machine: Rust maps
+`CARGO_HOME`, `RUSTUP_HOME` and the checkout to `/cargo`, `/rustup` and
+`/cineo` (`--remap-path-prefix`), and libmpv is built in the fixed
+`/tmp/cineo-libmpv-android` with `SOURCE_DATE_EPOCH=0`, the NDK compilers
+named without their path, and OpenSSL's libraries written into
+`openssl.pc` so that every `pkg-config` orders them the same
+(`docs/TECHNICAL_DEBT.md`). Updates are manual (`UpdateCheckMode: None`),
+because F-Droid reads the version with a regular expression and Gradle
+computes it. Each release changes `versionName`, `versionCode`, `commit`,
+`CurrentVersion` and `CurrentVersionCode`, and the Rust and cargo-ndk
+versions the release was built with, which `scripts/release-android.sh`
+prints as its `F-Droid recipe:` line.
 
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
