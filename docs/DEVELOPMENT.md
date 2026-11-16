@@ -651,7 +651,7 @@ but the newest Rust and libmpv cache of each job, so the repository stays
 under GitHub's 10 GB cache limit.
 
 The Android store listing (title, short and full description) lives in
-`fastlane/metadata/android/en-US/`, the layout F-Droid and IzzyOnDroid read
+`fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and IzzyOnDroid read
 (ADR-0030), with a 512 × 512 icon (`images/icon.png`, the brand logo on the launcher background) and six phone screenshots in `images/phoneScreenshots/` that show only Creative Commons films (their credits are in `docs/LEGAL.md`).
 
 `docs/fdroid/io.github.mdmrk.cineo.yml` is the draft build recipe for
