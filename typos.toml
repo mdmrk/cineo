@@ -3,6 +3,7 @@ extend-exclude = [
     "Cargo.lock",
     "android/gradle/**",
     "android/gradlew*",
+    "android/rustls-platform-verifier/**",
     "fastlane/**",
     "crates/cineo-desktop/assets/i18n/**",
     "android/app/src/main/res/values-*/**",
