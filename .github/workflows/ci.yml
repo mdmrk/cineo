@@ -190,7 +190,6 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: ./.github/actions/setup-android
       - id: libmpv
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/cache/restore@v6.1.0
         with:
           path: &libmpv-android-paths |
