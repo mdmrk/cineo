@@ -1,53 +1,15 @@
-Cineo is a native media center for Stremio-protocol addons, written in Rust. Install the addons you choose, browse and search their catalogs, and play their streams in a built-in player, over HTTP or BitTorrent. Cineo has no account, no cloud, no ads and no analytics: your library and settings stay on your phone.
+Cineo is a native media center for Stremio-protocol addons, written in Rust. Install the addons you choose, browse and search their catalogs, and play their streams in a built-in player, over HTTP or BitTorrent. No account, no cloud, no ads, no analytics: your library and settings stay on your phone.
 
 Cineo ships no content. On first run it installs Cinemeta, Stremio's metadata catalog, so the home screen has something to show; every other addon is your choice.
 
-<b>Addons</b>
 <ul>
-<li>Install an addon from its manifest URL, reorder addons and remove them</li>
-<li>Discover addons in the Official and Community lists, and configure those that need it in your browser</li>
-<li>Addons that stop loading stay listed, so you can remove them</li>
+<li>Browse and search the catalogs of all your addons</li>
+<li>Player built on libmpv, with hardware decoding, subtitles and audio tracks</li>
+<li>Torrent streaming with Cineo's own engine: playback starts while it downloads</li>
+<li>Continue watching, favourites and history</li>
+<li>Available in English, Spanish, Portuguese, Russian, Italian, German and French</li>
 </ul>
 
-<b>Browse and search</b>
-<ul>
-<li>Catalog rows from every installed addon on the home screen</li>
-<li>Search across every addon that supports it</li>
-<li>Stream lists you can filter by quality or addon and sort by addon order, quality, seeders or size</li>
-</ul>
+Peer-to-peer streaming shares data with other peers and shows them your IP address. Cineo asks before the first torrent, and torrent streams can be turned off entirely. You are responsible for the addons you install and what you watch through them.
 
-<b>Player</b>
-<ul>
-<li>Built on libmpv, with hardware decoding</li>
-<li>Audio and subtitle tracks from the file, plus subtitles from addons</li>
-<li>Preferred audio and subtitle languages, with a second choice for each</li>
-<li>Subtitle style, seek step and controls timeout in Settings</li>
-<li>A stats panel with network speed, buffer, resolution, codec and decoder</li>
-<li>Resumes where you stopped</li>
-</ul>
-
-<b>Torrent streaming</b>
-<ul>
-<li>Cineo's own engine starts playing while the torrent downloads</li>
-<li>Shows peers and speed while it connects, and a notification while a torrent is open</li>
-<li>Download and upload limits, upload on or off, peer count, DHT and listening port in Settings</li>
-<li>Asks before the first torrent: peer-to-peer streaming shares data with other peers and shows them your IP address. Torrent streams can be turned off entirely</li>
-</ul>
-
-<b>Library</b>
-<ul>
-<li>Continue watching, favourites and recently played</li>
-<li>Clear the history or reset all settings from Settings</li>
-</ul>
-
-<b>Languages</b>
-English, Spanish, Brazilian Portuguese, Russian, Italian, German and French, following your system language.
-
-<b>Limitations</b>
-<ul>
-<li>Phones with a 64-bit ARM processor (arm64-v8a); no Android TV version</li>
-</ul>
-
-You are responsible for the addons you install and what you watch through them.
-
-Cineo is free software under the MIT license. It bundles libmpv and FFmpeg under the LGPL-2.1; their license texts are in Settings, About.
+For phones with a 64-bit ARM processor. Free software under the MIT license; it bundles libmpv and FFmpeg under the LGPL-2.1.
