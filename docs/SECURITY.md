@@ -240,7 +240,10 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   `proxyHeaders` values into logs or error messages; use origin + path.
 - Never pass addon strings as mpv options or command-line arguments.
 - GitHub workflows and the local actions in `.github/actions/`: reference
-  actions by an exact version tag (`@vX.Y.Z`);
+  `actions/*` by an exact version tag (`@vX.Y.Z`) and every other action
+  by a full commit hash, listed with its version in `docs/DEVELOPMENT.md`
+  (a moved tag of a third-party action cannot reach the signing key or the
+  attestations);
   default `permissions: contents: read`; `persist-credentials: false`; pass
   inputs through `env:`, never by interpolating them into `run:`.
 - `mirror libmpv` runs only on pushes to `main`, with `contents: write`,

@@ -59,4 +59,10 @@ if (version.group(1), code.group(1)) != (package, declared):
     sys.exit(f"UpdateCheckData reads {version.group(1)} ({code.group(1)}), Cargo.toml has {package} ({declared})")
 PY
 
+actions=$(sed -n '/^### CI actions/,/^## /p' docs/DEVELOPMENT.md)
+while read -r action commit; do
+  grep -qF "| \`$action\`" <<<"$actions" && grep -F "| \`$action\`" <<<"$actions" | grep -qF "$commit" ||
+    fail "DEVELOPMENT.md does not list $action at $commit"
+done < <(grep -rhoE 'uses: [^ ]+@[0-9a-f]{40}' .github | sed -E 's/uses: (.*)@(.*)/\1 \2/' | sort -u)
+
 exit "$status"

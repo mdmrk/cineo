@@ -602,6 +602,19 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
 
+### CI actions
+
+`actions/*` are referenced by version tag; other actions by commit, with
+the version here (`docs/SECURITY.md`). `scripts/check-docs.sh` fails if a
+pinned commit in `.github/` is not in this table.
+
+| Action                        | Version | Commit                                     |
+| ----------------------------- | ------- | ------------------------------------------ |
+| `Swatinem/rust-cache`         | v2.9.3  | `d1527c8f67ef9af357290475d4af4b0fab8f12e0` |
+| `taiki-e/install-action`      | v2.90.5 | `ab49d3c64680143e184118bed66a46419fc15519` |
+| `samypr100/setup-dev-drive`   | v4.1.0  | `562171fe8df7401fdf582d766cd3b6ab80d5b1a0` |
+| `gradle/actions/setup-gradle` | v6.4.1  | `8da46b539cd8fe6ab27ca75128919a18d757604c` |
+
 ## Releasing
 
 - **Versioning:** SemVer. The workspace version in the root `Cargo.toml` is
@@ -612,62 +625,78 @@ alpha (`colour_and_transparency_survive_downscaling`).
 One workflow, `ci.yml`, runs everything. The builds run alongside the
 checks, and `publish` waits for both:
 
-| Trigger                  | Jobs                                              |
-| ------------------------ | ------------------------------------------------- |
-| pull request, manual run | check (linux), check (windows), check (android)   |
-| push to `main`           | the checks and build → publish `prerelease`       |
-| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z`           |
+| Trigger                  | Jobs                                                                   |
+| ------------------------ | ---------------------------------------------------------------------- |
+| pull request, manual run | check (linux), check (windows), check (macos), check (android)         |
+| push to `main`           | the checks and build → publish `prerelease`; mirror libmpv             |
+| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z`                                |
 
-The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
-`ci / check (android)`, `ci / build (linux)`, `ci / build (windows)`,
-`ci / build (android)` and `ci / publish`.
-`check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`, clippy,
-nextest with the `ci` profile, `scripts/lint.sh`, cargo-deny); `check (windows)` runs clippy and nextest on
-`windows-latest`, in a copy of the checkout on a Dev Drive
-(`samypr100/setup-dev-drive`). CI builds the dev profile without debug info
-(`CARGO_PROFILE_DEV_DEBUG=0`), and `check (linux)` and `check (windows)`
-write a `.cargo/config.toml` that builds the dependencies at `opt-level = 0`
-instead of the `Cargo.toml`'s 2: a cold test build went from 173 s to 54 s
-and the tests from 6 s to 9 s (measured locally on 2026-11-12). Only tag builds use the release profile's
-`lto = "thin"` and `codegen-units = 1`; every other run, including the
-prerelease and the APK `check (android)` builds, uses `lto = "off"` and
-`codegen-units = 16`. The `CARGO_PROFILE_RELEASE_*` variables that choose
-this are set on the build steps, never in the workflow's `env`:
-`Swatinem/rust-cache` hashes every `CARGO*` variable into its key, so a
-workflow-wide value that differs on tags made the checks on tags miss
-`main`'s cache. `build` builds `cineo-desktop` for Linux x86_64 and
-Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
-after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
-into `dist/` with `scripts/package.sh <linux|windows>` and attests build
-provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` at
-`CARGO_NDK_VERSION` in `scripts/android.env` and the NDK named by
-`NDK_VERSION` in `scripts/libmpv-android.env` with the local action
-`.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
-tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
-the hash of the script and its `.env`, also on tags; only runs on `main`
-save it) and runs
-`scripts/release-android.sh`: it builds libmpv if needed, a signed
-`assembleRelease`, and runs `scripts/package.sh android`, which checks that
-the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
-`.so` matches its hash, that no `.so` holds a build path or an OpenSSL build
-date (they would make the build unreproducible), that every `.so` in the APK has its LOAD segments
-aligned to at least 16 KB (`readelf`), that `apksigner verify` passes and
-the signer is the certificate the F-Droid recipe allows
-(`AllowedAPKSigningKeys`), and that the signing block has no dependency-info block (Gradle's is
-encrypted for Google; `dependenciesInfo` turns it off). The `versionCode`
-is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace version: Gradle
-takes it from `version-code` in `Cargo.toml`
-(`[workspace.metadata.android]`) and fails if it is not that number
-(ADR-0030). `scripts/release-android.sh` fails if a signing
-secret is missing or the decoded keystore is empty rather than publish an
-unsigned APK; `check (android)` builds an
-unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with
-`gh attestation verify <file> --repo <owner>/cineo`). Only `publish` and
-`mirror libmpv` can write to the repository. The checks and prerelease builds restore the compiled
-dependencies from the cache saved by the last run on `main`; tag builds
-start without a Rust cache and reuse only `main`'s libmpv for Android. After each run on `main`, `prune caches` deletes all
-but the newest Rust and libmpv cache of each job, so the repository stays
-under GitHub's 10 GB cache limit.
+**Checks.**
+- `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`,
+  clippy, nextest with the `ci` profile, `scripts/lint.sh`, cargo-deny),
+  then the player tests that need libmpv (`--run-ignored only`) with the
+  system `libmpv2`.
+- `check (windows)` runs clippy and nextest on `windows-latest`, in a copy
+  of the checkout on a Dev Drive (`samypr100/setup-dev-drive`), and
+  `check (macos)` runs them on `macos-latest`.
+- `check (android)` runs `cargo ndk … clippy -p cineo-android` at
+  `ANDROID_API`, then `./gradlew assembleDebug testDebugUnitTest lintDebug`.
+- CI builds the dev profile without debug info (`CARGO_PROFILE_DEV_DEBUG=0`),
+  and the linux, windows and macos checks write a `.cargo/config.toml` that
+  builds the dependencies at `opt-level = 0` instead of the `Cargo.toml`'s
+  2: a cold test build went from 173 s to 54 s and the tests from 6 s to
+  9 s (measured locally on 2026-11-12).
+
+**Builds.**
+- `build` builds `cineo-desktop` for Linux x86_64 and Windows x86_64 at the
+  `x86-64-v2` level (Windows with `bundled-libmpv`, after
+  `scripts/fetch-libmpv.sh` checks the pinned archive), and one universal
+  macOS binary for `aarch64-apple-darwin` and `x86_64-apple-darwin`
+  (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv-macos.sh`).
+  It puts the files into `dist/` with
+  `scripts/package.sh <linux|windows|macos>` and attests build provenance.
+- Both Android jobs set up Java, Gradle, `cargo-ndk` at
+  `CARGO_NDK_VERSION` in `scripts/android.env` and the NDK named by
+  `NDK_VERSION` in `scripts/libmpv-android.env` (unless the runner already
+  has it) with the local action `.github/actions/setup-android`.
+  `build (android)` restores libmpv from its cache and runs
+  `scripts/release-android.sh`: it builds libmpv if needed, a signed
+  `assembleRelease`, and runs `scripts/package.sh android`, which checks
+  that the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts,
+  that each `.so` matches its hash, that no `.so` holds a build path or an
+  OpenSSL build date (they would make the build unreproducible), that every
+  `.so` has its LOAD segments aligned to at least 16 KB (`readelf`), that
+  `apksigner verify` passes and the signer is the certificate the F-Droid
+  recipe allows (`AllowedAPKSigningKeys`), and that the signing block has
+  no dependency-info block (Gradle's is encrypted for Google;
+  `dependenciesInfo` turns it off). `release-android.sh` fails if a signing
+  secret is missing or the decoded keystore is empty rather than publish an
+  unsigned APK.
+- The `versionCode` is `MAJOR * 10000 + MINOR * 100 + PATCH` of the
+  workspace version: Gradle takes it from `version-code` in `Cargo.toml`
+  (`[workspace.metadata.android]`) and fails if it is not that number
+  (ADR-0030).
+- Only tag builds use the release profile's `lto = "thin"` and
+  `codegen-units = 1`; every other run, including the prerelease and the
+  APK `check (android)` builds, uses `lto = "off"` and `codegen-units = 16`.
+  The `CARGO_PROFILE_RELEASE_*` variables that choose this are set on the
+  build steps, never in the workflow's `env`: `Swatinem/rust-cache` hashes
+  every `CARGO*` variable into its key, so a workflow-wide value that
+  differs on tags made the checks on tags miss `main`'s cache.
+
+**Caches.** Only runs on `main` save the Rust caches. The Android one
+(`shared-key: android`) is saved by `check (android)`, which builds both
+the clippy and the release artifacts, and only restored by
+`build (android)`; tag builds start without a Rust cache. libmpv for
+Android is cached by the hash of its script and `.env`, restored on tags
+too and saved only by `build (android)` on `main`. After each run on
+`main`, `prune caches` deletes all but the newest Rust and libmpv cache of
+each job, so the repository stays under GitHub's 10 GB cache limit.
+
+**Publishing.** `publish` writes `SHA256SUMS` (check a file with
+`gh attestation verify <file> --repo <owner>/cineo`). `mirror libmpv`
+keeps a copy of the pinned Windows libmpv archive (ADR-0027). Only these
+two jobs can write to the repository.
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and Play read
@@ -681,6 +710,7 @@ Every release has these files, with the same names in every release so that
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded (ADR-0027)                      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
+| `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
@@ -701,8 +731,9 @@ Every release has these files, with the same names in every release so that
 Every push to `main` builds a prerelease, alongside the checks, and
 publishes it once they pass, except a push whose head commit starts with
 `chore(release):`; that commit gets the real release from its tag instead.
-It deletes the previous `prerelease` GitHub release and its tag and
-recreates both at the pushed commit.
+It moves the `prerelease` tag to the pushed commit and replaces the
+release's files (`gh release upload --clobber`), so the release and its
+links stay in place; the first push creates it.
 
 The desktop artifacts are not code-signed; build provenance attestations
 and `SHA256SUMS` are the integrity checks. The APK is signed, because
