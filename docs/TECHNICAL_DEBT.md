@@ -377,24 +377,23 @@ Format:
 - Exit: run the [manual test](DEVELOPMENT.md#manual-gui-test) on Windows
   10 and 11 and record the results.
 
-### Windows: the bundled libmpv's other license notices are missing
-- Where: [package.sh](../scripts/package.sh) (`cineo-licenses.zip`),
-  [libmpv-windows.env](../scripts/libmpv-windows.env)
-- Gap: only mpv's and FFmpeg's texts ship (`scripts/windows/licenses.txt`).
-  The build's recipe, shinchiro/mpv-winbuild-cmake at `bda10a2` (the last
-  commit before the build) with zhongfly's LGPL patch, lists 74 packages
-  under `mpv` (VERIFIED 2026-11-17: the `DEPENDS` closure of its
-  `packages/*.cmake`), among them libvpx, libbluray, OpenSSL, libplacebo,
-  Vorbis, LuaJIT, zlib-ng, libass, FreeType, shaderc, SPIRV-Cross, libjxl,
-  Little CMS, zimg, libwebp, libarchive, libxml2, Opus, aom, SVT-AV1,
-  HarfBuzz, FriBidi and dav1d. Their BSD, MIT and Apache licenses ask for
-  their notices with the binary. Which of the 74 end up in the DLL, and at
-  which commits (most are built from their default branch), is INFERRED;
-  this is not legal advice.
-- Why: each text has to be taken from that package's source near the build
-  date, and the owner has not decided how far to go (2026-11-17).
-- Instead: `libmpv.md` links to the build scripts and the build log.
-- Exit: the other packages' texts in `scripts/windows/licenses.txt`.
+### Windows: the bundled libmpv's license texts are inferred
+- Where: [scripts/windows/licenses/](../scripts/windows/licenses/),
+  [licenses.txt](../scripts/windows/licenses.txt)
+- Gap: the texts come from the packages that shinchiro/mpv-winbuild-cmake at
+  `bda10a2` (its last commit before the build), with zhongfly's LGPL patch,
+  lists under `mpv`: 73 packages, each read at its last commit before
+  2026-11-05 12:47 UTC, or from its pinned tarball (VERIFIED 2026-11-17).
+  mpv and FFmpeg are at the build's own commits. zhongfly builds most of
+  them from their default branch with cached sources, so the exact
+  revisions in the DLL, and whether every package is linked in, are
+  INFERRED; this is not legal advice.
+- Why: the build publishes no list of what it linked, and its logs need a
+  GitHub login.
+- Instead: the list errs on the side of more packages, and copyright
+  notices rarely change between nearby commits.
+- Exit: redo the list from the build log, or from a build that publishes
+  one, when the pin moves.
 
 ### Windows: the bundled libmpv reads HTTP through libcurl
 - Where: the pinned build in [libmpv-windows.env](../scripts/libmpv-windows.env)

@@ -1,5 +1,11 @@
 [files]
-extend-exclude = ["android/rustls-platform-verifier/**", "fastlane/**", "crates/cineo-desktop/assets/i18n/**", "android/app/src/main/res/values-*/**"]
+extend-exclude = [
+    "scripts/windows/licenses/**",
+    "android/rustls-platform-verifier/**",
+    "fastlane/**",
+    "crates/cineo-desktop/assets/i18n/**",
+    "android/app/src/main/res/values-*/**",
+]
 
 [default.extend-words]
 fre = "fre"

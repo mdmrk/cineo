@@ -122,13 +122,13 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `packages/ffmpeg.cmake`), pinned in `scripts/libmpv-windows.env`. It is
   written to disk and loaded as a separate shared library, and a user's own
   `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).
-  `cineo-licenses.zip` carries mpv's and FFmpeg's license texts at the
-  build's commits (`scripts/windows/licenses.txt`, each checked by SHA-256
-  when the zip is made) and `libmpv.md` with the binary's hash, the mpv
-  commit and the build sources. The DLL also
-  statically contains many other libraries under BSD, MIT, Apache and
-  similar licenses, whose notices are not shipped yet
-  (`docs/TECHNICAL_DEBT.md`). The archive itself,
+  `cineo-licenses.zip` carries `libmpv.md` with the binary's hash, the mpv
+  commit and the build sources, and in `libmpv/` the license texts of mpv,
+  FFmpeg and the 71 other packages the build's recipe lists (BSD, MIT,
+  Apache, LGPL and others), kept in `scripts/windows/licenses/`;
+  `scripts/windows/licenses.txt` names the repository, commit and file of
+  each. Whether those are exactly the libraries and revisions in the DLL is
+  INFERRED (`docs/TECHNICAL_DEBT.md`). The archive itself,
   unmodified, is a file of every release (ADR-0027, amended 2026-11-17).
 - The macOS release (ADR-0035) carries, in
   `Cineo.app/Contents/Frameworks`, the LGPL dylibs of

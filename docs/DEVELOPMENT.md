@@ -715,7 +715,7 @@ Every release has these files, with the same names in every release so that
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
 | `mpv-dev-lgpl-x86_64-….7z` | The unmodified libmpv archive the Windows build embeds, named as upstream names it (`LIBMPV_FILE`, so the name changes with the pin); `scripts/fetch-libmpv.sh` takes it from here before upstream, which deletes old builds (ADR-0027) |
-| `cineo-licenses.zip` | Cineo's license, the font licenses, mpv's and FFmpeg's license texts for the Windows build (`scripts/windows/licenses.txt`) and `libmpv.md` |
+| `cineo-licenses.zip` | Cineo's license, the font licenses, `libmpv.md` and, in `libmpv/`, the license texts of every package in the Windows libmpv build (`scripts/windows/licenses/`) |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
 | `install.ps1`        | Per-user Windows installer into `%LOCALAPPDATA%\Programs\Cineo` with a Start menu shortcut. `CINEO_UNINSTALL=1` removes it; `CINEO_VERSION` picks another release |
