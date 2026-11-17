@@ -632,7 +632,7 @@ checks, and `publish` waits for both:
 | Trigger                  | Jobs                                                                   |
 | ------------------------ | ---------------------------------------------------------------------- |
 | pull request, manual run | check (linux), check (windows), check (macos), check (android)         |
-| push to `main`           | the checks and build → publish `prerelease`                            |
+| push to `main`           | the checks and build → publish `prerelease` → reproduce (android)      |
 | tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z` → reproduce (android)          |
 
 **Checks.**
@@ -680,18 +680,20 @@ checks, and `publish` waits for both:
   workspace version: Gradle takes it from `version-code` in `Cargo.toml`
   (`[workspace.metadata.android]`) and fails if it is not that number
   (ADR-0030).
-- Only tag builds use the release profile's `lto = "thin"` and
-  `codegen-units = 1`; every other run, including the prerelease and the
-  APK `check (android)` builds, uses `lto = "off"` and `codegen-units = 16`.
+- `build (android)` always uses the release profile's `lto = "thin"` and
+  `codegen-units = 1`, so the prerelease APK is built the way F-Droid
+  builds a tag. Of the other builds, only tags use it; the prerelease's
+  desktop builds and `check (android)` use `lto = "off"` and
+  `codegen-units = 16`.
   The `CARGO_PROFILE_RELEASE_*` variables that choose this are set on the
   build steps, never in the workflow's `env`: `Swatinem/rust-cache` hashes
   every `CARGO*` variable into its key, so a workflow-wide value that
   differs on tags made the checks on tags miss `main`'s cache.
 
-**Caches.** Only runs on `main` save the Rust caches. The Android one
-(`shared-key: android`) is saved by `check (android)`, which builds both
-the clippy and the release artifacts, and only restored by
-`build (android)`; tag builds start without a Rust cache. libmpv for
+**Caches.** Only runs on `main` save the Rust caches. `check (android)`
+saves `shared-key: android` and `build (android)` saves
+`shared-key: android-release`, because their release profiles differ; tag
+builds start without a Rust cache. libmpv for
 Android is cached by the hash of its script and `.env`, restored on tags
 too and saved only by `build (android)` on `main`. After each run on
 `main`, `prune caches` deletes all but the newest Rust and libmpv cache of
@@ -699,9 +701,10 @@ each job, so the repository stays under GitHub's 10 GB cache limit.
 
 **Publishing.** `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It is the only job
-that can write to the repository. On tags, `reproduce (android)` then
-builds the release as F-Droid does and fails if it does not match the
-published APK ([F-Droid](#f-droid)).
+that can write to the repository. `reproduce (android)` then builds the
+pushed commit as F-Droid does and fails if it does not match the APK just
+published, the release's on tags and the prerelease's on `main`
+([F-Droid](#f-droid)).
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and Play read
@@ -725,7 +728,8 @@ Every release has these files, with the same names in every release so that
 
 ### Steps
 
-1. On `main` with green CI: bump `version` in `Cargo.toml`, and
+1. On `main` with green CI, `reproduce (android)` included: bump `version`
+   in `Cargo.toml`, and
    `version-code` to `MAJOR * 10000 + MINOR * 100 + PATCH`.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
@@ -797,19 +801,23 @@ the NDK compilers named without their path, and OpenSSL's libraries
 written into `openssl.pc` so that every `pkg-config` orders them the same
 (`docs/TECHNICAL_DEBT.md`).
 
-**Checking a release.** `scripts/check-fdroid-build.sh vX.Y.Z` builds a
-released tag as F-Droid does and fails unless the result matches the
-release's APK. It runs as root in fdroidserver's `buildserver` image:
-`docker run --rm -v "$PWD:/cineo:ro" registry.gitlab.com/fdroid/fdroidserver:buildserver /cineo/scripts/check-fdroid-build.sh vX.Y.Z`.
-It installs fdroidserver 2.4.5, writes the recipe for that tag into a
+**Checking a build.** `scripts/check-fdroid-build.sh <commit> <release>`
+builds a commit as F-Droid does and fails unless the result matches
+`cineo-arm64-android.apk` of the GitHub release `<release>` (a tag, or
+`prerelease`). It runs as root in fdroidserver's `buildserver` image:
+`docker run --rm -v "$PWD:/cineo:ro" registry.gitlab.com/fdroid/fdroidserver:buildserver /cineo/scripts/check-fdroid-build.sh vX.Y.Z vX.Y.Z`.
+It installs fdroidserver 2.4.5, writes the commit's recipe with the
+commit's version and `versionCode` and that release's APK as `Binaries`
+into a
 `fdroiddata` directory that it commits (`fdroid build` takes
 `SOURCE_DATE_EPOCH` from that commit), points `gradle:` at the image's
 `gradlew-fdroid` (the one pip installs has no Gradle 9 checksums) and runs
 `fdroid build --on-server` as `vagrant`. For v1.9.6 it matched, with the
 recipe that installs Rust through `scripts/install-rust.sh` (VERIFIED
-2026-11-17, about 15 minutes on 12 CPUs). CI runs it on every tag after
-`publish` (`reproduce (android)`); v1.9.7 matched there in 18 minutes
-(VERIFIED 2026-11-17). Install Rust in `~/.cargo` and
+2026-11-17, about 15 minutes on 12 CPUs). CI runs it after `publish` on
+every push, against the tag's release or the prerelease
+(`reproduce (android)`); v1.9.7 matched there in 18 minutes (VERIFIED
+2026-11-17). Install Rust in `~/.cargo` and
 `~/.rustup`, not behind a symlink, when building by hand: `CargoNdk` maps
 the canonical path of those directories, so a symlink leaves the real paths
 in `libcineo_android.so` (VERIFIED 2026-11-16).

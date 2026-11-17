@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-tag=${1:?usage: scripts/check-fdroid-build.sh vX.Y.Z, as root in the fdroidserver buildserver image}
+usage="usage: scripts/check-fdroid-build.sh <commit or tag> <release>, as root in the fdroidserver buildserver image"
+ref=${1:?$usage}
+release=${2:?$usage}
 repo=$(cd "$(dirname "$0")/.." && pwd)
 app=io.github.mdmrk.cineo
 work=/home/vagrant/fdroiddata
-version=${tag#v}
-IFS=. read -r major minor patch <<<"$version"
-code=$((major * 10000 + minor * 100 + patch))
-commit=$(git -c safe.directory="$repo" -C "$repo" rev-parse "$tag^{commit}")
+git=(git -c safe.directory="$repo" -C "$repo")
+commit=$("${git[@]}" rev-parse "$ref^{commit}")
+cargo=$("${git[@]}" show "$commit:Cargo.toml")
+version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' <<<"$cargo")
+code=$(sed -n '/^\[workspace.metadata.android\]/,/^\[/s/^version-code = \([0-9]*\)/\1/p' <<<"$cargo")
 
 apt-get update -qq
 apt-get install -y -qq sudo python3-venv git >/dev/null
@@ -17,20 +20,22 @@ python3 -m venv /opt/fdroidserver
 
 rm -rf "$work"
 mkdir -p "$work/metadata"
-python3 - "$repo/docs/fdroid/$app.yml" "$work/metadata/$app.yml" "$version" "$code" "$commit" <<'PY'
+"${git[@]}" show "$commit:docs/fdroid/$app.yml" >"$work/metadata/$app.yml"
+python3 - "$work/metadata/$app.yml" "$version" "$code" "$commit" "$release" <<'PY'
 import re, sys
-source, target, version, code, commit = sys.argv[1:]
-recipe = open(source).read()
-if recipe.count("  - versionName:") != 1:
-    sys.exit(f"{source} must hold exactly one build")
+target, version, code, commit, release = sys.argv[1:]
+recipe = open(target).read()
 for key, value in [
     (r"  - versionName", version),
     (r"    versionCode", code),
     (r"    commit", commit),
     (r"CurrentVersion", version),
     (r"CurrentVersionCode", code),
+    (r"Binaries", f"https://github.com/mdmrk/cineo/releases/download/{release}/cineo-arm64-android.apk"),
 ]:
-    recipe = re.sub(rf"(?m)^{key}: .*$", f"{key}: {value}", recipe)
+    recipe, count = re.subn(rf"(?m)^{key}: .*$", f"{key}: {value}", recipe)
+    if count != 1:
+        sys.exit(f"the recipe must have exactly one {key.strip(' -')}")
 open(target, "w").write(recipe)
 PY
 printf 'sdk_path: /opt/android-sdk\ngradle: /usr/local/bin/gradlew-fdroid\n' >"$work/config.yml"

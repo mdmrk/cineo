@@ -629,19 +629,23 @@ Format:
 - Exit: a `versionCode` that also counts prereleases while the literal F-Droid
   reads stays the release's.
 
-### Android: a release that does not reproduce is already published
+### Android: the release commit itself is checked after it is published
 - Where: [check-fdroid-build.sh](../scripts/check-fdroid-build.sh),
   `reproduce (android)` in [ci.yml](../.github/workflows/ci.yml)
-- Gap: `reproduce (android)` builds each tag as F-Droid does and compares
-  it with the released APK, so it runs after `publish` and cannot stop a
-  release that does not reproduce. libmpv is built in the fixed
-  `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
-  one machine, and its sources are downloaded again after a reboot.
-- Why: F-Droid compares against the APK at the release URL (`Binaries`),
-  which exists only once the release is published.
-- Instead: a failing `reproduce (android)` shows before F-Droid builds the
-  tag; a fixed release follows.
-- Exit: compare against the APK from `build (android)` before `publish`.
+- Gap: every push to `main` is built as F-Droid builds it and compared with
+  its prerelease APK, but the `chore(release):` commit gets no prerelease,
+  so the release itself is only compared after `publish`. That commit
+  changes only the version, so a release that does not reproduce needs a
+  `main` that did not either, which CI would have shown (INFERRED). libmpv
+  is built in the fixed `/tmp/cineo-libmpv-android`, so two libmpv builds
+  cannot run at once on one machine, and its sources are downloaded again
+  after a reboot.
+- Why: F-Droid compares against the APK at a release URL (`Binaries`),
+  which exists only once that release is published.
+- Instead: tag only when `reproduce (android)` is green on `main`; a
+  failing tag run shows before F-Droid builds it, and a fixed patch release
+  follows.
+- Exit: none planned.
 
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
