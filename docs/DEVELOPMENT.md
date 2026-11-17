@@ -632,7 +632,7 @@ checks, and `publish` waits for both:
 | Trigger                  | Jobs                                                                   |
 | ------------------------ | ---------------------------------------------------------------------- |
 | pull request, manual run | check (linux), check (windows), check (macos), check (android)         |
-| push to `main`           | the checks and build → publish `prerelease`; mirror libmpv             |
+| push to `main`           | the checks and build → publish `prerelease`                            |
 | tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z`                                |
 
 **Checks.**
@@ -698,9 +698,8 @@ too and saved only by `build (android)` on `main`. After each run on
 each job, so the repository stays under GitHub's 10 GB cache limit.
 
 **Publishing.** `publish` writes `SHA256SUMS` (check a file with
-`gh attestation verify <file> --repo <owner>/cineo`). `mirror libmpv`
-keeps a copy of the pinned Windows libmpv archive (ADR-0027). Only these
-two jobs can write to the repository.
+`gh attestation verify <file> --repo <owner>/cineo`). It is the only job
+that can write to the repository.
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and Play read
@@ -715,6 +714,7 @@ Every release has these files, with the same names in every release so that
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded gzip-compressed (ADR-0027)      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
+| `mpv-dev-lgpl-x86_64-….7z` | The unmodified libmpv archive the Windows build embeds, named as upstream names it (`LIBMPV_FILE`, so the name changes with the pin); `scripts/fetch-libmpv.sh` takes it from here before upstream, which deletes old builds (ADR-0027) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |

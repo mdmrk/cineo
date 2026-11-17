@@ -25,7 +25,7 @@ cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
 (mpv and FFmpeg, LGPL-2.1-or-later; license text in LGPL-2.1.txt).
 
 - Binary: ${LIBMPV_UPSTREAM}/${LIBMPV_FILE}
-  (SHA-256 ${LIBMPV_SHA256}); Cineo's copy: ${LIBMPV_MIRROR}/${LIBMPV_FILE}
+  (SHA-256 ${LIBMPV_SHA256}); every Cineo release carries the same file
 - mpv source: https://github.com/mpv-player/mpv/commit/${LIBMPV_MPV_COMMIT}
 - Build scripts and the sources of every library: https://github.com/zhongfly/mpv-winbuild
   (build log: ${LIBMPV_BUILD_LOG})
@@ -45,7 +45,9 @@ EOT
     cp scripts/install.sh scripts/install.ps1 dist/
     ;;
   windows)
+    source scripts/libmpv-windows.env
     cp target/release/cineo-desktop.exe dist/cineo-x86_64-windows.exe
+    cp "$(dirname "${CINEO_LIBMPV_DLL_GZ:?set CINEO_LIBMPV_DLL_GZ as for the build}")/$LIBMPV_FILE" dist/
     ;;
   android)
     apk=dist/cineo-arm64-android.apk

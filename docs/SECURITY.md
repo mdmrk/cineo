@@ -247,10 +247,6 @@ in the browser requires a user confirmation and an `http(s)` scheme.
   attestations);
   default `permissions: contents: read`; `persist-credentials: false`; pass
   inputs through `env:`, never by interpolating them into `run:`.
-- `mirror libmpv` runs only on pushes to `main`, with `contents: write`,
-  and only creates the release `libmpv-windows-<tag>` with the pinned
-  Windows libmpv archive after checking its SHA-256
-  (`scripts/mirror-libmpv.sh`).
 - Build caches (`Swatinem/rust-cache`) are written only by runs on `main`.
   The prerelease build reuses `main`'s cache, but a tag build never
   restores one, so a release binary is always built from a clean target

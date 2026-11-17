@@ -72,12 +72,11 @@ unsupported (ADR-0022).
 - **Amended 2026-11-17: a copy of the pinned archive.** zhongfly deletes
   its releases after about a month (VERIFIED 2026-11-17: the oldest of its
   52 releases was from 2026-10-18), which would break the Windows build.
-  The owner chose to keep a copy (2026-11-17): CI's `mirror libmpv` job,
-  on pushes to `main`, creates the release `libmpv-windows-<tag>` with the
-  archive once its SHA-256 matches the pin. It is a prerelease that is
-  never the latest, so `releases/latest/download/` is unaffected.
-  `scripts/fetch-libmpv.sh` downloads that copy first and upstream
-  second.
+  The owner chose to keep a copy in Cineo's own releases (2026-11-17):
+  `scripts/package.sh windows` puts the checked archive into `dist/`, so
+  every release and the prerelease carry it, and
+  `scripts/fetch-libmpv.sh` downloads it from the latest release, then
+  the prerelease, then upstream, and checks its SHA-256 either way.
 - **Amended 2026-11-17: the bundled DLL is compressed.** Embedded as is,
   the 102 MB DLL made the executable 126 MB. `scripts/fetch-libmpv.sh`
   writes it with `gzip -9 -n` (42 MB, VERIFIED 2026-11-17), the build
