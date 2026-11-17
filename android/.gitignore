@@ -3,3 +3,4 @@
 /app/build/
 /local.properties
 /.kotlin/
+/rustls-platform-verifier/build/
