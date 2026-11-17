@@ -494,6 +494,9 @@ The full evidence for the rows above whose notes do not fit in the table.
 - Restored 2026-11-03 (ADR-0027); released as a single
   `cineo-x86_64-windows.exe` with libmpv embedded, and `install.ps1`.
 - CI runs clippy and the tests on `windows-latest`.
+- The executable carries the Cineo icon and its version as Windows
+  resources (`winresource`), so Explorer and the Start menu shortcut can
+  show them; not yet looked at on Windows (UNKNOWN).
 - Under wine 2026-11-03 (`x86_64-pc-windows-gnu`): clippy clean; every test
   passes (the engine tests with a Windows temp path in place of the
   cross-compiled `CARGO_TARGET_TMPDIR`); the app starts, writes the bundled

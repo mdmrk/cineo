@@ -11,6 +11,9 @@ publish.workspace = true
 name = "cineo-desktop"
 path = "src/main.rs"
 
+[package.metadata.cargo-machete]
+ignored = ["winresource"]
+
 [features]
 bundled-libmpv = []
 
@@ -54,6 +57,7 @@ keepawake.workspace = true
 
 [build-dependencies]
 fastframe-i18n = { workspace = true, features = ["build"] }
+winresource.workspace = true
 
 [dev-dependencies]
 egui_kittest.workspace = true
