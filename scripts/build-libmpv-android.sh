@@ -33,7 +33,8 @@ step() { printf '\n==> %s\n' "$*"; }
 step "meson $MESON_VERSION"
 if [[ ! -x $stage/venv/bin/meson ]] || [[ $("$stage/venv/bin/meson" --version) != "$MESON_VERSION" ]]; then
   python3 -m venv "$stage/venv"
-  "$stage/venv/bin/pip" install --quiet "meson==$MESON_VERSION"
+  printf 'meson==%s --hash=sha256:%s\n' "$MESON_VERSION" "$MESON_SHA256" >"$stage/meson.txt"
+  "$stage/venv/bin/pip" install --quiet --only-binary :all: --require-hashes -r "$stage/meson.txt"
 fi
 meson=$stage/venv/bin/meson
 

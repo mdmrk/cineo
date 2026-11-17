@@ -82,7 +82,7 @@ Lint (job `check (android)`).
 **libmpv.** `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh` needs
 `python3` (with `venv`), `perl`, `make`, `ninja`, `pkg-config`, `git`,
 `curl` and `strings` (binutils) on the host. It downloads the pinned sources and checks their SHA-256, installs
-its own meson in a venv, cross-compiles OpenSSL, dav1d, freetype, fribidi,
+the pinned meson in a venv (its wheel checked by SHA-256), cross-compiles OpenSSL, dav1d, freetype, fribidi,
 harfbuzz, libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level
 26 in the fixed `/tmp/cineo-libmpv-android` (sources, build, prefix and
 meson; fixed so that the paths the libraries record are the same on every
