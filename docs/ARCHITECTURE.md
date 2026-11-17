@@ -70,6 +70,7 @@ flowchart TB
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
 | `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010); `Torrents` runs the start, stop, status and lookahead steps for both shells |
 | `cineo-android` | Rust half of the Android shell (ADR-0028): holds the core `State`, runs effects through the IO crates, and hands Kotlin `AppView` snapshots through UniFFI; the TLS verifier's JNI entry point |
+| `cineo-uniffi-bindgen` | Only UniFFI's `uniffi-bindgen` binary, which Gradle runs to write the Kotlin bindings, so the Android build does not compile the app's Rust for the host too (ADR-0038) |
 
 **When to add a crate:** only when the new code has a different dependency
 set or a different IO boundary from an existing crate. A new *concept* is a

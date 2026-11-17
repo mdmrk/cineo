@@ -67,8 +67,7 @@ abstract class UniffiBindgen : DefaultTask() {
         exec.exec {
             workingDir = workspace.get().asFile
             commandLine(
-                "cargo", "run", "-p", "cineo-android", "--features", "bindgen",
-                "--bin", "uniffi-bindgen", "--locked", "--",
+                "cargo", "run", "-p", "cineo-uniffi-bindgen", "--bin", "uniffi-bindgen", "--locked", "--",
                 "generate", "--library", library.path, "--language", "kotlin",
                 "--no-format", "--out-dir", kotlin.get().asFile.path,
             )

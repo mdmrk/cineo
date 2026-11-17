@@ -53,6 +53,7 @@ old one *Superseded by NNNN*.
 | [0035](0035-macos-support.md) | macOS support | Accepted |
 | [0036](0036-pinned-toolchain-for-the-ci-cache.md) | A pinned stable toolchain, bumped by hand | Accepted |
 | [0037](0037-vendored-tls-verifier.md) | The TLS verifier's Kotlin source in the tree | Accepted (libmpv cache on tags: withdrawn) |
+| [0038](0038-bindgen-tool-crate.md) | The UniFFI binding generator in its own crate | Accepted |
 
 ## What we took from the reference projects
 

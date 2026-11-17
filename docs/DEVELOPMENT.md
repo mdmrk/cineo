@@ -65,7 +65,8 @@ The Android app (ADR-0028) needs:
 `app/build/outputs/apk/debug/app-debug.apk`; `adb install -r` puts it on a
 device. Gradle's `cargoNdk` task builds `cineo-android` for `arm64-v8a` at
 API level 26, and `uniffiBindgen` writes the Kotlin bindings from that
-library into `app/build/generated/rust/kotlin`. The Android build keeps
+library into `app/build/generated/rust/kotlin` with the `uniffi-bindgen`
+of `cineo-uniffi-bindgen` (ADR-0038). The Android build keeps
 symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`) because `uniffi-bindgen`
 reads its metadata from them; AGP strips the copy in the APK. It also
 unwinds on panic (`CARGO_PROFILE_RELEASE_PANIC=unwind`), unlike the desktop
@@ -514,7 +515,7 @@ current version when adding one.
 | `fastframe-i18n` (git, tag; `build` feature at build time only) | 0.17.1 | Compiles the gettext UI catalogs in `build.rs` and looks messages up, and picks the default UI language from the OS (desktop, ADR-0034) | MIT |
 | `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop, and the HWND for SMTC on Windows (desktop); already in the tree through eframe | MIT/Apache/Zlib                      |
 | `libloading`                                                                           | 0.9.0                                                                                                                                  | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC                                  |
-| `uniffi` (no default features; `cli` and `cargo-metadata` only with the `bindgen` feature) | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
+| `uniffi` (no default features; `cli` and `cargo-metadata` only in `cineo-uniffi-bindgen`) | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
 | `jni` (no default features; Android only)                                              | 0.22.4                                                                                                                                 | The one JNI entry point that hands the app `Context` to the TLS verifier (android)                                                              | MIT/Apache                           |
 | `rustls-platform-verifier` (Android only)                                              | 0.7.1, already in the tree through reqwest                                                                                             | `android::init_with_env` for Android's certificate verifier (android)                                                                           | MIT/Apache                           |
 | `android_logger` (no default features; Android only) | 0.15.1 | Sends logs to logcat (android) | MIT/Apache |

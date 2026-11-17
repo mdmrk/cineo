@@ -1186,6 +1186,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cineo-uniffi-bindgen"
+version = "1.9.6"
+dependencies = [
+ "uniffi",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
