@@ -380,18 +380,21 @@ Format:
 ### Windows: the bundled libmpv's other license notices are missing
 - Where: [package.sh](../scripts/package.sh) (`cineo-licenses.zip`),
   [libmpv-windows.env](../scripts/libmpv-windows.env)
-- Gap: besides mpv and FFmpeg, `libmpv-2.dll` statically contains libvpx,
-  libbluray, OpenSSL, libplacebo, Vorbis, Lua, zlib, libass, FreeType,
-  shaderc, SPIRV, libjxl, Little CMS, zimg, libssh, libwebp, libarchive,
-  libxml2, Opus, aom, HarfBuzz, FriBidi and dav1d (VERIFIED 2026-11-17:
-  their names in the DLL's strings). Their BSD, MIT and Apache licenses ask
-  for their notices with the binary; only `LGPL-2.1.txt` ships. This is
-  INFERRED, not legal advice.
-- Why: listing them needs each library's version from the zhongfly build,
-  and the owner has not decided yet (2026-11-17).
+- Gap: only mpv's and FFmpeg's texts ship (`scripts/windows/licenses.txt`).
+  The build's recipe, shinchiro/mpv-winbuild-cmake at `bda10a2` (the last
+  commit before the build) with zhongfly's LGPL patch, lists 74 packages
+  under `mpv` (VERIFIED 2026-11-17: the `DEPENDS` closure of its
+  `packages/*.cmake`), among them libvpx, libbluray, OpenSSL, libplacebo,
+  Vorbis, LuaJIT, zlib-ng, libass, FreeType, shaderc, SPIRV-Cross, libjxl,
+  Little CMS, zimg, libwebp, libarchive, libxml2, Opus, aom, SVT-AV1,
+  HarfBuzz, FriBidi and dav1d. Their BSD, MIT and Apache licenses ask for
+  their notices with the binary. Which of the 74 end up in the DLL, and at
+  which commits (most are built from their default branch), is INFERRED;
+  this is not legal advice.
+- Why: each text has to be taken from that package's source near the build
+  date, and the owner has not decided how far to go (2026-11-17).
 - Instead: `libmpv.md` links to the build scripts and the build log.
-- Exit: a Windows license list like `scripts/macos/licenses.txt`, fetched
-  and checked by `scripts/fetch-libmpv.sh` and shipped in the zip.
+- Exit: the other packages' texts in `scripts/windows/licenses.txt`.
 
 ### Windows: the bundled libmpv reads HTTP through libcurl
 - Where: the pinned build in [libmpv-windows.env](../scripts/libmpv-windows.env)

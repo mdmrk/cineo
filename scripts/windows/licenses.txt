@@ -1,0 +1,5 @@
+mpv-LGPL-2.1.txt https://raw.githubusercontent.com/mpv-player/mpv/3138fc8eea22f7898f91208bb6ea53514db29ba5/LICENSE.LGPL 72b672113d642cbb8ef5dcc76938db801983c56e50b1400ab930f1a64d6dc8d9
+mpv-Copyright.txt https://raw.githubusercontent.com/mpv-player/mpv/3138fc8eea22f7898f91208bb6ea53514db29ba5/Copyright bfe9ee4cceabcb8ecbfadf208d04156f73d801e6a57369a5606bb8341e204a23
+ffmpeg-LGPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/db8537d8cc7962bd3d07254d6ceff21d888817d4/COPYING.LGPLv3 da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768
+ffmpeg-GPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/db8537d8cc7962bd3d07254d6ceff21d888817d4/COPYING.GPLv3 8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903
+ffmpeg-LICENSE.md https://raw.githubusercontent.com/FFmpeg/FFmpeg/db8537d8cc7962bd3d07254d6ceff21d888817d4/LICENSE.md e6dc72d5665a1ebd6dcc841de59278dad4ca77ecc47b03f1064a55c3e9ea8bb8

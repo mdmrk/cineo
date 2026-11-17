@@ -116,13 +116,17 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   not use the LGPL `libmpv2` crates. On Linux, Cineo uses the system's
   libmpv and ships none.
 - The Windows release (`bundled-libmpv`, ADR-0027) embeds, gzip-compressed,
-  an unmodified LGPL build of `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later) from
-  zhongfly/mpv-winbuild, pinned in `scripts/libmpv-windows.env`. It is
+  an unmodified LGPL build of `libmpv-2.dll` from zhongfly/mpv-winbuild
+  (mpv LGPL-2.1-or-later; FFmpeg built with `--enable-version3`, so
+  LGPL-3.0-or-later: VERIFIED 2026-11-17 in the LGPL patch of the build's
+  `packages/ffmpeg.cmake`), pinned in `scripts/libmpv-windows.env`. It is
   written to disk and loaded as a separate shared library, and a user's own
   `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).
-  `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
-  binary's hash, the mpv commit and the build sources. The DLL also
-  statically contains about twenty libraries under BSD, MIT, Apache and
+  `cineo-licenses.zip` carries mpv's and FFmpeg's license texts at the
+  build's commits (`scripts/windows/licenses.txt`, each checked by SHA-256
+  when the zip is made) and `libmpv.md` with the binary's hash, the mpv
+  commit and the build sources. The DLL also
+  statically contains many other libraries under BSD, MIT, Apache and
   similar licenses, whose notices are not shipped yet
   (`docs/TECHNICAL_DEBT.md`). The archive itself,
   unmodified, is a file of every release (ADR-0027, amended 2026-11-17).

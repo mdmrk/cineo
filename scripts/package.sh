@@ -16,13 +16,18 @@ case "${1:-linux}" in
   linux)
     mkdir -p dist/cineo-licenses
     common_licenses dist/cineo-licenses
-    cp crates/cineo-desktop/assets/licenses/LGPL-2.1.txt dist/cineo-licenses/
+    while read -r name url sha; do
+      curl -fsSL --retry 5 --retry-all-errors -o "dist/cineo-licenses/$name" "$url"
+      echo "$sha  dist/cineo-licenses/$name" | sha256sum -c --quiet -
+    done <scripts/windows/licenses.txt
     source scripts/libmpv-windows.env
     cat >dist/cineo-licenses/libmpv.md <<EOT
 # libmpv (Windows build only)
 
-cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
-(mpv and FFmpeg, LGPL-2.1-or-later; license text in LGPL-2.1.txt).
+cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll:
+mpv is LGPL-2.1-or-later (mpv-LGPL-2.1.txt, mpv-Copyright.txt), and FFmpeg
+is built with --enable-version3, so it is LGPL-3.0-or-later
+(ffmpeg-LGPL-3.0.txt, which builds on ffmpeg-GPL-3.0.txt; ffmpeg-LICENSE.md).
 
 - Binary: ${LIBMPV_UPSTREAM}/${LIBMPV_FILE}
   (SHA-256 ${LIBMPV_SHA256}); every Cineo release carries the same file
