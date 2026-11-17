@@ -78,6 +78,14 @@ unsupported (ADR-0022).
   never the latest, so `releases/latest/download/` is unaffected.
   `scripts/fetch-libmpv.sh` downloads that copy first and upstream
   second.
+- **Amended 2026-11-17: the bundled DLL is compressed.** Embedded as is,
+  the 102 MB DLL made the executable 126 MB. `scripts/fetch-libmpv.sh`
+  writes it with `gzip -9 -n` (42 MB, VERIFIED 2026-11-17), the build
+  embeds that file (`CINEO_LIBMPV_DLL_GZ`), and `flate2`, already in the
+  dependency graph through librqbit, restores it byte for byte. It is
+  written to `<cache dir>/libmpv/<CRC32>/`, named by the gzip trailer's
+  checksum instead of the Cineo version, so a different DLL of the same
+  size is no longer kept.
 - **CI** runs clippy and the tests on `windows-latest` too, and builds
   `cineo-x86_64-windows.exe` for releases. `cargo deny` checks the Linux and
   Windows graphs.

@@ -9,4 +9,5 @@ curl -fsSL --retry 3 -o "$archive" "$LIBMPV_MIRROR/$LIBMPV_FILE" ||
   curl -fsSL --retry 5 --retry-all-errors -o "$archive" "$LIBMPV_UPSTREAM/$LIBMPV_FILE"
 echo "$LIBMPV_SHA256  $archive" | sha256sum -c -
 7z e -y -o"$out" "$archive" libmpv-2.dll >/dev/null
-ls -l "$out/libmpv-2.dll"
+gzip -9 -n -k -f "$out/libmpv-2.dll"
+ls -l "$out/libmpv-2.dll" "$out/libmpv-2.dll.gz"

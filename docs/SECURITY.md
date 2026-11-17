@@ -218,8 +218,9 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 - The Windows release embeds `libmpv-2.dll` from a third-party build
   (zhongfly/mpv-winbuild), pinned by SHA-256 in
   `scripts/libmpv-windows.env` and checked before every build. It is
-  written to `<cache dir>\libmpv\<version>\` and replaced when its size
-  differs. A `libmpv-2.dll` next to the executable is loaded first, so
+  embedded gzip-compressed and written to `<cache dir>\libmpv\<CRC32>\`,
+  named by the checksum in the gzip trailer, and replaced when its size
+  differs; a damaged archive fails its CRC check and writes nothing. A `libmpv-2.dll` next to the executable is loaded first, so
   anyone who can write there can run code as Cineo.
 
 - The macOS release carries libmpv and its libraries from a third-party

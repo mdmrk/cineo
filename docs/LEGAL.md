@@ -115,8 +115,8 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
   not use the LGPL `libmpv2` crates. On Linux, Cineo uses the system's
   libmpv and ships none.
-- The Windows release (`bundled-libmpv`, ADR-0027) embeds an unmodified
-  LGPL build of `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later) from
+- The Windows release (`bundled-libmpv`, ADR-0027) embeds, gzip-compressed,
+  an unmodified LGPL build of `libmpv-2.dll` (mpv and FFmpeg, LGPL-2.1-or-later) from
   zhongfly/mpv-winbuild, pinned in `scripts/libmpv-windows.env`. It is
   written to disk and loaded as a separate shared library, and a user's own
   `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).

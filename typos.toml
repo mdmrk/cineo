@@ -7,6 +7,7 @@ tha = "tha"
 strem = "strem"
 abd = "abd"
 seeked = "seeked"
+flate = "flate"
 
 [default]
 extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs"]

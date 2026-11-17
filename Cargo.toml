@@ -29,6 +29,7 @@ log = "0.4.35"
 jni = { version = "0.22.4", default-features = false }
 iconflow = { version = "2.1.0", default-features = false, features = ["pack-tabler"] }
 fast_image_resize = "6.1.0"
+flate2 = "1.1.11"
 fastframe-dirs = { git = "https://github.com/crmne/fastframe", tag = "v0.17.1" }
 fastframe-emoji = { git = "https://github.com/crmne/fastframe", tag = "v0.17.1" }
 fastframe-file = { git = "https://github.com/crmne/fastframe", tag = "v0.17.1" }

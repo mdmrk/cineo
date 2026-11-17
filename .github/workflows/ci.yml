@@ -143,7 +143,7 @@ jobs:
         if: matrix.features == 'bundled-libmpv'
         run: |
           scripts/fetch-libmpv.sh libmpv
-          echo "CINEO_LIBMPV_DLL=$(cygpath -m "$PWD/libmpv/libmpv-2.dll")" >> "$GITHUB_ENV"
+          echo "CINEO_LIBMPV_DLL_GZ=$(cygpath -m "$PWD/libmpv/libmpv-2.dll.gz")" >> "$GITHUB_ENV"
       - name: Fetch libmpv (macOS)
         if: matrix.platform == 'macos'
         run: scripts/fetch-libmpv-macos.sh target/libmpv-macos

@@ -30,7 +30,7 @@ cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
 - Build scripts and the sources of every library: https://github.com/zhongfly/mpv-winbuild
   (build log: ${LIBMPV_BUILD_LOG})
 
-Cineo writes the DLL to %LOCALAPPDATA%\\Cineo\\cache\\libmpv\\<version>\\.
+Cineo writes the DLL to %LOCALAPPDATA%\\Cineo\\cache\\libmpv\\<CRC32>\\.
 To use your own build, put a libmpv-2.dll next to cineo-x86_64-windows.exe;
 it is loaded first.
 EOT

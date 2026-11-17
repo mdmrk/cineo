@@ -26,8 +26,9 @@ holds the details it links to.
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
    runtime (ADR-0014). On Windows, put a `libmpv-2.dll` next to the
    executable, or build with `--features bundled-libmpv` and
-   `CINEO_LIBMPV_DLL` set to the DLL's path (`scripts/fetch-libmpv.sh`
-   downloads the pinned one). On macOS, `brew install mpv` for
+   `CINEO_LIBMPV_DLL_GZ` set to the gzip-compressed DLL
+   (`scripts/fetch-libmpv.sh <dir>` downloads the pinned one and writes
+   `<dir>/libmpv-2.dll.gz`). On macOS, `brew install mpv` for
    `cargo run`; `scripts/fetch-libmpv-macos.sh target/libmpv-macos` then
    `scripts/package.sh macos` (after release builds for
    `aarch64-apple-darwin` and `x86_64-apple-darwin`) makes the `.dmg`.
@@ -489,6 +490,7 @@ current version when adding one.
 | `eframe` (`glow`, `default_fonts`, `x11`, `wayland`, `accesskit`, `links`; no default features) | 0.36.2 (ADR-0033)                                                                                                                                 | Desktop window and egui (desktop, ADR-0011)                                                                                                     | MIT/Apache                           |
 | `iconflow` (`pack-tabler` only; no default features)                                   | 2.1.0                                                                                                                                  | Tabler icon font and codepoints for the desktop UI (desktop)                                                                                    | MIT; Tabler font MIT                 |
 | `image` (`jpeg`, `png`, `webp` only)                                                   | 0.25.10                                                                                                                                | Image header checks and decoding (desktop)                                                                                                      | MIT/Apache                           |
+| `flate2`                                                                               | 1.1.11                                                                                                                                 | Decompresses the bundled `libmpv-2.dll` (desktop, ADR-0027); already in the graph through librqbit                                              | MIT/Apache                           |
 | `fast_image_resize` (default features)                                                 | 6.1.0                                                                                                                                  | SIMD downscaling of posters and backdrops (desktop)                                                                                             | MIT/Apache                           |
 | `egui_kittest` (dev, no default features)                                              | 0.36.2 (ADR-0033)                                                                                                                                 | Headless UI tests via AccessKit (desktop)                                                                                                       | MIT/Apache                           |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features)                         | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012)                                                                                                           | Apache-2.0                           |
@@ -708,7 +710,7 @@ Every release has these files, with the same names in every release so that
 | File                 | What                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
-| `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded (ADR-0027)                      |
+| `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded gzip-compressed (ADR-0027)      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, LGPL-2.1 and `libmpv.md`                                                        |
