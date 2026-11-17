@@ -36,7 +36,8 @@ Builds:
     build:
       - export RUSTUP_HOME=/home/vagrant/.rustup CARGO_HOME=/home/vagrant/.cargo
       - ../../scripts/install-rust.sh aarch64-linux-android
-      - cargo install cargo-ndk --version 4.1.2 --locked
+      - source ../../scripts/android.env
+      - cargo install cargo-ndk --version "$CARGO_NDK_VERSION" --locked
       - ANDROID_NDK_HOME=$$NDK$$ ../../scripts/build-libmpv-android.sh
     ndk: 30.0.16248370
 

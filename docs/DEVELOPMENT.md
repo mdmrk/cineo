@@ -781,13 +781,13 @@ with the tag's full commit hash. `fdroid checkupdates --auto`
 (fdroidserver 2.4.5) added 1.9.7 (10907) from a test tag that bumped both
 (VERIFIED 2026-11-17). The recipe installs Rust with
 `scripts/install-rust.sh`, so it builds each tag with the version that
-tag's `rust-toolchain.toml` pins. The NDK (`ndk:`) and cargo-ndk versions
-are literals in the recipe; `scripts/check-docs.sh` fails if they differ
-from `NDK_VERSION` in `scripts/libmpv-android.env` and `CARGO_NDK_VERSION`
-in `scripts/android.env`, or if the recipe's `UpdateCheckData` does not
-read the workspace version and its `versionCode` from `Cargo.toml`. A
-release that changes the NDK or cargo-ndk needs the same change in
-`fdroiddata` by hand.
+tag's `rust-toolchain.toml` pins, and cargo-ndk at that tag's
+`CARGO_NDK_VERSION` (`scripts/android.env`). Only the NDK (`ndk:`) is a
+literal, because F-Droid installs it before the build; `scripts/check-docs.sh`
+fails if it differs from `NDK_VERSION` in `scripts/libmpv-android.env`, or
+if the recipe's `UpdateCheckData` does not read the workspace version and
+its `versionCode` from `Cargo.toml`. A release that changes the NDK needs
+the same change in `fdroiddata` by hand.
 
 **Reproducibility.** The build is reproducible across directories on one
 machine: Rust maps `CARGO_HOME`, `RUSTUP_HOME` and the checkout to

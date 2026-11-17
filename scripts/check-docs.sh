@@ -32,19 +32,13 @@ while IFS= read -r line; do
   fi
 done < <(sed -n '/^\[workspace.dependencies\]/,/^\[workspace.lints/p' Cargo.toml | grep -E '^[a-z0-9_-]+ = ')
 
-python3 -I - docs/fdroid/io.github.mdmrk.cineo.yml Cargo.toml scripts/libmpv-android.env scripts/android.env <<'PY' || status=1
+python3 -I - docs/fdroid/io.github.mdmrk.cineo.yml Cargo.toml scripts/libmpv-android.env <<'PY' || status=1
 import re, sys
-recipe, cargo, libmpv_env, android_env = (open(path).read() for path in sys.argv[1:])
-pins = {
-    "NDK": (re.search(r"^NDK_VERSION=(.+)$", libmpv_env, re.M).group(1),
-            re.findall(r"^    ndk: (.+)$", recipe, re.M)[-1]),
-    "cargo-ndk": (re.search(r"^CARGO_NDK_VERSION=(.+)$", android_env, re.M).group(1),
-                  re.findall(r"cargo install cargo-ndk --version (\S+)", recipe)[-1]),
-}
-for tool, (pinned, built) in pins.items():
-    if pinned != built:
-        print(f"{sys.argv[1]} builds with {tool} {built}, the scripts pin {pinned}", file=sys.stderr)
-        sys.exit(1)
+recipe, cargo, libmpv_env = (open(path).read() for path in sys.argv[1:])
+pinned = re.search(r"^NDK_VERSION=(.+)$", libmpv_env, re.M).group(1)
+built = re.findall(r"^    ndk: (.+)$", recipe, re.M)[-1]
+if pinned != built:
+    sys.exit(f"{sys.argv[1]} builds with NDK {built}, the scripts pin {pinned}")
 data = re.search(r"^UpdateCheckData: (.*)$", recipe, re.M).group(1)
 code_file, code_re, version_file, version_re = data.split("|")
 if (code_file, version_file) != ("Cargo.toml", "."):
