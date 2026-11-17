@@ -1,3 +1,5 @@
+<img src="crates/cineo-desktop/assets/brand/icon.png" alt="Cineo logo" width="128">
+
 # Cineo
 
 [![Release](https://img.shields.io/github/v/release/mdmrk/cineo)](https://github.com/mdmrk/cineo/releases/latest)
