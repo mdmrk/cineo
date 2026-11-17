@@ -2041,8 +2041,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-desktop"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "log",
  "mac-usernotifications",
@@ -2051,16 +2051,16 @@ dependencies = [
 
 [[package]]
 name = "fastframe-dirs"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "directories",
 ]
 
 [[package]]
 name = "fastframe-emoji"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "egui",
  "fastframe-fonts",
@@ -2077,8 +2077,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-file"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "log",
  "windows-sys 0.60.2",
@@ -2086,8 +2086,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-fonts"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "directories",
  "egui",
@@ -2099,8 +2099,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-graphics"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "eframe",
  "log",
@@ -2112,8 +2112,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-i18n"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "include-po",
  "polib",
@@ -2123,8 +2123,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-instance"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "directories",
  "getrandom 0.4.3",
@@ -2133,16 +2133,16 @@ dependencies = [
 
 [[package]]
 name = "fastframe-log"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "jiff",
 ]
 
 [[package]]
 name = "fastframe-now-playing"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "fastframe-desktop",
  "log",
@@ -2154,8 +2154,8 @@ dependencies = [
 
 [[package]]
 name = "fastframe-power"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "log",
  "objc2 0.6.5",
@@ -2166,16 +2166,16 @@ dependencies = [
 
 [[package]]
 name = "fastframe-scroll"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "egui",
 ]
 
 [[package]]
 name = "fastframe-text"
-version = "0.17.0"
-source = "git+https://github.com/crmne/fastframe?tag=v0.17.0#3617b1471763e3a36fed15d5da67c95e178173e9"
+version = "0.17.1"
+source = "git+https://github.com/crmne/fastframe?tag=v0.17.1#d5ae46d52f055ec8942765f64be4207c8c7c75bf"
 dependencies = [
  "egui",
  "zbus",

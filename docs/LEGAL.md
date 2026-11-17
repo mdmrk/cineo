@@ -62,7 +62,7 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   `fastframe-now-playing` (MIT), unmodified. The same MPL-2.0 terms apply as
   for `option-ext`: ship the notice and point to the source.
 - Crate-scoped exception for fonts (2026-11-08, ADR-0033): `fastframe-fonts`
-  0.17.0 is `MIT AND OFL-1.1`, the OFL covering the Inter font in its
+  0.17.1 is `MIT AND OFL-1.1`, the OFL covering the Inter font in its
   source. Cineo builds it without the `inter` feature, so that font is not
   in the binary.
 - Crate-scoped exceptions for the Windows clipboard (2026-11-08, ADR-0033):
