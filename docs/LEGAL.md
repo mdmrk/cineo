@@ -121,7 +121,10 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   written to disk and loaded as a separate shared library, and a user's own
   `libmpv-2.dll` next to the executable replaces it (LGPL-2.1 §6).
   `cineo-licenses.zip` carries `LGPL-2.1.txt` and `libmpv.md` with the
-  binary's hash, the mpv commit and the build sources. Releases do not
+  binary's hash, the mpv commit and the build sources. The DLL also
+  statically contains about twenty libraries under BSD, MIT, Apache and
+  similar licenses, whose notices are not shipped yet
+  (`docs/TECHNICAL_DEBT.md`). Releases do not
   carry the archive itself; `libmpv.md` links to it upstream.
 - The macOS release (ADR-0035) carries, in
   `Cineo.app/Contents/Frameworks`, the LGPL dylibs of

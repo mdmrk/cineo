@@ -217,8 +217,8 @@ EOF
 The script that built them is scripts/build-libmpv-android.sh with
 scripts/libmpv-android.env, at the tag of this release in
 https://github.com/mdmrk/cineo. With NDK $NDK_VERSION, python3 with venv,
-perl, make, ninja and pkg-config, it downloads those sources, checks
-their hashes and writes the libraries to target/libmpv-android/out/lib/:
+perl, make, ninja, pkg-config, git, curl and strings, it downloads those
+sources, checks their hashes and writes the libraries to target/libmpv-android/out/lib/:
 
     ANDROID_NDK_HOME=/path/to/ndk/$NDK_VERSION scripts/build-libmpv-android.sh
 

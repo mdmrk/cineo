@@ -389,6 +389,22 @@ Format:
   the checksum step until the pin moves to a newer build.
 - Exit: none planned; update the pin when it breaks.
 
+### Windows: the bundled libmpv's other license notices are missing
+- Where: [package.sh](../scripts/package.sh) (`cineo-licenses.zip`),
+  [libmpv-windows.env](../scripts/libmpv-windows.env)
+- Gap: besides mpv and FFmpeg, `libmpv-2.dll` statically contains libvpx,
+  libbluray, OpenSSL, libplacebo, Vorbis, Lua, zlib, libass, FreeType,
+  shaderc, SPIRV, libjxl, Little CMS, zimg, libssh, libwebp, libarchive,
+  libxml2, Opus, aom, HarfBuzz, FriBidi and dav1d (VERIFIED 2026-11-17:
+  their names in the DLL's strings). Their BSD, MIT and Apache licenses ask
+  for their notices with the binary; only `LGPL-2.1.txt` ships. This is
+  INFERRED, not legal advice.
+- Why: listing them needs each library's version from the zhongfly build,
+  and the owner has not decided yet (2026-11-17).
+- Instead: `libmpv.md` links to the build scripts and the build log.
+- Exit: a Windows license list like `scripts/macos/licenses.txt`, fetched
+  and checked by `scripts/fetch-libmpv.sh` and shipped in the zip.
+
 ### Windows: the bundled libmpv reads HTTP through libcurl
 - Where: the pinned build in [libmpv-windows.env](../scripts/libmpv-windows.env)
 - Gap: this mpv build opens `http(s)` with libcurl, not FFmpeg. Against a
@@ -612,16 +628,16 @@ Format:
 
 ### Android: prereleases share the release's versionCode
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`versionCode`)
-- Gap: the `versionCode` comes from the workspace version (ADR-0030), so a
+- Gap: the `versionCode` is the literal `version-code` in `Cargo.toml`,
+  which Gradle checks against the workspace version (ADR-0030), so a
   prerelease APK has the same `versionCode` as the release before it.
   Android refuses only a lower `versionCode`, so it installs over it
-  (INFERRED, not tried). F-Droid's update checker reads `version-code`
-  from `Cargo.toml` (VERIFIED: `docs/DEVELOPMENT.md`), so a prerelease
-  number would have to stay out of that literal.
-- Why: F-Droid builds from a tag and cannot know CI's run number.
+  (INFERRED, not tried).
+- Why: F-Droid reads the `versionCode` from `Cargo.toml` at a tag and
+  cannot know CI's run number.
 - Instead: prereleases install over each other with the same number.
-- Exit: a `versionCode` that also counts prereleases and that F-Droid
-  reads, with the check in `scripts/package.sh` kept.
+- Exit: a `versionCode` that also counts prereleases while the literal F-Droid
+  reads stays the release's.
 
 ### Android: nothing checks reproducibility on every release
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
@@ -655,18 +671,6 @@ Format:
 - Instead: if an upstream source is deleted, the build fails at its
   checksum and a user cannot get that source from us.
 - Exit: none planned; move the pin to a source that is still published.
-
-### Android: the libmpv build is not reproducible
-- Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
-- Gap: rebuilding from the pinned sources gives working
-  libraries whose hashes differ from the release's (seen 2026-11-04). The
-  build directory is embedded in them, for example in FFmpeg's configure
-  line and its source paths; whether anything else differs is UNKNOWN.
-- Why: the LGPL asks for the source, not for identical binaries.
-- Instead: `libmpv.md` names the hashes of the shipped files, and a
-  rebuilt copy cannot be checked against them.
-- Exit: `-ffile-prefix-map`, FFmpeg without its configure string, and a
-  test that two builds in different directories match.
 
 ### Android: arm64 phones only
 - Where: [build.gradle.kts](../android/app/build.gradle.kts)
