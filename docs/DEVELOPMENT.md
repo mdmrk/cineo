@@ -808,7 +808,8 @@ It installs fdroidserver 2.4.5, writes the recipe for that tag into a
 `fdroid build --on-server` as `vagrant`. For v1.9.6 it matched, with the
 recipe that installs Rust through `scripts/install-rust.sh` (VERIFIED
 2026-11-17, about 15 minutes on 12 CPUs). CI runs it on every tag after
-`publish` (`reproduce (android)`). Install Rust in `~/.cargo` and
+`publish` (`reproduce (android)`); v1.9.7 matched there in 18 minutes
+(VERIFIED 2026-11-17). Install Rust in `~/.cargo` and
 `~/.rustup`, not behind a symlink, when building by hand: `CargoNdk` maps
 the canonical path of those directories, so a symlink leaves the real paths
 in `libcineo_android.so` (VERIFIED 2026-11-16).

@@ -16,9 +16,9 @@ Repo: https://github.com/mdmrk/cineo.git
 Binaries: https://github.com/mdmrk/cineo/releases/download/v%v/cineo-arm64-android.apk
 
 Builds:
-  - versionName: 1.9.6
-    versionCode: 10906
-    commit: 7164ea9060b922412fec43ee75d23bf74d636f31
+  - versionName: 1.9.7
+    versionCode: 10907
+    commit: 04ac7d6855d2cbfc7b490a4679f4d13fe6d61faa
     subdir: android/app
     sudo:
       - apt-get update
@@ -46,5 +46,5 @@ AllowedAPKSigningKeys: 757268eddeaabc68285f7728b5b10fb5d380c4ba6ddb93a5ad687a911
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v\d+\.\d+\.\d+$
 UpdateCheckData: Cargo.toml|version-code = (\d+)|.|(?m)^version = "(.+)"
-CurrentVersion: 1.9.6
-CurrentVersionCode: 10906
+CurrentVersion: 1.9.7
+CurrentVersionCode: 10907
