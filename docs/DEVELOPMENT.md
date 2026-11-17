@@ -633,7 +633,7 @@ checks, and `publish` waits for both:
 | ------------------------ | ---------------------------------------------------------------------- |
 | pull request, manual run | check (linux), check (windows), check (macos), check (android)         |
 | push to `main`           | the checks and build → publish `prerelease`                            |
-| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z`                                |
+| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z` → reproduce (android)          |
 
 **Checks.**
 - `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`,
@@ -699,7 +699,9 @@ each job, so the repository stays under GitHub's 10 GB cache limit.
 
 **Publishing.** `publish` writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It is the only job
-that can write to the repository.
+that can write to the repository. On tags, `reproduce (android)` then
+builds the release as F-Droid does and fails if it does not match the
+published APK ([F-Droid](#f-droid)).
 
 The Android store listing (title, short and full description) lives in
 `fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and Play read
@@ -795,20 +797,21 @@ the NDK compilers named without their path, and OpenSSL's libraries
 written into `openssl.pc` so that every `pkg-config` orders them the same
 (`docs/TECHNICAL_DEBT.md`).
 
-**Checking a release locally**, as F-Droid will:
-- Run `registry.gitlab.com/fdroid/fdroidserver:buildserver` with a
-  `fdroiddata` clone. The image has no fdroidserver: install 2.4.5 in a
-  venv inside the container.
-- Commit the recipe in the `fdroiddata` clone first: `fdroid build` takes
-  `SOURCE_DATE_EPOCH` from the last commit that touches it, and an empty
-  value makes Gradle and clang fail (VERIFIED 2026-11-16).
-- Run `fdroid build --on-server` as `vagrant` with
-  `runuser -u vagrant -- env HOME=/home/vagrant …`; `sudo -u` also gave an
-  empty `SOURCE_DATE_EPOCH`. Reinstall `sudo` in the container before each
-  run, because `fdroid build` removes it (both observed 2026-11-16).
-- Install Rust in `~/.cargo` and `~/.rustup`, not behind a symlink:
-  `CargoNdk` maps the canonical path of those directories, so a symlink
-  leaves the real paths in `libcineo_android.so` (VERIFIED 2026-11-16).
+**Checking a release.** `scripts/check-fdroid-build.sh vX.Y.Z` builds a
+released tag as F-Droid does and fails unless the result matches the
+release's APK. It runs as root in fdroidserver's `buildserver` image:
+`docker run --rm -v "$PWD:/cineo:ro" registry.gitlab.com/fdroid/fdroidserver:buildserver /cineo/scripts/check-fdroid-build.sh vX.Y.Z`.
+It installs fdroidserver 2.4.5, writes the recipe for that tag into a
+`fdroiddata` directory that it commits (`fdroid build` takes
+`SOURCE_DATE_EPOCH` from that commit), points `gradle:` at the image's
+`gradlew-fdroid` (the one pip installs has no Gradle 9 checksums) and runs
+`fdroid build --on-server` as `vagrant`. For v1.9.6 it matched, with the
+recipe that installs Rust through `scripts/install-rust.sh` (VERIFIED
+2026-11-17, about 15 minutes on 12 CPUs). CI runs it on every tag after
+`publish` (`reproduce (android)`). Install Rust in `~/.cargo` and
+`~/.rustup`, not behind a symlink, when building by hand: `CargoNdk` maps
+the canonical path of those directories, so a symlink leaves the real paths
+in `libcineo_android.so` (VERIFIED 2026-11-16).
 
 **Submission.** The first submission, `fdroiddata` merge request 57704,
 was closed on 2026-11-17 only because F-Droid includes apps maintained for

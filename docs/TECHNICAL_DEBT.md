@@ -629,25 +629,19 @@ Format:
 - Exit: a `versionCode` that also counts prereleases while the literal F-Droid
   reads stays the release's.
 
-### Android: nothing checks reproducibility on every release
-- Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
-  [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
-- Gap: `fdroid build` of v1.9.6 matched the GitHub release (VERIFIED
-  2026-11-16; earlier mismatches and their fix are in ADR-0037). Each later
-  release is only checked when F-Droid builds it, now with the Rust that
-  `scripts/install-rust.sh` installs from the tag's `rust-toolchain.toml`;
-  whether that works on F-Droid's build server, and still matches, is
-  UNKNOWN until F-Droid builds a release with it. libmpv is built in the
-  fixed `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at
-  once on one machine, and its sources are downloaded again after a reboot.
-- Why: F-Droid publishes our signed APK only if its build matches
-  (ADR-0030); a fixed directory was the simplest way to make the paths
-  that FFmpeg, mpv and OpenSSL record the same everywhere.
-- Instead: `scripts/package.sh android` fails if a native library holds the
-  build path, `HOME`, `CARGO_HOME`, `RUSTUP_HOME` or an OpenSSL build date;
-  nothing compares two whole builds in CI.
-- Exit: a CI job that builds the APK in fdroidserver's `buildserver` image
-  and compares it with the release.
+### Android: a release that does not reproduce is already published
+- Where: [check-fdroid-build.sh](../scripts/check-fdroid-build.sh),
+  `reproduce (android)` in [ci.yml](../.github/workflows/ci.yml)
+- Gap: `reproduce (android)` builds each tag as F-Droid does and compares
+  it with the released APK, so it runs after `publish` and cannot stop a
+  release that does not reproduce. libmpv is built in the fixed
+  `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
+  one machine, and its sources are downloaded again after a reboot.
+- Why: F-Droid compares against the APK at the release URL (`Binaries`),
+  which exists only once the release is published.
+- Instead: a failing `reproduce (android)` shows before F-Droid builds the
+  tag; a fixed release follows.
+- Exit: compare against the APK from `build (android)` before `publish`.
 
 ### Android: the release does not carry the libmpv source
 - Where: [build-libmpv-android.sh](../scripts/build-libmpv-android.sh),
