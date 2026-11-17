@@ -26,21 +26,24 @@ Builds:
       - curl -Lo /tmp/rustup-init.sh https://sh.rustup.rs
       - export CARGO_HOME=/home/vagrant/.cargo RUSTUP_HOME=/home/vagrant/.rustup
       - sh /tmp/rustup-init.sh -y --no-modify-path --profile minimal --default-toolchain
-        1.100.0 --target aarch64-linux-android
-      - /home/vagrant/.cargo/bin/cargo install cargo-ndk --version 4.1.2 --locked
+        none
       - chown -R vagrant:vagrant /home/vagrant/.cargo /home/vagrant/.rustup
       - ln -s /home/vagrant/.cargo/bin/* /usr/local/bin/
     gradle:
       - yes
     rm:
       - tests/net/zeros-1mib.json.gz
-    build: RUSTUP_HOME=/home/vagrant/.rustup CARGO_HOME=/home/vagrant/.cargo ANDROID_NDK_HOME=$$NDK$$
-      ../../scripts/build-libmpv-android.sh
+    build:
+      - export RUSTUP_HOME=/home/vagrant/.rustup CARGO_HOME=/home/vagrant/.cargo
+      - ../../scripts/install-rust.sh aarch64-linux-android
+      - cargo install cargo-ndk --version 4.1.2 --locked
+      - ANDROID_NDK_HOME=$$NDK$$ ../../scripts/build-libmpv-android.sh
     ndk: 30.0.16248370
 
 AllowedAPKSigningKeys: 757268eddeaabc68285f7728b5b10fb5d380c4ba6ddb93a5ad687a9110896cbb
 
-AutoUpdateMode: None
-UpdateCheckMode: None
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v\d+\.\d+\.\d+$
+UpdateCheckData: Cargo.toml|version-code = (\d+)|.|(?m)^version = "(.+)"
 CurrentVersion: 1.9.6
 CurrentVersionCode: 10906

@@ -17,12 +17,17 @@ fun cargoLockVersion(crate: String): String {
         .substringAfter('"').substringBefore('"')
 }
 
-fun workspaceVersion(): String {
+fun cargoTomlValue(section: String, key: String): String {
     val lines = cargoWorkspace.file("Cargo.toml").asFile.readLines()
-    val section = lines.indexOfFirst { it.trim() == "[workspace.package]" }
-    return lines.drop(section + 1).first { it.startsWith("version = ") }
-        .substringAfter('"').substringBefore('"')
+    val at = lines.indexOfFirst { it.trim() == "[$section]" }
+    require(at >= 0) { "Cargo.toml has no [$section]" }
+    val line = lines.drop(at + 1).takeWhile { !it.startsWith("[") }.firstOrNull { it.startsWith("$key = ") }
+    return requireNotNull(line) { "Cargo.toml [$section] has no $key" }.substringAfter("= ").trim().trim('"')
 }
+
+fun pinnedNdkVersion(): String =
+    cargoWorkspace.file("scripts/libmpv-android.env").asFile.readLines()
+        .first { it.startsWith("NDK_VERSION=") }.substringAfter('=')
 
 abstract class CargoNdk : DefaultTask() {
     @get:Inject abstract val exec: ExecOperations
@@ -114,7 +119,14 @@ fun versionCode(version: String): Int {
     requireNotNull(parts) { "the workspace version $version is not MAJOR.MINOR.PATCH" }
     val (major, minor, patch) = parts
     require(minor < 100 && patch < 100) { "the versionCode needs MINOR and PATCH below 100, not $version" }
-    return major * 10000 + minor * 100 + patch
+    val expected = major * 10000 + minor * 100 + patch
+    val declared = requireNotNull(cargoTomlValue("workspace.metadata.android", "version-code").toIntOrNull()) {
+        "Cargo.toml [workspace.metadata.android] version-code is not an integer"
+    }
+    require(declared == expected) {
+        "Cargo.toml [workspace.metadata.android] version-code is $declared, but version $version needs $expected"
+    }
+    return declared
 }
 
 fun env(name: String): String? = providers.environmentVariable(name).orNull?.takeIf { it.isNotEmpty() }
@@ -130,14 +142,14 @@ android {
     compileSdk {
         version = release(37) { minorApiLevel = 2 }
     }
-    ndkVersion = "30.0.16248370"
+    ndkVersion = pinnedNdkVersion()
 
     defaultConfig {
         applicationId = "io.github.mdmrk.cineo"
         minSdk = minApi
         targetSdk = 36
-        versionName = workspaceVersion()
-        versionCode = versionCode(workspaceVersion())
+        versionName = cargoTomlValue("workspace.package", "version")
+        versionCode = versionCode(cargoTomlValue("workspace.package", "version"))
         ndk { abiFilters += "arm64-v8a" }
     }
 

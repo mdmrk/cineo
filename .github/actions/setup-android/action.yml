@@ -1,11 +1,16 @@
 name: setup android
-description: Java, Gradle, cargo-ndk and the NDK pinned in scripts/libmpv-android.env
+description: Java, Gradle, cargo-ndk pinned in scripts/android.env and the NDK pinned in scripts/libmpv-android.env
 runs:
   using: composite
   steps:
+    - id: pins
+      shell: bash
+      run: |
+        source scripts/android.env
+        echo "cargo-ndk=$CARGO_NDK_VERSION" >> "$GITHUB_OUTPUT"
     - uses: taiki-e/install-action@v2.88.1
       with:
-        tool: cargo-ndk@4.1.2
+        tool: cargo-ndk@${{ steps.pins.outputs.cargo-ndk }}
     - uses: actions/setup-java@v6.1.0
       with:
         distribution: temurin

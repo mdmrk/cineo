@@ -615,8 +615,9 @@ Format:
 - Gap: the `versionCode` comes from the workspace version (ADR-0030), so a
   prerelease APK has the same `versionCode` as the release before it.
   Android refuses only a lower `versionCode`, so it installs over it
-  (INFERRED, not tried). Whether F-Droid's update checker can read a
-  `versionCode` that Gradle computes instead of a literal is UNKNOWN.
+  (INFERRED, not tried). F-Droid's update checker reads `version-code`
+  from `Cargo.toml` (VERIFIED: `docs/DEVELOPMENT.md`), so a prerelease
+  number would have to stay out of that literal.
 - Why: F-Droid builds from a tag and cannot know CI's run number.
 - Instead: prereleases install over each other with the same number.
 - Exit: a `versionCode` that also counts prereleases and that F-Droid
@@ -625,23 +626,14 @@ Format:
 ### Android: nothing checks reproducibility on every release
 - Where: [build.gradle.kts](../android/app/build.gradle.kts) (`CargoNdk`),
   [build-libmpv-android.sh](../scripts/build-libmpv-android.sh)
-- Gap: two release builds from different directories and `CARGO_HOME`s on
-  the same machine give the same unsigned APK (VERIFIED 2026-11-05, SHA-256
-  `2fe745f8…dbe0a7`). libmpv built from the pinned sources gives the same
-  `libavformat.so` on Debian 13 with 12 and with 4 CPUs and on Ubuntu 24.04
-  with 4 CPUs (VERIFIED 2026-11-16). The v1.9.4 and v1.9.5 APKs on GitHub
-  differ from an F-Droid build only in `libavformat.so` (the order of
-  `dlopen`, `dlclose`, `dlerror` and `dlsym` in its dynamic symbols) and in
-  the `libmpv.md` that holds its hash, because pkgconf 1.8.1 and 2.5.1 order
-  OpenSSL's `-ldl` and `-lcrypto` differently. With the libraries written
-  into `openssl.pc`, Debian 13 and Ubuntu 26.04 build the seven libmpv
-  libraries of v1.9.5 byte for byte, and `fdroid build` of v1.9.6 matched
-  the GitHub release (VERIFIED 2026-11-16). Each later release is only
-  checked when F-Droid builds it. Rust is the version
-  `rust-toolchain.toml` pins at the tag (ADR-0036), which the recipe must
-  name and `release-android.sh` prints. libmpv is built in the fixed
-  `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at once on
-  one machine, and its sources are downloaded again after a reboot.
+- Gap: `fdroid build` of v1.9.6 matched the GitHub release (VERIFIED
+  2026-11-16; earlier mismatches and their fix are in ADR-0037). Each later
+  release is only checked when F-Droid builds it, now with the Rust that
+  `scripts/install-rust.sh` installs from the tag's `rust-toolchain.toml`;
+  whether that works on F-Droid's build server, and still matches, is
+  UNKNOWN until F-Droid builds a release with it. libmpv is built in the
+  fixed `/tmp/cineo-libmpv-android`, so two libmpv builds cannot run at
+  once on one machine, and its sources are downloaded again after a reboot.
 - Why: F-Droid publishes our signed APK only if its build matches
   (ADR-0030); a fixed directory was the simplest way to make the paths
   that FFmpeg, mpv and OpenSSL record the same everywhere.

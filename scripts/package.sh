@@ -107,15 +107,6 @@ while at < cd - 24:
         sys.exit(f"{sys.argv[1]}: the signing block carries Google's encrypted dependency info")
     at += 8 + length
 PY
-    version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
-    IFS=. read -r major minor patch <<<"$version"
-    expected=$((major * 10000 + minor * 100 + patch))
-    badging=$("$build_tools/aapt2" dump badging "$apk" | head -n 1)
-    grep -qF "versionCode='$expected' versionName='$version'" <<<"$badging" ||
-      {
-        echo "$apk: expected versionCode $expected and versionName $version, got: $badging" >&2
-        exit 1
-      }
     ;;
   macos)
     source scripts/libmpv-macos.env

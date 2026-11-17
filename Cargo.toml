@@ -9,6 +9,9 @@ license = "MIT"
 repository = "https://github.com/mdmrk/cineo"
 publish = false
 
+[workspace.metadata.android]
+version-code = 10906
+
 [workspace.dependencies]
 cineo-core = { path = "crates/cineo-core" }
 cineo-net = { path = "crates/cineo-net" }

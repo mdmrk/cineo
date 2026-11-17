@@ -27,6 +27,5 @@ else
   echo "libmpv is up to date with its pins"
 fi
 
-echo "F-Droid recipe: $(rustc --version), $(cargo ndk --version), NDK $NDK_VERSION"
 (cd android && ./gradlew assembleRelease)
 scripts/package.sh android

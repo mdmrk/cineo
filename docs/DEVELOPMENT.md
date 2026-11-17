@@ -38,71 +38,76 @@ holds the details it links to.
    The engine tests need an absolute Windows path, which a cross-compiled
    `CARGO_TARGET_TMPDIR` (`/home/…`) is not, so they fail under wine only.
    CI tests on `windows-latest` (MSVC).
-
-5. To build the Android app (ADR-0028): the Rust target
-   `rustup target add aarch64-linux-android`, `cargo install --locked
-   cargo-ndk@4.1.2`, JDK 21, and the Android SDK with its licenses
-   accepted (`sdkmanager --licenses`) and `ndk;30.0.16248370` installed.
-   Point `ANDROID_HOME` at the SDK, or write `sdk.dir=…` to
-   `android/local.properties`. Then `cd android && ./gradlew assembleDebug`
-   builds `app/build/outputs/apk/debug/app-debug.apk`; `adb install -r`
-   puts it on a device. Gradle's `cargoNdk` task builds `cineo-android`
-   for `arm64-v8a` at API level 26, and `uniffiBindgen` writes the Kotlin
-   bindings from that library into `app/build/generated/rust/kotlin`. The
-   Android build keeps symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`)
-   because `uniffi-bindgen` reads its metadata from them; AGP strips the
-   copy in the APK. `./gradlew testDebugUnitTest` runs the Kotlin unit
-   tests in `app/src/test/` on the JVM, and `./gradlew lintDebug` runs
-   Android Lint, which fails on errors and reports warnings in
-   `app/build/reports/`. CI runs `cargo ndk … clippy -p cineo-android`,
-   the Gradle build, those tests and Lint (job `check (android)`).
-6. To build the Android libmpv (ADR-0028):
-   `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh`, with the NDK
-   `scripts/libmpv-android.env` names, plus `python3` (with `venv`),
-   `perl`, `make`, `ninja`, `git` and `curl` on the host. It downloads the
-   pinned sources and checks their SHA-256, installs its own meson in a
-   venv, cross-compiles OpenSSL, dav1d, freetype, fribidi, harfbuzz,
-   libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level 26
-   in the fixed `/tmp/cineo-libmpv-android` (sources, build, prefix and
-   meson; fixed so that the paths the libraries record are the same on
-   every machine), and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
-   `SOURCES` and `libmpv.md` with each `.so`'s SHA-256), the same as
-   `libmpv-android-arm64-v8a.tar.xz`. `libmpv.md` lists the pinned
-   sources with their URLs and hashes; no source archive is written
-   (ADR-0029, amended 2026-11-05). It stops if FFmpeg was configured
-   with `--enable-gpl`, `--enable-version3` or `--enable-nonfree`, if mpv
-   has GPL code, or if a library needs one that is neither shipped nor
-   part of Android. Gradle copies `out/lib/` into the APK,
-   and `out/licenses/` and `libmpv.md` into `assets/licenses/`. A debug build
-   without them only warns; a release build fails.
-7. To build a signed release APK: set `CINEO_KEYSTORE` (the `.jks` file),
-   `CINEO_KEYSTORE_PASSWORD`, `CINEO_KEY_ALIAS` and `CINEO_KEY_PASSWORD`,
-   and optionally `CINEO_VERSION_CODE` (default 1), then
-   `cd android && ./gradlew assembleRelease`. Without `CINEO_KEYSTORE` it
-   writes an unsigned `app-release-unsigned.apk`. `ANDROID_HOME=…
-   scripts/package.sh android` then copies the APK into `dist/` and
-   checks it. `scripts/release-android.sh` does all of it in one command,
-   the same steps CI's `build (android)` runs: it needs the four
-   `CINEO_KEY*` variables and a `CINEO_VERSION_CODE` above the last
-   released one, and refuses to build without them, finds the
-   SDK through `ANDROID_HOME` or `android/local.properties`, rebuilds
-   libmpv only when the script or `.env` changed since the last build
-   (`target/libmpv-android/pins`), and leaves
-   `dist/cineo-arm64-android.apk`. Release builds run R8 with the keep
-   rules in `android/app/proguard-rules.pro` for JNA, the UniFFI bindings
-   and rustls-platform-verifier, and store the `.so` files compressed.
-   `android/rustls-platform-verifier` is the verifier's Kotlin half, copied
-   unchanged from upstream (`UPSTREAM` names the commit); Gradle fails if
-   its version differs from `rustls-platform-verifier-android` in
-   `Cargo.lock` (ADR-0037).
-   AGP keeps the libmpv and FFmpeg `.so` files unstripped, so they match
-   the hashes in `libmpv.md`.
+5. To build the Android app, see [Android](#android).
 
 If you build with a distro-packaged Rust instead of rustup, make sure it is
 the version `rust-toolchain.toml` pins or newer. Some distro builds expect a cross linker name; if
 linking fails with `linker 'x86_64-linux-gnu-gcc' not found`, set
 `CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=cc` in your shell. Do not commit
 that setting.
+
+### Android
+
+The Android app (ADR-0028) needs:
+- the Rust target `aarch64-linux-android` (`scripts/install-rust.sh
+  aarch64-linux-android`);
+- cargo-ndk at the version `CARGO_NDK_VERSION` in `scripts/android.env`
+  pins (`cargo install --locked cargo-ndk@<version>`);
+- JDK 21;
+- the Android SDK with its licenses accepted (`sdkmanager --licenses`) and
+  the NDK that `NDK_VERSION` in `scripts/libmpv-android.env` names. Point
+  `ANDROID_HOME` at the SDK, or write `sdk.dir=…` to
+  `android/local.properties`.
+
+**Debug build.** `cd android && ./gradlew assembleDebug` builds
+`app/build/outputs/apk/debug/app-debug.apk`; `adb install -r` puts it on a
+device. Gradle's `cargoNdk` task builds `cineo-android` for `arm64-v8a` at
+API level 26, and `uniffiBindgen` writes the Kotlin bindings from that
+library into `app/build/generated/rust/kotlin`. The Android build keeps
+symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`) because `uniffi-bindgen`
+reads its metadata from them; AGP strips the copy in the APK.
+`./gradlew testDebugUnitTest` runs the Kotlin unit tests in `app/src/test/`
+on the JVM, and `./gradlew lintDebug` runs Android Lint, which fails on
+errors and reports warnings in `app/build/reports/`. CI runs
+`cargo ndk … clippy -p cineo-android`, the Gradle build, those tests and
+Lint (job `check (android)`).
+
+**libmpv.** `ANDROID_NDK_HOME=… scripts/build-libmpv-android.sh` needs
+`python3` (with `venv`), `perl`, `make`, `ninja`, `git` and `curl` on the
+host. It downloads the pinned sources and checks their SHA-256, installs
+its own meson in a venv, cross-compiles OpenSSL, dav1d, freetype, fribidi,
+harfbuzz, libass, FFmpeg, libplacebo and mpv for `arm64-v8a` at API level
+26 in the fixed `/tmp/cineo-libmpv-android` (sources, build, prefix and
+meson; fixed so that the paths the libraries record are the same on every
+machine), and writes `target/libmpv-android/out/` (`lib/`, `licenses/`,
+`SOURCES` and `libmpv.md` with each `.so`'s SHA-256). `libmpv.md` lists the pinned sources
+with their URLs and hashes; no source archive is written (ADR-0029,
+amended 2026-11-05). It stops if FFmpeg was configured with
+`--enable-gpl`, `--enable-version3` or `--enable-nonfree`, if mpv has GPL
+code, or if a library needs one that is neither shipped nor part of
+Android. Gradle copies `out/lib/` into the APK, and `out/licenses/` and
+`libmpv.md` into `assets/licenses/`. A debug build without them only
+warns; a release build fails.
+
+**Release APK.** Set `CINEO_KEYSTORE` (the `.jks` file),
+`CINEO_KEYSTORE_PASSWORD`, `CINEO_KEY_ALIAS` and `CINEO_KEY_PASSWORD`, then
+run `scripts/release-android.sh`, the same steps as CI's `build (android)`.
+It refuses to build without the four variables, finds the SDK through
+`ANDROID_HOME` or `android/local.properties`, rebuilds libmpv only when the
+script or its `.env` changed since the last build
+(`target/libmpv-android/pins`), runs `./gradlew assembleRelease` and
+`scripts/package.sh android`, which checks the APK, and leaves
+`dist/cineo-arm64-android.apk`. Without `CINEO_KEYSTORE`,
+`./gradlew assembleRelease` writes an unsigned `app-release-unsigned.apk`.
+The `versionName` and `versionCode` come from `Cargo.toml` ([Releasing](#releasing)).
+Release builds run R8 with the keep rules in
+`android/app/proguard-rules.pro` for JNA, the UniFFI bindings and
+rustls-platform-verifier, and store the `.so` files compressed. AGP keeps
+the libmpv and FFmpeg `.so` files unstripped, so they match the hashes in
+`libmpv.md`. `android/rustls-platform-verifier` is the verifier's Kotlin
+half, copied unchanged from upstream (`UPSTREAM` names the commit); Gradle
+fails if its version differs from `rustls-platform-verifier-android` in
+`Cargo.lock` (ADR-0037).
 
 ## Everyday commands
 
@@ -627,8 +632,9 @@ workflow-wide value that differs on tags made the checks on tags miss
 Windows x86_64 at the `x86-64-v2` level (Windows with `bundled-libmpv`,
 after `scripts/fetch-libmpv.sh` checks the pinned archive), puts the files
 into `dist/` with `scripts/package.sh <linux|windows>` and attests build
-provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` and the NDK
-named by `NDK_VERSION` in `scripts/libmpv-android.env` with the local action
+provenance. Both Android jobs set up Java, Gradle, `cargo-ndk` at
+`CARGO_NDK_VERSION` in `scripts/android.env` and the NDK named by
+`NDK_VERSION` in `scripts/libmpv-android.env` with the local action
 `.github/actions/setup-android` and share one Rust cache (`shared-key: android`), which
 tag builds do not use. `build (android)` restores libmpv from the cache (keyed by
 the hash of the script and its `.env`, also on tags; only runs on `main`
@@ -639,11 +645,12 @@ the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
 `.so` matches its hash, that no `.so` holds a build path or an OpenSSL build
 date (they would make the build unreproducible), that every `.so` in the APK has its LOAD segments
 aligned to at least 16 KB (`readelf`), that `apksigner verify` passes, that
-the signing block has no dependency-info block (Gradle's is encrypted for
-Google, and IzzyOnDroid flags it; `dependenciesInfo` turns it off), and
-that the
-`versionCode` is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace
-version, which Gradle computes (ADR-0030). The script fails if a signing
+and that the signing block has no dependency-info block (Gradle's is
+encrypted for Google; `dependenciesInfo` turns it off). The `versionCode`
+is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace version: Gradle
+takes it from `version-code` in `Cargo.toml`
+(`[workspace.metadata.android]`) and fails if it is not that number
+(ADR-0030). `scripts/release-android.sh` fails if a signing
 secret is missing or the decoded keystore is empty rather than publish an
 unsigned APK; `check (android)` builds an
 unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with
@@ -655,39 +662,8 @@ but the newest Rust and libmpv cache of each job, so the repository stays
 under GitHub's 10 GB cache limit.
 
 The Android store listing (title, short and full description) lives in
-`fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and IzzyOnDroid read
+`fastlane/metadata/android/en-US/` and six more locales (es-ES, pt-BR, ru-RU, it-IT, de-DE, fr-FR; only en-US has images), the layout F-Droid and Play read
 (ADR-0030), with a 512 × 512 icon (`images/icon.png`, the brand logo on the launcher background) and six phone screenshots in `images/phoneScreenshots/` that show only Creative Commons films (their credits are in `docs/LEGAL.md`).
-
-`docs/fdroid/io.github.mdmrk.cineo.yml` is the build recipe submitted to
-F-Droid's `fdroiddata` repository (ADR-0030). It passes `fdroid lint` and
-`fdroid rewritemeta` (fdroidserver 2.4.5). `Binaries` and
-`AllowedAPKSigningKeys` make F-Droid publish our signed APK only when its
-own build matches it: for v1.9.6, `fdroid build --on-server` in
-fdroidserver's `buildserver` image passed the scanner and matched the
-GitHub APK (VERIFIED 2026-11-16: "compared built binary to supplied
-reference binary successfully"). Why earlier releases did not match is in
-ADR-0037.
-
-To check a release the same way:
-- Commit the recipe in a `fdroiddata` clone first: `fdroid build` takes
-  `SOURCE_DATE_EPOCH` from the last commit that touches it, and an empty
-  value makes Gradle and clang fail (VERIFIED 2026-11-16).
-- Install Rust in `~/.cargo` and `~/.rustup`, not behind a symlink: `CargoNdk`
-  maps the canonical path of those directories, so a symlink leaves the real
-  paths in `libcineo_android.so` (VERIFIED 2026-11-16).
-
-The build is reproducible across directories on one machine: Rust maps
-`CARGO_HOME`, `RUSTUP_HOME` and the checkout to `/cargo`, `/rustup` and
-`/cineo` (`--remap-path-prefix`), and libmpv is built in the fixed
-`/tmp/cineo-libmpv-android` with `SOURCE_DATE_EPOCH=0`, the NDK compilers
-named without their path, and OpenSSL's libraries written into
-`openssl.pc` so that every `pkg-config` orders them the same
-(`docs/TECHNICAL_DEBT.md`). Updates are manual (`UpdateCheckMode: None`),
-because F-Droid reads the version with a regular expression and Gradle
-computes it. Each release changes `versionName`, `versionCode`, `commit`,
-`CurrentVersion` and `CurrentVersionCode`, and the Rust and cargo-ndk
-versions the release was built with, which `scripts/release-android.sh`
-prints as its `F-Droid recipe:` line.
 
 Every release has these files, with the same names in every release so that
 `releases/latest/download/<name>` works:
@@ -705,7 +681,8 @@ Every release has these files, with the same names in every release so that
 
 ### Steps
 
-1. On `main` with green CI: bump `version` in `Cargo.toml`.
+1. On `main` with green CI: bump `version` in `Cargo.toml`, and
+   `version-code` to `MAJOR * 10000 + MINOR * 100 + PATCH`.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
 4. `ci.yml` runs every check, builds, and publishes the release
@@ -733,6 +710,68 @@ Android requires it, with the key in these repository secrets:
 The owner keeps the key and a backup outside the repository. Android only
 installs an update signed with the same key: if it is lost, users must
 uninstall, and lose their library, to install a new one.
+
+### F-Droid
+
+`docs/fdroid/io.github.mdmrk.cineo.yml` is the recipe for F-Droid's
+`fdroiddata` repository (ADR-0030). It passes `fdroid lint` and
+`fdroid rewritemeta` (fdroidserver 2.4.5).
+
+**Signing.** F-Droid builds the app itself from the tag and compares its
+unsigned build with our signed APK from the release (`Binaries`). If they
+match, it publishes our APK with our signature; if not, it publishes
+nothing for that version, because `AllowedAPKSigningKeys` names only our
+release certificate. F-Droid never signs Cineo with its own key, so the
+F-Droid and GitHub builds update each other. For v1.9.6,
+`fdroid build --on-server` in fdroidserver's `buildserver` image passed the
+scanner and matched the GitHub APK (VERIFIED 2026-11-16: "compared built
+binary to supplied reference binary successfully"). Why earlier releases
+did not match is in ADR-0037.
+
+**Updates.** F-Droid finds new releases by itself
+(`UpdateCheckMode: Tags`): `UpdateCheckData` reads `version` and
+`version-code` from `Cargo.toml` at each `vX.Y.Z` tag, and
+`AutoUpdateMode: Version` adds a build for it copied from the last one,
+with the tag's full commit hash. `fdroid checkupdates --auto`
+(fdroidserver 2.4.5) added 1.9.7 (10907) from a test tag that bumped both
+(VERIFIED 2026-11-17). The recipe installs Rust with
+`scripts/install-rust.sh`, so it builds each tag with the version that
+tag's `rust-toolchain.toml` pins. The NDK (`ndk:`) and cargo-ndk versions
+are literals in the recipe; `scripts/check-docs.sh` fails if they differ
+from `NDK_VERSION` in `scripts/libmpv-android.env` and `CARGO_NDK_VERSION`
+in `scripts/android.env`, or if the recipe's `UpdateCheckData` does not
+read the workspace version and its `versionCode` from `Cargo.toml`. A
+release that changes the NDK or cargo-ndk needs the same change in
+`fdroiddata` by hand.
+
+**Reproducibility.** The build is reproducible across directories on one
+machine: Rust maps `CARGO_HOME`, `RUSTUP_HOME` and the checkout to
+`/cargo`, `/rustup` and `/cineo` (`--remap-path-prefix`), and libmpv is
+built in the fixed `/tmp/cineo-libmpv-android` with `SOURCE_DATE_EPOCH=0`,
+the NDK compilers named without their path, and OpenSSL's libraries
+written into `openssl.pc` so that every `pkg-config` orders them the same
+(`docs/TECHNICAL_DEBT.md`).
+
+**Checking a release locally**, as F-Droid will:
+- Run `registry.gitlab.com/fdroid/fdroidserver:buildserver` with a
+  `fdroiddata` clone. The image has no fdroidserver: install 2.4.5 in a
+  venv inside the container.
+- Commit the recipe in the `fdroiddata` clone first: `fdroid build` takes
+  `SOURCE_DATE_EPOCH` from the last commit that touches it, and an empty
+  value makes Gradle and clang fail (VERIFIED 2026-11-16).
+- Run `fdroid build --on-server` as `vagrant` with
+  `runuser -u vagrant -- env HOME=/home/vagrant …`; `sudo -u` also gave an
+  empty `SOURCE_DATE_EPOCH`. Reinstall `sudo` in the container before each
+  run, because `fdroid build` removes it (both observed 2026-11-16).
+- Install Rust in `~/.cargo` and `~/.rustup`, not behind a symlink:
+  `CargoNdk` maps the canonical path of those directories, so a symlink
+  leaves the real paths in `libcineo_android.so` (VERIFIED 2026-11-16).
+
+**Submission.** The first submission, `fdroiddata` merge request 57704,
+was closed on 2026-11-17 only because F-Droid includes apps maintained for
+more than three months; it can be sent again from 2027-01-08, three months
+after v0.1.0. Before that review the owner decides whether store builds
+list the Community addon catalog (ADR-0030).
 
 ## Pull requests
 

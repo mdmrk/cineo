@@ -214,7 +214,6 @@ jobs:
         with:
           path: *libmpv-android-paths
           key: *libmpv-android-key
-      - run: rm -rf /tmp/cineo-libmpv-android target/libmpv-android/libmpv-android-arm64-v8a.tar.xz
       - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: dist/*

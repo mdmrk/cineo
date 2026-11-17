@@ -4,6 +4,7 @@
 - Date: 2026-11-05
 - Amends: 0029 (which rejected a store "not now")
 - Amended 2026-11-16: F-Droid route 1 instead of route 2 (below)
+- Amended 2026-11-17: the `versionCode` is a literal in `Cargo.toml` (below)
 
 ## Context
 ADR-0029 releases a signed `cineo-arm64-android.apk` on GitHub and left
@@ -115,6 +116,12 @@ F-Droid route:
   the same tag. The build fails if MINOR or PATCH reaches 100, and
   `scripts/package.sh android` checks the APK's `versionCode` and
   `versionName` against the workspace version.
+  **Amended 2026-11-17:** F-Droid's update checker reads the `versionCode`
+  only from a regular expression over a file at the tag, so it is written
+  as `version-code` in `Cargo.toml` (`[workspace.metadata.android]`) and
+  Gradle fails if it is not the number above, so `scripts/package.sh`
+  no longer checks it in the APK. The recipe then updates itself
+  (`UpdateCheckMode: Tags`, `AutoUpdateMode: Version`).
 - CI keeps publishing the APK on GitHub as in ADR-0029, and checks every
   `.so` in it for 16 KB LOAD alignment.
 - Store text lives in the repository in the fastlane layout

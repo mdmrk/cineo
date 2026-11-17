@@ -10,12 +10,11 @@ if ! grep -qx "Pkg.Revision = $NDK_VERSION" "$ndk/source.properties"; then
   exit 1
 fi
 
-work=$(realpath -m "${1:-$root/target/libmpv-android}")
 stage=/tmp/cineo-libmpv-android
 src=$stage/src
 build=$stage/build
 prefix=$stage/prefix
-out=$work/out
+out=$root/target/libmpv-android/out
 rm -rf "$build" "$prefix" "$out"
 mkdir -p "$src" "$build" "$prefix" "$out/lib" "$out/licenses"
 
@@ -244,9 +243,5 @@ uninstalled first, which removes its library and settings.
 EOF
 } >"$out/libmpv.md"
 
-archive=$work/libmpv-android-arm64-v8a.tar.xz
-tar -C "$out" -cJf "$archive" lib licenses SOURCES libmpv.md
-
 step "done"
-sha256sum "$archive"
 ls -l "$out/lib"
