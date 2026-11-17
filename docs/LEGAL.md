@@ -101,7 +101,10 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `configure` puts mbedTLS, not OpenSSL, on its version3 list. It also
   links dav1d 1.5.4 (BSD-2-Clause); mpv links libass 0.17.5 (ISC),
   freetype 2.15.0 (FTL), fribidi 1.0.18 (LGPL-2.1-or-later), harfbuzz
-  15.0.0 (MIT), libplacebo 7.387.0 (LGPL-2.1-or-later) and the NDK's
+  15.0.0 (MIT), libplacebo 7.387.0 (LGPL-2.1-or-later, with the OpenGL
+  loader glad generates, MIT and Apache-2.0 for the Khronos specifications,
+  and the fast_float headers, MIT; VERIFIED 2026-11-17 in its
+  `src/meson.build` and the glad templates) and the NDK's
   static libc++ (Apache-2.0 with LLVM exception). The archive carries
   each license text and the source list. The OpenSSL, dav1d, libass,
   fribidi and harfbuzz hashes match the ones those projects publish;

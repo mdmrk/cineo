@@ -184,6 +184,8 @@ cp "$src/freetype/docs/FTL.TXT" "$out/licenses/freetype-FTL.txt"
 cp "$src/fribidi/COPYING" "$out/licenses/fribidi-LGPL-2.1.txt"
 cp "$src/harfbuzz/COPYING" "$out/licenses/harfbuzz-MIT.txt"
 cp "$src/libplacebo/LICENSE" "$out/licenses/libplacebo-LGPL-2.1.txt"
+cp "$src/libplacebo/3rdparty/glad/LICENSE" "$out/licenses/libplacebo-glad.txt"
+cp "$src/libplacebo/3rdparty/fast_float/LICENSE-MIT" "$out/licenses/libplacebo-fast_float-MIT.txt"
 
 {
   cat <<EOF
