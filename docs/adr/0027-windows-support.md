@@ -69,6 +69,15 @@ unsupported (ADR-0022).
 - **Files.** Private directories and files keep mode 0700/0600 on Unix;
   Windows uses the default ACL of the user's profile.
 - **Release builds** use `windows_subsystem = "windows"` (no console).
+- **Amended 2026-11-17: a copy of the pinned archive.** zhongfly deletes
+  its releases after about a month (VERIFIED 2026-11-17: the oldest of its
+  52 releases was from 2026-10-18), which would break the Windows build.
+  The owner chose to keep a copy (2026-11-17): CI's `mirror libmpv` job,
+  on pushes to `main`, creates the release `libmpv-windows-<tag>` with the
+  archive once its SHA-256 matches the pin. It is a prerelease that is
+  never the latest, so `releases/latest/download/` is unaffected.
+  `scripts/fetch-libmpv.sh` downloads that copy first and upstream
+  second.
 - **CI** runs clippy and the tests on `windows-latest` too, and builds
   `cineo-x86_64-windows.exe` for releases. `cargo deny` checks the Linux and
   Windows graphs.

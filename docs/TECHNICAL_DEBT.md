@@ -377,18 +377,6 @@ Format:
 - Exit: run the [manual test](DEVELOPMENT.md#manual-gui-test) on Windows
   10 and 11 and record the results.
 
-### Windows: the bundled libmpv depends on an upstream release
-- Where: [fetch-libmpv.sh](../scripts/fetch-libmpv.sh),
-  [libmpv-windows.env](../scripts/libmpv-windows.env)
-- Gap: the Windows build downloads the pinned archive from
-  zhongfly/mpv-winbuild only; Cineo keeps no copy, in releases or
-  elsewhere.
-- Why: releases carry only what users install, and no separate mirror
-  release or tag (owner decisions 2026-11-03).
-- Instead: if upstream deletes that release, the Windows build fails at
-  the checksum step until the pin moves to a newer build.
-- Exit: none planned; update the pin when it breaks.
-
 ### Windows: the bundled libmpv's other license notices are missing
 - Where: [package.sh](../scripts/package.sh) (`cineo-licenses.zip`),
   [libmpv-windows.env](../scripts/libmpv-windows.env)

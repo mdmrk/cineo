@@ -124,8 +124,9 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   binary's hash, the mpv commit and the build sources. The DLL also
   statically contains about twenty libraries under BSD, MIT, Apache and
   similar licenses, whose notices are not shipped yet
-  (`docs/TECHNICAL_DEBT.md`). Releases do not
-  carry the archive itself; `libmpv.md` links to it upstream.
+  (`docs/TECHNICAL_DEBT.md`). The archive itself
+  is kept, unmodified, as the asset of the release `libmpv-windows-<tag>`
+  (ADR-0027, amended 2026-11-17), and `libmpv.md` links to both copies.
 - The macOS release (ADR-0035) carries, in
   `Cineo.app/Contents/Frameworks`, the LGPL dylibs of
   media-kit/libmpv-darwin-build v0.7.3 (variant `video-default`, MIT build

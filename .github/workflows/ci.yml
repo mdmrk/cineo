@@ -223,6 +223,20 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  mirror-libmpv:
+    name: mirror libmpv
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - *checkout
+      - run: scripts/mirror-libmpv.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
   publish:
     name: publish
     needs: [linux, windows, macos, android, build, build-android]

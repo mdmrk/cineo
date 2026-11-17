@@ -660,8 +660,8 @@ takes it from `version-code` in `Cargo.toml`
 secret is missing or the decoded keystore is empty rather than publish an
 unsigned APK; `check (android)` builds an
 unsigned debug APK on pull requests. `publish` writes `SHA256SUMS` (check a file with
-`gh attestation verify <file> --repo <owner>/cineo`). Only `publish` can
-write to the repository. The checks and prerelease builds restore the compiled
+`gh attestation verify <file> --repo <owner>/cineo`). Only `publish` and
+`mirror libmpv` can write to the repository. The checks and prerelease builds restore the compiled
 dependencies from the cache saved by the last run on `main`; tag builds
 start without a Rust cache and reuse only `main`'s libmpv for Android. After each run on `main`, `prune caches` deletes all
 but the newest Rust and libmpv cache of each job, so the repository stays

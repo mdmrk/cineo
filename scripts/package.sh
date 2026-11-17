@@ -20,7 +20,7 @@ cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
 (mpv and FFmpeg, LGPL-2.1-or-later; license text in LGPL-2.1.txt).
 
 - Binary: ${LIBMPV_UPSTREAM}/${LIBMPV_FILE}
-  (SHA-256 ${LIBMPV_SHA256})
+  (SHA-256 ${LIBMPV_SHA256}); Cineo's copy: ${LIBMPV_MIRROR}/${LIBMPV_FILE}
 - mpv source: https://github.com/mpv-player/mpv/commit/${LIBMPV_MPV_COMMIT}
 - Build scripts and the sources of every library: https://github.com/zhongfly/mpv-winbuild
   (build log: ${LIBMPV_BUILD_LOG})
