@@ -1,5 +1,5 @@
-include = ["**/Cargo.toml", ".config/nextest.toml", ".clippy.toml", "rustfmt.toml", ".taplo.toml", "typos.toml"]
-exclude = ["target/**", "android/build/**", "android/app/build/**"]
+include = ["**/*.toml"]
+exclude = ["target/**", "android/build/**", "android/app/build/**", ".config/deny.toml"]
 
 [formatting]
 align_entries = false

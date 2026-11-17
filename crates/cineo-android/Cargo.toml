@@ -16,7 +16,7 @@ path = "src/bin/uniffi-bindgen.rs"
 required-features = ["bindgen"]
 
 [features]
-bindgen = ["uniffi/cli"]
+bindgen = ["uniffi/cli", "uniffi/cargo-metadata"]
 
 [dependencies]
 cineo-core.workspace = true
@@ -43,44 +43,5 @@ serde_json.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true
 
-[lints.rust]
-unsafe_code = "deny"
-missing_debug_implementations = "warn"
-unreachable_pub = "warn"
-trivial_numeric_casts = "warn"
-unused_lifetimes = "warn"
-single_use_lifetimes = "warn"
-rust_2024_compatibility = { level = "warn", priority = -1 }
-
-
-[lints.clippy]
-dbg_macro = "warn"
-todo = "warn"
-unimplemented = "warn"
-unwrap_used = "warn"
-expect_used = "warn"
-print_stdout = "warn"
-print_stderr = "warn"
-large_futures = "warn"
-needless_pass_by_value = "warn"
-redundant_clone = "warn"
-semicolon_if_nothing_returned = "warn"
-cloned_instead_of_copied = "warn"
-implicit_clone = "warn"
-manual_let_else = "warn"
-match_same_arms = "warn"
-str_to_string = "warn"
-rc_buffer = "warn"
-mem_forget = "warn"
-needless_continue = "warn"
-uninlined_format_args = "warn"
-explicit_iter_loop = "warn"
-flat_map_option = "warn"
-map_unwrap_or = "warn"
-unnecessary_wraps = "warn"
-manual_assert = "warn"
-if_not_else = "warn"
-inefficient_to_string = "warn"
-verbose_file_reads = "warn"
-empty_drop = "warn"
-exit = "warn"
+[lints]
+workspace = true

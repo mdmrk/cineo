@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod app;
 mod brand;
 pub mod dirs;

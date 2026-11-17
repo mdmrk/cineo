@@ -1,13 +1,5 @@
 [files]
-extend-exclude = [
-    "Cargo.lock",
-    "android/gradle/**",
-    "android/gradlew*",
-    "android/rustls-platform-verifier/**",
-    "fastlane/**",
-    "crates/cineo-desktop/assets/i18n/**",
-    "android/app/src/main/res/values-*/**",
-]
+extend-exclude = ["android/rustls-platform-verifier/**", "fastlane/**", "crates/cineo-desktop/assets/i18n/**", "android/app/src/main/res/values-*/**"]
 
 [default.extend-words]
 fre = "fre"
@@ -17,4 +9,4 @@ abd = "abd"
 seeked = "seeked"
 
 [default]
-extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs", "[0-9a-f]{3,}…[0-9a-f]{3,}"]
+extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs"]

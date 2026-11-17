@@ -290,20 +290,20 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 
 ## Unsafe code
 
-`unsafe_code = "forbid"` workspace-wide. A crate that genuinely needs FFI
-must:
+`unsafe_code = "deny"` workspace-wide, and every crate root without FFI
+(`cineo-core`, `cineo-net`, `cineo-store`, `cineo-stream` and both roots of
+`cineo-desktop`) adds `#![forbid(unsafe_code)]`, so no module in them can
+lift it. A crate that genuinely needs FFI must:
 
-1. Lift the lint for that crate only.
+1. Keep no `forbid` in its root.
 2. Justify it in an ADR.
 3. Keep `unsafe` inside the modules that lift the lint, with a `reason`.
 
 The exceptions are `cineo-player` (ADR-0014) and `cineo-android`
-(ADR-0028). Each has its own lint table that sets `unsafe_code = "deny"`.
-Only these modules allow it: `embedded::ffi` (libmpv bindings) and
+(ADR-0028), which use the workspace lints like every crate. Only these
+modules allow it: `embedded::ffi` (libmpv bindings) and
 `embedded::render` (the OpenGL renderer) in `cineo-player`, and `native`
-(the JNI entry point for the TLS verifier) in `cineo-android`. These tables
-are copies of the root `[workspace.lints]` with only `unsafe_code` changed;
-a lint added to the root must be added to them too.
+(the JNI entry point for the TLS verifier) in `cineo-android`.
 
 ## Reporting a vulnerability
 

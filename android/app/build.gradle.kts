@@ -7,7 +7,7 @@ plugins {
 }
 
 val cargoWorkspace: Directory = rootProject.layout.projectDirectory.dir("..")
-val minApi = 26
+val minApi: Int by rootProject.extra
 
 fun cargoLockVersion(crate: String): String {
     val lines = cargoWorkspace.file("Cargo.lock").asFile.readLines()
@@ -24,10 +24,6 @@ fun cargoTomlValue(section: String, key: String): String {
     val line = lines.drop(at + 1).takeWhile { !it.startsWith("[") }.firstOrNull { it.startsWith("$key = ") }
     return requireNotNull(line) { "Cargo.toml [$section] has no $key" }.substringAfter("= ").trim().trim('"')
 }
-
-fun pinnedNdkVersion(): String =
-    cargoWorkspace.file("scripts/libmpv-android.env").asFile.readLines()
-        .first { it.startsWith("NDK_VERSION=") }.substringAfter('=')
 
 abstract class CargoNdk : DefaultTask() {
     @get:Inject abstract val exec: ExecOperations
@@ -89,18 +85,16 @@ val cargoNdk = tasks.register<CargoNdk>("cargoNdk") {
 }
 
 abstract class Libmpv : DefaultTask() {
-    @get:Internal abstract val built: DirectoryProperty
+    @get:InputFiles @get:PathSensitive(PathSensitivity.RELATIVE) abstract val built: DirectoryProperty
     @get:Input abstract val required: Property<Boolean>
     @get:OutputDirectory abstract val jniLibs: DirectoryProperty
     @get:OutputDirectory abstract val assets: DirectoryProperty
 
     @TaskAction
     fun copy() {
-        val root = built.get().asFile
-        val out = root.resolve("out")
+        val out = built.get().asFile
         val abi = jniLibs.get().dir("arm64-v8a").asFile
         val licenses = assets.get().dir("licenses").asFile
-        assets.get().dir("sources").asFile.deleteRecursively()
         listOf(abi, licenses).forEach { it.deleteRecursively(); it.mkdirs() }
         val libs = out.resolve("lib").listFiles { file -> file.name.endsWith(".so") }.orEmpty()
         val notice = out.resolve("libmpv.md")
@@ -108,7 +102,7 @@ abstract class Libmpv : DefaultTask() {
         out.resolve("licenses").listFiles().orEmpty().forEach { it.copyTo(licenses.resolve(it.name)) }
         if (notice.isFile) notice.copyTo(licenses.resolve(notice.name))
         if (libs.none { it.name == "libmpv.so" } || !notice.isFile) {
-            val message = "No libmpv build at $root. Run scripts/build-libmpv-android.sh."
+            val message = "No libmpv build at $out. Run scripts/build-libmpv-android.sh."
             if (required.get()) throw GradleException(message)
             logger.warn("$message The app will build, but cannot play.")
         }
@@ -143,7 +137,7 @@ android {
     compileSdk {
         version = release(37) { minorApiLevel = 2 }
     }
-    ndkVersion = pinnedNdkVersion()
+    ndkVersion = rootProject.extra["ndkVersion"] as String
 
     defaultConfig {
         applicationId = "io.github.mdmrk.cineo"
@@ -195,11 +189,10 @@ composeCompiler {
 androidComponents {
     onVariants { variant ->
         val libmpv = tasks.register<Libmpv>("libmpv${variant.name.replaceFirstChar { it.uppercase() }}") {
-            built.set(cargoWorkspace.dir("target/libmpv-android"))
+            built.set(cargoWorkspace.dir("target/libmpv-android/out"))
             required.set(variant.buildType == "release")
             jniLibs.set(layout.buildDirectory.dir("generated/libmpv/${variant.name}/jniLibs"))
             assets.set(layout.buildDirectory.dir("generated/libmpv/${variant.name}/assets"))
-            outputs.upToDateWhen { false }
         }
         variant.sources.jniLibs?.addGeneratedSourceDirectory(cargoNdk, CargoNdk::jniLibs)
         variant.sources.jniLibs?.addGeneratedSourceDirectory(libmpv, Libmpv::jniLibs)
@@ -208,18 +201,14 @@ androidComponents {
     }
 }
 
-val checkVerifierSources = tasks.register("checkVerifierSources") {
-    val upstream = rootProject.layout.projectDirectory.file("rustls-platform-verifier/UPSTREAM")
+run {
+    val vendored = rootProject.layout.projectDirectory.file("rustls-platform-verifier/UPSTREAM").asFile
+        .readLines().first().substringAfterLast(' ')
     val locked = cargoLockVersion("rustls-platform-verifier-android")
-    doLast {
-        val vendored = upstream.asFile.readLines().first().substringAfterLast(' ')
-        check(vendored == locked) {
-            "Cargo.lock has rustls-platform-verifier-android $locked, but android/rustls-platform-verifier is $vendored"
-        }
+    require(vendored == locked) {
+        "Cargo.lock has rustls-platform-verifier-android $locked, but android/rustls-platform-verifier is $vendored"
     }
 }
-
-tasks.named("preBuild") { dependsOn(checkVerifierSources) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod blocklist;
 mod cache;
 mod engine;

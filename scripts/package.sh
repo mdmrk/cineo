@@ -4,14 +4,19 @@ cd "$(dirname "$0")/.."
 rm -rf dist
 mkdir -p dist
 
+common_licenses() {
+  local iconflow
+  iconflow=$(cargo metadata --format-version 1 --locked |
+    jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
+  cp LICENSE "$1/cineo-MIT.txt"
+  cp crates/cineo-desktop/assets/fonts/*-OFL.txt "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" "$1/"
+}
+
 case "${1:-linux}" in
   linux)
     mkdir -p dist/cineo-licenses
-    cp LICENSE crates/cineo-desktop/assets/fonts/*-OFL.txt \
-      crates/cineo-desktop/assets/licenses/LGPL-2.1.txt dist/cineo-licenses/
-    iconflow=$(cargo metadata --format-version 1 --locked |
-      jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
-    cp "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" dist/cineo-licenses/
+    common_licenses dist/cineo-licenses
+    cp crates/cineo-desktop/assets/licenses/LGPL-2.1.txt dist/cineo-licenses/
     source scripts/libmpv-windows.env
     cat >dist/cineo-licenses/libmpv.md <<EOT
 # libmpv (Windows build only)
@@ -28,9 +33,6 @@ cineo-x86_64-windows.exe contains an unmodified LGPL build of libmpv-2.dll
 Cineo writes the DLL to %LOCALAPPDATA%\\Cineo\\cache\\libmpv\\<version>\\.
 To use your own build, put a libmpv-2.dll next to cineo-x86_64-windows.exe;
 it is loaded first.
-
-cineo-universal-macos.dmg carries its own libmpv and FFmpeg builds; their
-notices and license texts are in Cineo.app/Contents/Resources/licenses.
 EOT
     if command -v zip >/dev/null; then
       (cd dist && zip -qr cineo-licenses.zip cineo-licenses)
@@ -115,9 +117,11 @@ PY
     ;;
   macos)
     source scripts/libmpv-macos.env
-    libmpv=${CINEO_LIBMPV_MACOS:-target/libmpv-macos}
+    libmpv=target/libmpv-macos
     version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
-    app=dist/Cineo.app
+    work=$(mktemp -d)
+    mkdir "$work/stage"
+    app=$work/stage/Cineo.app
     contents=$app/Contents
     mkdir -p "$contents/MacOS" "$contents/Frameworks" "$contents/Resources/licenses"
     lipo -create target/aarch64-apple-darwin/release/cineo-desktop \
@@ -125,7 +129,7 @@ PY
     sed -e "s/__VERSION__/$version/g" -e "s/__BUILD__/${version%%-*}/g" \
       scripts/macos/Info.plist >"$contents/Info.plist"
     plutil -lint "$contents/Info.plist"
-    iconset=$(mktemp -d)/cineo.iconset
+    iconset=$work/cineo.iconset
     mkdir -p "$iconset"
     icon=crates/cineo-desktop/assets/brand/icon.png
     for size in 16 32 128; do
@@ -141,11 +145,7 @@ PY
       codesign --force --sign - "$lib"
     done
     licenses=$contents/Resources/licenses
-    cp LICENSE "$licenses/cineo-MIT.txt"
-    cp crates/cineo-desktop/assets/fonts/*-OFL.txt "$licenses/"
-    iconflow=$(cargo metadata --format-version 1 --locked |
-      jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
-    cp "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" "$licenses/"
+    common_licenses "$licenses"
     cp "$libmpv"/licenses/* "$licenses/"
     cat >"$licenses/libmpv.md" <<EOT
 # libmpv (macOS build)
@@ -169,17 +169,17 @@ they find each other inside the app. To use your own build, replace the
 EOT
     codesign --force --sign - "$app"
     codesign --verify --strict --deep "$app"
-    check=$(mktemp -d)/dlopen
+    check=$work/dlopen
     printf '%s\n' '#include <dlfcn.h>' '#include <stdio.h>' \
       'int main(int argc, char **argv) { (void)argc; if (!dlopen(argv[1], RTLD_NOW)) { fprintf(stderr, "%s\n", dlerror()); return 1; } return 0; }' |
       cc -x c -o "$check" -
     "$check" "$contents/Frameworks/libmpv.dylib"
-    lipo "$contents/MacOS/cineo" -verify_arch arm64 x86_64
-    stage=$(mktemp -d)
-    cp -R "$app" "$stage/"
-    ln -s /Applications "$stage/Applications"
-    hdiutil create -volname Cineo -srcfolder "$stage" -ov -format UDZO dist/cineo-universal-macos.dmg
-    rm -rf "$app" "$stage"
+    for binary in "$contents/MacOS/cineo" "$contents"/Frameworks/*.dylib; do
+      lipo "$binary" -verify_arch arm64 x86_64
+    done
+    ln -s /Applications "$work/stage/Applications"
+    hdiutil create -volname Cineo -srcfolder "$work/stage" -format UDZO dist/cineo-universal-macos.dmg
+    rm -rf "$work"
     ;;
   *)
     echo "unknown platform: $1" >&2

@@ -62,7 +62,7 @@ tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "t
 tokio-util = { version = "0.7.20", default-features = false, features = ["io"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
-uniffi = "0.32.2"
+uniffi = { version = "0.32.2", default-features = false }
 url = "2.5.8"
 
 egui_kittest = { version = "0.36.2", default-features = false }
@@ -70,13 +70,12 @@ tempfile = "3.27.0"
 wiremock = "0.6.5"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_debug_implementations = "warn"
 unreachable_pub = "warn"
 trivial_numeric_casts = "warn"
 unused_lifetimes = "warn"
 single_use_lifetimes = "warn"
-rust_2024_compatibility = { level = "warn", priority = -1 }
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

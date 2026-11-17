@@ -9,7 +9,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 26
+        minSdk = rootProject.extra["minApi"] as Int
         buildConfigField("boolean", "TEST", "false")
     }
 

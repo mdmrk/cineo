@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 mod addon_client;
 mod effects;
 mod policy;

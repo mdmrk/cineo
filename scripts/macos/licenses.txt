@@ -1,16 +1,16 @@
-mpv-LGPL-2.1.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/LICENSE.LGPL
-mpv-Copyright.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/Copyright
-ffmpeg-LGPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.LGPLv3
-ffmpeg-GPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.GPLv3
-ffmpeg-LICENSE.md https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/LICENSE.md
-dav1d-BSD-2-Clause.txt https://code.videolan.org/videolan/dav1d/-/raw/1.2.1/COPYING
-libass-ISC.txt https://raw.githubusercontent.com/libass/libass/0.17.1/COPYING
-freetype.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/LICENSE.TXT
-freetype-FTL.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/docs/FTL.TXT
-fribidi-LGPL-2.1.txt https://raw.githubusercontent.com/fribidi/fribidi/v1.0.13/COPYING
-harfbuzz-MIT.txt https://raw.githubusercontent.com/harfbuzz/harfbuzz/8.1.1/COPYING
-libpng.txt https://raw.githubusercontent.com/pnggroup/libpng/v1.6.40/LICENSE
-libxml2-MIT.txt https://gitlab.gnome.org/GNOME/libxml2/-/raw/v2.11.5/Copyright
-mbedtls-Apache-2.0.txt https://raw.githubusercontent.com/Mbed-TLS/mbedtls/v3.4.1/LICENSE
-uchardet.txt https://gitlab.freedesktop.org/uchardet/uchardet/-/raw/v0.0.8/COPYING
-libmpv-darwin-build-MIT.txt https://raw.githubusercontent.com/media-kit/libmpv-darwin-build/v0.7.3/LICENSE.txt
+mpv-LGPL-2.1.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/LICENSE.LGPL dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551
+mpv-Copyright.txt https://raw.githubusercontent.com/mpv-player/mpv/v0.36.0/Copyright 160139ae889eacb76789123463ae04a7c851cd62692ab2b5851bc02eb0efd5fc
+ffmpeg-LGPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.LGPLv3 da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768
+ffmpeg-GPL-3.0.txt https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/COPYING.GPLv3 8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903
+ffmpeg-LICENSE.md https://raw.githubusercontent.com/FFmpeg/FFmpeg/n6.0/LICENSE.md cb48bf09a11f5fb576cddb0431c8f5ed0a60157a9ec942adffc13907cbe083f2
+dav1d-BSD-2-Clause.txt https://code.videolan.org/videolan/dav1d/-/raw/1.2.1/COPYING b327887de263238deaa80c34cdd2ff3e0ba1d35db585ce14a37ce3e74ee389e9
+libass-ISC.txt https://raw.githubusercontent.com/libass/libass/0.17.1/COPYING f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c
+freetype.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/LICENSE.TXT 2e3bbb7d7c5c396368dd0853a790ec29ce5b8647163dde42a0493fb0d6556b2b
+freetype-FTL.txt https://gitlab.freedesktop.org/freetype/freetype/-/raw/VER-2-13-2/docs/FTL.TXT 08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1
+fribidi-LGPL-2.1.txt https://raw.githubusercontent.com/fribidi/fribidi/v1.0.13/COPYING 32434afcc8666ba060e111d715bfdb6c2d5dd8a35fa4d3ab8ad67d8f850d2f2b
+harfbuzz-MIT.txt https://raw.githubusercontent.com/harfbuzz/harfbuzz/8.1.1/COPYING ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64
+libpng.txt https://raw.githubusercontent.com/pnggroup/libpng/v1.6.40/LICENSE 5c0bb4b05b1354ae7c173532b6702ea68b611047ff9b91c4d3af77da39c195d9
+libxml2-MIT.txt https://gitlab.gnome.org/GNOME/libxml2/-/raw/v2.11.5/Copyright c5c63674f8a83c4d2e385d96d1c670a03cb871ba2927755467017317878574bd
+mbedtls-Apache-2.0.txt https://raw.githubusercontent.com/Mbed-TLS/mbedtls/v3.4.1/LICENSE cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+uchardet.txt https://gitlab.freedesktop.org/uchardet/uchardet/-/raw/v0.0.8/COPYING 107a29ccdd2d778aa2df5462f85dddfa099059abd22e064e07ec2cc9bafc37cd
+libmpv-darwin-build-MIT.txt https://raw.githubusercontent.com/media-kit/libmpv-darwin-build/v0.7.3/LICENSE.txt 21e0fc174a2c3fb9f26329cfb235f6963c5341e3cc28324e8ff6e40199dc81a1

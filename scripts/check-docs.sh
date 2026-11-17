@@ -53,12 +53,10 @@ code = re.search(code_re, cargo)
 version = re.search(version_re, cargo)
 if not code or not version:
     sys.exit(f"{sys.argv[1]}: UpdateCheckData does not match Cargo.toml")
-package = re.search(r'^\[workspace\.package\]\nversion = "(\d+)\.(\d+)\.(\d+)"$', cargo, re.M)
-major, minor, patch = map(int, package.groups())
-if version.group(1) != ".".join(package.groups()):
-    sys.exit(f"UpdateCheckData reads version {version.group(1)}, Cargo.toml has {'.'.join(package.groups())}")
-if int(code.group(1)) != major * 10000 + minor * 100 + patch:
-    sys.exit(f"Cargo.toml version-code {code.group(1)} is not MAJOR * 10000 + MINOR * 100 + PATCH")
+package = re.search(r'^\[workspace\.package\]\nversion = "(.+)"$', cargo, re.M).group(1)
+declared = re.search(r"^\[workspace\.metadata\.android\]\nversion-code = (\d+)$", cargo, re.M).group(1)
+if (version.group(1), code.group(1)) != (package, declared):
+    sys.exit(f"UpdateCheckData reads {version.group(1)} ({code.group(1)}), Cargo.toml has {package} ({declared})")
 PY
 
 exit "$status"

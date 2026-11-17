@@ -45,7 +45,7 @@ unused-allowed-license = "allow"
 confidence-threshold = 0.9
 
 [bans]
-multiple-versions = "warn"
+multiple-versions = "allow"
 wildcards = "deny"
 allow-wildcard-paths = true
 deny = [

@@ -188,13 +188,15 @@ updated `Cargo.lock`.
   that only cause churn.
 - `#[allow(...)]` needs a `reason = "…"`. `#[expect(...)]` is
   preferred when the lint should fire.
-- `unsafe_code = "forbid"`, except in the modules listed in [SECURITY.md](SECURITY.md), which also
-  describes the exception process.
+- `unsafe_code = "deny"` in `[workspace.lints]`, and `#![forbid(unsafe_code)]`
+  in every crate root without FFI; the modules that allow it and the
+  exception process are in [SECURITY.md](SECURITY.md).
 
 ### Rust version (ADR-0036)
 
 `rust-toolchain.toml` pins one stable release, and CI installs that one with
-`scripts/install-rust.sh [target…]`.
+`scripts/install-rust.sh [target…]` (`rustup toolchain install`, then the
+targets; it does not change your default toolchain).
 To move to a new release, change `channel`, fix the new lints and commit
 both as `build: use Rust X.Y.Z`. The pin keeps CI's Rust cache warm:
 `Swatinem/rust-cache` hashes the `rustc` version into its key, so an
@@ -510,7 +512,7 @@ current version when adding one.
 | `fastframe-i18n` (git, tag; `build` feature at build time only) | 0.17.1 | Compiles the gettext UI catalogs in `build.rs` and looks messages up, and picks the default UI language from the OS (desktop, ADR-0034) | MIT |
 | `raw-window-handle`                                                                    | 0.6.2                                                                                                                                  | The window's Wayland or Xlib display for mpv's hardware-decoding interop, and the HWND for SMTC on Windows (desktop); already in the tree through eframe | MIT/Apache/Zlib                      |
 | `libloading`                                                                           | 0.9.0                                                                                                                                  | Loads libmpv at runtime for embedded playback (player, ADR-0014). glutin still pulls in 0.8.9 on Linux, so the tree has both (as of 2026-10-07) | ISC                                  |
-| `uniffi` (`cli` only with the `bindgen` feature)                                       | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
+| `uniffi` (no default features; `cli` and `cargo-metadata` only with the `bindgen` feature) | 0.32.2                                                                                                                                 | Kotlin bindings for the Android shell (android, ADR-0028)                                                                                        | MPL-2.0 (LEGAL.md)                   |
 | `jni` (no default features; Android only)                                              | 0.22.4                                                                                                                                 | The one JNI entry point that hands the app `Context` to the TLS verifier (android)                                                              | MIT/Apache                           |
 | `rustls-platform-verifier` (Android only)                                              | 0.7.1, already in the tree through reqwest                                                                                             | `android::init_with_env` for Android's certificate verifier (android)                                                                           | MIT/Apache                           |
 | `android_logger` (no default features; Android only) | 0.15.1 | Sends logs to logcat (android) | MIT/Apache |
