@@ -42,6 +42,7 @@ abstract class CargoNdk : DefaultTask() {
             workingDir = workspace.get().asFile
             environment("ANDROID_NDK_HOME", ndk.get().asFile.path)
             environment("CARGO_PROFILE_RELEASE_STRIP", "debuginfo")
+            environment("CARGO_PROFILE_RELEASE_PANIC", "unwind")
             val home = System.getProperty("user.home")
             val remaps = listOf(
                 (System.getenv("CARGO_HOME") ?: "$home/.cargo") to "/cargo",

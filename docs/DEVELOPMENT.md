@@ -66,7 +66,11 @@ device. Gradle's `cargoNdk` task builds `cineo-android` for `arm64-v8a` at
 API level 26, and `uniffiBindgen` writes the Kotlin bindings from that
 library into `app/build/generated/rust/kotlin`. The Android build keeps
 symbols (`CARGO_PROFILE_RELEASE_STRIP=debuginfo`) because `uniffi-bindgen`
-reads its metadata from them; AGP strips the copy in the APK.
+reads its metadata from them; AGP strips the copy in the APK. It also
+unwinds on panic (`CARGO_PROFILE_RELEASE_PANIC=unwind`), unlike the desktop
+release, so a panicking thread is reported (`the shell thread panicked`)
+and UniFFI turns a panic in a call into a Kotlin exception instead of
+closing the app.
 `./gradlew testDebugUnitTest` runs the Kotlin unit tests in `app/src/test/`
 on the JVM, and `./gradlew lintDebug` runs Android Lint, which fails on
 errors and reports warnings in `app/build/reports/`. CI runs
