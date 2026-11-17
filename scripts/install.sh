@@ -24,14 +24,12 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-[ "$(uname -s)" = Linux ] || die "this script is for Linux; on Windows use install.ps1"
+[ "$(uname -s)" = Linux ] || die "this script is for Linux; on Windows use install.ps1, on macOS cineo-universal-macos.dmg"
 [ "$(uname -m)" = x86_64 ] || die "no build for $(uname -m)"
 command -v curl >/dev/null || die "curl is required"
 command -v sha256sum >/dev/null || die "sha256sum is required"
 
-if [ -n "${CINEO_DOWNLOAD_URL:-}" ]; then
-  base=$CINEO_DOWNLOAD_URL
-elif [ "$version" = latest ]; then
+if [ "$version" = latest ]; then
   base=https://github.com/$repo/releases/latest/download
 else
   base=https://github.com/$repo/releases/download/$version
@@ -44,7 +42,8 @@ say "Downloading Cineo ($version)..."
 for file in cineo-x86_64-linux cineo.png cineo-licenses.zip SHA256SUMS; do
   curl -fsSL --retry 3 -o "$tmp/$file" "$base/$file" || die "could not download $base/$file"
 done
-(cd "$tmp" && grep -E ' \*?(cineo-x86_64-linux|cineo\.png|cineo-licenses\.zip)$' SHA256SUMS | sha256sum -c --quiet -) ||
+(cd "$tmp" && grep -E ' \*?(cineo-x86_64-linux|cineo\.png|cineo-licenses\.zip)$' SHA256SUMS >checked &&
+  [ "$(wc -l <checked)" -eq 3 ] && sha256sum -c --quiet checked) ||
   die "checksum mismatch; nothing was installed"
 
 mkdir -p "$bin_dir" "$(dirname "$desktop")" "$(dirname "$icon")"

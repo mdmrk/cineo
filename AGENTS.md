@@ -40,7 +40,7 @@ arm64 port in progress and released as an APK (ADR-0028, ADR-0029). Scope and cu
    changed and **how you verified it**.
 
 ## Commands
-- `scripts/check.sh` — all gates: fmt, clippy `-D warnings`, tests, docs,
+- `scripts/check.sh` — all gates: fmt, clippy `-D warnings`, tests, lint,
   cargo-deny.
 - `cargo test -p <crate> <name>` — a single test.
 - `cargo fmt --all` — formatting (rustfmt, edition 2024).

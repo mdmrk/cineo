@@ -545,7 +545,8 @@ The full evidence for the rows above whose notes do not fit in the table.
 - It is for arm64-v8a phones only; there is no Android TV build.
 - It installs from the GitHub release, with no store.
 - CI checks that the APK holds libmpv, FFmpeg and `libmpv.md` with matching
-  hashes and passes `apksigner verify` (`scripts/package.sh android`); no
+  hashes, passes `apksigner verify` and is signed with the key the F-Droid
+  recipe allows (`scripts/package.sh android`); no
   APK from CI has been installed yet.
 - `cineo-android` installs an addon, fills the home screen from its catalogs
   and restores the addons after a restart

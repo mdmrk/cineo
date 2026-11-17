@@ -93,7 +93,12 @@ EOT
     rm -rf "$libs"
     sdk=${ANDROID_HOME:?set ANDROID_HOME to the Android SDK}
     build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
-    "$build_tools/apksigner" verify "$apk"
+    signer=$(sed -n 's/^AllowedAPKSigningKeys: //p' docs/fdroid/io.github.mdmrk.cineo.yml)
+    digests=$("$build_tools/apksigner" verify --print-certs "$apk" | sed -n 's/.*certificate SHA-256 digest: //p' | sort -u)
+    [[ $digests == "$signer" ]] || {
+      echo "$apk is signed by ${digests:-nothing}, not the release key $signer that F-Droid allows" >&2
+      exit 1
+    }
     python3 -I - "$apk" <<'PY'
 import struct, sys
 data = open(sys.argv[1], "rb").read()

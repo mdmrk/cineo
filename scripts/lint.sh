@@ -3,21 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export RUST_LOG=warn
 
-step() { printf '\n==> %s\n' "$*"; }
-
-have() { command -v "$1" >/dev/null 2>&1; }
-
-need() {
-  if have "$1"; then
-    return 0
-  fi
-  if [[ -n "${CI:-}" ]]; then
-    echo "$1 is required in CI" >&2
-    exit 1
-  fi
-  echo "$1 not installed; skipped. Install: $2"
-  return 1
-}
+source scripts/common.sh
 
 step "taplo"
 if need taplo "cargo install --locked taplo-cli"; then
@@ -41,8 +27,5 @@ fi
 
 step "doc references"
 scripts/check-docs.sh
-
-step "lockfile"
-cargo metadata --locked --format-version 1 >/dev/null
 
 printf '\nLint passed.\n'

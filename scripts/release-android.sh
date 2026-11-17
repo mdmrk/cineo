@@ -2,6 +2,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/libmpv-android.env
+source scripts/android.env
+
+if [[ $(cargo ndk --version) != *" $CARGO_NDK_VERSION"* ]]; then
+  echo "cargo-ndk $CARGO_NDK_VERSION is required, found: $(cargo ndk --version)" >&2
+  exit 1
+fi
 
 for name in CINEO_KEYSTORE CINEO_KEYSTORE_PASSWORD CINEO_KEY_ALIAS CINEO_KEY_PASSWORD; do
   if [[ -z ${!name:-} ]]; then

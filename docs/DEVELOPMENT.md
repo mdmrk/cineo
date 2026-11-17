@@ -20,8 +20,9 @@ holds the details it links to.
    ```sh
    cargo install --locked cargo-nextest cargo-deny taplo-cli typos-cli cargo-machete
    ```
-   `shellcheck` and `shfmt` come from your package manager. `scripts/lint.sh`
-   and `scripts/fmt.sh` skip a missing tool locally and fail on it in CI.
+   `shellcheck` and `shfmt` come from your package manager. `scripts/lint.sh`,
+   `scripts/fmt.sh` and `scripts/check.sh` skip a missing tool locally
+   (`check.sh` runs `cargo test` without nextest) and fail on it in CI.
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
    runtime (ADR-0014). On Windows, put a `libmpv-2.dll` next to the
    executable, or build with `--features bundled-libmpv` and
@@ -92,7 +93,8 @@ warns; a release build fails.
 **Release APK.** Set `CINEO_KEYSTORE` (the `.jks` file),
 `CINEO_KEYSTORE_PASSWORD`, `CINEO_KEY_ALIAS` and `CINEO_KEY_PASSWORD`, then
 run `scripts/release-android.sh`, the same steps as CI's `build (android)`.
-It refuses to build without the four variables, finds the SDK through
+It refuses to build without the four variables or with a cargo-ndk other
+than `CARGO_NDK_VERSION`, finds the SDK through
 `ANDROID_HOME` or `android/local.properties`, rebuilds libmpv only when the
 script or its `.env` changed since the last build
 (`target/libmpv-android/pins`), runs `./gradlew assembleRelease` and
@@ -113,14 +115,13 @@ fails if its version differs from `rustls-platform-verifier-android` in
 
 | Task                 | Command                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------- |
-| Everything CI checks | `scripts/check.sh` (`--quick` skips lint, docs and deny)                                        |
+| Everything CI checks | `scripts/check.sh` (`--quick` skips lint and deny)                                          |
 | Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--portable`, `--allow-private-network`) |
 | Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
-| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, doc references, lockfile)                       |
+| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, doc references)                 |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
 | Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
 | One test             | `cargo test -p cineo-core some_name`                                                        |
-| Docs                 | `cargo doc --workspace --no-deps --open`                                                    |
 | Dependency policy    | `cargo deny --config .config/deny.toml check`                                               |
 | Translations         | `scripts/update-translations.sh` (GNU gettext 0.24+; refreshes `cineo.pot` and merges it into every `.po`; `--check` only verifies) |
 
@@ -615,7 +616,7 @@ The checks show on GitHub as `ci / check (linux)`, `ci / check (windows)`,
 `ci / check (android)`, `ci / build (linux)`, `ci / build (windows)`,
 `ci / build (android)` and `ci / publish`.
 `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`, clippy,
-nextest with the `ci` profile, `scripts/lint.sh`, docs, cargo-deny); `check (windows)` runs clippy and nextest on
+nextest with the `ci` profile, `scripts/lint.sh`, cargo-deny); `check (windows)` runs clippy and nextest on
 `windows-latest`, in a copy of the checkout on a Dev Drive
 (`samypr100/setup-dev-drive`). CI builds the dev profile without debug info
 (`CARGO_PROFILE_DEV_DEBUG=0`), and `check (linux)` and `check (windows)`
@@ -644,8 +645,9 @@ save it) and runs
 the APK holds libmpv, FFmpeg, `libmpv.md` and the license texts, that each
 `.so` matches its hash, that no `.so` holds a build path or an OpenSSL build
 date (they would make the build unreproducible), that every `.so` in the APK has its LOAD segments
-aligned to at least 16 KB (`readelf`), that `apksigner verify` passes, that
-and that the signing block has no dependency-info block (Gradle's is
+aligned to at least 16 KB (`readelf`), that `apksigner verify` passes and
+the signer is the certificate the F-Droid recipe allows
+(`AllowedAPKSigningKeys`), and that the signing block has no dependency-info block (Gradle's is
 encrypted for Google; `dependenciesInfo` turns it off). The `versionCode`
 is `MAJOR * 10000 + MINOR * 100 + PATCH` of the workspace version: Gradle
 takes it from `version-code` in `Cargo.toml`

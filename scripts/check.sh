@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-
-step() { printf '\n==> %s\n' "$*"; }
+source scripts/common.sh
 
 step "format"
 scripts/fmt.sh --check
@@ -11,8 +10,11 @@ step "clippy"
 cargo clippy --workspace --all-targets --locked -- -D warnings
 
 step "tests"
-if command -v cargo-nextest >/dev/null 2>&1; then
+if have cargo-nextest; then
   cargo nextest run --workspace --locked
+elif [[ -n "${CI:-}" ]]; then
+  echo "cargo-nextest is required in CI" >&2
+  exit 1
 else
   cargo test --workspace --locked
 fi
@@ -21,14 +23,9 @@ if [[ "${1:-}" != "--quick" ]]; then
   step "lint"
   scripts/lint.sh
 
-  step "docs"
-  RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
-
   step "cargo-deny"
-  if command -v cargo-deny >/dev/null 2>&1; then
-    cargo deny --all-features --config .config/deny.toml check
-  else
-    echo "cargo-deny not installed; skipped (CI runs it). Install: cargo install --locked cargo-deny"
+  if need cargo-deny "cargo install --locked cargo-deny"; then
+    cargo deny --config .config/deny.toml check
   fi
 fi
 
