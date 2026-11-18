@@ -31,6 +31,14 @@ if minisign -V -q -p "$work/minisign.pub" -m "$work/dist/SHA256SUMS" -x "$work/d
   fail "changed checksums still verify"
 fi
 
+if CINEO_MINISIGN_KEY=$(sed -n 2p "$work/secret.key") "$work/scripts/sign-release.sh" "$work/dist" v1.0.0 2>"$work/err" >/dev/null; then
+  fail "a key without its comment line was accepted"
+fi
+grep -qF "whole secret key file" "$work/err" || fail "a key without its comment line was not explained"
+if CINEO_MINISIGN_KEY=$(tr '\n' ' ' <"$work/secret.key") "$work/scripts/sign-release.sh" "$work/dist" v1.0.0 >/dev/null 2>&1; then
+  fail "a key on one line was accepted"
+fi
+
 minisign -G -W -p "$work/other.pub" -s "$work/other.key" >/dev/null
 printf 'abc  cineo-x86_64-linux\n' >"$work/dist/SHA256SUMS"
 if CINEO_MINISIGN_KEY=$(cat "$work/other.key") "$work/scripts/sign-release.sh" "$work/dist" v1.0.0 >/dev/null 2>&1; then

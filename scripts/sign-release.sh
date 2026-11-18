@@ -13,6 +13,10 @@ sums=$dir/SHA256SUMS
   echo "CINEO_MINISIGN_KEY is not set; refusing to publish unsigned checksums" >&2
   exit 1
 }
+[[ $(sed -n 1p <<<"$CINEO_MINISIGN_KEY") == "untrusted comment:"* && -n $(sed -n 2p <<<"$CINEO_MINISIGN_KEY") ]] || {
+  echo "CINEO_MINISIGN_KEY must hold the whole secret key file: its 'untrusted comment:' line and the key line below it" >&2
+  exit 1
+}
 key=$(mktemp)
 trap 'rm -f "$key"' EXIT
 chmod 600 "$key"
