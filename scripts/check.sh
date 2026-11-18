@@ -25,6 +25,7 @@ if [[ "${1:-}" != "--quick" ]]; then
 
   step "release checks"
   scripts/test-check-release.sh
+  scripts/check-release.sh notes
 
   step "cargo-deny"
   if need cargo-deny "cargo install --locked cargo-deny"; then

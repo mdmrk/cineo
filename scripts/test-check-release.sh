@@ -58,5 +58,40 @@ mv "$work/dist/mpv-dev-lgpl-x86_64-20260101-git-abc.7z" "$work/dist/mpv-dev-lgpl
 expect fail "a libmpv archive other than the pinned one" assets "$work/dist"
 expect fail "a missing directory" assets "$work/nothing"
 
+printf '[workspace.package]\nversion = "2.3.4"\n' >"$work/Cargo.toml"
+expect fail "a version without notes" notes
+mkdir -p "$work/docs/releases"
+printf ' \n\n' >"$work/docs/releases/v2.3.4.md"
+expect fail "empty notes" notes
+printf -- '- Fixed a thing.\n' >"$work/docs/releases/v2.3.4.md"
+expect pass "written notes" notes
+printf -- '- Older.\n' >"$work/docs/releases/v2.3.3.md"
+rm "$work/docs/releases/v2.3.4.md"
+expect fail "notes of another version only" notes
+
+cp scripts/release-notes.sh "$work/scripts/"
+printf -- '- Fixed a thing.\n' >"$work/docs/releases/v2.3.4.md"
+body=$(GITHUB_REPOSITORY=owner/cineo "$work/scripts/release-notes.sh" v2.3.4 v2.3.3)
+for want in \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-linux" \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-windows.exe" \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-universal-macos.dmg" \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-arm64-android.apk" \
+  "- Fixed a thing." \
+  "**Full changelog**: https://github.com/owner/cineo/compare/v2.3.3...v2.3.4"; do
+  grep -qF -- "$want" <<<"$body" || {
+    echo "FAIL: the release body has no $want" >&2
+    failures=$((failures + 1))
+  }
+done
+if GITHUB_REPOSITORY=owner/cineo "$work/scripts/release-notes.sh" v9.9.9 >/dev/null 2>&1; then
+  echo "FAIL: a body was written without notes" >&2
+  failures=$((failures + 1))
+fi
+grep -q "Full changelog" <<<"$(GITHUB_REPOSITORY=owner/cineo "$work/scripts/release-notes.sh" v2.3.4)" && {
+  echo "FAIL: a first release links a changelog" >&2
+  failures=$((failures + 1))
+}
+
 ((failures == 0)) || exit 1
 echo "check-release.sh: all cases passed"

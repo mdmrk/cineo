@@ -744,11 +744,18 @@ Every release has these files, with the same names in every release so that
 
 1. On `main` with green CI, `reproduce (android)` included: bump `version`
    in `Cargo.toml`, and
-   `version-code` to `MAJOR * 10000 + MINOR * 100 + PATCH`.
+   `version-code` to `MAJOR * 10000 + MINOR * 100 + PATCH`, and write the
+   release notes in `docs/releases/vX.Y.Z.md` (what changed, for users;
+   no download links or changelog link, those are added).
+   `scripts/check-release.sh notes`, run by `scripts/check.sh`, fails while
+   the notes of the `Cargo.toml` version are missing or empty.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
 4. `ci.yml` runs every check, builds, and publishes the release
-   `vX.Y.Z` with notes generated from the commits since the previous tag.
+   `vX.Y.Z`. Its text comes from `scripts/release-notes.sh`: a line of
+   download links, the notes file, and a link comparing the tag with the
+   previous latest release. On tags, the build jobs check the notes before
+   compiling.
 
 ### Prerelease builds
 

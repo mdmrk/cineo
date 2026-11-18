@@ -134,7 +134,7 @@ jobs:
       - *checkout
       - &check-tag
         if: startsWith(github.ref, 'refs/tags/')
-        run: scripts/check-release.sh version "$TAG"
+        run: scripts/check-release.sh version "$TAG" && scripts/check-release.sh notes
         env:
           TAG: ${{ github.ref_name }}
       - run: scripts/install-rust.sh $TARGETS
@@ -251,8 +251,10 @@ jobs:
           if [[ "$REF" == refs/tags/* ]]; then
             prerelease=""
             [[ "$TAG" == *-* ]] && prerelease="--prerelease"
+            previous=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+            scripts/release-notes.sh "$TAG" "$previous" > "$RUNNER_TEMP/notes.md"
             gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag $prerelease \
-              --title "$TAG" --generate-notes
+              --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
           else
             if gh release view prerelease --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/prerelease" -f sha="$GITHUB_SHA" -F force=true > /dev/null

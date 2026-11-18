@@ -50,8 +50,17 @@ check_assets() {
   return "$status"
 }
 
+check_notes() {
+  local version notes
+  version=$(workspace_version)
+  notes=docs/releases/v$version.md
+  [[ -f $notes ]] || die "$notes is missing; write the notes of v$version with the version bump"
+  grep -q '[^[:space:]]' "$notes" || die "$notes is empty"
+}
+
 case "${1:-}" in
   version) check_version "${2:-}" ;;
   assets) check_assets "${2:-}" ;;
-  *) die "usage: check-release.sh version TAG | assets DIR" ;;
+  notes) check_notes ;;
+  *) die "usage: check-release.sh version TAG | assets DIR | notes" ;;
 esac
