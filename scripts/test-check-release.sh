@@ -93,5 +93,13 @@ grep -q "Full changelog" <<<"$(GITHUB_REPOSITORY=owner/cineo "$work/scripts/rele
   failures=$((failures + 1))
 }
 
+printf 'untrusted comment: minisign public key\nRWSkey1\n' >"$work/minisign.pub"
+printf 'repo=mdmrk/cineo\nminisign_key=RWSkey1\n' >"$work/scripts/install.sh"
+expect pass "install.sh holding minisign.pub's key" key
+printf 'repo=mdmrk/cineo\nminisign_key=RWSkey2\n' >"$work/scripts/install.sh"
+expect fail "install.sh holding another key" key
+rm "$work/minisign.pub"
+expect fail "no minisign.pub" key
+
 ((failures == 0)) || exit 1
 echo "check-release.sh: all cases passed"

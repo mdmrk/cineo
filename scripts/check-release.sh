@@ -58,9 +58,19 @@ check_notes() {
   grep -q '[^[:space:]]' "$notes" || die "$notes is empty"
 }
 
+check_key() {
+  local key embedded
+  [[ -f minisign.pub ]] || die "minisign.pub is missing"
+  key=$(sed -n 2p minisign.pub)
+  embedded=$(sed -n 's/^minisign_key=//p' scripts/install.sh)
+  [[ -n $key && $key == "$embedded" ]] ||
+    die "scripts/install.sh checks signatures with '$embedded', but minisign.pub holds '$key'"
+}
+
 case "${1:-}" in
   version) check_version "${2:-}" ;;
   assets) check_assets "${2:-}" ;;
   notes) check_notes ;;
-  *) die "usage: check-release.sh version TAG | assets DIR | notes" ;;
+  key) check_key ;;
+  *) die "usage: check-release.sh version TAG | assets DIR | notes | key" ;;
 esac

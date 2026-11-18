@@ -605,6 +605,7 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | cargo-machete | 0.9.2   | Unused dependencies                 |
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
+| minisign      | Ubuntu's package | Release checksum signatures |
 
 ### CI actions
 
@@ -739,6 +740,7 @@ Every release has these files, with the same names in every release so that
 | `install.sh`         | Per-user installer (README, Install). Uninstall: `… \| sh -s -- --uninstall`. `CINEO_VERSION` picks another release |
 | `install.ps1`        | Per-user Windows installer into `%LOCALAPPDATA%\Programs\Cineo` with a Start menu shortcut. `CINEO_UNINSTALL=1` removes it; `CINEO_VERSION` picks another release |
 | `SHA256SUMS`         | Checksums of all of the above; the installer verifies them                                                          |
+| `SHA256SUMS.minisig` | minisign signature of `SHA256SUMS` by the key in `minisign.pub`; `install.sh` verifies it when `minisign` is installed |
 
 ### Steps
 
@@ -766,8 +768,21 @@ It moves the `prerelease` tag to the pushed commit and replaces the
 release's files (`gh release upload --clobber`), so the release and its
 links stay in place; the first push creates it.
 
-The desktop artifacts are not code-signed; build provenance attestations
-and `SHA256SUMS` are the integrity checks. The APK is signed, because
+The desktop artifacts are not code-signed; build provenance attestations,
+`SHA256SUMS` and its minisign signature are the integrity checks.
+`publish` signs `SHA256SUMS` with `scripts/sign-release.sh`, which fails
+rather than publish unsigned checksums when the key is missing, and checks
+the signature against `minisign.pub` (`scripts/test-sign-release.sh`).
+The key is the secret `CINEO_MINISIGN_KEY`, the whole secret key file of
+`minisign -G -W` (no password; the secret is the protection), in the
+`release-signing` environment, which deploys only from `main` and `v*` tags.
+`scripts/install.sh` carries the same public key as `minisign.pub`
+(`scripts/test-install.sh` runs it against signed, unsigned, re-signed and
+altered releases);
+`scripts/check-release.sh key` fails if they differ. A new key means
+changing both, and installers from older releases keep the old one.
+
+The APK is signed, because
 Android requires it, with the key in these repository secrets:
 
 | Secret | What |

@@ -26,6 +26,11 @@ if [[ "${1:-}" != "--quick" ]]; then
   step "release checks"
   scripts/test-check-release.sh
   scripts/check-release.sh notes
+  scripts/check-release.sh key
+  if need minisign "your package manager"; then
+    scripts/test-sign-release.sh
+    scripts/test-install.sh
+  fi
 
   step "cargo-deny"
   if need cargo-deny "cargo install --locked cargo-deny"; then

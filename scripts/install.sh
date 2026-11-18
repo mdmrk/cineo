@@ -2,6 +2,7 @@
 set -eu
 
 repo=mdmrk/cineo
+minisign_key=RWQPKOI7lXW1zBfoRntGmEe8QJf5TdJTDUZ4NEDFJtrSNdNmxrdBpHln
 version=${CINEO_VERSION:-latest}
 bin_dir=${XDG_BIN_HOME:-$HOME/.local/bin}
 data_home=${XDG_DATA_HOME:-$HOME/.local/share}
@@ -45,6 +46,16 @@ done
 (cd "$tmp" && grep -E ' \*?(cineo-x86_64-linux|cineo\.png|cineo-licenses\.zip)$' SHA256SUMS >checked &&
   [ "$(wc -l <checked)" -eq 3 ] && sha256sum -c --quiet checked) ||
   die "checksum mismatch; nothing was installed"
+if command -v minisign >/dev/null; then
+  if curl -fsSL --retry 3 -o "$tmp/SHA256SUMS.minisig" "$base/SHA256SUMS.minisig"; then
+    minisign -V -q -P "$minisign_key" -m "$tmp/SHA256SUMS" -x "$tmp/SHA256SUMS.minisig" ||
+      die "the release signature does not verify; nothing was installed"
+  elif [ "$version" = latest ]; then
+    die "the release has no signature; nothing was installed"
+  else
+    say "Note: $version has no signature; only its checksums were checked."
+  fi
+fi
 
 mkdir -p "$bin_dir" "$(dirname "$desktop")" "$(dirname "$icon")"
 install -m 755 "$tmp/cineo-x86_64-linux" "$exe.new"

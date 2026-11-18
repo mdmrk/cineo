@@ -59,6 +59,15 @@ Install your distribution's **mpv** package first, then run:
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
 ```
 
+With `minisign` installed, the script also checks the release's signature.
+To check a download by hand:
+
+```sh
+minisign -Vm SHA256SUMS -P "$(sed -n 2p minisign.pub)" && sha256sum -c --ignore-missing SHA256SUMS
+```
+
+`minisign.pub` is in this repository.
+
 ### Windows (x86_64)
 
 In PowerShell:
