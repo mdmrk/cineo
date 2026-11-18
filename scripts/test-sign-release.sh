@@ -15,7 +15,7 @@ fail() {
   failures=$((failures + 1))
 }
 
-if CINEO_MINISIGN_KEY= "$work/scripts/sign-release.sh" "$work/dist" v1.0.0 >/dev/null 2>&1; then
+if CINEO_MINISIGN_KEY='' "$work/scripts/sign-release.sh" "$work/dist" v1.0.0 >/dev/null 2>&1; then
   fail "checksums were signed without a key"
 fi
 [[ ! -e $work/dist/SHA256SUMS.minisig ]] || fail "a signature was left without a key"

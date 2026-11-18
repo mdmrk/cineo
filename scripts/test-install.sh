@@ -19,7 +19,7 @@ CURL
 chmod +x "$work/bin/curl"
 
 release() {
-  rm -rf "$work/release" "$work/home"
+  rm -rf "${work:?}/release" "${work:?}/home"
   mkdir -p "$work/release" "$work/home"
   printf '#!/bin/sh\n' >"$work/release/cineo-x86_64-linux"
   printf 'png' >"$work/release/cineo.png"
