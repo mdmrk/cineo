@@ -19,7 +19,39 @@ check_version() {
     die "the tag $tag names ${tag#v}, but Cargo.toml says $version; bump the version or retag"
 }
 
+check_assets() {
+  local dir=${1:?usage: check-release.sh assets DIR} status=0 name
+  [[ -d $dir ]] || die "$dir is not a directory"
+  source scripts/libmpv-windows.env
+  local expected=(
+    cineo-x86_64-linux
+    cineo-x86_64-windows.exe
+    cineo-arm64-android.apk
+    cineo-universal-macos.dmg
+    "$LIBMPV_FILE"
+    cineo-licenses.zip
+    cineo.png
+    install.sh
+    install.ps1
+  )
+  for name in "${expected[@]}"; do
+    [[ -f $dir/$name ]] || {
+      echo "$dir has no $name" >&2
+      status=1
+    }
+  done
+  while IFS= read -r -d '' name; do
+    name=$(basename "$name")
+    printf '%s\n' "${expected[@]}" | grep -qxF -- "$name" || {
+      echo "$dir has $name, which is not a release file" >&2
+      status=1
+    }
+  done < <(find "$dir" -mindepth 1 -maxdepth 1 -print0)
+  return "$status"
+}
+
 case "${1:-}" in
   version) check_version "${2:-}" ;;
-  *) die "usage: check-release.sh version TAG" ;;
+  assets) check_assets "${2:-}" ;;
+  *) die "usage: check-release.sh version TAG | assets DIR" ;;
 esac

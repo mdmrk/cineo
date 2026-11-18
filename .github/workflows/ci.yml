@@ -234,11 +234,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      - *checkout
       - uses: actions/download-artifact@v8.0.2
         with:
           pattern: dist-*
           path: dist
           merge-multiple: true
+      - run: scripts/check-release.sh assets dist
       - run: cd dist && sha256sum -- * > SHA256SUMS
       - name: Publish the release or the prerelease
         env:

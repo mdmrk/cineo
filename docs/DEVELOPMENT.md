@@ -664,8 +664,7 @@ checks, and `publish` waits for both:
 - On tags, `build` and `build (android)` first run
   `scripts/check-release.sh version <tag>`, which fails unless the tag
   without its `v` is the workspace version, so a tag pushed before the
-  version bump fails before anything compiles
-  (`scripts/test-check-release.sh`, run by `scripts/check.sh`).
+  version bump fails before anything compiles.
 - Both Android jobs set up Java, Gradle, `cargo-ndk` at
   `CARGO_NDK_VERSION` in `scripts/android.env` and the NDK named by
   `NDK_VERSION` in `scripts/libmpv-android.env` (unless the runner already
@@ -706,7 +705,10 @@ too and saved only by `build (android)` on `main`. After each run on
 `main`, `prune caches` deletes all but the newest Rust and libmpv cache of
 each job, so the repository stays under GitHub's 10 GB cache limit.
 
-**Publishing.** `publish` writes `SHA256SUMS` (check a file with
+**Publishing.** `publish` runs `scripts/check-release.sh assets dist`,
+which fails if a file of the table below is missing or `dist/` holds any
+other file (`scripts/test-check-release.sh`, run by `scripts/check.sh`,
+covers both checks), then writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It is the only job
 that can write to the repository. `reproduce (android)` then builds the
 pushed commit as F-Droid does and fails if it does not match the APK just
