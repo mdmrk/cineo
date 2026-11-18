@@ -652,6 +652,11 @@ checks, and `publish` waits for both:
   9 s (measured locally on 2026-11-12).
 
 **Builds.**
+- `build` builds `cineo-desktop` for Linux x86_64 on `ubuntu-24.04`, never
+  `ubuntu-latest`, because the runner's glibc is the oldest the binary runs
+  on: `scripts/package.sh linux` fails if it needs a glibc above
+  `linux_glibc_max` (2.39). v1.5.0 to v1.9.7 were built on Ubuntu 26.04
+  when `ubuntu-latest` moved to it, and need glibc 2.43.
 - `build` builds `cineo-desktop` for Linux x86_64 and Windows x86_64 at the
   `x86-64-v2` level (Windows with `bundled-libmpv`, after
   `scripts/fetch-libmpv.sh` checks the pinned archive), and one universal
@@ -724,7 +729,7 @@ Every release has these files, with the same names in every release so that
 
 | File                 | What                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`); uses the system libmpv                           |
+| `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`) against glibc 2.39; uses the system libmpv        |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded gzip-compressed (ADR-0027)      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |

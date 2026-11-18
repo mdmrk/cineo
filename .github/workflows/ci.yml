@@ -118,7 +118,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { platform: linux, os: ubuntu-latest, rustflags: -C target-cpu=x86-64-v2 }
+          - { platform: linux, os: ubuntu-24.04, rustflags: -C target-cpu=x86-64-v2 }
           - { platform: windows, os: windows-latest, features: bundled-libmpv, rustflags: -C target-cpu=x86-64-v2 }
           - { platform: macos, os: macos-latest, targets: aarch64-apple-darwin x86_64-apple-darwin }
     runs-on: ${{ matrix.os }}

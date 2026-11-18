@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 rm -rf dist
 mkdir -p dist
+linux_glibc_max=2.39
 version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
 
 check_version() {
@@ -10,6 +11,19 @@ check_version() {
   reported=$("$1" --version)
   [[ $reported == "cineo-desktop $version" ]] || {
     echo "$1 reports '$reported', but Cargo.toml says $version" >&2
+    exit 1
+  }
+}
+
+check_glibc() {
+  local needed
+  needed=$(objdump -T "$1" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)+' | sed 's/^GLIBC_//' | sort -Vu | tail -n 1)
+  [[ -n $needed ]] || {
+    echo "$1 links no glibc symbol" >&2
+    exit 1
+  }
+  [[ $(printf '%s\n' "$needed" "$linux_glibc_max" | sort -V | tail -n 1) == "$linux_glibc_max" ]] || {
+    echo "$1 needs glibc $needed, above the $linux_glibc_max that Linux releases support" >&2
     exit 1
   }
 }
@@ -57,6 +71,7 @@ EOT
     rm -rf dist/cineo-licenses
     cp target/release/cineo-desktop dist/cineo-x86_64-linux
     check_version dist/cineo-x86_64-linux
+    check_glibc dist/cineo-x86_64-linux
     cp crates/cineo-desktop/assets/brand/icon.png dist/cineo.png
     cp scripts/install.sh scripts/install.ps1 dist/
     ;;

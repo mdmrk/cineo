@@ -98,7 +98,7 @@ _Last reviewed: 2026-10-13._
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh` |
+| Linux x86_64 | Supported | CLI and GUI run (KDE Wayland, 2026-10-06); released as a single `x86-64-v2` executable with `install.sh`; needs glibc 2.39 or newer (Ubuntu 24.04, Debian 13, Fedora 40 and later), checked on every build by `scripts/package.sh`; v1.5.0 to v1.9.7 need glibc 2.43 |
 | Windows x86_64 | Untested | Released with libmpv embedded; tests pass under wine; never run on real Windows. [Details](#windows) |
 | macOS (arm64, x86_64) | Untested | Restored 2026-11-12 (ADR-0035) as a universal `.dmg` with libmpv inside; never run on a Mac. [Details](#macos) |
 | Android | Partial | In progress (ADR-0028); a signed arm64 APK in every release since 2026-11-04; arm64 phones only, gaps and parts not yet seen on a phone in the details. [Details](#android) |
