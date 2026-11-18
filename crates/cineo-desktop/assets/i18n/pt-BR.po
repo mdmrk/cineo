@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-17 11:44+0100\n"
+"POT-Creation-Date: 2026-11-18 18:20+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -246,7 +246,7 @@ msgid "Exit fullscreen"
 msgstr "Sair da tela cheia"
 
 #: crates/cineo-desktop/src/player/bars.rs:153
-#: crates/cineo-desktop/src/settings/mod.rs:730
+#: crates/cineo-desktop/src/settings/mod.rs:731
 msgid "Fullscreen"
 msgstr "Tela cheia"
 
@@ -860,32 +860,36 @@ msgstr "Saltar pelo salto curto"
 msgid "Volume  ·  mute"
 msgstr "Volume  ·  silenciar"
 
-#: crates/cineo-desktop/src/settings/mod.rs:746
+#: crates/cineo-desktop/src/settings/mod.rs:730
+msgid "Subtitles on or off"
+msgstr "Ativar ou desativar legendas"
+
+#: crates/cineo-desktop/src/settings/mod.rs:747
 msgid "Reset all settings?"
 msgstr "Redefinir todas as configurações?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:747
+#: crates/cineo-desktop/src/settings/mod.rs:748
 msgid ""
 "Every setting goes back to its default. Your addons and library are kept."
 msgstr ""
 "Todas as configurações voltam ao padrão. Seus complementos e sua biblioteca "
 "são mantidos."
 
-#: crates/cineo-desktop/src/settings/mod.rs:748
+#: crates/cineo-desktop/src/settings/mod.rs:749
 msgid "Reset"
 msgstr "Redefinir"
 
-#: crates/cineo-desktop/src/settings/mod.rs:752
+#: crates/cineo-desktop/src/settings/mod.rs:753
 msgid "Clear watch history?"
 msgstr "Limpar histórico?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:753
+#: crates/cineo-desktop/src/settings/mod.rs:754
 msgid "Every item and its progress leaves the Library. This cannot be undone."
 msgstr ""
 "Todos os itens e seu progresso saem da Biblioteca. Isso não pode ser "
 "desfeito."
 
-#: crates/cineo-desktop/src/settings/mod.rs:754
+#: crates/cineo-desktop/src/settings/mod.rs:755
 msgctxt "clear"
 msgid "Clear"
 msgstr "Limpar"

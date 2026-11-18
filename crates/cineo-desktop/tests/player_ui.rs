@@ -4,7 +4,7 @@
     reason = "test helpers panic on purpose"
 )]
 
-use cineo_core::app::{Action, HideControls, SeekStep, Setting, Settings, ShortSeekStep};
+use cineo_core::app::{Action, HideControls, Language, SeekStep, Setting, Settings, ShortSeekStep};
 use cineo_desktop::player::{Controls, NextUp, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use cineo_player::subtitles::AddonSubtitle;
@@ -246,6 +246,67 @@ fn keys_control_playback_and_escape_leaves() {
             PlayerCommand::Stop,
         ]
     );
+}
+
+fn subtitles(selected: Option<i64>) -> Status {
+    let tracks: Vec<Track> = [(1, "fra"), (2, "spa"), (3, "eng")]
+        .into_iter()
+        .map(|(id, lang)| track(id, TrackKind::Subtitle, lang, selected == Some(id)))
+        .chain([track(1, TrackKind::Audio, "eng", true)])
+        .collect();
+    Status {
+        tracks: tracks.into(),
+        ..status()
+    }
+}
+
+#[test]
+fn c_turns_the_shown_subtitle_off_and_the_same_one_back_on() {
+    let mut harness = harness(subtitles(Some(2)));
+    harness.key_press(Key::C);
+    harness.run();
+    harness.state_mut().0 = subtitles(None);
+    harness.run();
+    harness.key_press(Key::C);
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            PlayerCommand::SetSubtitle(None),
+            PlayerCommand::SetSubtitle(Some(2)),
+        ]
+    );
+}
+
+#[test]
+fn c_without_a_previous_subtitle_picks_the_preferred_language() {
+    let settings = Settings {
+        subtitle_language: Language::from_code("eng"),
+        ..Settings::default()
+    };
+    let mut harness = harness_full(subtitles(None), Vec::new(), settings);
+    harness.key_press(Key::C);
+    harness.run();
+    assert_eq!(harness.state().2, vec![PlayerCommand::SetSubtitle(Some(3))]);
+}
+
+#[test]
+fn c_without_a_preferred_language_picks_the_first_subtitle() {
+    let mut harness = harness(subtitles(None));
+    harness.key_press(Key::C);
+    harness.run();
+    assert_eq!(harness.state().2, vec![PlayerCommand::SetSubtitle(Some(1))]);
+}
+
+#[test]
+fn c_without_subtitles_sends_nothing() {
+    let mut harness = harness(Status {
+        tracks: [track(1, TrackKind::Audio, "eng", true)].into(),
+        ..status()
+    });
+    harness.key_press(Key::C);
+    harness.run();
+    assert!(harness.state().2.is_empty());
 }
 
 #[test]

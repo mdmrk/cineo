@@ -727,6 +727,7 @@ fn keyboard(ui: &mut Ui) {
                 (or("←/→", "J/L"), t!("Seek by the seek step")),
                 (plain("Shift+←/→"), t!("Seek by the short seek step")),
                 (plain("↑/↓  ·  M"), t!("Volume  ·  mute")),
+                (plain("C"), t!("Subtitles on or off")),
                 (or("F", "F11"), t!("Fullscreen")),
             ];
             for (keys, what) in rows {

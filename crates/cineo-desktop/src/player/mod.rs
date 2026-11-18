@@ -73,6 +73,7 @@ pub struct Controls {
     volume: Held,
     addon_request: Option<Url>,
     subtitle_delay_ms: i32,
+    last_subtitle: Option<i64>,
     settings: Vec<Action>,
     next_dismissed: bool,
     next_requested: bool,
@@ -247,6 +248,7 @@ fn shortcuts(
     let fullscreen = is_fullscreen(ui.ctx());
     let mut toggle_full = false;
     let mut toggle_stats = false;
+    let mut toggle_subtitles = false;
     let (step, short) = (
         settings.seek_step.seconds(),
         settings.short_seek_step.seconds(),
@@ -280,6 +282,9 @@ fn shortcuts(
         if key(Key::I) {
             toggle_stats = true;
         }
+        if key(Key::C) {
+            toggle_subtitles = true;
+        }
         if key(Key::F) || key(Key::F11) {
             toggle_full = true;
         }
@@ -297,6 +302,40 @@ fn shortcuts(
     if toggle_stats {
         toggle_stats_shown(ui.ctx());
     }
+    if toggle_subtitles && let Some(command) = subtitle_toggle(status, settings, controls) {
+        out.push(command);
+    }
+}
+
+fn subtitle_toggle(
+    status: &Status,
+    settings: &Settings,
+    controls: &mut Controls,
+) -> Option<PlayerCommand> {
+    let subtitles: Vec<_> = status
+        .tracks
+        .iter()
+        .filter(|t| t.kind == TrackKind::Subtitle)
+        .collect();
+    if let Some(shown) = subtitles.iter().find(|t| t.selected) {
+        controls.last_subtitle = Some(shown.id);
+        return Some(PlayerCommand::SetSubtitle(None));
+    }
+    let previous = controls
+        .last_subtitle
+        .filter(|id| subtitles.iter().any(|t| t.id == *id));
+    let preferred = || {
+        settings.subtitle_languages().find_map(|language| {
+            subtitles
+                .iter()
+                .find(|t| t.lang.as_deref().is_some_and(|lang| language.matches(lang)))
+                .map(|t| t.id)
+        })
+    };
+    previous
+        .or_else(preferred)
+        .or_else(|| subtitles.first().map(|t| t.id))
+        .map(|id| PlayerCommand::SetSubtitle(Some(id)))
 }
 
 fn is_fullscreen(ctx: &egui::Context) -> bool {

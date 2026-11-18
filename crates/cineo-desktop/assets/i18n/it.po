@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-17 11:44+0100\n"
+"POT-Creation-Date: 2026-11-18 18:20+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -246,7 +246,7 @@ msgid "Exit fullscreen"
 msgstr "Esci da schermo intero"
 
 #: crates/cineo-desktop/src/player/bars.rs:153
-#: crates/cineo-desktop/src/settings/mod.rs:730
+#: crates/cineo-desktop/src/settings/mod.rs:731
 msgid "Fullscreen"
 msgstr "Schermo intero"
 
@@ -860,32 +860,36 @@ msgstr "Avanza del passo breve"
 msgid "Volume  ·  mute"
 msgstr "Volume  ·  disattiva audio"
 
-#: crates/cineo-desktop/src/settings/mod.rs:746
+#: crates/cineo-desktop/src/settings/mod.rs:730
+msgid "Subtitles on or off"
+msgstr "Attiva o disattiva i sottotitoli"
+
+#: crates/cineo-desktop/src/settings/mod.rs:747
 msgid "Reset all settings?"
 msgstr "Ripristinare tutte le impostazioni?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:747
+#: crates/cineo-desktop/src/settings/mod.rs:748
 msgid ""
 "Every setting goes back to its default. Your addons and library are kept."
 msgstr ""
 "Ogni impostazione torna al valore predefinito. Gli add-on e la libreria "
 "restano."
 
-#: crates/cineo-desktop/src/settings/mod.rs:748
+#: crates/cineo-desktop/src/settings/mod.rs:749
 msgid "Reset"
 msgstr "Ripristina"
 
-#: crates/cineo-desktop/src/settings/mod.rs:752
+#: crates/cineo-desktop/src/settings/mod.rs:753
 msgid "Clear watch history?"
 msgstr "Cancellare la cronologia?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:753
+#: crates/cineo-desktop/src/settings/mod.rs:754
 msgid "Every item and its progress leaves the Library. This cannot be undone."
 msgstr ""
 "Ogni elemento e il suo avanzamento escono dalla libreria. L'operazione non "
 "può essere annullata."
 
-#: crates/cineo-desktop/src/settings/mod.rs:754
+#: crates/cineo-desktop/src/settings/mod.rs:755
 msgctxt "clear"
 msgid "Clear"
 msgstr "Cancella"

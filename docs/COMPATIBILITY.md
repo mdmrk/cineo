@@ -331,6 +331,14 @@ The full evidence for the rows above whose notes do not fit in the table.
   (`track_menus_list_tracks_and_select_one`).
 - Addon subtitles in the same menu
   (`addon_subtitles_are_listed_and_requested`).
+- On the desktop, `C` turns the shown subtitle off and turns the same one
+  back on (`c_turns_the_shown_subtitle_off_and_the_same_one_back_on`); with
+  none shown before, it picks the preferred language, else the first
+  loaded subtitle
+  (`c_without_a_previous_subtitle_picks_the_preferred_language`,
+  `c_without_a_preferred_language_picks_the_first_subtitle`). An addon
+  subtitle that was never loaded is not a candidate
+  (`c_without_subtitles_sends_nothing`).
 - A preferred subtitle language in Settings
   (`settings_pick_a_subtitle_language`) is applied to the file's tracks
   through mpv `slang` (`preferred_subtitle_language_covers_every_tag`) and
