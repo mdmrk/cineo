@@ -23,6 +23,9 @@ if [[ "${1:-}" != "--quick" ]]; then
   step "lint"
   scripts/lint.sh
 
+  step "release checks"
+  scripts/test-check-release.sh
+
   step "cargo-deny"
   if need cargo-deny "cargo install --locked cargo-deny"; then
     cargo deny --config .config/deny.toml check

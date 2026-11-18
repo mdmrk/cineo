@@ -658,7 +658,14 @@ checks, and `publish` waits for both:
   macOS binary for `aarch64-apple-darwin` and `x86_64-apple-darwin`
   (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv-macos.sh`).
   It puts the files into `dist/` with
-  `scripts/package.sh <linux|windows|macos>` and attests build provenance.
+  `scripts/package.sh <linux|windows|macos>`, which fails if the binary's
+  `--version` is not `cineo-desktop` followed by the workspace version, and
+  attests build provenance.
+- On tags, `build` and `build (android)` first run
+  `scripts/check-release.sh version <tag>`, which fails unless the tag
+  without its `v` is the workspace version, so a tag pushed before the
+  version bump fails before anything compiles
+  (`scripts/test-check-release.sh`, run by `scripts/check.sh`).
 - Both Android jobs set up Java, Gradle, `cargo-ndk` at
   `CARGO_NDK_VERSION` in `scripts/android.env` and the NDK named by
   `NDK_VERSION` in `scripts/libmpv-android.env` (unless the runner already

@@ -132,6 +132,11 @@ jobs:
         shell: bash
     steps:
       - *checkout
+      - &check-tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: scripts/check-release.sh version "$TAG"
+        env:
+          TAG: ${{ github.ref_name }}
       - run: scripts/install-rust.sh $TARGETS
         env:
           TARGETS: ${{ matrix.targets }}
@@ -181,6 +186,7 @@ jobs:
     permissions: *attest
     steps:
       - *checkout
+      - *check-tag
       - *install-rust-android
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}

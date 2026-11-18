@@ -3,6 +3,16 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 rm -rf dist
 mkdir -p dist
+version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+
+check_version() {
+  local reported
+  reported=$("$1" --version)
+  [[ $reported == "cineo-desktop $version" ]] || {
+    echo "$1 reports '$reported', but Cargo.toml says $version" >&2
+    exit 1
+  }
+}
 
 common_licenses() {
   local iconflow
@@ -46,12 +56,14 @@ EOT
     fi
     rm -rf dist/cineo-licenses
     cp target/release/cineo-desktop dist/cineo-x86_64-linux
+    check_version dist/cineo-x86_64-linux
     cp crates/cineo-desktop/assets/brand/icon.png dist/cineo.png
     cp scripts/install.sh scripts/install.ps1 dist/
     ;;
   windows)
     source scripts/libmpv-windows.env
     cp target/release/cineo-desktop.exe dist/cineo-x86_64-windows.exe
+    check_version dist/cineo-x86_64-windows.exe
     cp "$(dirname "${CINEO_LIBMPV_DLL_GZ:?set CINEO_LIBMPV_DLL_GZ as for the build}")/$LIBMPV_FILE" dist/
     ;;
   android)
@@ -125,7 +137,6 @@ PY
   macos)
     source scripts/libmpv-macos.env
     libmpv=target/libmpv-macos
-    version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
     work=$(mktemp -d)
     mkdir "$work/stage"
     app=$work/stage/Cineo.app
@@ -133,6 +144,7 @@ PY
     mkdir -p "$contents/MacOS" "$contents/Frameworks" "$contents/Resources/licenses"
     lipo -create target/aarch64-apple-darwin/release/cineo-desktop \
       target/x86_64-apple-darwin/release/cineo-desktop -output "$contents/MacOS/cineo"
+    check_version "$contents/MacOS/cineo"
     sed -e "s/__VERSION__/$version/g" -e "s/__BUILD__/${version%%-*}/g" \
       scripts/macos/Info.plist >"$contents/Info.plist"
     plutil -lint "$contents/Info.plist"
