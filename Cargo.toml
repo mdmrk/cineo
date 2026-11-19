@@ -3,14 +3,14 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "1.9.7"
+version = "1.9.8"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/mdmrk/cineo"
 publish = false
 
 [workspace.metadata.android]
-version-code = 10907
+version-code = 10908
 
 [workspace.dependencies]
 cineo-core = { path = "crates/cineo-core" }
