@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-19 21:10+0100\n"
+"POT-Creation-Date: 2026-11-19 21:38+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -1502,54 +1502,44 @@ msgstr "Cineo no pudo reemplazar su ejecutable."
 msgid "Cineo keeps working while it downloads."
 msgstr "Cineo sigue funcionando mientras se descarga."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:101
-#, rust-format
-msgid "{received} of {total} downloaded."
-msgstr "{received} de {total} descargados."
-
-#: crates/cineo-desktop/src/view/sidebar.rs:105
-#, rust-format
-msgid "{received} downloaded."
-msgstr "{received} descargados."
-
-#: crates/cineo-desktop/src/view/sidebar.rs:121
+#: crates/cineo-desktop/src/view/sidebar.rs:117
 #, rust-format
 msgid "Update to v{version}"
 msgstr "Actualizar a v{version}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:122
+#: crates/cineo-desktop/src/view/sidebar.rs:118
 msgid "Download and check it; it runs after a restart."
 msgstr "Se descarga y se comprueba; se usará tras reiniciar."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:128
+#: crates/cineo-desktop/src/view/sidebar.rs:124
 #, rust-format
 msgid "Downloading v{version}… {percent}%"
 msgstr "Descargando v{version}… {percent}%"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:132
+#: crates/cineo-desktop/src/view/sidebar.rs:128
 #, rust-format
 msgid "Downloading v{version}…"
 msgstr "Descargando v{version}…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:138
+#: crates/cineo-desktop/src/view/sidebar.rs:134
 msgid "Restart to update"
 msgstr "Reiniciar para actualizar"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:139
+#: crates/cineo-desktop/src/view/sidebar.rs:135
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr "Cineo se cierra y abre v{version}."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:143
+#: crates/cineo-desktop/src/view/sidebar.rs:139
 msgid "Update failed, try again"
 msgstr "La actualización falló, reintentar"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:150
+#: crates/cineo-desktop/src/view/sidebar.rs:146
 #, rust-format
 msgid "v{version} available"
 msgstr "v{version} disponible"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:151
+#: crates/cineo-desktop/src/view/sidebar.rs:147
 msgid "Open the release page to download it."
 msgstr "Abre la página de la versión para descargarla."
 

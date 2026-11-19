@@ -97,12 +97,8 @@ fn update_failure(failure: UpdateFailure) -> Text {
 fn download_hover(received: u64, total: Option<u64>) -> Text {
     let keeps_working = t!("Cineo keeps working while it downloads.");
     let size = match total {
-        Some(total) => t!(
-            "{received} of {total} downloaded.",
-            received = bytes(received as f64),
-            total = bytes(total as f64)
-        ),
-        None if received > 0 => t!("{received} downloaded.", received = bytes(received as f64)),
+        Some(total) => format!("{} / {}", bytes(received as f64), bytes(total as f64)),
+        None if received > 0 => bytes(received as f64),
         None => return keeps_working,
     };
     format!("{size}\n{keeps_working}").into()

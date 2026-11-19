@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-19 21:10+0100\n"
+"POT-Creation-Date: 2026-11-19 21:38+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1431,54 +1431,44 @@ msgstr ""
 msgid "Cineo keeps working while it downloads."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:101
-#, rust-format
-msgid "{received} of {total} downloaded."
-msgstr ""
-
-#: crates/cineo-desktop/src/view/sidebar.rs:105
-#, rust-format
-msgid "{received} downloaded."
-msgstr ""
-
-#: crates/cineo-desktop/src/view/sidebar.rs:121
+#: crates/cineo-desktop/src/view/sidebar.rs:117
 #, rust-format
 msgid "Update to v{version}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:122
+#: crates/cineo-desktop/src/view/sidebar.rs:118
 msgid "Download and check it; it runs after a restart."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:128
+#: crates/cineo-desktop/src/view/sidebar.rs:124
 #, rust-format
 msgid "Downloading v{version}… {percent}%"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:132
+#: crates/cineo-desktop/src/view/sidebar.rs:128
 #, rust-format
 msgid "Downloading v{version}…"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:138
+#: crates/cineo-desktop/src/view/sidebar.rs:134
 msgid "Restart to update"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:139
+#: crates/cineo-desktop/src/view/sidebar.rs:135
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:143
+#: crates/cineo-desktop/src/view/sidebar.rs:139
 msgid "Update failed, try again"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:150
+#: crates/cineo-desktop/src/view/sidebar.rs:146
 #, rust-format
 msgid "v{version} available"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:151
+#: crates/cineo-desktop/src/view/sidebar.rs:147
 msgid "Open the release page to download it."
 msgstr ""
 

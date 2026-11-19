@@ -532,7 +532,7 @@ The full evidence for the rows above whose notes do not fit in the table.
   published release to the next is UNKNOWN (not done yet).
 - On both, while the executable downloads the link shows the percent
   received when the server sends the length, and its tooltip the size
-  received and the total
+  received and the total as "12.6 MB / 30.1 MB"
   (`a_download_reports_how_much_has_arrived`,
   `the_percent_stays_within_the_total`,
   `progress_after_the_download_ended_changes_nothing`,
