@@ -126,14 +126,14 @@ impl AddonClient {
 
     pub async fn fetch_image(&self, url: &Url, max_bytes: usize) -> Result<Vec<u8>, FetchError> {
         let span = info_span!("image_request", req = next_request_id(), origin = %origin(url));
-        self.get_limited(url.clone(), max_bytes, "image/*")
+        self.get_limited(url.clone(), max_bytes, "image/*", |_, _| {})
             .instrument(span)
             .await
     }
 
     pub async fn fetch_subtitle(&self, url: &Url) -> Result<Vec<u8>, FetchError> {
         let span = info_span!("subtitle_request", req = next_request_id(), origin = %origin(url));
-        self.get_limited(url.clone(), self.policy.max_body_bytes, "*/*")
+        self.get_limited(url.clone(), self.policy.max_body_bytes, "*/*", |_, _| {})
             .instrument(span)
             .await
     }
@@ -142,7 +142,12 @@ impl AddonClient {
         let span = info_span!("release_request", req = next_request_id(), origin = %origin(url));
         async {
             let body = self
-                .get_limited(url.clone(), RELEASE_LIMIT, "application/vnd.github+json")
+                .get_limited(
+                    url.clone(),
+                    RELEASE_LIMIT,
+                    "application/vnd.github+json",
+                    |_, _| {},
+                )
                 .await?;
             Ok(parse_release(&body)?)
         }
@@ -150,13 +155,18 @@ impl AddonClient {
         .await
     }
 
-    pub async fn fetch_release_file(&self, url: &Url) -> Result<Vec<u8>, FetchError> {
+    pub async fn fetch_release_file(
+        &self,
+        url: &Url,
+        progress: impl FnMut(u64, Option<u64>) + Send,
+    ) -> Result<Vec<u8>, FetchError> {
         let span =
             info_span!("release_file_request", req = next_request_id(), origin = %origin(url));
         self.get_limited(
             url.clone(),
             self.policy.max_body_bytes,
             "application/octet-stream",
+            progress,
         )
         .instrument(span)
         .await
@@ -186,8 +196,13 @@ impl AddonClient {
     }
 
     async fn get(&self, url: Url) -> Result<Vec<u8>, FetchError> {
-        self.get_limited(url, self.policy.max_body_bytes, "application/json")
-            .await
+        self.get_limited(
+            url,
+            self.policy.max_body_bytes,
+            "application/json",
+            |_, _| {},
+        )
+        .await
     }
 
     async fn get_limited(
@@ -195,6 +210,7 @@ impl AddonClient {
         url: Url,
         limit: usize,
         accept: &str,
+        mut progress: impl FnMut(u64, Option<u64>) + Send,
     ) -> Result<Vec<u8>, FetchError> {
         self.policy.check_url(&url)?;
         let mut response = self
@@ -215,15 +231,15 @@ impl AddonClient {
         {
             return Err(FetchError::TooLarge { limit });
         }
-        let capacity = response
-            .content_length()
-            .map_or(0, |len| usize::try_from(len).unwrap_or(limit));
+        let total = response.content_length();
+        let capacity = total.map_or(0, |len| usize::try_from(len).unwrap_or(limit));
         let mut body = Vec::with_capacity(capacity);
         while let Some(chunk) = response.chunk().await.map_err(|err| classify(&err))? {
             if body.len() + chunk.len() > limit {
                 return Err(FetchError::TooLarge { limit });
             }
             body.extend_from_slice(&chunk);
+            progress(body.len() as u64, total);
         }
         debug!(bytes = body.len(), "response body received");
         Ok(body)

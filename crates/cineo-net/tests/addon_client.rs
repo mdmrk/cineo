@@ -379,14 +379,31 @@ async fn release_files_download_up_to_the_policy_limit() {
 
     let small = url::Url::parse(&format!("{}/small.exe", server.uri())).unwrap();
     assert_eq!(
-        client.fetch_release_file(&small).await.unwrap(),
+        client.fetch_release_file(&small, |_, _| {}).await.unwrap(),
         vec![7; 1000]
     );
     let large = url::Url::parse(&format!("{}/large.exe", server.uri())).unwrap();
     assert!(matches!(
-        client.fetch_release_file(&large).await,
+        client.fetch_release_file(&large, |_, _| {}).await,
         Err(FetchError::TooLarge { limit: 2000 })
     ));
+}
+
+#[tokio::test]
+async fn a_release_file_reports_its_progress_against_the_length() {
+    let server = MockServer::start().await;
+    serve(&server, "/cineo.exe", vec![7; 300_000]).await;
+    let client = AddonClient::new(local_policy()).unwrap();
+    let url = url::Url::parse(&format!("{}/cineo.exe", server.uri())).unwrap();
+    let mut seen = Vec::new();
+    let body = client
+        .fetch_release_file(&url, |received, total| seen.push((received, total)))
+        .await
+        .unwrap();
+    assert_eq!(body.len(), 300_000);
+    assert_eq!(seen.last(), Some(&(300_000, Some(300_000))));
+    assert!(seen.windows(2).all(|pair| pair[0].0 < pair[1].0));
+    assert!(seen.iter().all(|(_, total)| *total == Some(300_000)));
 }
 
 #[tokio::test]

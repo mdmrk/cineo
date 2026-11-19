@@ -9,7 +9,7 @@ use eframe::egui::{
 use url::Url;
 
 mod bars;
-mod stats;
+pub(crate) mod stats;
 mod tracks;
 
 use bars::{bottom_bar, next_popup, top_bar};

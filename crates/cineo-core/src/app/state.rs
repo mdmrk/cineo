@@ -241,6 +241,10 @@ pub enum Action {
     ResetSettings,
     LatestReleaseLoaded(Result<Version, String>),
     InstallUpdate,
+    UpdateDownloaded {
+        received: u64,
+        total: Option<u64>,
+    },
     UpdateFinished(Result<(), UpdateFailure>),
     RestartToUpdate,
     ManifestLoaded {
@@ -506,8 +510,14 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
             Vec::new()
         }
         Action::InstallUpdate => install_update(state).into_iter().collect(),
+        Action::UpdateDownloaded { received, total } => {
+            if matches!(state.update_progress, UpdateProgress::Downloading { .. }) {
+                state.update_progress = UpdateProgress::Downloading { received, total };
+            }
+            Vec::new()
+        }
         Action::UpdateFinished(result) => {
-            if state.update_progress == UpdateProgress::Downloading {
+            if matches!(state.update_progress, UpdateProgress::Downloading { .. }) {
                 state.update_progress = match result {
                     Ok(()) => UpdateProgress::Ready,
                     Err(failure) => UpdateProgress::Failed(failure),
@@ -778,12 +788,15 @@ fn install_update(state: &mut State) -> Option<Effect> {
     let target = state.self_update?;
     if matches!(
         state.update_progress,
-        UpdateProgress::Downloading | UpdateProgress::Ready
+        UpdateProgress::Downloading { .. } | UpdateProgress::Ready
     ) {
         return None;
     }
     let request = release::update_request(state.available_update()?, target)?;
-    state.update_progress = UpdateProgress::Downloading;
+    state.update_progress = UpdateProgress::Downloading {
+        received: 0,
+        total: None,
+    };
     Some(Effect::InstallUpdate(Box::new(request)))
 }
 

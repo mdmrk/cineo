@@ -530,6 +530,15 @@ The full evidence for the rows above whose notes do not fit in the table.
   `the_new_executable_can_run`,
   `a_running_executable_can_be_swapped_on_linux`). An update from one
   published release to the next is UNKNOWN (not done yet).
+- On both, while the executable downloads the link shows the percent
+  received when the server sends the length, and its tooltip the size
+  received and the total
+  (`a_download_reports_how_much_has_arrived`,
+  `the_percent_stays_within_the_total`,
+  `progress_after_the_download_ended_changes_nothing`,
+  `a_release_file_reports_its_progress_against_the_length`,
+  `progress_is_reported_once_per_percent_or_per_mebibyte`,
+  `an_update_shows_its_download_and_then_asks_for_a_restart`).
 - macOS and Android: no in-app install; the user installs the new
   release.
 

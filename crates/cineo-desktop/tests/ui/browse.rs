@@ -208,14 +208,22 @@ fn a_copy_that_updates_itself_offers_to_install_the_update() {
 #[test]
 fn an_update_shows_its_download_and_then_asks_for_a_restart() {
     use cineo_core::app::UpdateProgress;
-    let mut downloading = harness(
-        self_updating(UpdateProgress::Downloading),
-        ViewState::default(),
-    );
-    downloading.run();
-    downloading.get_by_label("Downloading v999.0.0…").click();
-    downloading.run();
-    assert!(downloading.state().2.is_empty());
+    for (total, label) in [
+        (None, "Downloading v999.0.0…"),
+        (Some(50), "Downloading v999.0.0… 42%"),
+    ] {
+        let mut downloading = harness(
+            self_updating(UpdateProgress::Downloading {
+                received: 21,
+                total,
+            }),
+            ViewState::default(),
+        );
+        downloading.run();
+        downloading.get_by_label(label).click();
+        downloading.run();
+        assert!(downloading.state().2.is_empty());
+    }
 
     let mut ready = harness(self_updating(UpdateProgress::Ready), ViewState::default());
     ready.run();

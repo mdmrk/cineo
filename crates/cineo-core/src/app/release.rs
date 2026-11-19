@@ -42,9 +42,28 @@ pub enum UpdateFailure {
 pub enum UpdateProgress {
     #[default]
     Idle,
-    Downloading,
+    Downloading {
+        received: u64,
+        total: Option<u64>,
+    },
     Ready,
     Failed(UpdateFailure),
+}
+
+impl UpdateProgress {
+    pub fn percent(self) -> Option<u8> {
+        let Self::Downloading {
+            received,
+            total: Some(total),
+        } = self
+        else {
+            return None;
+        };
+        if total == 0 {
+            return None;
+        }
+        u8::try_from(received.min(total).saturating_mul(100) / total).ok()
+    }
 }
 
 pub(crate) fn update_request(version: &Version, target: UpdateTarget) -> Option<UpdateRequest> {

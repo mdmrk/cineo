@@ -79,7 +79,7 @@ pub(super) fn stat_rows(status: &Status, torrent: Option<&TorrentStatus>) -> Vec
     rows
 }
 
-fn bytes(count: f64) -> String {
+pub(crate) fn bytes(count: f64) -> String {
     const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
     let mut value = count.max(0.0);
     let mut unit = 0;

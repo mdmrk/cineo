@@ -352,9 +352,16 @@ impl CineoApp {
     fn install_update(&mut self, request: UpdateRequest) {
         let client = AddonClient::new(crate::self_update::policy());
         match (std::env::current_exe(), client) {
-            (Ok(exe), Ok(client)) => self.spawn(async move {
-                Action::UpdateFinished(crate::self_update::install(&client, &request, exe).await)
-            }),
+            (Ok(exe), Ok(client)) => {
+                let send = self.sender();
+                self.spawn(async move {
+                    let progress =
+                        |received, total| send(Action::UpdateDownloaded { received, total });
+                    Action::UpdateFinished(
+                        crate::self_update::install(&client, &request, exe, progress).await,
+                    )
+                });
+            }
             _ => self.dispatch(Action::UpdateFinished(Err(UpdateFailure::Install))),
         }
     }

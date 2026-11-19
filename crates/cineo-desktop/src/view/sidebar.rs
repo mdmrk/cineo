@@ -2,6 +2,7 @@ use super::icons::{Icon, append_icon, paint_icon, paint_nav_label};
 use super::widgets::{compact, faint, lerp_color, spinner};
 use super::{Page, ViewState, go};
 use crate::i18n::{Text, t};
+use crate::player::stats::bytes;
 use crate::{brand, theme};
 use cineo_core::app::{Action, State, UpdateFailure, UpdateProgress};
 use eframe::egui::{
@@ -92,6 +93,21 @@ fn update_failure(failure: UpdateFailure) -> Text {
     }
 }
 
+#[expect(clippy::cast_precision_loss, reason = "a size shown to one decimal")]
+fn download_hover(received: u64, total: Option<u64>) -> Text {
+    let keeps_working = t!("Cineo keeps working while it downloads.");
+    let size = match total {
+        Some(total) => t!(
+            "{received} of {total} downloaded.",
+            received = bytes(received as f64),
+            total = bytes(total as f64)
+        ),
+        None if received > 0 => t!("{received} downloaded.", received = bytes(received as f64)),
+        None => return keeps_working,
+    };
+    format!("{size}\n{keeps_working}").into()
+}
+
 fn update_link(
     ui: &mut Ui,
     state: &State,
@@ -106,9 +122,16 @@ fn update_link(
                 t!("Download and check it; it runs after a restart."),
                 UpdateClick::Install,
             ),
-            UpdateProgress::Downloading => (
-                t!("Downloading v{version}…", version = version),
-                t!("Cineo keeps working while it downloads."),
+            progress @ UpdateProgress::Downloading { received, total } => (
+                match progress.percent() {
+                    Some(percent) => t!(
+                        "Downloading v{version}… {percent}%",
+                        version = version,
+                        percent = percent
+                    ),
+                    None => t!("Downloading v{version}…", version = version),
+                },
+                download_hover(received, total),
                 UpdateClick::Nothing,
             ),
             UpdateProgress::Ready => (

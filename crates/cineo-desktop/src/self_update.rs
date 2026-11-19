@@ -185,25 +185,53 @@ fn replace_licenses(_dir: &Path, _zip: &[u8]) -> Result<(), UpdateFailure> {
     Err(UpdateFailure::Install)
 }
 
+#[derive(Default)]
+struct Throttle(Option<u64>);
+
+impl Throttle {
+    fn due(&mut self, received: u64, total: Option<u64>) -> bool {
+        let step = match total {
+            Some(total) if total > 0 => received.saturating_mul(100) / total,
+            _ => received / (1024 * 1024),
+        };
+        self.0.replace(step) != Some(step)
+    }
+}
+
+async fn download(
+    client: &AddonClient,
+    url: &url::Url,
+    progress: impl FnMut(u64, Option<u64>) + Send,
+) -> Result<Vec<u8>, UpdateFailure> {
+    client
+        .fetch_release_file(url, progress)
+        .await
+        .map_err(|err| {
+            warn!(%err, %url, "update download failed");
+            UpdateFailure::Download
+        })
+}
+
 pub(crate) async fn install(
     client: &AddonClient,
     request: &UpdateRequest,
     exe: PathBuf,
+    progress: impl Fn(u64, Option<u64>) + Send + Sync,
 ) -> Result<(), UpdateFailure> {
-    let download = |url| async move {
-        client.fetch_release_file(url).await.map_err(|err| {
-            warn!(%err, %url, "update download failed");
-            UpdateFailure::Download
-        })
-    };
-    let sums = download(&request.sums).await?;
-    let signature = download(&request.signature).await?;
+    let sums = download(client, &request.sums, |_, _| {}).await?;
+    let signature = download(client, &request.signature, |_, _| {}).await?;
     verify_sums(PUBLIC_KEY, &request.version, &sums, &signature)?;
-    let executable = download(&request.executable).await?;
+    let mut throttle = Throttle::default();
+    let executable = download(client, &request.executable, |received, total| {
+        if throttle.due(received, total) {
+            progress(received, total);
+        }
+    })
+    .await?;
     check_file(&sums, request.target.executable(), &executable)?;
     let dir = exe.parent().map_or_else(PathBuf::new, Path::to_path_buf);
     let licenses = if request.target == UpdateTarget::Windows && dir.join("licenses").is_dir() {
-        let zip = download(&request.licenses).await?;
+        let zip = download(client, &request.licenses, |_, _| {}).await?;
         check_file(&sums, LICENSES, &zip)?;
         Some(zip)
     } else {
@@ -325,6 +353,23 @@ mod tests {
         assert!(!beside(&exe, ".new").exists());
         remove_leftover(&exe);
         assert!(!beside(&exe, ".old").exists());
+    }
+
+    #[test]
+    fn progress_is_reported_once_per_percent_or_per_mebibyte() {
+        let mut throttle = Throttle::default();
+        let reported: Vec<u64> = [0, 1, 99, 100, 150, 199, 200, 10_000]
+            .into_iter()
+            .filter(|&received| throttle.due(received, Some(10_000)))
+            .collect();
+        assert_eq!(reported, [0, 100, 200, 10_000]);
+        let mut throttle = Throttle::default();
+        const MIB: u64 = 1024 * 1024;
+        let reported: Vec<u64> = [1, MIB - 1, MIB, MIB + 5, 3 * MIB]
+            .into_iter()
+            .filter(|&received| throttle.due(received, None))
+            .collect();
+        assert_eq!(reported, [1, MIB, 3 * MIB]);
     }
 
     #[test]
