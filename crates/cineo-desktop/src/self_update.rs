@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use aws_lc_rs::digest::{SHA256, digest};
-use cineo_core::app::{UpdateFailure, UpdateRequest};
+use cineo_core::app::{UpdateFailure, UpdateRequest, UpdateTarget};
 use cineo_net::{AddonClient, NetPolicy};
 use minisign_verify::{PublicKey, Signature};
 use semver::Version;
@@ -11,9 +11,19 @@ use tracing::{info, warn};
 
 pub const PUBLIC_KEY: &str = "RWQPKOI7lXW1zBfoRntGmEe8QJf5TdJTDUZ4NEDFJtrSNdNmxrdBpHln";
 const AFTER_UPDATE: &str = "--after-update";
-const EXECUTABLE: &str = "cineo-x86_64-windows.exe";
 const LICENSES: &str = "cineo-licenses.zip";
-const INSTALLED_NAME: &str = "cineo-desktop.exe";
+const INSTALLED_NAME: &str = if cfg!(windows) {
+    "cineo-desktop.exe"
+} else {
+    "cineo-desktop"
+};
+const TARGET: Option<UpdateTarget> = if cfg!(windows) {
+    Some(UpdateTarget::Windows)
+} else if cfg!(target_os = "linux") {
+    Some(UpdateTarget::Linux)
+} else {
+    None
+};
 const MAX_DOWNLOAD: usize = 256 * 1024 * 1024;
 
 pub(crate) fn policy() -> NetPolicy {
@@ -24,7 +34,11 @@ pub(crate) fn policy() -> NetPolicy {
     }
 }
 
-pub(crate) fn can_update(exe: &Path) -> bool {
+pub(crate) fn target(exe: &Path) -> Option<UpdateTarget> {
+    TARGET.filter(|_| can_update(exe))
+}
+
+fn can_update(exe: &Path) -> bool {
     if exe.file_name().is_none_or(|name| name != INSTALLED_NAME) {
         return false;
     }
@@ -94,7 +108,8 @@ fn swap(exe: &Path, new: &[u8]) -> Result<(), UpdateFailure> {
     let staged = beside(exe, ".new");
     let old = beside(exe, ".old");
     let _ = std::fs::remove_file(&old);
-    std::fs::write(&staged, new).map_err(|_| UpdateFailure::Install)?;
+    let _ = std::fs::remove_file(&staged);
+    write_executable(&staged, new).map_err(|_| UpdateFailure::Install)?;
     if std::fs::rename(exe, &old).is_err() {
         let _ = std::fs::remove_file(&staged);
         return Err(UpdateFailure::Install);
@@ -105,6 +120,15 @@ fn swap(exe: &Path, new: &[u8]) -> Result<(), UpdateFailure> {
         return Err(UpdateFailure::Install);
     }
     Ok(())
+}
+
+fn write_executable(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o755);
+    options.open(path)?.write_all(bytes)
 }
 
 pub fn remove_leftover(exe: &Path) {
@@ -176,9 +200,9 @@ pub(crate) async fn install(
     let signature = download(&request.signature).await?;
     verify_sums(PUBLIC_KEY, &request.version, &sums, &signature)?;
     let executable = download(&request.executable).await?;
-    check_file(&sums, EXECUTABLE, &executable)?;
+    check_file(&sums, request.target.executable(), &executable)?;
     let dir = exe.parent().map_or_else(PathBuf::new, Path::to_path_buf);
-    let licenses = if dir.join("licenses").is_dir() {
+    let licenses = if request.target == UpdateTarget::Windows && dir.join("licenses").is_dir() {
         let zip = download(&request.licenses).await?;
         check_file(&sums, LICENSES, &zip)?;
         Some(zip)
@@ -271,10 +295,17 @@ mod tests {
     #[test]
     fn a_file_must_match_its_line_in_the_checksums() {
         let sums = fixture("SHA256SUMS");
-        assert_eq!(check_file(&sums, EXECUTABLE, b"new executable"), Ok(()));
+        assert_eq!(
+            check_file(&sums, UpdateTarget::Windows.executable(), b"new executable"),
+            Ok(())
+        );
         assert_eq!(check_file(&sums, LICENSES, b"licenses zip"), Ok(()));
         assert_eq!(
-            check_file(&sums, EXECUTABLE, b"another executable"),
+            check_file(
+                &sums,
+                UpdateTarget::Windows.executable(),
+                b"another executable"
+            ),
             Err(UpdateFailure::Checksum)
         );
         assert_eq!(
@@ -314,6 +345,37 @@ mod tests {
             &dir.path().join("missing").join(INSTALLED_NAME)
         ));
         assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_new_executable_can_run() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let exe = dir.path().join(INSTALLED_NAME);
+        std::fs::write(&exe, b"old").unwrap();
+        std::fs::write(beside(&exe, ".new"), b"stale").unwrap();
+        assert_eq!(swap(&exe, b"new"), Ok(()));
+        let mode = std::fs::metadata(&exe).unwrap().permissions().mode();
+        assert_eq!(mode & 0o100, 0o100, "mode {mode:o}");
+        assert_eq!(std::fs::read(&exe).unwrap(), b"new");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_running_executable_can_be_swapped_on_linux() {
+        let dir = tempfile::tempdir().unwrap();
+        let exe = dir.path().join(INSTALLED_NAME);
+        std::fs::copy("/bin/sleep", &exe).unwrap();
+        let mut running = std::process::Command::new(&exe).arg("5").spawn().unwrap();
+        std::thread::sleep(Duration::from_millis(300));
+        let swapped = swap(&exe, &std::fs::read("/bin/true").unwrap());
+        let still_running = running.try_wait().unwrap().is_none();
+        let _ = running.kill();
+        let _ = running.wait();
+        assert_eq!(swapped, Ok(()));
+        assert!(still_running);
+        assert!(std::process::Command::new(&exe).status().unwrap().success());
     }
 
     #[cfg(windows)]

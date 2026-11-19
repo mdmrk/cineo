@@ -182,7 +182,7 @@ fn a_newer_release_shows_in_the_sidebar_and_opens_its_page() {
 
 fn self_updating(progress: cineo_core::app::UpdateProgress) -> State {
     let mut state = State {
-        self_update: true,
+        self_update: Some(cineo_core::app::UpdateTarget::Windows),
         ..State::default()
     };
     update(&mut state, Action::RestoreSettings(Settings::default()));

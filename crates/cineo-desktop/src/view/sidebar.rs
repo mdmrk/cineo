@@ -99,7 +99,7 @@ fn update_link(
     compact: bool,
 ) -> Option<Action> {
     let version = latest.to_string();
-    let (text, hover, click) = if state.self_update {
+    let (text, hover, click) = if state.self_update.is_some() {
         match state.update_progress {
             UpdateProgress::Idle => (
                 t!("Update to v{version}", version = version),

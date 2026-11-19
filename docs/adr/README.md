@@ -56,6 +56,7 @@ old one *Superseded by NNNN*.
 | [0038](0038-bindgen-tool-crate.md) | The UniFFI binding generator in its own crate | Accepted |
 | [0039](0039-linux-appimage.md) | A Linux AppImage with its own LGPL libmpv | Withdrawn |
 | [0040](0040-windows-in-app-update.md) | In-app update on Windows | Accepted |
+| [0041](0041-linux-in-app-update.md) | In-app update on Linux | Accepted |
 
 ## What we took from the reference projects
 

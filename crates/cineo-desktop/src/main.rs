@@ -46,7 +46,6 @@ fn main() -> ExitCode {
         if cli.after_update {
             cineo_desktop::instance::wait_until_closed(dir, std::time::Duration::from_secs(10));
         }
-        #[cfg(windows)]
         if let Ok(exe) = std::env::current_exe() {
             cineo_desktop::self_update::remove_leftover(&exe);
         }

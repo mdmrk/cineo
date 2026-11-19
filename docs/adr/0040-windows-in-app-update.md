@@ -1,6 +1,6 @@
 # 0040. In-app update on Windows
 
-- Status: Accepted
+- Status: Accepted; amended by 0041 (Linux)
 - Date: 2026-11-19
 
 ## Context

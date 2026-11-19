@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use anyhow::Context as _;
 use cineo_core::app::{
     Action, Effect, Language, Notice, Settings, State, TorrentRequest, UpdateFailure,
-    UpdateRequest, parse_link, update,
+    UpdateRequest, UpdateTarget, parse_link, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::embedded::{Display, Player, PlayerCommand, ProcAddress, Renderer, Status};
@@ -349,7 +349,6 @@ impl CineoApp {
         }
     }
 
-    #[cfg(windows)]
     fn install_update(&mut self, request: UpdateRequest) {
         let client = AddonClient::new(crate::self_update::policy());
         match (std::env::current_exe(), client) {
@@ -360,13 +359,7 @@ impl CineoApp {
         }
     }
 
-    #[cfg(not(windows))]
-    fn install_update(&mut self, _request: UpdateRequest) {
-        self.dispatch(Action::UpdateFinished(Err(UpdateFailure::Install)));
-    }
-
     fn restart_to_update(&self) {
-        #[cfg(windows)]
         match std::env::current_exe().and_then(|exe| crate::self_update::restart(&exe)) {
             Ok(()) => self.ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Err(err) => warn!(%err, "cannot start the updated Cineo"),
@@ -534,14 +527,10 @@ impl eframe::App for CineoApp {
     }
 }
 
-#[cfg(windows)]
-fn can_update_itself() -> bool {
-    std::env::current_exe().is_ok_and(|exe| crate::self_update::can_update(&exe))
-}
-
-#[cfg(not(windows))]
-fn can_update_itself() -> bool {
-    false
+fn can_update_itself() -> Option<UpdateTarget> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| crate::self_update::target(&exe))
 }
 
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {

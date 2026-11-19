@@ -5,9 +5,25 @@ use url::Url;
 pub const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/mdmrk/cineo/releases/latest";
 const RELEASE_DOWNLOADS: &str = "https://github.com/mdmrk/cineo/releases/download";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpdateTarget {
+    Windows,
+    Linux,
+}
+
+impl UpdateTarget {
+    pub fn executable(self) -> &'static str {
+        match self {
+            Self::Windows => "cineo-x86_64-windows.exe",
+            Self::Linux => "cineo-x86_64-linux",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UpdateRequest {
     pub version: Version,
+    pub target: UpdateTarget,
     pub sums: Url,
     pub signature: Url,
     pub executable: Url,
@@ -31,13 +47,14 @@ pub enum UpdateProgress {
     Failed(UpdateFailure),
 }
 
-pub(crate) fn update_request(version: &Version) -> Option<UpdateRequest> {
+pub(crate) fn update_request(version: &Version, target: UpdateTarget) -> Option<UpdateRequest> {
     let asset = |name: &str| Url::parse(&format!("{RELEASE_DOWNLOADS}/v{version}/{name}")).ok();
     Some(UpdateRequest {
         version: version.clone(),
+        target,
         sums: asset("SHA256SUMS")?,
         signature: asset("SHA256SUMS.minisig")?,
-        executable: asset("cineo-x86_64-windows.exe")?,
+        executable: asset(target.executable())?,
         licenses: asset("cineo-licenses.zip")?,
     })
 }

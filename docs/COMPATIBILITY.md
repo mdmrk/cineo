@@ -520,7 +520,16 @@ The full evidence for the rows above whose notes do not fit in the table.
   `an_update_shows_its_download_and_then_asks_for_a_restart`,
   `a_failed_update_can_be_tried_again`). An update from one published
   release to the next is UNKNOWN (not done yet).
-- Elsewhere no in-app install: the user runs the installer again.
+- Linux (ADR-0041): the same update for a `cineo-desktop` in a writable
+  folder, as `install.sh` installs it, with `cineo-x86_64-linux` as the
+  executable; the new one is written runnable and the running one is
+  swapped while it runs; the license texts are not replaced
+  (`installing_an_update_downloads_the_offered_release`,
+  `the_new_executable_can_run`,
+  `a_running_executable_can_be_swapped_on_linux`). An update from one
+  published release to the next is UNKNOWN (not done yet).
+- macOS and Android: no in-app install; the user installs the new
+  release.
 
 ### Windows
 

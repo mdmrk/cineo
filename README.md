@@ -94,8 +94,10 @@ Download and open `cineo-arm64-android.apk` from the
 
 ## Update
 
-Run the install command again. On macOS, replace Cineo in Applications
-with the new one. On Android, install the new APK over the old one.
+On Windows and Linux, a copy installed with the install command offers
+"Update to vX.Y.Z" in the sidebar; or run the install command again. On
+macOS, replace Cineo in Applications with the new one. On Android,
+install the new APK over the old one.
 
 ## Uninstall
 

@@ -366,6 +366,16 @@ Format:
   is used only when the bundle has none.
 - Exit: build libmpv for macOS in CI from pinned sources, as for Android.
 
+### Linux: an in-app update keeps the old license texts
+- Where: [self_update.rs](../crates/cineo-desktop/src/self_update.rs) (`install`), [install.sh](../scripts/install.sh)
+- Gap: `install.sh` writes the license texts to `$XDG_DATA_HOME/doc/cineo`;
+  an in-app update replaces only the executable (ADR-0041).
+- Why: they live away from the executable and `install.sh` writes them
+  only when `unzip` is installed; Cineo has no zip reader.
+- Instead: the texts stay at the installed version until `install.sh`
+  runs again.
+- Exit: replace them from `cineo-licenses.zip` during the update.
+
 ### Windows: nothing has run on a Windows machine
 - Where: every `cfg(windows)` path (ADR-0027)
 - Gap: CI compiles and tests on `windows-latest`, and the app starts under

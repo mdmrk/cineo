@@ -10,7 +10,7 @@ use super::refresh::{
     addons_changed, catalog_loaded, default_genre, discover_page, load_board, loading_rows,
     manifest_loaded, meta_loaded, open_detail, refresh_addon_lists, retry_failed, select_video,
 };
-use super::release::{self, UpdateFailure, UpdateProgress, UpdateRequest};
+use super::release::{self, UpdateFailure, UpdateProgress, UpdateRequest, UpdateTarget};
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
@@ -151,7 +151,7 @@ pub struct State {
     pub playing: Option<Playing>,
     pub update: Option<Version>,
     pub update_checked: bool,
-    pub self_update: bool,
+    pub self_update: Option<UpdateTarget>,
     pub update_progress: UpdateProgress,
 }
 
@@ -775,15 +775,14 @@ fn settings_changed(state: &mut State) -> Vec<Effect> {
 }
 
 fn install_update(state: &mut State) -> Option<Effect> {
-    if !state.self_update
-        || matches!(
-            state.update_progress,
-            UpdateProgress::Downloading | UpdateProgress::Ready
-        )
-    {
+    let target = state.self_update?;
+    if matches!(
+        state.update_progress,
+        UpdateProgress::Downloading | UpdateProgress::Ready
+    ) {
         return None;
     }
-    let request = release::update_request(state.available_update()?)?;
+    let request = release::update_request(state.available_update()?, target)?;
     state.update_progress = UpdateProgress::Downloading;
     Some(Effect::InstallUpdate(Box::new(request)))
 }

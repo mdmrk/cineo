@@ -14,11 +14,6 @@ mod media_keys;
 pub mod panic_log;
 pub mod player;
 mod register;
-#[cfg(any(windows, test))]
-#[cfg_attr(
-    not(windows),
-    expect(dead_code, reason = "only the Windows shell installs updates")
-)]
 pub mod self_update;
 pub mod settings;
 mod theme;
