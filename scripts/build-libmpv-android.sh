@@ -2,13 +2,11 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
+source "$root/scripts/common.sh"
 source "$root/scripts/libmpv-android.env"
 
 ndk=${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME to NDK $NDK_VERSION}
-if ! grep -qx "Pkg.Revision = $NDK_VERSION" "$ndk/source.properties"; then
-  echo "expected NDK $NDK_VERSION at $ndk" >&2
-  exit 1
-fi
+grep -qx "Pkg.Revision = $NDK_VERSION" "$ndk/source.properties" || die "expected NDK $NDK_VERSION at $ndk"
 
 stage=/tmp/cineo-libmpv-android
 src=$stage/src
@@ -27,8 +25,6 @@ export SOURCE_DATE_EPOCH=0
 export PKG_CONFIG_LIBDIR=$prefix/lib/pkgconfig
 unset PKG_CONFIG_PATH PKG_CONFIG_SYSROOT_DIR
 jobs=$(nproc)
-
-step() { printf '\n==> %s\n' "$*"; }
 
 step "meson $MESON_VERSION"
 if [[ ! -x $stage/venv/bin/meson ]] || [[ $("$stage/venv/bin/meson" --version) != "$MESON_VERSION" ]]; then
@@ -99,10 +95,8 @@ mkdir -p "$build/openssl"
   sed -i 's|^Requires:.*|Libs: -L${libdir} -lssl -lcrypto\nLibs.private: -ldl -pthread\nCflags: -I${includedir}|' \
     "$prefix/lib/pkgconfig/openssl.pc"
   openssl_libs=$(pkg-config --static --libs openssl | xargs)
-  if [[ $openssl_libs != "-L$prefix/lib -lssl -lcrypto -ldl -pthread" ]]; then
-    echo "pkg-config gives OpenSSL's libraries as '$openssl_libs'" >&2
-    exit 1
-  fi
+  [[ $openssl_libs == "-L$prefix/lib -lssl -lcrypto -ldl -pthread" ]] ||
+    die "pkg-config gives OpenSSL's libraries as '$openssl_libs'"
 )
 
 meson_build dav1d -Denable_tools=false -Denable_tests=false -Denable_examples=false -Denable_docs=false
@@ -155,22 +149,15 @@ for lib in "${libs[@]}"; do
   cp -L "$prefix/lib/$lib" "$out/lib/$lib"
 done
 
-if strings "$out/lib/libavcodec.so" | grep -qE -- '--enable-(gpl|version3|nonfree)'; then
-  echo "FFmpeg was configured with a GPL, version3 or nonfree flag" >&2
-  exit 1
-fi
-if grep -q "^#define HAVE_GPL 1" "$build/mpv/config.h"; then
-  echo "mpv was configured with GPL code" >&2
-  exit 1
-fi
+! strings "$out/lib/libavcodec.so" | grep -qE -- '--enable-(gpl|version3|nonfree)' ||
+  die "FFmpeg was configured with a GPL, version3 or nonfree flag"
+! grep -q "^#define HAVE_GPL 1" "$build/mpv/config.h" || die "mpv was configured with GPL code"
 shipped=" ${libs[*]} "
 system=" libc.so libm.so libdl.so liblog.so libandroid.so libEGL.so libGLESv2.so libGLESv3.so libOpenSLES.so libaaudio.so libmediandk.so libz.so "
 for lib in "$out"/lib/*.so; do
   while read -r needed; do
-    if [[ $shipped != *" $needed "* && $system != *" $needed "* ]]; then
-      echo "$(basename "$lib") needs $needed, which is neither shipped nor part of Android" >&2
-      exit 1
-    fi
+    [[ $shipped == *" $needed "* || $system == *" $needed "* ]] ||
+      die "$(basename "$lib") needs $needed, which is neither shipped nor part of Android"
   done < <(llvm-readelf -d "$lib" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p')
 done
 

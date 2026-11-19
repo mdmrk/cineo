@@ -20,16 +20,16 @@ holds the details it links to.
    ```sh
    cargo install --locked cargo-nextest cargo-deny taplo-cli typos-cli cargo-machete
    ```
-   `shellcheck` and `shfmt` come from your package manager. `scripts/lint.sh`,
-   `scripts/fmt.sh` and `scripts/check.sh` skip a missing tool locally
+   `shellcheck` and `shfmt` come from your package manager. `scripts/fmt.sh`
+   and `scripts/check.sh` skip a missing tool locally
    (`check.sh` runs `cargo test` without nextest) and fail on it in CI.
 3. libmpv (mpv 0.35 or newer) to play anything; the app loads it at
    runtime (ADR-0014). On Windows, put a `libmpv-2.dll` next to the
    executable, or build with `--features bundled-libmpv` and
    `CINEO_LIBMPV_DLL_GZ` set to the gzip-compressed DLL
-   (`scripts/fetch-libmpv.sh <dir>` downloads the pinned one and writes
+   (`scripts/fetch-libmpv.sh windows <dir>` downloads the pinned one and writes
    `<dir>/libmpv-2.dll.gz`). On macOS, `brew install mpv` for
-   `cargo run`; `scripts/fetch-libmpv-macos.sh target/libmpv-macos` then
+   `cargo run`; `scripts/fetch-libmpv.sh macos target/libmpv-macos` then
    `scripts/package.sh macos` (after release builds for
    `aarch64-apple-darwin` and `x86_64-apple-darwin`) makes the `.dmg`.
 4. To check the Windows build from Linux:
@@ -121,10 +121,9 @@ fails if its version differs from `rustls-platform-verifier-android` in
 
 | Task                 | Command                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------- |
-| Everything CI checks | `scripts/check.sh` (`--quick` skips lint and deny)                                          |
+| Everything CI checks | `scripts/check.sh` (`--quick` stops after the tests: no taplo, shellcheck, typos, cargo-machete, doc references, release scripts or deny) |
 | Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--portable`, `--allow-private-network`) |
 | Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
-| Static checks        | `scripts/lint.sh` (taplo, shellcheck, typos, cargo-machete, doc references)                 |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
 | Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
 | One test             | `cargo test -p cineo-core some_name`                                                        |
@@ -640,7 +639,8 @@ checks, and `publish` waits for both:
 
 **Checks.**
 - `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`,
-  clippy, nextest with the `ci` profile, `scripts/lint.sh`, cargo-deny),
+  clippy, nextest with the `ci` profile, the static checks, the release
+  script tests, cargo-deny),
   then the player tests that need libmpv (`--run-ignored only`) with the
   system `libmpv2`.
 - `check (windows)` runs clippy and nextest on `windows-latest`, in a copy
@@ -662,15 +662,15 @@ checks, and `publish` waits for both:
   when `ubuntu-latest` moved to it, and need glibc 2.43.
 - `build` builds `cineo-desktop` for Linux x86_64 and Windows x86_64 at the
   `x86-64-v2` level (Windows with `bundled-libmpv`, after
-  `scripts/fetch-libmpv.sh` checks the pinned archive), and one universal
+  `scripts/fetch-libmpv.sh windows` checks the pinned archive), and one universal
   macOS binary for `aarch64-apple-darwin` and `x86_64-apple-darwin`
-  (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv-macos.sh`).
+  (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv.sh macos`).
   It puts the files into `dist/` with
   `scripts/package.sh <linux|windows|macos>`, which fails if the binary's
   `--version` is not `cineo-desktop` followed by the workspace version, and
   attests build provenance.
 - On tags, `build` and `build (android)` first run
-  `scripts/check-release.sh version <tag>`, which fails unless the tag
+  `scripts/release.sh version <tag>`, which fails unless the tag
   without its `v` is the workspace version, so a tag pushed before the
   version bump fails before anything compiles.
 - Both Android jobs set up Java, Gradle, `cargo-ndk` at
@@ -713,9 +713,9 @@ too and saved only by `build (android)` on `main`. After each run on
 `main`, `prune caches` deletes all but the newest Rust and libmpv cache of
 each job, so the repository stays under GitHub's 10 GB cache limit.
 
-**Publishing.** `publish` runs `scripts/check-release.sh assets dist`,
+**Publishing.** `publish` runs `scripts/release.sh assets dist`,
 which fails if a file of the table below is missing or `dist/` holds any
-other file (`scripts/test-check-release.sh`, run by `scripts/check.sh`,
+other file (`scripts/test-release.sh`, run by `scripts/check.sh`,
 covers both checks), then writes `SHA256SUMS` (check a file with
 `gh attestation verify <file> --repo <owner>/cineo`). It is the only job
 that can write to the repository. `reproduce (android)` then builds the
@@ -751,12 +751,12 @@ Every release has these files, with the same names in every release so that
    `version-code` to `MAJOR * 10000 + MINOR * 100 + PATCH`, and write the
    release notes in `docs/releases/vX.Y.Z.md` (what changed, for users;
    no download links or changelog link, those are added).
-   `scripts/check-release.sh notes`, run by `scripts/check.sh`, fails while
+   `scripts/release.sh notes`, run by `scripts/check.sh`, fails while
    the notes of the `Cargo.toml` version are missing or empty.
 2. Commit with `chore(release): vX.Y.Z`.
 3. Tag `vX.Y.Z` and push the tag.
 4. `ci.yml` runs every check, builds, and publishes the release
-   `vX.Y.Z`. Its text comes from `scripts/release-notes.sh`: a line of
+   `vX.Y.Z`. Its text comes from `scripts/release.sh body`: a line of
    download links, the notes file, and a link comparing the tag with the
    previous latest release. On tags, the build jobs check the notes before
    compiling.
@@ -772,16 +772,16 @@ links stay in place; the first push creates it.
 
 The desktop artifacts are not code-signed; build provenance attestations,
 `SHA256SUMS` and its minisign signature are the integrity checks.
-`publish` signs `SHA256SUMS` with `scripts/sign-release.sh`, which fails
+`publish` signs `SHA256SUMS` with `scripts/release.sh sign`, which fails
 rather than publish unsigned checksums when the key is missing, and checks
-the signature against `minisign.pub` (`scripts/test-sign-release.sh`).
+the signature against `minisign.pub` (`scripts/test-release.sh`).
 The key is the secret `CINEO_MINISIGN_KEY`, the whole secret key file of
 `minisign -G -W` (no password; the secret is the protection), in the
 `release-signing` environment, which deploys only from `main` and `v*` tags.
 `scripts/install.sh` carries the same public key as `minisign.pub`
-(`scripts/test-install.sh` runs it against signed, unsigned, re-signed and
+(`scripts/test-release.sh` runs it against signed, unsigned, re-signed and
 altered releases);
-`scripts/check-release.sh key` fails if they differ. A new key means
+`scripts/release.sh key` fails if they differ. A new key means
 changing both, and installers from older releases keep the old one.
 
 The APK is signed, because

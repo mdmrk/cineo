@@ -1,31 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/common.sh
 rm -rf dist
 mkdir -p dist
 linux_glibc_max=2.39
-version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+version=$(workspace_version)
 
 check_version() {
   local reported
   reported=$("$1" --version)
-  [[ $reported == "cineo-desktop $version" ]] || {
-    echo "$1 reports '$reported', but Cargo.toml says $version" >&2
-    exit 1
-  }
+  [[ $reported == "cineo-desktop $version" ]] || die "$1 reports '$reported', but Cargo.toml says $version"
 }
 
 check_glibc() {
   local needed
   needed=$(objdump -T "$1" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)+' | sed 's/^GLIBC_//' | sort -Vu | tail -n 1)
-  [[ -n $needed ]] || {
-    echo "$1 links no glibc symbol" >&2
-    exit 1
-  }
-  [[ $(printf '%s\n' "$needed" "$linux_glibc_max" | sort -V | tail -n 1) == "$linux_glibc_max" ]] || {
-    echo "$1 needs glibc $needed, above the $linux_glibc_max that Linux releases support" >&2
-    exit 1
-  }
+  [[ -n $needed ]] || die "$1 links no glibc symbol"
+  [[ $(printf '%s\n' "$needed" "$linux_glibc_max" | sort -V | tail -n 1) == "$linux_glibc_max" ]] ||
+    die "$1 needs glibc $needed, above the $linux_glibc_max that Linux releases support"
 }
 
 common_licenses() {
@@ -63,11 +56,7 @@ Cineo writes the DLL to %LOCALAPPDATA%\\Cineo\\cache\\libmpv\\<CRC32>\\.
 To use your own build, put a libmpv-2.dll next to cineo-x86_64-windows.exe;
 it is loaded first.
 EOT
-    if command -v zip >/dev/null; then
-      (cd dist && zip -qr cineo-licenses.zip cineo-licenses)
-    else
-      (cd dist && python3 -m zipfile -c cineo-licenses.zip cineo-licenses)
-    fi
+    (cd dist && python3 -I -m zipfile -c cineo-licenses.zip cineo-licenses)
     rm -rf dist/cineo-licenses
     cp target/release/cineo-desktop dist/cineo-x86_64-linux
     check_version dist/cineo-x86_64-linux
@@ -87,43 +76,27 @@ EOT
     cp android/app/build/outputs/apk/release/app-release.apk "$apk"
     entries=$(unzip -Z1 "$apk")
     for required in assets/licenses/libmpv.md assets/licenses/mpv-LGPL-2.1.txt lib/arm64-v8a/libcineo_android.so; do
-      grep -qxF "$required" <<<"$entries" || {
-        echo "$apk has no $required" >&2
-        exit 1
-      }
+      grep -qxF "$required" <<<"$entries" || die "$apk has no $required"
     done
     for lib in libmpv.so libavcodec.so libavfilter.so libavformat.so libavutil.so libswresample.so libswscale.so; do
       shipped=$(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1)
       grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" ||
-        {
-          echo "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names" >&2
-          exit 1
-        }
+        die "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names"
     done
     libs=$(mktemp -d)
     unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
     for so in "$libs"/lib/arm64-v8a/*.so; do
       text=$(strings -n 8 "$so")
+      name=$(basename "$so")
       for leak in "$PWD" "$HOME" "${CARGO_HOME:-$HOME/.cargo}" "${RUSTUP_HOME:-$HOME/.rustup}"; do
-        if grep -qF -- "$leak" <<<"$text"; then
-          echo "$apk: $(basename "$so") holds the build path $leak, so the build is not reproducible" >&2
-          exit 1
-        fi
+        ! grep -qF -- "$leak" <<<"$text" || die "$apk: $name holds the build path $leak, so the build is not reproducible"
       done
-      if grep 'built on: ' <<<"$text" | grep -qv 'built on: Thu Jan  1 00:00:00 1970 UTC'; then
-        echo "$apk: $(basename "$so") holds a build date, so the build is not reproducible" >&2
-        exit 1
-      fi
+      ! grep 'built on: ' <<<"$text" | grep -qv 'built on: Thu Jan  1 00:00:00 1970 UTC' ||
+        die "$apk: $name holds a build date, so the build is not reproducible"
       aligns=$(readelf -lW "$so" | awk '$1 == "LOAD" { print $NF }')
-      [[ -n $aligns ]] || {
-        echo "$apk: $(basename "$so") has no LOAD segment" >&2
-        exit 1
-      }
+      [[ -n $aligns ]] || die "$apk: $name has no LOAD segment"
       for align in $aligns; do
-        ((align >= 16384)) || {
-          echo "$apk: $(basename "$so") has a LOAD segment aligned to $align, below 16 KB" >&2
-          exit 1
-        }
+        ((align >= 16384)) || die "$apk: $name has a LOAD segment aligned to $align, below 16 KB"
       done
     done
     rm -rf "$libs"
@@ -131,10 +104,7 @@ EOT
     build_tools=$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
     signer=$(sed -n 's/^AllowedAPKSigningKeys: //p' docs/fdroid/io.github.mdmrk.cineo.yml)
     digests=$("$build_tools/apksigner" verify --print-certs "$apk" | sed -n 's/.*certificate SHA-256 digest: //p' | sort -u)
-    [[ $digests == "$signer" ]] || {
-      echo "$apk is signed by ${digests:-nothing}, not the release key $signer that F-Droid allows" >&2
-      exit 1
-    }
+    [[ $digests == "$signer" ]] || die "$apk is signed by ${digests:-nothing}, not the release key $signer that F-Droid allows"
     python3 -I - "$apk" <<'PY'
 import struct, sys
 data = open(sys.argv[1], "rb").read()
@@ -215,9 +185,6 @@ EOT
     hdiutil create -volname Cineo -srcfolder "$work/stage" -format UDZO dist/cineo-universal-macos.dmg
     rm -rf "$work"
     ;;
-  *)
-    echo "unknown platform: $1" >&2
-    exit 1
-    ;;
+  *) die "unknown platform: $1" ;;
 esac
 ls -l dist

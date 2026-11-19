@@ -2,29 +2,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export RUST_LOG=warn
-
 source scripts/common.sh
-
-mode_check=0
-[[ "${1:-}" == "--check" ]] && mode_check=1
-
-shell_files() { git ls-files -z '*.sh'; }
-
+check=()
+shfmt_mode=-w
+if [[ "${1:-}" == "--check" ]]; then
+  check=(--check)
+  shfmt_mode=-d
+fi
 step "rustfmt"
-if ((mode_check)); then cargo fmt --all -- --check; else cargo fmt --all; fi
-
+cargo fmt --all -- "${check[@]}"
 step "taplo"
 if need taplo "cargo install --locked taplo-cli"; then
-  if ((mode_check)); then taplo fmt --check; else taplo fmt; fi
+  taplo fmt "${check[@]}"
 fi
-
 step "shfmt"
 if need shfmt "https://github.com/mvdan/sh/releases"; then
-  if ((mode_check)); then
-    shell_files | xargs -0 shfmt -i 2 -ci -d
-  else
-    shell_files | xargs -0 shfmt -i 2 -ci -w
-  fi
+  git ls-files -z '*.sh' | xargs -0 shfmt -i 2 -ci "$shfmt_mode"
 fi
-
 printf '\nFormatting done.\n'

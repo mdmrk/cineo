@@ -1,24 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/common.sh
 source scripts/libmpv-android.env
 source scripts/android.env
 
-if [[ $(cargo ndk --version) != *" $CARGO_NDK_VERSION"* ]]; then
-  echo "cargo-ndk $CARGO_NDK_VERSION is required, found: $(cargo ndk --version)" >&2
-  exit 1
-fi
+[[ $(cargo ndk --version) == *" $CARGO_NDK_VERSION"* ]] ||
+  die "cargo-ndk $CARGO_NDK_VERSION is required, found: $(cargo ndk --version)"
 
 for name in CINEO_KEYSTORE CINEO_KEYSTORE_PASSWORD CINEO_KEY_ALIAS CINEO_KEY_PASSWORD; do
-  if [[ -z ${!name:-} ]]; then
-    echo "set $name: an unsigned APK is never released" >&2
-    exit 1
-  fi
+  [[ -n ${!name:-} ]] || die "set $name: an unsigned APK is never released"
 done
-if [[ ! -s $CINEO_KEYSTORE ]]; then
-  echo "$CINEO_KEYSTORE is missing or empty: an unsigned APK is never released" >&2
-  exit 1
-fi
+[[ -s $CINEO_KEYSTORE ]] || die "$CINEO_KEYSTORE is missing or empty: an unsigned APK is never released"
 if [[ -z ${ANDROID_HOME:-} && -f android/local.properties ]]; then
   ANDROID_HOME=$(sed -n 's/^sdk\.dir=//p' android/local.properties)
 fi
