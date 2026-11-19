@@ -150,6 +150,18 @@ impl AddonClient {
         .await
     }
 
+    pub async fn fetch_release_file(&self, url: &Url) -> Result<Vec<u8>, FetchError> {
+        let span =
+            info_span!("release_file_request", req = next_request_id(), origin = %origin(url));
+        self.get_limited(
+            url.clone(),
+            self.policy.max_body_bytes,
+            "application/octet-stream",
+        )
+        .instrument(span)
+        .await
+    }
+
     async fn fetch_resource<T>(
         &self,
         addon: &TransportUrl,

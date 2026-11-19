@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-18 18:20+0100\n"
+"POT-Creation-Date: 2026-11-19 11:12+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:531
+#: crates/cineo-desktop/src/app/mod.rs:571
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -32,7 +32,7 @@ msgstr ""
 "\n"
 "要打开它的 Microsoft Store 页面吗？"
 
-#: crates/cineo-desktop/src/app/mod.rs:535
+#: crates/cineo-desktop/src/app/mod.rs:575
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
@@ -41,7 +41,7 @@ msgstr ""
 "请从显卡制造商或 Windows 更新安装显卡驱动程序，然后重新打开 Cineo。远程桌面和"
 "虚拟机需要开启 3D 加速。"
 
-#: crates/cineo-desktop/src/app/mod.rs:539
+#: crates/cineo-desktop/src/app/mod.rs:579
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
@@ -49,7 +49,7 @@ msgstr ""
 "请安装显卡驱动程序或 Mesa，然后重新打开 Cineo。远程会话和虚拟机需要开启 3D 加"
 "速。"
 
-#: crates/cineo-desktop/src/app/mod.rs:542
+#: crates/cineo-desktop/src/app/mod.rs:582
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -66,15 +66,15 @@ msgstr ""
 "\n"
 "详细信息：{details}"
 
-#: crates/cineo-desktop/src/app/mod.rs:545
+#: crates/cineo-desktop/src/app/mod.rs:585
 msgid "Cineo cannot open its window"
 msgstr "Cineo 无法打开窗口"
 
-#: crates/cineo-desktop/src/app/mod.rs:547
+#: crates/cineo-desktop/src/app/mod.rs:587
 msgid "Open Microsoft Store"
 msgstr "打开 Microsoft Store"
 
-#: crates/cineo-desktop/src/app/mod.rs:548
+#: crates/cineo-desktop/src/app/mod.rs:588
 msgid "Close"
 msgstr "关闭"
 
@@ -618,7 +618,7 @@ msgid "Reset…"
 msgstr "重置…"
 
 #: crates/cineo-desktop/src/settings/mod.rs:418
-#: crates/cineo-desktop/src/view/sidebar.rs:52
+#: crates/cineo-desktop/src/view/sidebar.rs:53
 #, rust-format
 msgid "Cineo v{version}"
 msgstr "Cineo v{version}"
@@ -1437,16 +1437,63 @@ msgstr "电视"
 msgid "{name} {kind}"
 msgstr "{name} {kind}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:65
+#: crates/cineo-desktop/src/view/sidebar.rs:66
 msgid "Loading addons…"
 msgstr "正在加载插件…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:74
+#: crates/cineo-desktop/src/view/sidebar.rs:83
+msgid "The download failed. Check the connection and try again."
+msgstr "下载失败。请检查网络连接后重试。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:85
+msgid "The release's signature did not verify, so nothing was installed."
+msgstr "版本签名校验失败，未安装任何内容。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:88
+msgid "A downloaded file did not match its checksum, so nothing was installed."
+msgstr "下载的文件与校验和不符，未安装任何内容。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:90
+msgid "Cineo could not replace its executable."
+msgstr "Cineo 无法替换其可执行文件。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:104
+#, rust-format
+msgid "Update to v{version}"
+msgstr "更新到 v{version}"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:105
+msgid "Download and check it; it runs after a restart."
+msgstr "下载并校验，重启后生效。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:109
+#, rust-format
+msgid "Downloading v{version}…"
+msgstr "正在下载 v{version}…"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:110
+msgid "Cineo keeps working while it downloads."
+msgstr "下载期间 Cineo 可照常使用。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:114
+msgid "Restart to update"
+msgstr "重启以完成更新"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:115
+#, rust-format
+msgid "Cineo closes and starts v{version}."
+msgstr "Cineo 将关闭并启动 v{version}。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:119
+msgid "Update failed, try again"
+msgstr "更新失败，重试"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:126
 #, rust-format
 msgid "v{version} available"
 msgstr "v{version} 可用"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:93
+#: crates/cineo-desktop/src/view/sidebar.rs:127
 msgid "Open the release page to download it."
 msgstr "打开发布页面进行下载。"
 

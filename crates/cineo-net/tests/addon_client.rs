@@ -367,6 +367,29 @@ async fn the_latest_release_version_comes_from_its_tag() {
 }
 
 #[tokio::test]
+async fn release_files_download_up_to_the_policy_limit() {
+    let server = MockServer::start().await;
+    serve(&server, "/small.exe", vec![7; 1000]).await;
+    serve(&server, "/large.exe", vec![7; 3000]).await;
+    let client = AddonClient::new(NetPolicy {
+        max_body_bytes: 2000,
+        ..local_policy()
+    })
+    .unwrap();
+
+    let small = url::Url::parse(&format!("{}/small.exe", server.uri())).unwrap();
+    assert_eq!(
+        client.fetch_release_file(&small).await.unwrap(),
+        vec![7; 1000]
+    );
+    let large = url::Url::parse(&format!("{}/large.exe", server.uri())).unwrap();
+    assert!(matches!(
+        client.fetch_release_file(&large).await,
+        Err(FetchError::TooLarge { limit: 2000 })
+    ));
+}
+
+#[tokio::test]
 async fn fetch_effects_come_back_as_their_loaded_actions() {
     let server = MockServer::start().await;
     serve(
@@ -412,4 +435,5 @@ fn effects_that_are_not_requests_get_no_task() {
     let client = AddonClient::new(local_policy()).unwrap();
     assert!(fetch_task(&client, Effect::StopTorrent).is_none());
     assert!(fetch_task(&client, Effect::SaveAddons(Vec::new())).is_none());
+    assert!(fetch_task(&client, Effect::RestartToUpdate).is_none());
 }

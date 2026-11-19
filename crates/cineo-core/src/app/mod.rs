@@ -16,7 +16,10 @@ pub use library::{LibraryItem, SavedStream, continue_watching};
 pub use link::{DiscoverLink, LinkError, Route, parse_link};
 pub use message::{Notice, PlaybackFailure, Problem};
 pub use plan::{CatalogTarget, board_targets};
-pub use release::{LATEST_RELEASE_URL, ReleaseError, parse_release, release_page};
+pub use release::{
+    LATEST_RELEASE_URL, ReleaseError, UpdateFailure, UpdateProgress, UpdateRequest, parse_release,
+    release_page,
+};
 pub use settings::{
     AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, OnLeave, PeerLimit,
     Percent, Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,

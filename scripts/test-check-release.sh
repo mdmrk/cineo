@@ -93,9 +93,15 @@ grep -q "Full changelog" <<<"$(GITHUB_REPOSITORY=owner/cineo "$work/scripts/rele
   failures=$((failures + 1))
 }
 
+mkdir -p "$work/crates/cineo-desktop/src"
+updater() { printf 'pub const PUBLIC_KEY: &str = "%s";\n' "$1" >"$work/crates/cineo-desktop/src/self_update.rs"; }
 printf 'untrusted comment: minisign public key\nRWSkey1\n' >"$work/minisign.pub"
 printf 'repo=mdmrk/cineo\nminisign_key=RWSkey1\n' >"$work/scripts/install.sh"
-expect pass "install.sh holding minisign.pub's key" key
+updater RWSkey1
+expect pass "install.sh and the updater holding minisign.pub's key" key
+updater RWSkey2
+expect fail "the updater holding another key" key
+updater RWSkey1
 printf 'repo=mdmrk/cineo\nminisign_key=RWSkey2\n' >"$work/scripts/install.sh"
 expect fail "install.sh holding another key" key
 rm "$work/minisign.pub"

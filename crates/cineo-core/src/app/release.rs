@@ -1,7 +1,46 @@
 use semver::Version;
 use serde_json::Value;
+use url::Url;
 
 pub const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/mdmrk/cineo/releases/latest";
+const RELEASE_DOWNLOADS: &str = "https://github.com/mdmrk/cineo/releases/download";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateRequest {
+    pub version: Version,
+    pub sums: Url,
+    pub signature: Url,
+    pub executable: Url,
+    pub licenses: Url,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpdateFailure {
+    Download,
+    Signature,
+    Checksum,
+    Install,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum UpdateProgress {
+    #[default]
+    Idle,
+    Downloading,
+    Ready,
+    Failed(UpdateFailure),
+}
+
+pub(crate) fn update_request(version: &Version) -> Option<UpdateRequest> {
+    let asset = |name: &str| Url::parse(&format!("{RELEASE_DOWNLOADS}/v{version}/{name}")).ok();
+    Some(UpdateRequest {
+        version: version.clone(),
+        sums: asset("SHA256SUMS")?,
+        signature: asset("SHA256SUMS.minisig")?,
+        executable: asset("cineo-x86_64-windows.exe")?,
+        licenses: asset("cineo-licenses.zip")?,
+    })
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]

@@ -40,7 +40,9 @@ pub fn fetch_task(
         | Effect::SaveSettings(_)
         | Effect::Play(_)
         | Effect::StartTorrent(_)
-        | Effect::StopTorrent => return None,
+        | Effect::StopTorrent
+        | Effect::InstallUpdate(_)
+        | Effect::RestartToUpdate => return None,
     };
     let client = client.clone();
     Some(async move { run(&client, fetch).await })

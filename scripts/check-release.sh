@@ -65,6 +65,9 @@ check_key() {
   embedded=$(sed -n 's/^minisign_key=//p' scripts/install.sh)
   [[ -n $key && $key == "$embedded" ]] ||
     die "scripts/install.sh checks signatures with '$embedded', but minisign.pub holds '$key'"
+  embedded=$(sed -n 's/^pub const PUBLIC_KEY: &str = "\(.*\)";$/\1/p' crates/cineo-desktop/src/self_update.rs)
+  [[ $key == "$embedded" ]] ||
+    die "the Windows updater checks signatures with '$embedded', but minisign.pub holds '$key'"
 }
 
 case "${1:-}" in

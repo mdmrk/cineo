@@ -32,6 +32,14 @@ pub fn forward(data_dir: &Path, link: Option<&str>) -> bool {
     slot(data_dir).send(link.map_or(RAISE, str::trim)).is_ok()
 }
 
+pub fn wait_until_closed(data_dir: &Path, limit: std::time::Duration) {
+    let slot = slot(data_dir);
+    let started = std::time::Instant::now();
+    while started.elapsed() < limit && slot.send(PING).is_ok() {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+}
+
 pub(crate) fn listen(data_dir: &Path, on_request: impl Fn(Request) + Send + 'static) -> bool {
     let claim = slot(data_dir).claim(PING, move |request| {
         if let Some(request) = parse(request) {
@@ -76,6 +84,12 @@ mod tests {
             !super::forward(&dir, None),
             "a plain launch starts when nothing runs"
         );
+        let started = std::time::Instant::now();
+        super::wait_until_closed(&dir, Duration::from_secs(5));
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "nothing to wait for when nothing runs"
+        );
         let (tx, rx) = channel();
         assert!(super::listen(&dir, move |request| {
             let _ = tx.send(request);
@@ -104,6 +118,16 @@ mod tests {
             rx.recv_timeout(Duration::from_secs(5)).unwrap(),
             Request::Raise,
             "a plain launch raises the running copy"
+        );
+        let started = std::time::Instant::now();
+        super::wait_until_closed(&dir, Duration::from_millis(400));
+        assert!(
+            started.elapsed() >= Duration::from_millis(400),
+            "an updated copy waits while the old one still answers"
+        );
+        assert!(
+            rx.try_recv().is_err(),
+            "waiting raises nothing in the running copy"
         );
         let _ = std::fs::remove_dir_all(&dir);
     }

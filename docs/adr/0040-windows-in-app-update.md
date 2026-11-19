@@ -75,9 +75,12 @@ Option 1, on Windows only.
   `licenses\` is replaced from the zip after the swap. On every start,
   Cineo deletes a leftover `cineo-desktop.exe.old`.
 - **Restart.** The sidebar then offers "Restart to update". Cineo starts
-  the new executable with `--wait-for-exit <pid>` and quits; the new one
-  waits for that process (at most 10 s) before the single-instance check
-  (ADR-0032), so it does not hand itself over to the closing one.
+  the new executable with its own arguments plus `--after-update` and
+  quits; the new one waits while the old one still answers the
+  single-instance ping (at most 10 s, ADR-0032), so it does not hand itself
+  over to the closing one. (Amended 2026-11-19, before any code: waiting
+  for a process id would need `unsafe` Windows calls, which the desktop
+  shell forbids; the ping already exists and has no side effects.)
 - **Dependency.** `minisign-verify` 0.3.0; SHA-256 from aws-lc-rs, already
   in the Windows build.
 

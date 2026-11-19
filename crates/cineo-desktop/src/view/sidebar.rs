@@ -1,9 +1,9 @@
 use super::icons::{Icon, append_icon, paint_icon, paint_nav_label};
 use super::widgets::{compact, faint, lerp_color, spinner};
 use super::{Page, ViewState, go};
-use crate::i18n::t;
+use crate::i18n::{Text, t};
 use crate::{brand, theme};
-use cineo_core::app::{Action, State};
+use cineo_core::app::{Action, State, UpdateFailure, UpdateProgress};
 use eframe::egui::{
     self, Align, Color32, CornerRadius, Frame, Layout, Margin, Mesh, Rect, Response, Sense, Stroke,
     TextFormat, Ui, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
@@ -45,9 +45,10 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                     item(ui, page);
                 }
             }
+            let mut clicked = None;
             ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
                 if let Some(latest) = state.available_update() {
-                    update_link(ui, latest, compact);
+                    clicked = update_link(ui, state, latest, compact);
                 }
                 let version = faint(&t!("Cineo v{version}", version = env!("CARGO_PKG_VERSION")));
                 ui.horizontal(|ui| {
@@ -67,11 +68,67 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                     });
                 }
             });
+            out.extend(clicked);
         });
 }
 
-fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
-    let text = t!("v{version} available", version = latest.to_string());
+enum UpdateClick {
+    OpenPage,
+    Install,
+    Restart,
+    Nothing,
+}
+
+fn update_failure(failure: UpdateFailure) -> Text {
+    match failure {
+        UpdateFailure::Download => t!("The download failed. Check the connection and try again."),
+        UpdateFailure::Signature => {
+            t!("The release's signature did not verify, so nothing was installed.")
+        }
+        UpdateFailure::Checksum => {
+            t!("A downloaded file did not match its checksum, so nothing was installed.")
+        }
+        UpdateFailure::Install => t!("Cineo could not replace its executable."),
+    }
+}
+
+fn update_link(
+    ui: &mut Ui,
+    state: &State,
+    latest: &semver::Version,
+    compact: bool,
+) -> Option<Action> {
+    let version = latest.to_string();
+    let (text, hover, click) = if state.self_update {
+        match state.update_progress {
+            UpdateProgress::Idle => (
+                t!("Update to v{version}", version = version),
+                t!("Download and check it; it runs after a restart."),
+                UpdateClick::Install,
+            ),
+            UpdateProgress::Downloading => (
+                t!("Downloading v{version}…", version = version),
+                t!("Cineo keeps working while it downloads."),
+                UpdateClick::Nothing,
+            ),
+            UpdateProgress::Ready => (
+                t!("Restart to update"),
+                t!("Cineo closes and starts v{version}.", version = version),
+                UpdateClick::Restart,
+            ),
+            UpdateProgress::Failed(failure) => (
+                t!("Update failed, try again"),
+                update_failure(failure),
+                UpdateClick::Install,
+            ),
+        }
+    } else {
+        (
+            t!("v{version} available", version = version),
+            t!("Open the release page to download it."),
+            UpdateClick::OpenPage,
+        )
+    };
     let mut job = LayoutJob::default();
     append_icon(
         &mut job,
@@ -88,17 +145,25 @@ fn update_link(ui: &mut Ui, latest: &semver::Version, compact: bool) {
     }
     ui.horizontal(|ui| {
         ui.add_space(9.0);
-        let link = ui
-            .add(egui::Link::new(job))
-            .on_hover_text(t!("Open the release page to download it."));
+        let link = ui.add(egui::Link::new(job)).on_hover_text(hover);
         link.widget_info(|| WidgetInfo::labeled(WidgetType::Link, true, &text));
-        if link.clicked() {
-            ui.ctx()
-                .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
-                    latest,
-                )));
+        if !link.clicked() {
+            return None;
         }
-    });
+        match click {
+            UpdateClick::OpenPage => {
+                ui.ctx()
+                    .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
+                        latest,
+                    )));
+                None
+            }
+            UpdateClick::Install => Some(Action::InstallUpdate),
+            UpdateClick::Restart => Some(Action::RestartToUpdate),
+            UpdateClick::Nothing => None,
+        }
+    })
+    .inner
 }
 
 fn logo(ui: &mut Ui, sidebar_width: f32) {

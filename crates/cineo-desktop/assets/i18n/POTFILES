@@ -18,6 +18,7 @@ crates/cineo-desktop/src/player/mod.rs
 crates/cineo-desktop/src/player/stats.rs
 crates/cineo-desktop/src/player/tracks.rs
 crates/cineo-desktop/src/register.rs
+crates/cineo-desktop/src/self_update.rs
 crates/cineo-desktop/src/settings/mod.rs
 crates/cineo-desktop/src/settings/subtitles.rs
 crates/cineo-desktop/src/settings/widgets.rs

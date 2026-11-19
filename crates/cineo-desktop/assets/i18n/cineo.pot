@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-18 18:20+0100\n"
+"POT-Creation-Date: 2026-11-19 11:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:531
+#: crates/cineo-desktop/src/app/mod.rs:571
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -29,20 +29,20 @@ msgid ""
 "Open its Microsoft Store page?"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:535
+#: crates/cineo-desktop/src/app/mod.rs:575
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
 "acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:539
+#: crates/cineo-desktop/src/app/mod.rs:579
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:542
+#: crates/cineo-desktop/src/app/mod.rs:582
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -53,15 +53,15 @@ msgid ""
 "Details: {details}"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:545
+#: crates/cineo-desktop/src/app/mod.rs:585
 msgid "Cineo cannot open its window"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:547
+#: crates/cineo-desktop/src/app/mod.rs:587
 msgid "Open Microsoft Store"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:548
+#: crates/cineo-desktop/src/app/mod.rs:588
 msgid "Close"
 msgstr ""
 
@@ -601,7 +601,7 @@ msgid "Reset…"
 msgstr ""
 
 #: crates/cineo-desktop/src/settings/mod.rs:418
-#: crates/cineo-desktop/src/view/sidebar.rs:52
+#: crates/cineo-desktop/src/view/sidebar.rs:53
 #, rust-format
 msgid "Cineo v{version}"
 msgstr ""
@@ -1407,16 +1407,63 @@ msgstr ""
 msgid "{name} {kind}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:65
+#: crates/cineo-desktop/src/view/sidebar.rs:66
 msgid "Loading addons…"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:74
+#: crates/cineo-desktop/src/view/sidebar.rs:83
+msgid "The download failed. Check the connection and try again."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:85
+msgid "The release's signature did not verify, so nothing was installed."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:88
+msgid "A downloaded file did not match its checksum, so nothing was installed."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:90
+msgid "Cineo could not replace its executable."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:104
+#, rust-format
+msgid "Update to v{version}"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:105
+msgid "Download and check it; it runs after a restart."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:109
+#, rust-format
+msgid "Downloading v{version}…"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:110
+msgid "Cineo keeps working while it downloads."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:114
+msgid "Restart to update"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:115
+#, rust-format
+msgid "Cineo closes and starts v{version}."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:119
+msgid "Update failed, try again"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:126
 #, rust-format
 msgid "v{version} available"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:93
+#: crates/cineo-desktop/src/view/sidebar.rs:127
 msgid "Open the release page to download it."
 msgstr ""
 

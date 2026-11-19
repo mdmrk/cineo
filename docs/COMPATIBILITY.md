@@ -495,7 +495,32 @@ The full evidence for the rows above whose notes do not fit in the table.
   `the_latest_release_version_comes_from_its_tag`,
   `a_newer_release_shows_in_the_sidebar_and_opens_its_page`,
   `update_checks_can_be_turned_off_in_about`).
-- No in-app install: the user runs the installer again.
+- Windows (ADR-0040): a copy installed by `install.ps1`, or a portable
+  `cineo-desktop.exe` in a writable folder, shows "Update to vX.Y.Z"
+  instead, and a click downloads the release's executable, checksums and
+  signature. The checksums must be signed by the release key for exactly
+  that version and every file must match them; then the running
+  executable is renamed aside, the new one takes its place and
+  `licenses\` is replaced. "Restart to update" starts the new copy,
+  which waits until the old one has closed
+  (`installing_an_update_downloads_the_offered_release`,
+  `a_copy_that_cannot_update_itself_downloads_nothing`,
+  `a_finished_update_waits_for_a_restart`,
+  `a_failed_update_says_why_and_can_be_tried_again`,
+  `checksums_signed_for_the_offered_version_verify`,
+  `checksums_signed_for_another_version_or_key_or_changed_are_refused`,
+  `a_file_must_match_its_line_in_the_checksums`,
+  `the_new_executable_takes_the_old_ones_place`,
+  `a_failed_swap_leaves_nothing_behind`,
+  `only_a_writable_cineo_desktop_exe_updates_itself`,
+  `a_running_executable_can_be_swapped`,
+  `the_license_texts_come_from_the_zip`,
+  `release_files_download_up_to_the_policy_limit`,
+  `a_copy_that_updates_itself_offers_to_install_the_update`,
+  `an_update_shows_its_download_and_then_asks_for_a_restart`,
+  `a_failed_update_can_be_tried_again`). An update from one published
+  release to the next is UNKNOWN (not done yet).
+- Elsewhere no in-app install: the user runs the installer again.
 
 ### Windows
 

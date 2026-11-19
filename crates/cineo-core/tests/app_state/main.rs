@@ -21,6 +21,7 @@ mod library;
 mod playback;
 mod settings;
 mod torrent;
+mod updates;
 
 fn player_failed(reason: &str, pick_another: bool) -> Notice {
     Notice::PlaybackFailed {

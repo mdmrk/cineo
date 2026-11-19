@@ -20,6 +20,8 @@ struct Cli {
     data_dir: Option<PathBuf>,
     #[arg(long, value_name = "DIR")]
     cache_dir: Option<PathBuf>,
+    #[arg(long = "after-update", hide = true)]
+    after_update: bool,
     #[arg(value_name = "LINK")]
     link: Option<String>,
 }
@@ -41,6 +43,13 @@ fn main() -> ExitCode {
         .or_else(|| installed.as_ref().map(|dirs| dirs.state.clone()));
     if let Some(dir) = &data_dir {
         cineo_desktop::panic_log::record_panics(dir);
+        if cli.after_update {
+            cineo_desktop::instance::wait_until_closed(dir, std::time::Duration::from_secs(10));
+        }
+        #[cfg(windows)]
+        if let Ok(exe) = std::env::current_exe() {
+            cineo_desktop::self_update::remove_leftover(&exe);
+        }
         if cineo_desktop::instance::forward(dir, cli.link.as_deref()) {
             return ExitCode::SUCCESS;
         }

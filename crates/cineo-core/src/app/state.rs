@@ -10,7 +10,7 @@ use super::refresh::{
     addons_changed, catalog_loaded, default_genre, discover_page, load_board, loading_rows,
     manifest_loaded, meta_loaded, open_detail, refresh_addon_lists, retry_failed, select_video,
 };
-use super::release;
+use super::release::{self, UpdateFailure, UpdateProgress, UpdateRequest};
 use super::settings::{Setting, Settings};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
@@ -151,6 +151,8 @@ pub struct State {
     pub playing: Option<Playing>,
     pub update: Option<Version>,
     pub update_checked: bool,
+    pub self_update: bool,
+    pub update_progress: UpdateProgress,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -238,6 +240,9 @@ pub enum Action {
     ChangeSetting(Setting),
     ResetSettings,
     LatestReleaseLoaded(Result<Version, String>),
+    InstallUpdate,
+    UpdateFinished(Result<(), UpdateFailure>),
+    RestartToUpdate,
     ManifestLoaded {
         transport: TransportUrl,
         result: Result<Box<Manifest>, String>,
@@ -325,6 +330,8 @@ pub enum Effect {
     StartTorrent(TorrentRequest),
     StopTorrent,
     CheckForUpdate(Url),
+    InstallUpdate(Box<UpdateRequest>),
+    RestartToUpdate,
 }
 
 pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
@@ -497,6 +504,23 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::LatestReleaseLoaded(result) => {
             state.update = result.ok().filter(release::is_newer);
             Vec::new()
+        }
+        Action::InstallUpdate => install_update(state).into_iter().collect(),
+        Action::UpdateFinished(result) => {
+            if state.update_progress == UpdateProgress::Downloading {
+                state.update_progress = match result {
+                    Ok(()) => UpdateProgress::Ready,
+                    Err(failure) => UpdateProgress::Failed(failure),
+                };
+            }
+            Vec::new()
+        }
+        Action::RestartToUpdate => {
+            if state.update_progress == UpdateProgress::Ready {
+                vec![Effect::RestartToUpdate]
+            } else {
+                Vec::new()
+            }
         }
         Action::SetFavorite { id, favorite } => set_favorite(state, id, favorite),
         Action::RemoveFromLibrary(id) => remove_from_library(state, id),
@@ -748,6 +772,20 @@ fn settings_changed(state: &mut State) -> Vec<Effect> {
         effects.extend(stop_torrent(state));
     }
     effects
+}
+
+fn install_update(state: &mut State) -> Option<Effect> {
+    if !state.self_update
+        || matches!(
+            state.update_progress,
+            UpdateProgress::Downloading | UpdateProgress::Ready
+        )
+    {
+        return None;
+    }
+    let request = release::update_request(state.available_update()?)?;
+    state.update_progress = UpdateProgress::Downloading;
+    Some(Effect::InstallUpdate(Box::new(request)))
 }
 
 fn check_for_update(state: &mut State) -> Option<Effect> {

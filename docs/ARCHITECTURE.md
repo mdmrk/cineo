@@ -174,6 +174,7 @@ sits behind `cfg` in the crate that does the IO:
 | libmpv (`cineo-player`) | system `libmpv.so.2` | `libmpv-2.dll` embedded in the release and written to the cache (`bundled-libmpv`) | dylibs in `Cineo.app/Contents/Frameworks`, else the system, `/opt/homebrew/lib` or `/usr/local/lib` |
 | Single-instance handover (desktop `instance`, ADR-0032) | Unix socket via `fastframe-instance` | loopback port and token via `fastframe-instance` | Unix socket via `fastframe-instance` |
 | Scheme registration (desktop `register`) | `xdg-mime` | `HKCU` via `reg.exe` | none (ADR-0035) |
+| Self update (desktop `self_update`, ADR-0040) | none (update notice) | download, verify with minisign, swap the executable | none (update notice) |
 | Media keys (desktop `media_keys`, ADR-0031) | MPRIS via `fastframe-now-playing` | SMTC via `fastframe-now-playing` | Now Playing via `fastframe-now-playing` |
 | Keep awake (desktop `keep_awake`) | `org.freedesktop.ScreenSaver`, and idle sleep via `fastframe-power` | `SetThreadExecutionState` via `keepawake`, and idle sleep via `fastframe-power` | IOKit assertions via `keepawake`, and App Nap via `fastframe-power` |
 

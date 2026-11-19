@@ -130,6 +130,7 @@ impl Shell {
                     });
             }
             Effect::StopTorrent => self.torrents.stop(),
+            Effect::InstallUpdate(_) | Effect::RestartToUpdate => {}
         }
     }
 
