@@ -606,7 +606,7 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | cargo-machete | 0.9.2   | Unused dependencies                 |
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
-| minisign      | Ubuntu's package | Release checksum signatures |
+| minisign      | 0.12    | Release checksum signatures; CI takes the author's static Linux build, checked by SHA-256 (`scripts/release.sh tool`), not Ubuntu's archive |
 
 ### CI actions
 

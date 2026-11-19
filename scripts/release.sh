@@ -2,7 +2,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/common.sh
-usage="usage: release.sh version TAG | assets DIR | notes | key | body TAG [PREVIOUS_TAG] | sign DIR TAG"
+usage="usage: release.sh version TAG | assets DIR | notes | key | body TAG [PREVIOUS_TAG] | sign DIR TAG | tool DIR"
+minisign_url=${CINEO_MINISIGN_URL:-https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-linux.tar.gz}
+minisign_sha256=9a599b48ba6eb7b1e80f12f36b94ceca7c00b7a5173c95c3efc88d9822957e73
 check_version() {
   local tag=${1:?$usage} version
   version=$(workspace_version)
@@ -84,6 +86,17 @@ sign() {
   minisign -S -s "$key" -m "$sums" -x "$sums.minisig" -t "cineo $tag SHA256SUMS" >/dev/null
   minisign -V -q -p minisign.pub -m "$sums" -x "$sums.minisig"
 }
+tool() {
+  local dir=${1:?$usage}
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT
+  curl -fsSL --retry 5 --retry-all-errors -o "$work/minisign.tar.gz" "$minisign_url"
+  echo "$minisign_sha256  $work/minisign.tar.gz" | sha256sum -c --status - ||
+    die "$minisign_url is not the pinned minisign 0.12 (SHA-256 $minisign_sha256)"
+  tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign 2>/dev/null
+  mkdir -p "$dir"
+  install -m 755 "$work/minisign-linux/x86_64/minisign" "$dir/minisign"
+}
 command=${1:-}
 shift || true
 case "$command" in
@@ -93,5 +106,6 @@ case "$command" in
   key) check_key ;;
   body) body "$@" ;;
   sign) sign "$@" ;;
+  tool) tool "$@" ;;
   *) die "$usage" ;;
 esac

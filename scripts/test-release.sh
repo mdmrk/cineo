@@ -36,6 +36,11 @@ expect pass "a prerelease tag naming the workspace version" version v2.3.4-rc.1
 expect fail "a plain tag of a prerelease version" version v2.3.4
 expect fail "no tag" version
 expect fail "an unknown command" nothing
+mkdir -p "$work/fake/minisign-linux/x86_64"
+printf '#!/bin/sh\n' >"$work/fake/minisign-linux/x86_64/minisign"
+tar -czf "$work/fake.tar.gz" -C "$work/fake" minisign-linux
+CINEO_MINISIGN_URL=file://$work/fake.tar.gz expect fail "a minisign archive other than the pinned one" tool "$work/tool"
+[[ ! -e $work/tool/minisign ]] || fail "a minisign from another archive was installed"
 complete() {
   rm -rf "$repo/dist"
   mkdir "$repo/dist"
