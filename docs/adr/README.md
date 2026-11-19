@@ -55,6 +55,7 @@ old one *Superseded by NNNN*.
 | [0037](0037-vendored-tls-verifier.md) | The TLS verifier's Kotlin source in the tree | Accepted (libmpv cache on tags: withdrawn) |
 | [0038](0038-bindgen-tool-crate.md) | The UniFFI binding generator in its own crate | Accepted |
 | [0039](0039-linux-appimage.md) | A Linux AppImage with its own LGPL libmpv | Withdrawn |
+| [0040](0040-windows-in-app-update.md) | In-app update on Windows | Accepted |
 
 ## What we took from the reference projects
 
