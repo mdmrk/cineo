@@ -22,11 +22,8 @@ check_glibc() {
 }
 
 common_licenses() {
-  local iconflow
-  iconflow=$(cargo metadata --format-version 1 --locked |
-    jq -r '.packages[] | select(.name == "iconflow") | .manifest_path')
   cp LICENSE "$1/cineo-MIT.txt"
-  cp crates/cineo-desktop/assets/fonts/*-OFL.txt "$(dirname "$iconflow")/THIRD_PARTY_LICENSES_FONTS.md" "$1/"
+  cp crates/cineo-desktop/assets/fonts/*-OFL.txt "$(crate_dir iconflow)/THIRD_PARTY_LICENSES_FONTS.md" "$1/"
 }
 
 case "${1:-linux}" in
@@ -78,11 +75,12 @@ EOT
     for required in assets/licenses/libmpv.md assets/licenses/mpv-LGPL-2.1.txt lib/arm64-v8a/libcineo_android.so; do
       grep -qxF "$required" <<<"$entries" || die "$apk has no $required"
     done
-    for lib in libmpv.so libavcodec.so libavfilter.so libavformat.so libavutil.so libswresample.so libswscale.so; do
-      shipped=$(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1)
-      grep -qF -- "- $lib: SHA-256 $shipped" "$libmpv/out/libmpv.md" ||
+    named=$(sed -n 's/^- \(lib[^:]*\.so\): SHA-256 \([0-9a-f]\{64\}\)$/\1 \2/p' "$libmpv/out/libmpv.md")
+    grep -q '^libmpv\.so ' <<<"$named" || die "$libmpv/out/libmpv.md names no libmpv.so"
+    while read -r lib sha; do
+      [[ $(unzip -p "$apk" "lib/arm64-v8a/$lib" | sha256sum | cut -d' ' -f1) == "$sha" ]] ||
         die "$apk: lib/arm64-v8a/$lib is missing or not the one libmpv.md names"
-    done
+    done <<<"$named"
     libs=$(mktemp -d)
     unzip -q "$apk" 'lib/arm64-v8a/*.so' -d "$libs"
     for so in "$libs"/lib/arm64-v8a/*.so; do

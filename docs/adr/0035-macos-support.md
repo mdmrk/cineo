@@ -49,7 +49,7 @@ Research (2026-11-12):
 ## Decision
 Option 1.
 
-- **libmpv.** `scripts/fetch-libmpv-macos.sh` downloads the pinned archive
+- **libmpv.** `scripts/fetch-libmpv.sh macos` downloads the pinned archive
   (`scripts/libmpv-macos.env`), checks its SHA-256 and the license texts
   listed in `scripts/macos/licenses.txt`. `scripts/package.sh macos` copies
   the dylibs to `Cineo.app/Contents/Frameworks`, adds an `@loader_path` run

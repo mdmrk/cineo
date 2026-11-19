@@ -19,7 +19,7 @@ Facts (2026-11-19):
 - Every release and the prerelease carry `cineo-x86_64-windows.exe`,
   `cineo-licenses.zip`, `SHA256SUMS` and `SHA256SUMS.minisig`, signed in
   CI with the key in `minisign.pub`; the trusted comment is
-  `cineo <tag> SHA256SUMS` (`scripts/sign-release.sh`; VERIFIED on the
+  `cineo <tag> SHA256SUMS` (`scripts/release.sh sign`; VERIFIED on the
   published prerelease).
 - `cineo-net` caps a response at 8 MiB and 20 s by default (`NetPolicy`);
   the executable is about 69 MB (VERIFIED: prerelease).
@@ -91,7 +91,7 @@ Option 1, on Windows only.
   a release that carries both the old and new key, which this ADR does not
   build. The key stays in the `release-signing` environment only.
 - Releases must keep the asset names and the trusted comment format;
-  `scripts/check-release.sh` and `scripts/test-sign-release.sh` already
+  `scripts/release.sh` and `scripts/test-release.sh` already
   check them.
 - Tests: core state transitions; signature and hash checks with a test key
   (good, bad signature, other version's comment, wrong hash); the swap and

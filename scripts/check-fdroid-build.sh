@@ -5,12 +5,13 @@ usage="usage: scripts/check-fdroid-build.sh <commit or tag> <release>, as root i
 ref=${1:?$usage}
 release=${2:?$usage}
 repo=$(cd "$(dirname "$0")/.." && pwd)
+source "$repo/scripts/common.sh"
 app=io.github.mdmrk.cineo
 work=/home/vagrant/fdroiddata
 git=(git -c safe.directory="$repo" -C "$repo")
 commit=$("${git[@]}" rev-parse "$ref^{commit}")
 cargo=$("${git[@]}" show "$commit:Cargo.toml")
-version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' <<<"$cargo")
+version=$(workspace_version <(echo "$cargo"))
 code=$(sed -n '/^\[workspace.metadata.android\]/,/^\[/s/^version-code = \([0-9]*\)/\1/p' <<<"$cargo")
 
 apt-get update -qq

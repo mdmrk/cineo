@@ -90,9 +90,7 @@ tool() {
   local dir=${1:?$usage}
   work=$(mktemp -d)
   trap 'rm -rf "$work"' EXIT
-  curl -fsSL --retry 5 --retry-all-errors -o "$work/minisign.tar.gz" "$minisign_url"
-  echo "$minisign_sha256  $work/minisign.tar.gz" | sha256sum -c --status - ||
-    die "$minisign_url is not the pinned minisign 0.12 (SHA-256 $minisign_sha256)"
+  fetch "$work/minisign.tar.gz" "$minisign_sha256" "$minisign_url"
   tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign 2>/dev/null
   mkdir -p "$dir"
   install -m 755 "$work/minisign-linux/x86_64/minisign" "$dir/minisign"
