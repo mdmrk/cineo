@@ -41,9 +41,9 @@ jobs:
       - uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519
         with:
           tool: cargo-nextest@0.9.150,cargo-deny@0.20.2,taplo@0.10.0,typos@1.51.1,cargo-machete@0.9.2,shellcheck@0.11.0,shfmt@3.14.1
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends minisign > /dev/null
+      - run: sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends minisign > /dev/null
       - run: scripts/check.sh
-      - run: sudo apt-get install -y -qq --no-install-recommends libmpv2 > /dev/null
+      - run: sudo apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends libmpv2 > /dev/null
       - run: cargo nextest run -p cineo-player --locked --run-ignored only
 
   windows:
@@ -203,7 +203,7 @@ jobs:
             target/libmpv-android/pins
           key: &libmpv-android-key libmpv-android-${{ hashFiles('scripts/build-libmpv-android.sh', 'scripts/libmpv-android.env') }}
       - if: steps.libmpv.outputs.cache-hit != 'true'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build > /dev/null
+        run: sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq ninja-build > /dev/null
       - run: base64 -d <<<"$ANDROID_KEYSTORE_BASE64" > "$RUNNER_TEMP/cineo-release.jks"
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -244,7 +244,7 @@ jobs:
           merge-multiple: true
       - run: scripts/release.sh assets dist
       - run: cd dist && sha256sum -- * > SHA256SUMS
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends minisign > /dev/null
+      - run: sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends minisign > /dev/null
       - run: scripts/release.sh sign dist "$RELEASE"
         env:
           CINEO_MINISIGN_KEY: ${{ secrets.CINEO_MINISIGN_KEY }}
