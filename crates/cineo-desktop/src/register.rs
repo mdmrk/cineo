@@ -11,6 +11,7 @@ const SCHEMES: [&str; 2] = ["stremio", "cineo"];
 #[cfg(target_os = "linux")]
 pub(crate) fn register() -> anyhow::Result<()> {
     let exe = std::env::current_exe().context("cannot find the Cineo executable")?;
+    let exe = link_target(&exe, std::env::var_os("APPIMAGE").as_deref());
     let data = std::env::var_os("XDG_DATA_HOME")
         .filter(|d| !d.is_empty())
         .map(std::path::PathBuf::from)
@@ -32,6 +33,14 @@ pub(crate) fn register() -> anyhow::Result<()> {
         .arg("default")
         .arg(file)
         .args(SCHEMES.map(|s| format!("x-scheme-handler/{s}"))))
+}
+
+#[cfg(target_os = "linux")]
+fn link_target(exe: &std::path::Path, appimage: Option<&std::ffi::OsStr>) -> std::path::PathBuf {
+    appimage
+        .map(std::path::Path::new)
+        .filter(|image| image.is_absolute() && image.is_file())
+        .map_or_else(|| exe.to_path_buf(), std::path::Path::to_path_buf)
 }
 
 #[cfg(target_os = "linux")]
@@ -101,4 +110,36 @@ fn run(command: &mut Command) -> anyhow::Result<()> {
         bail!("{program} failed ({}): {}", output.status, stderr.trim());
     }
     Ok(())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn links_open_the_appimage_file_not_its_mount() {
+        let dir = std::env::temp_dir().join(format!("cineo-register-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let image = dir.join("cineo-x86_64-linux.AppImage");
+        std::fs::write(&image, b"").unwrap();
+        let mounted = Path::new("/tmp/.mount_cineoX/usr/lib/cineo/cineo-desktop");
+        assert_eq!(link_target(mounted, Some(image.as_os_str())), image);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn links_open_the_executable_outside_an_appimage() {
+        let exe = Path::new("/home/me/.local/bin/cineo-desktop");
+        assert_eq!(link_target(exe, None), PathBuf::from(exe));
+        assert_eq!(link_target(exe, Some("".as_ref())), PathBuf::from(exe));
+        assert_eq!(
+            link_target(exe, Some("relative.AppImage".as_ref())),
+            PathBuf::from(exe)
+        );
+        assert_eq!(
+            link_target(exe, Some("/nowhere/cineo.AppImage".as_ref())),
+            PathBuf::from(exe)
+        );
+    }
 }
