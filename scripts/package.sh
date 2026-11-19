@@ -28,84 +28,6 @@ check_glibc() {
   }
 }
 
-fetch_tool() {
-  local url=$1 sha=$2 file
-  file=target/appimage-tools/$(basename "$url")
-  mkdir -p target/appimage-tools
-  if [[ ! -f $file ]] || ! echo "$sha  $file" | sha256sum -c --status -; then
-    curl -fsSL --retry 5 --retry-all-errors -o "$file" "$url"
-    echo "$sha  $file" | sha256sum -c - >&2
-  fi
-  chmod +x "$file"
-  printf '%s\n' "$file"
-}
-
-appimage() {
-  source scripts/appimage.env
-  local libmpv=target/libmpv-linux/out work appdir runtime tool url sha embedded
-  local image=dist/cineo-x86_64-linux.AppImage
-  [[ -f $libmpv/lib/libmpv.so.2 ]] || {
-    echo "$libmpv has no libmpv.so.2; run scripts/build-libmpv-linux.sh first" >&2
-    exit 1
-  }
-  read -r url sha <<<"$APPIMAGE_RUNTIME"
-  runtime=$(fetch_tool "$url" "$sha")
-  read -r url sha <<<"$APPIMAGE_TOOL"
-  tool=$(fetch_tool "$url" "$sha")
-  work=$(mktemp -d)
-  appdir=$work/Cineo.AppDir
-  mkdir -p "$appdir/usr/lib/cineo" "$appdir/usr/share/doc/cineo"
-  cp target/release/cineo-desktop "$libmpv"/lib/* "$appdir/usr/lib/cineo/"
-  for elf in "$appdir"/usr/lib/cineo/*; do
-    check_glibc "$elf"
-  done
-  ln -s usr/lib/cineo/cineo-desktop "$appdir/AppRun"
-  cp crates/cineo-desktop/assets/brand/icon.png "$appdir/cineo.png"
-  ln -s cineo.png "$appdir/.DirIcon"
-  cat >"$appdir/cineo.desktop" <<EOT
-[Desktop Entry]
-Type=Application
-Name=Cineo
-Comment=Media center for Stremio-protocol addons
-Exec=cineo-desktop
-Icon=cineo
-Terminal=false
-Categories=AudioVideo;Video;Player;
-EOT
-  common_licenses "$appdir/usr/share/doc/cineo"
-  cp "$libmpv"/licenses/* "$libmpv/libmpv.md" "$appdir/usr/share/doc/cineo/"
-  (cd dist && ARCH=x86_64 VERSION=$version APPIMAGE_EXTRACT_AND_RUN=1 "$OLDPWD/$tool" -n \
-    --runtime-file "$OLDPWD/$runtime" -u "$APPIMAGE_UPDATE" "$appdir" "$(basename "$image")" >&2)
-  rm -rf "$work"
-  APPIMAGE_EXTRACT_AND_RUN=1 check_version "$image"
-  embedded=$("$image" --appimage-updateinformation)
-  [[ $embedded == "$APPIMAGE_UPDATE" ]] || {
-    echo "$image carries the update information '$embedded', not '$APPIMAGE_UPDATE'" >&2
-    exit 1
-  }
-  python3 -I - "$image" <<'PY'
-import hashlib, os, sys
-image = sys.argv[1]
-header = {}
-with open(image + ".zsync", "rb") as f:
-    for line in f:
-        if line == b"\n":
-            break
-        key, _, value = line.decode().partition(": ")
-        header[key] = value.strip()
-data = open(image, "rb").read()
-problems = []
-if header.get("Filename") != os.path.basename(image):
-    problems.append(f"names {header.get('Filename')}")
-if header.get("Length") != str(len(data)):
-    problems.append(f"gives the length {header.get('Length')}, not {len(data)}")
-if header.get("SHA-1") != hashlib.sha1(data).hexdigest():
-    problems.append("has another SHA-1")
-if problems:
-    sys.exit(f"{image}.zsync does not describe {image}: " + "; ".join(problems))
-PY
-}
-
 common_licenses() {
   local iconflow
   iconflow=$(cargo metadata --format-version 1 --locked |
@@ -152,7 +74,6 @@ EOT
     check_glibc dist/cineo-x86_64-linux
     cp crates/cineo-desktop/assets/brand/icon.png dist/cineo.png
     cp scripts/install.sh scripts/install.ps1 dist/
-    appimage
     ;;
   windows)
     source scripts/libmpv-windows.env

@@ -25,8 +25,6 @@ check_assets() {
   source scripts/libmpv-windows.env
   local expected=(
     cineo-x86_64-linux
-    cineo-x86_64-linux.AppImage
-    cineo-x86_64-linux.AppImage.zsync
     cineo-x86_64-windows.exe
     cineo-arm64-android.apk
     cineo-universal-macos.dmg

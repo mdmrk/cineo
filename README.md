@@ -53,13 +53,7 @@ It works with Stremio addons. No account, no cloud.
 
 ### Linux (x86_64)
 
-Download `cineo-x86_64-linux.AppImage` from the
-[latest release](https://github.com/mdmrk/cineo/releases/latest), make it
-executable and run it; it carries its own mpv. It names its update file
-for AppImage updaters such as AppImageUpdate and Gear Lever (not tried
-yet).
-
-Or install your distribution's **mpv** package first, then run:
+Install your distribution's **mpv** package first, then run:
 
 ```sh
 curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh

@@ -112,10 +112,9 @@ jobs:
 
   build:
     name: build (${{ matrix.platform }})
-    if: >-
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') ||
-      !startsWith(github.event.head_commit.message, 'chore(release):')))
+    if: &release-push >-
+      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') ||
+      !startsWith(github.event.head_commit.message, 'chore(release):'))
     strategy:
       fail-fast: true
       matrix:
@@ -154,28 +153,6 @@ jobs:
       - name: Fetch libmpv (macOS)
         if: matrix.platform == 'macos'
         run: scripts/fetch-libmpv-macos.sh target/libmpv-macos
-      - name: Linux libmpv and AppImage tools
-        if: matrix.platform == 'linux'
-        run: >-
-          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends
-          nasm ninja-build patchelf python3-venv zsync libdrm-dev libgl-dev
-          libfontconfig-dev libasound2-dev libpulse-dev zlib1g-dev > /dev/null
-      - id: libmpv-linux
-        if: matrix.platform == 'linux'
-        uses: actions/cache/restore@v6.1.0
-        with:
-          path: &libmpv-linux-paths target/libmpv-linux/out
-          key: &libmpv-linux-key libmpv-linux-${{ hashFiles('scripts/build-libmpv-linux.sh', 'scripts/libmpv-linux.env', 'scripts/libmpv-android.env') }}
-      - name: Build libmpv (Linux)
-        if: matrix.platform == 'linux' && steps.libmpv-linux.outputs.cache-hit != 'true'
-        run: scripts/build-libmpv-linux.sh
-      - if: >-
-          matrix.platform == 'linux' && steps.libmpv-linux.outputs.cache-hit != 'true' &&
-          !startsWith(github.ref, 'refs/tags/')
-        uses: actions/cache/save@v6.1.0
-        with:
-          path: *libmpv-linux-paths
-          key: *libmpv-linux-key
       - name: Build
         run: |
           if [[ -n "$TARGETS" ]]; then
@@ -193,8 +170,7 @@ jobs:
       - run: scripts/package.sh "$PLATFORM"
         env:
           PLATFORM: ${{ matrix.platform }}
-      - if: github.event_name == 'push'
-        uses: actions/attest-build-provenance@v4.2.2
+      - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: dist/*
       - uses: actions/upload-artifact@v7.0.2
@@ -205,9 +181,7 @@ jobs:
 
   build-android:
     name: build (android)
-    if: &release-push >-
-      github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') ||
-      !startsWith(github.event.head_commit.message, 'chore(release):'))
+    if: *release-push
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions: *attest
@@ -253,41 +227,9 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  appimage:
-    name: appimage (${{ matrix.image }})
-    needs: [build]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    container: ${{ matrix.image }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - image: ubuntu:24.04
-            setup: &apt-host >-
-              apt-get update -qq && apt-get install -y -qq --no-install-recommends
-              python3 libfontconfig1 libasound2t64 libpulse0 libdrm2 zlib1g > /dev/null
-          - image: debian:13
-            setup: *apt-host
-          - image: fedora:latest
-            setup: >-
-              dnf install -y -q python3 fontconfig alsa-lib pulseaudio-libs libdrm zlib
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - *checkout
-      - run: ${{ matrix.setup }}
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          name: dist-linux
-          path: dist
-      - run: chmod +x dist/cineo-x86_64-linux.AppImage && scripts/check-appimage.sh dist/cineo-x86_64-linux.AppImage
-
   publish:
     name: publish
-    if: github.event_name == 'push'
-    needs: [linux, windows, macos, android, build, build-android, appimage]
+    needs: [linux, windows, macos, android, build, build-android]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: release-signing
@@ -359,7 +301,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh cache list --ref refs/heads/main --limit 1000 --json id,key,createdAt --jq '
-            map(select(.key | test("^(v0-rust-|libmpv-android-|libmpv-linux-)")))
+            map(select(.key | test("^(v0-rust-|libmpv-android-)")))
             | group_by(.key | sub("(-[0-9a-f]{8}){2}$|-[0-9a-f]{64}$"; ""))
             | map(sort_by(.createdAt) | .[:-1][]) | .[].id' |
             while read -r id; do gh cache delete "$id" || true; done

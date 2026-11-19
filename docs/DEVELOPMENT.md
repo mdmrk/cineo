@@ -606,8 +606,6 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
 | minisign      | Ubuntu's package | Release checksum signatures |
-| appimagetool  | 1.9.1   | Builds the AppImage (`scripts/appimage.env`) |
-| type2-runtime | 20251108 | The AppImage's static runtime (`scripts/appimage.env`) |
 
 ### CI actions
 
@@ -634,10 +632,9 @@ checks, and `publish` waits for both:
 
 | Trigger                  | Jobs                                                                   |
 | ------------------------ | ---------------------------------------------------------------------- |
-| pull request             | the checks and build (linux, windows, macos) → appimage; nothing is published |
-| manual run               | check (linux), check (windows), check (macos), check (android)         |
-| push to `main`           | the checks and build → appimage → publish `prerelease` → reproduce (android) |
-| tag `vX.Y.Z`             | the checks and build → appimage → publish `vX.Y.Z` → reproduce (android) |
+| pull request, manual run | check (linux), check (windows), check (macos), check (android)         |
+| push to `main`           | the checks and build → publish `prerelease` → reproduce (android)      |
+| tag `vX.Y.Z`             | the checks and build → publish `vX.Y.Z` → reproduce (android)          |
 
 **Checks.**
 - `check (linux)` runs `scripts/check.sh` (`scripts/fmt.sh --check`,
@@ -656,18 +653,6 @@ checks, and `publish` waits for both:
   9 s (measured locally on 2026-11-12).
 
 **Builds.**
-- On Linux, `build` also builds libmpv with `scripts/build-libmpv-linux.sh`
-  (ADR-0039) unless its cache has it, and `scripts/package.sh linux` packs
-  the executable with it into `cineo-x86_64-linux.AppImage` and its
-  `.zsync` file with the pinned type2 runtime and appimagetool
-  (`scripts/appimage.env`), checks glibc 2.39 for every file in it, its
-  `--version`, its update information and that the `.zsync` file
-  describes it. `appimage` then runs `scripts/check-appimage.sh` in clean
-  Ubuntu 24.04, Debian 13 and Fedora containers with only the host
-  libraries of `LINUX_HOST_LIBS` installed: every library resolves, the
-  AppImage reports its version and libmpv initializes with null outputs.
-  Pull requests run `build` and `appimage` too; only pushes attest and
-  publish.
 - `build` builds `cineo-desktop` for Linux x86_64 on `ubuntu-24.04`, never
   `ubuntu-latest`, because the runner's glibc is the oldest the binary runs
   on: `scripts/package.sh linux` fails if it needs a glibc above
@@ -722,9 +707,7 @@ saves `shared-key: android` and `build (android)` saves
 `shared-key: android-release`, because their release profiles differ; tag
 builds start without a Rust cache. libmpv for
 Android is cached by the hash of its script and `.env`, restored on tags
-too and saved only by `build (android)` on `main`. libmpv for Linux is
-cached by the hash of its script and both `.env` files it reads, and
-saved by any run but a tag's that had to build it. After each run on
+too and saved only by `build (android)` on `main`. After each run on
 `main`, `prune caches` deletes all but the newest Rust and libmpv cache of
 each job, so the repository stays under GitHub's 10 GB cache limit.
 
@@ -748,8 +731,6 @@ Every release has these files, with the same names in every release so that
 | File                 | What                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`) against glibc 2.39; uses the system libmpv        |
-| `cineo-x86_64-linux.AppImage` | The same executable with its own LGPL libmpv, FFmpeg and libva (ADR-0039); needs glibc 2.39 and no mpv package |
-| `cineo-x86_64-linux.AppImage.zsync` | Block checksums AppImage updaters use to download only what changed; the AppImage's update information names it |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded gzip-compressed (ADR-0027)      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
 | `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
