@@ -116,8 +116,17 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   Cineo loads it at runtime with `libloading` (ADR-0014). Our bindings are
   written from mpv's ISC-licensed headers (`client.h`, `render.h`,
   `render_gl.h`, copyright the mpv developers); no mpv code is copied. We do
-  not use the LGPL `libmpv2` crates. On Linux, Cineo uses the system's
-  libmpv and ships none.
+  not use the LGPL `libmpv2` crates. The plain Linux executable uses the
+  system's libmpv and ships none.
+- The Linux AppImage (ADR-0039) carries `libmpv.so.2`, FFmpeg's shared
+  libraries and libva (MIT) as separate files in `usr/lib/cineo/`,
+  loaded at runtime, built by `scripts/build-libmpv-linux.sh` from the
+  same pinned sources as Android's plus libva, without GPL, version3 or
+  nonfree code; the only change is an `$ORIGIN` run path. It carries
+  their license texts and a `libmpv.md` (hashes, sources, how to
+  replace them) in `usr/share/doc/cineo/`. As for Android, the release
+  names the pinned sources rather than carrying them; whether that meets
+  LGPL §4 is INFERRED, not legal advice.
 - The Windows release (`bundled-libmpv`, ADR-0027) embeds, gzip-compressed,
   an unmodified LGPL build of `libmpv-2.dll` from zhongfly/mpv-winbuild
   (mpv LGPL-2.1-or-later; FFmpeg built with `--enable-version3`, so

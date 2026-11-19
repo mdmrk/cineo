@@ -53,6 +53,18 @@ Format:
 - Exit: check `hwdec-current` in the stats overlay on Intel/AMD under
   Wayland and X11.
 
+### Linux AppImage: no VA-API interop
+- Where: [build-libmpv-linux.sh](../scripts/build-libmpv-linux.sh)
+- Gap: the AppImage's mpv is built without X11, Wayland and EGL, so it
+  cannot use the window's display for VA-API interop; and its libva
+  2.24.1 cannot load a host driver built for a newer libva (ADR-0039).
+- Why: X11 or Wayland support would make libX11, libXpresent, libXss and
+  more required host libraries.
+- Instead: hardware decoding through `vaapi-copy` over DRM at best, else
+  software decoding; which one happens is UNKNOWN (not run).
+- Exit: check `hwdec-current` in the AppImage on Intel and AMD; build
+  mpv with Wayland if its client library proves common enough.
+
 ### Embedded player: GL thread assumption
 - Where: [app/mod.rs](../crates/cineo-desktop/src/app/mod.rs)
 - Gap: the renderer is created and freed inside eframe's `logic`/`ui`/

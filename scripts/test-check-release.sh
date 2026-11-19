@@ -38,7 +38,7 @@ expect fail "no tag" version
 complete() {
   rm -rf "$work/dist"
   mkdir "$work/dist"
-  (cd "$work/dist" && touch cineo-x86_64-linux cineo-x86_64-windows.exe cineo-arm64-android.apk \
+  (cd "$work/dist" && touch cineo-x86_64-linux cineo-x86_64-linux.AppImage cineo-x86_64-linux.AppImage.zsync cineo-x86_64-windows.exe cineo-arm64-android.apk \
     cineo-universal-macos.dmg mpv-dev-lgpl-x86_64-20260101-git-abc.7z cineo-licenses.zip cineo.png \
     install.sh install.ps1)
 }
@@ -47,6 +47,9 @@ complete
 expect pass "every release file" assets "$work/dist"
 rm "$work/dist/cineo-universal-macos.dmg"
 expect fail "a missing file" assets "$work/dist"
+complete
+rm "$work/dist/cineo-x86_64-linux.AppImage.zsync"
+expect fail "an AppImage without its zsync file" assets "$work/dist"
 complete
 touch "$work/dist/stray.txt"
 expect fail "an extra file" assets "$work/dist"
@@ -73,7 +76,8 @@ cp scripts/release-notes.sh "$work/scripts/"
 printf -- '- Fixed a thing.\n' >"$work/docs/releases/v2.3.4.md"
 body=$(GITHUB_REPOSITORY=owner/cineo "$work/scripts/release-notes.sh" v2.3.4 v2.3.3)
 for want in \
-  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-linux" \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-linux.AppImage" \
+  "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-linux)" \
   "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-x86_64-windows.exe" \
   "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-universal-macos.dmg" \
   "https://github.com/owner/cineo/releases/download/v2.3.4/cineo-arm64-android.apk" \

@@ -12,8 +12,8 @@ notes=docs/releases/$tag.md
 repo=https://github.com/${GITHUB_REPOSITORY:-mdmrk/cineo}
 download=$repo/releases/download/$tag
 
-printf '**Download:** [Linux](%s) · [Windows](%s) · [macOS](%s) · [Android](%s)\n\n' \
-  "$download/cineo-x86_64-linux" "$download/cineo-x86_64-windows.exe" \
+printf '**Download:** [Linux AppImage](%s) · [Linux](%s) · [Windows](%s) · [macOS](%s) · [Android](%s)\n\n' \
+  "$download/cineo-x86_64-linux.AppImage" "$download/cineo-x86_64-linux" "$download/cineo-x86_64-windows.exe" \
   "$download/cineo-universal-macos.dmg" "$download/cineo-arm64-android.apk"
 cat "$notes"
 if [[ -n $previous ]]; then

@@ -66,15 +66,19 @@ Option 1.
 
 - **libmpv.** `scripts/build-libmpv-linux.sh` with
   `scripts/libmpv-linux.env` builds the Android set natively on
-  `ubuntu-24.04`, plus libva (static, with the driver directories of
-  Debian, Fedora and Arch in its search path), with the same GPL,
+  `ubuntu-24.04`, plus libva (a shared library only, so shipped beside
+  libmpv, with the driver directories of Debian, Fedora and Arch in its
+  search path), with the same GPL,
   version3 and nonfree checks. mpv is built with `-Dgpl=false`, VA-API
-  over DRM and EGL, ALSA and PulseAudio output, and fontconfig for libass.
+  over DRM, ALSA and PulseAudio output, and fontconfig for libass, and
+  without X11, Wayland and EGL.
   Its output is cached like Android's.
-- **Libraries.** The AppImage carries `libmpv.so.2` and FFmpeg's shared
-  libraries, found through `RUNPATH=$ORIGIN`, never `LD_LIBRARY_PATH`.
+- **Libraries.** The AppImage carries `libmpv.so.2`, FFmpeg's shared
+  libraries, `libva.so.2` and `libva-drm.so.2`, found through
+  `RUNPATH=$ORIGIN`, never `LD_LIBRARY_PATH`. The other libraries built
+  here are linked statically and not exported (`--exclude-libs,ALL`).
   It takes from the host only libraries every desktop has and that must
-  match the host: glibc, libgcc, libstdc++, libEGL, libdrm, fontconfig,
+  match the host: glibc, libgcc, libstdc++, zlib, libdrm, fontconfig,
   ALSA and PulseAudio. The build fails if a bundled library needs anything
   else.
 - **Image.** `cineo-x86_64-linux.AppImage` from the pinned type2 runtime
@@ -98,6 +102,13 @@ Option 1.
   must be pruned like the others.
 - Release size grows by the AppImage (tens of MB, INFERRED) and its
   `.zsync` file.
+- mpv's VA-API interop, which draws decoded frames without a copy, needs
+  the window's X11 or Wayland display (`embedded::render`) and an mpv
+  built with X11 or Wayland, which would add libX11, libXpresent, libXss
+  and more to the host libraries (INFERRED). This build leaves them out,
+  so the AppImage decodes in hardware at most through `vaapi-copy` over
+  DRM, else in software (UNKNOWN which); recorded in
+  `docs/TECHNICAL_DEBT.md`.
 - When a host's VA-API driver is newer than the bundled libva, hardware
   decoding falls back to software (`auto-safe`) until libva is updated
   here; recorded in `docs/TECHNICAL_DEBT.md`.
