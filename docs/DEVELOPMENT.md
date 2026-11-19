@@ -558,7 +558,8 @@ urgent-piece helpers, the stream window (ADR-0019), the lookahead setter
 the blocklist before metadata is asked for (ADR-0026). Since 2026-11-15
 (`8981a054`, with upstream up to 2026-11-12) they also give up, after a
 seek, the in-flight pieces no stream wants and cancel their requests, and
-take a chunk out of the upload queue when its peer sends `cancel`. To
+take a chunk out of the upload queue when its peer sends `cancel`. Since
+2026-11-19 (`984d0a4f`) closing a stream gives them up too. To
 update: merge
 upstream `main` into the fork's `main`, push, and run
 `cargo update -p librqbit`. Dropping the fork once upstream releases the

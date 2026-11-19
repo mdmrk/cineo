@@ -126,7 +126,7 @@ Format:
 - Why: keeping partial pieces needs them counted in the window
   ("torrent data can exceed its window" above).
 - Instead: only pieces outside every stream's span are given up, and
-  only when a stream seeks.
+  only when a stream seeks or closes.
 - Exit: keep the chunks of a given-up piece while the window has room.
 
 ### Streaming engine: the measured bitrate includes mpv's overhead
