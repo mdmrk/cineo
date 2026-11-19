@@ -364,10 +364,15 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn a_running_executable_can_be_swapped_on_linux() {
+        use std::os::unix::process::CommandExt as _;
         let dir = tempfile::tempdir().unwrap();
         let exe = dir.path().join(INSTALLED_NAME);
         std::fs::copy("/bin/sleep", &exe).unwrap();
-        let mut running = std::process::Command::new(&exe).arg("5").spawn().unwrap();
+        let mut running = std::process::Command::new(&exe)
+            .arg0("sleep")
+            .arg("5")
+            .spawn()
+            .unwrap();
         std::thread::sleep(Duration::from_millis(300));
         let swapped = swap(&exe, &std::fs::read("/bin/true").unwrap());
         let still_running = running.try_wait().unwrap().is_none();
@@ -375,7 +380,13 @@ mod tests {
         let _ = running.wait();
         assert_eq!(swapped, Ok(()));
         assert!(still_running);
-        assert!(std::process::Command::new(&exe).status().unwrap().success());
+        assert!(
+            std::process::Command::new(&exe)
+                .arg0("true")
+                .status()
+                .unwrap()
+                .success()
+        );
     }
 
     #[cfg(windows)]
