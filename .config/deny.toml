@@ -23,7 +23,6 @@ allow = [
     "Unicode-3.0",
     "Unlicense",
     "CC0-1.0",
-    "CDLA-Permissive-2.0",
 ]
 exceptions = [
     { crate = "option-ext", allow = ["MPL-2.0"] },

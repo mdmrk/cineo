@@ -38,9 +38,10 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   (`.config/deny.toml`). Extending the license allowlist requires a note here.
   Current allowlist (2026-10-06): MIT, MIT-0, Apache-2.0 (incl. LLVM
   exception), BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unlicense,
-  CC0-1.0, CDLA-Permissive-2.0 (Mozilla CA bundle data via rustls).
+  CC0-1.0 (CDLA-Permissive-2.0 removed 2026-11-20: no dependency uses it).
   `cargo deny` checks the `x86_64-unknown-linux-gnu`,
-  `x86_64-pc-windows-msvc` and `aarch64-linux-android` dependency graphs.
+  `x86_64-pc-windows-msvc`, `aarch64-apple-darwin`, `x86_64-apple-darwin`
+  and `aarch64-linux-android` dependency graphs.
 - One crate-scoped exception (2026-10-06): `option-ext` 0.2.0 is
   MPL-2.0. It reaches the tree through `librqbit-core` → `directories` →
   `dirs-sys` (ADR-0012), and since 2026-11-12 also through

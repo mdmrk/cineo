@@ -1,5 +1,4 @@
 /target
-**/*.rs.bk
 *.profraw
 /.claude/
 CLAUDE.local.md
