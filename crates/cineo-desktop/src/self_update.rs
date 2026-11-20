@@ -12,10 +12,10 @@ use tracing::{info, warn};
 pub const PUBLIC_KEY: &str = "RWQPKOI7lXW1zBfoRntGmEe8QJf5TdJTDUZ4NEDFJtrSNdNmxrdBpHln";
 const AFTER_UPDATE: &str = "--after-update";
 const LICENSES: &str = "cineo-licenses.zip";
-const INSTALLED_NAME: &str = if cfg!(windows) {
-    "cineo-desktop.exe"
+const INSTALLED_NAMES: [&str; 2] = if cfg!(windows) {
+    ["cineo.exe", "cineo-desktop.exe"]
 } else {
-    "cineo-desktop"
+    ["cineo", "cineo-desktop"]
 };
 const TARGET: Option<UpdateTarget> = if cfg!(windows) {
     Some(UpdateTarget::Windows)
@@ -39,7 +39,10 @@ pub(crate) fn target(exe: &Path) -> Option<UpdateTarget> {
 }
 
 fn can_update(exe: &Path) -> bool {
-    if exe.file_name().is_none_or(|name| name != INSTALLED_NAME) {
+    if exe
+        .file_name()
+        .is_none_or(|name| !INSTALLED_NAMES.iter().any(|installed| name == *installed))
+    {
         return false;
     }
     let Some(dir) = exe.parent() else {
@@ -345,7 +348,7 @@ mod tests {
     #[test]
     fn the_new_executable_takes_the_old_ones_place() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join(INSTALLED_NAME);
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
         std::fs::write(&exe, b"old").unwrap();
         assert_eq!(swap(&exe, b"new"), Ok(()));
         assert_eq!(std::fs::read(&exe).unwrap(), b"new");
@@ -375,19 +378,20 @@ mod tests {
     #[test]
     fn a_failed_swap_leaves_nothing_behind() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join(INSTALLED_NAME);
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
         assert_eq!(swap(&exe, b"new"), Err(UpdateFailure::Install));
         assert!(!exe.exists());
         assert!(!beside(&exe, ".new").exists());
     }
 
     #[test]
-    fn only_a_writable_cineo_desktop_exe_updates_itself() {
+    fn only_a_writable_installed_cineo_updates_itself() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(can_update(&dir.path().join(INSTALLED_NAME)));
+        assert!(can_update(&dir.path().join(INSTALLED_NAMES[0])));
+        assert!(can_update(&dir.path().join(INSTALLED_NAMES[1])));
         assert!(!can_update(&dir.path().join("cineo-x86_64-windows.exe")));
         assert!(!can_update(
-            &dir.path().join("missing").join(INSTALLED_NAME)
+            &dir.path().join("missing").join(INSTALLED_NAMES[0])
         ));
         assert!(std::fs::read_dir(dir.path()).unwrap().next().is_none());
     }
@@ -397,7 +401,7 @@ mod tests {
     fn the_new_executable_can_run() {
         use std::os::unix::fs::PermissionsExt as _;
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join(INSTALLED_NAME);
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
         std::fs::write(&exe, b"old").unwrap();
         std::fs::write(beside(&exe, ".new"), b"stale").unwrap();
         assert_eq!(swap(&exe, b"new"), Ok(()));
@@ -415,7 +419,7 @@ mod tests {
         }
         let me = std::env::current_exe().unwrap();
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join(INSTALLED_NAME);
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
         std::fs::copy(&me, &exe).unwrap();
         let mut running = std::process::Command::new(&exe)
             .args([
@@ -448,7 +452,7 @@ mod tests {
     #[test]
     fn a_running_executable_can_be_swapped() {
         let dir = tempfile::tempdir().unwrap();
-        let exe = dir.path().join(INSTALLED_NAME);
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
         let system = std::env::var_os("SystemRoot")
             .map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from);
         std::fs::copy(system.join(r"System32\ping.exe"), &exe).unwrap();

@@ -53,7 +53,9 @@ Option 1, on Windows only.
 
 - **When.** Only when the running executable's folder is writable and the
   executable is named `cineo-desktop.exe` (an `install.ps1` install or a
-  portable copy). Otherwise the sidebar keeps opening the release page.
+  portable copy). Amended 2026-11-20: the executable is now `cineo.exe`;
+  `cineo.exe` and the older `cineo-desktop.exe` both update themselves,
+  and `install.ps1` installs `cineo.exe` and deletes `cineo-desktop.exe`. Otherwise the sidebar keeps opening the release page.
   Nothing downloads until the user clicks "Update to vX.Y.Z".
 - **Core.** `cineo-core` gains the update's state (available, downloading,
   ready, failed with a typed reason) and an effect that names the

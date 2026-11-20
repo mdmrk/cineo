@@ -7,7 +7,8 @@ version=${CINEO_VERSION:-latest}
 bin_dir=${XDG_BIN_HOME:-$HOME/.local/bin}
 data_home=${XDG_DATA_HOME:-$HOME/.local/share}
 state_home=${XDG_STATE_HOME:-$HOME/.local/state}
-exe=$bin_dir/cineo-desktop
+exe=$bin_dir/cineo
+legacy_exe=$bin_dir/cineo-desktop
 desktop=$data_home/applications/cineo.desktop
 icon=$data_home/icons/hicolor/256x256/apps/cineo.png
 licenses=$data_home/doc/cineo
@@ -19,7 +20,7 @@ die() {
 }
 
 if [ "${1:-}" = "--uninstall" ]; then
-  rm -f "$exe" "$desktop" "$icon"
+  rm -f "$exe" "$legacy_exe" "$desktop" "$icon"
   rm -rf "$licenses"
   say "Cineo removed. Your addons and library stay in $state_home/cineo."
   exit 0
@@ -60,6 +61,7 @@ fi
 mkdir -p "$bin_dir" "$(dirname "$desktop")" "$(dirname "$icon")"
 install -m 755 "$tmp/cineo-x86_64-linux" "$exe.new"
 mv -f "$exe.new" "$exe"
+rm -f "$legacy_exe" "$legacy_exe.old"
 install -m 644 "$tmp/cineo.png" "$icon"
 if command -v unzip >/dev/null; then
   rm -rf "$licenses"

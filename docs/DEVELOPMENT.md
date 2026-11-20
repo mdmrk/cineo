@@ -268,7 +268,7 @@ subsystem logs and how to diagnose it.
 
 - `tracing` everywhere. Libraries never print. Only shells write to
   stdout/stderr.
-- GUI: `cineo-desktop` logs to stderr. `-v` gives debug logs for Cineo
+- GUI: `cineo` logs to stderr. `-v` gives debug logs for Cineo
   crates, `-vv` gives trace for everything. `RUST_LOG` overrides both, for
   example `RUST_LOG=cineo_net=trace`. libmpv's own messages use the target `libmpv`: its
   errors are always shown, its warnings (about the media, some on every
@@ -292,7 +292,7 @@ with tokens, or headers from `proxyHeaders`. Log the origin and path instead.
 
 #### Addon failures
 
-1. Install the addon in `cineo-desktop -v`. Every parse **warning** is
+1. Install the addon in `cineo -v`. Every parse **warning** is
    logged as `addon data problem` (field location + reason) inside the
    `addon_request` span, on stderr and in `cineo.log`.
 2. Read the error type. It is one of:
@@ -362,7 +362,7 @@ A good report contains:
 
 1. The exact command or UI steps.
 2. `-v` logs, scrubbed of personal data.
-3. The version (`cineo-desktop --version`) and OS.
+3. The version (`cineo --version`) and OS.
 4. For addon issues: a **public** manifest URL only.
 
 The issue templates ask for these.
@@ -408,7 +408,7 @@ and result in the PR.
 
 | #   | Do                                                                                 | Expect                                                                                       |
 | --- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 1   | Start `cineo-desktop --data-dir <tmp> -v`                                          | Board shows Cinemeta rows with posters                                                       |
+| 1   | Start `cineo --data-dir <tmp> -v`                                          | Board shows Cinemeta rows with posters                                                       |
 | 2   | Addons                                                                             | Cinemeta is the only installed addon; Discover addons shows the Official and Community lists |
 | 3   | Install the stream addon (`http://127.0.0.1:8000/manifest.json` for the local one) | It appears second in the list; Move up/down reorders                                         |
 | 4   | Search "Night of the Living Dead" → open the 1968 film                             | Detail page: backdrop, poster, facts, description                                            |
@@ -668,7 +668,7 @@ checks, and `publish` waits for both:
   (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv.sh macos`).
   It puts the files into `dist/` with
   `scripts/package.sh <linux|windows|macos>`, which fails if the binary's
-  `--version` is not `cineo-desktop` followed by the workspace version, and
+  `--version` is not `cineo` followed by the workspace version, and
   attests build provenance.
 - On tags, `build` and `build (android)` first run
   `scripts/release.sh version <tag>`, which fails unless the tag

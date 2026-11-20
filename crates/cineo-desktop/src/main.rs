@@ -8,7 +8,7 @@ use anyhow::Context;
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[command(name = "cineo-desktop", version, about = "Cineo media center")]
+#[command(name = "cineo", version, about = "Cineo media center")]
 struct Cli {
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,

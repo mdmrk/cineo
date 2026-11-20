@@ -152,9 +152,9 @@ CURL
     shift 2
     if env HOME="$inst/home" XDG_BIN_HOME= XDG_DATA_HOME= XDG_STATE_HOME= RELEASE="$inst/release" \
       PATH="$inst/bin:$PATH" "$@" sh "$inst/install.sh" >/dev/null 2>&1; then
-      [[ $outcome == pass && -x $inst/home/.local/bin/cineo-desktop ]] || fail "$what was installed"
+      [[ $outcome == pass && -x $inst/home/.local/bin/cineo ]] || fail "$what was installed"
     else
-      [[ $outcome == fail && ! -e $inst/home/.local/bin/cineo-desktop ]] || fail "$what was not installed"
+      [[ $outcome == fail && ! -e $inst/home/.local/bin/cineo ]] || fail "$what was not installed"
     fi
   }
   release

@@ -38,7 +38,7 @@ on Windows, and the standard library has Unix sockets.
   `Notice::InvalidLink`. Install links map only to `https://` and set
   `State::link_prompt`; nothing is installed before `AcceptLink`. Page links
   only navigate. `autoPlay` is ignored.
-- `cineo-desktop <link>` opens a link. The startup link waits until the
+- `cineo <link>` opens a link. The startup link waits until the
   installed addons have loaded.
 - Single instance, for links only: the running app listens on
   `<data dir>/cineo.sock` (mode 0600) on Unix, or on the named pipe

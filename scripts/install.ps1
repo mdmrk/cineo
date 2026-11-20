@@ -5,7 +5,8 @@ $ProgressPreference = 'SilentlyContinue'
 $Repo = 'mdmrk/cineo'
 $Version = if ($env:CINEO_VERSION) { $env:CINEO_VERSION } else { 'latest' }
 $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\Cineo'
-$Exe = Join-Path $InstallDir 'cineo-desktop.exe'
+$Exe = Join-Path $InstallDir 'cineo.exe'
+$LegacyExe = Join-Path $InstallDir 'cineo-desktop.exe'
 $Shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Cineo.lnk'
 $Extracted = Join-Path $env:LOCALAPPDATA 'Cineo\cache\libmpv'
 
@@ -50,8 +51,9 @@ try {
     try {
         Move-Item -Force (Join-Path $Tmp 'cineo-x86_64-windows.exe') $Exe
     } catch {
-        throw 'Could not replace cineo-desktop.exe. Close Cineo and run the installer again.'
+        throw 'Could not replace cineo.exe. Close Cineo and run the installer again.'
     }
+    Remove-Item -Force -ErrorAction SilentlyContinue $LegacyExe, "$LegacyExe.old"
     $Licenses = Join-Path $InstallDir 'licenses'
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $Licenses
     Expand-Archive -Force (Join-Path $Tmp 'cineo-licenses.zip') $InstallDir

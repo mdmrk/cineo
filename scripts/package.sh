@@ -10,7 +10,7 @@ version=$(workspace_version)
 check_version() {
   local reported
   reported=$("$1" --version)
-  [[ $reported == "cineo-desktop $version" ]] || die "$1 reports '$reported', but Cargo.toml says $version"
+  [[ $reported == "cineo $version" ]] || die "$1 reports '$reported', but Cargo.toml says $version"
 }
 
 check_glibc() {
@@ -55,7 +55,7 @@ it is loaded first.
 EOT
     (cd dist && python3 -I -m zipfile -c cineo-licenses.zip cineo-licenses)
     rm -rf dist/cineo-licenses
-    cp target/release/cineo-desktop dist/cineo-x86_64-linux
+    cp target/release/cineo dist/cineo-x86_64-linux
     check_version dist/cineo-x86_64-linux
     check_glibc dist/cineo-x86_64-linux
     cp crates/cineo-desktop/assets/brand/icon.png dist/cineo.png
@@ -63,7 +63,7 @@ EOT
     ;;
   windows)
     source scripts/libmpv-windows.env
-    cp target/release/cineo-desktop.exe dist/cineo-x86_64-windows.exe
+    cp target/release/cineo.exe dist/cineo-x86_64-windows.exe
     check_version dist/cineo-x86_64-windows.exe
     cp "$(dirname "${CINEO_LIBMPV_DLL_GZ:?set CINEO_LIBMPV_DLL_GZ as for the build}")/$LIBMPV_FILE" dist/
     ;;
@@ -125,8 +125,8 @@ PY
     app=$work/stage/Cineo.app
     contents=$app/Contents
     mkdir -p "$contents/MacOS" "$contents/Frameworks" "$contents/Resources/licenses"
-    lipo -create target/aarch64-apple-darwin/release/cineo-desktop \
-      target/x86_64-apple-darwin/release/cineo-desktop -output "$contents/MacOS/cineo"
+    lipo -create target/aarch64-apple-darwin/release/cineo \
+      target/x86_64-apple-darwin/release/cineo -output "$contents/MacOS/cineo"
     check_version "$contents/MacOS/cineo"
     sed -e "s/__VERSION__/$version/g" -e "s/__BUILD__/${version%%-*}/g" \
       scripts/macos/Info.plist >"$contents/Info.plist"

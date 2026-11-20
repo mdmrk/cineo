@@ -42,7 +42,9 @@ Option 1.
   is `cineo-x86_64-windows.exe` or `cineo-x86_64-linux`.
 - **When.** Linux: the running executable is named `cineo-desktop` and its
   folder is writable (an `install.sh` install, or a copy the user put
-  there). A system install in `/usr/bin` keeps the notice. macOS keeps the
+  there). Amended 2026-11-20: the executable is now `cineo`; `cineo` and
+  the older `cineo-desktop` both update themselves, and `install.sh`
+  installs `~/.local/bin/cineo` and deletes `cineo-desktop`. A system install in `/usr/bin` keeps the notice. macOS keeps the
   notice.
 - **Download and verify.** As ADR-0040, with `cineo-x86_64-linux` as the
   executable. The license zip is not downloaded on Linux.
