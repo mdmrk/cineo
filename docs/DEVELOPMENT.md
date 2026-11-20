@@ -122,7 +122,7 @@ fails if its version differs from `rustls-platform-verifier-android` in
 | Task                 | Command                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------- |
 | Everything CI checks | `scripts/check.sh` (`--quick` stops after the tests: no taplo, shellcheck, typos, cargo-machete, doc references, release scripts or deny) |
-| Run the desktop app  | `cargo run -p cineo-desktop -- -v` (`--data-dir`, `--cache-dir`, `--portable`, `--allow-private-network`) |
+| Run the desktop app  | `cargo run -- -v` (`--data-dir`, `--cache-dir`, `--portable`, `--allow-private-network`) |
 | Format everything    | `scripts/fmt.sh` (Rust, TOML, shell; `--check` only verifies)                               |
 | Lint                 | `cargo clippy --workspace --all-targets --locked -- -D warnings`                            |
 | Test                 | `cargo nextest run --workspace` or `cargo test --workspace`                                 |
