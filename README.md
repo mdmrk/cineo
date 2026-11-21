@@ -6,8 +6,8 @@
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20windows%20%7C%20macos%20%7C%20android-blue)](docs/COMPATIBILITY.md#platforms)
 [![License](https://img.shields.io/github/license/mdmrk/cineo)](LICENSE)
 
-Native media center for Stremio addons. Torrent streaming, subtitles,
-local library. No account, no cloud.
+A fast, native media center for Linux, Windows, macOS and Android phones.
+It works with Stremio addons. No account, no cloud.
 
 <table>
   <tr>
