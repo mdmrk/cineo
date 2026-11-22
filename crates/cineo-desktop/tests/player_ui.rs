@@ -8,7 +8,7 @@ use cineo_core::app::{Action, HideControls, Language, SeekStep, Setting, Setting
 use cineo_desktop::player::{Controls, NextUp, Playback, show};
 use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use cineo_player::subtitles::AddonSubtitle;
-use eframe::egui::{Key, Modifiers, ViewportId};
+use eframe::egui::{Event, Key, Modifiers, PointerButton, Pos2, ViewportId, pos2};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -481,4 +481,25 @@ fn a_volume_click_holds_the_new_level_until_the_player_reports_it() {
             .numeric_value()
     };
     assert_eq!(level(&harness), Some(50.0));
+}
+
+#[test]
+fn click_on_video_while_moving_toggles_pause() {
+    let mut harness = harness(status());
+    let pointer = |pos: Pos2, pressed: bool| Event::PointerButton {
+        pos,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: Modifiers::NONE,
+    };
+    let (start, end) = (pos2(600.0, 300.0), pos2(660.0, 340.0));
+    harness.event(Event::PointerMoved(start));
+    harness.run();
+    harness.event(pointer(start, true));
+    harness.run();
+    harness.event(Event::PointerMoved(end));
+    harness.run();
+    harness.event(pointer(end, false));
+    harness.run();
+    assert_eq!(harness.state().2, vec![PlayerCommand::TogglePause]);
 }

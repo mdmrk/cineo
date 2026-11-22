@@ -2,8 +2,8 @@ use cineo_core::app::{Action, SeekStep, Settings, TorrentStatus};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
-    self, Align, Color32, CornerRadius, CursorIcon, Key, Pos2, Rect, Sense, Ui, ViewportCommand,
-    pos2, vec2,
+    self, Align, Color32, CornerRadius, CursorIcon, Key, Pos2, Rect, Response, Sense, Ui,
+    ViewportCommand, pos2, vec2,
 };
 
 use url::Url;
@@ -80,6 +80,7 @@ pub struct Controls {
     next_shown_at: Option<f64>,
     started: bool,
     click_toggled_pause: bool,
+    video_pressed: bool,
 }
 
 impl Controls {
@@ -152,12 +153,13 @@ pub fn show(
     shortcuts(ui, status, settings, controls, now, &mut out);
 
     let video = ui.interact(rect, ui.id().with("video"), Sense::click());
+    let moved_click = moved_click(ui, &video, controls);
     if video.double_clicked() {
         toggle_fullscreen(ui);
         if std::mem::take(&mut controls.click_toggled_pause) {
             out.push(PlayerCommand::TogglePause);
         }
-    } else if video.clicked() {
+    } else if video.clicked() || moved_click {
         controls.click_toggled_pause = controls.menu.take().is_none();
         if controls.click_toggled_pause {
             out.push(PlayerCommand::TogglePause);
@@ -218,6 +220,22 @@ pub fn show(
 fn first_load(controls: &mut Controls, status: &Status) -> bool {
     controls.started |= status.loaded && !status.is_waiting();
     !controls.started
+}
+
+fn moved_click(ui: &Ui, video: &Response, controls: &mut Controls) -> bool {
+    let (pressed, released, pos) = ui.input(|i| {
+        (
+            i.pointer.primary_pressed(),
+            i.pointer.primary_released(),
+            i.pointer.interact_pos(),
+        )
+    });
+    if pressed {
+        controls.video_pressed = video.is_pointer_button_down_on();
+    }
+    released
+        && std::mem::take(&mut controls.video_pressed)
+        && pos.is_some_and(|pos| video.rect.contains(pos))
 }
 
 fn track_activity(ui: &Ui, controls: &mut Controls, now: f64) {
