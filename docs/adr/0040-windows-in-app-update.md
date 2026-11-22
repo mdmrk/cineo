@@ -71,11 +71,12 @@ Option 1, on Windows only.
   `cineo vX.Y.Z SHA256SUMS` for the version offered, so an older signed
   release cannot be replayed. Each file's SHA-256 must match its line.
   Any failure leaves the installed copy as it was.
-- **Swap.** Write `cineo-desktop.exe.new` beside the executable, rename the
-  running `cineo-desktop.exe` to `cineo-desktop.exe.old`, rename the new
+- **Swap.** Write `cineo.exe.new` beside the executable, rename the
+  running `cineo.exe` to `cineo.exe.old`, rename the new
   one into place; if the second rename fails, rename the old one back.
   `licenses\` is replaced from the zip after the swap. On every start,
-  Cineo deletes a leftover `cineo-desktop.exe.old`.
+  Cineo deletes a leftover `cineo.exe.old`. An older `cineo-desktop.exe`
+  uses `cineo-desktop.exe.new` and `cineo-desktop.exe.old` the same way.
 - **Restart.** The sidebar then offers "Restart to update". Cineo starts
   the new executable with its own arguments plus `--after-update` and
   quits; the new one waits while the old one still answers the

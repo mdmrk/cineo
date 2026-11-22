@@ -48,15 +48,16 @@ Option 1.
   notice.
 - **Download and verify.** As ADR-0040, with `cineo-x86_64-linux` as the
   executable. The license zip is not downloaded on Linux.
-- **Swap.** As ADR-0040, with `cineo-desktop.new` created with mode 0755
-  (minus the umask) and `cineo-desktop.old` deleted on the next start.
+- **Swap.** As ADR-0040, with `cineo.new` created with mode 0755
+  (minus the umask) and `cineo.old` deleted on the next start (for an
+  older `cineo-desktop`, `cineo-desktop.new` and `cineo-desktop.old`).
 - **Restart.** As ADR-0040.
 
 ## Consequences
 - Linux users of `install.sh` update with two clicks.
 - The license texts `install.sh` wrote stay at the version installed;
   running `install.sh` again refreshes them (`docs/TECHNICAL_DEBT.md`).
-- A development build at `target/*/cineo-desktop` offers the update too,
+- A development build at `target/*/cineo` offers the update too,
   as on Windows.
 - Tests: the core test names the target's asset; the swap keeps the new
   executable runnable; on Linux, renaming a running executable. A real
