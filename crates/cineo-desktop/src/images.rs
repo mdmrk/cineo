@@ -77,7 +77,7 @@ fn over_budget(mut held: Vec<(String, u64, usize)>, pass: u64, budget: usize) ->
 }
 
 fn textures_id() -> egui::Id {
-    egui::Id::new("cineo-image-textures")
+    egui::Id::unique("cineo-image-textures")
 }
 
 pub(crate) fn painted(ctx: &egui::Context, uri: &str) {

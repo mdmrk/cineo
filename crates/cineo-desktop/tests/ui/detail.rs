@@ -135,6 +135,7 @@ fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
     harness.hover_at(pos2(640.0, 450.0));
     harness.event(Event::MouseWheel {
         unit: MouseWheelUnit::Point,
+        source: MouseWheelSource::Wheel,
         delta: vec2(0.0, -1.0e6),
         phase: TouchPhase::Move,
         modifiers: Modifiers::NONE,

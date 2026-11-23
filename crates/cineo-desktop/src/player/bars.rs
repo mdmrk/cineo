@@ -3,7 +3,7 @@ use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::plain_text;
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, CursorIcon, Label, Layout, Pos2, Rect, Response,
-    RichText, Sense, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, vec2,
+    RichText, Role, Sense, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
 
 use super::stats::toggle_stats_shown;
@@ -80,7 +80,7 @@ pub(super) fn bottom_bar(
         pos2(bar.right() - margin, bar.top() + 50.0),
     );
     let controls_area = bar.with_min_y(seek.top() - SEEK_REACH_UP);
-    let _ = ui.interact(controls_area, ui.id().with("bar"), Sense::click());
+    let _ = ui.interact(controls_area, ui.scope_id().with("bar"), Sense::click());
     seek_bar(ui, seek, status, &mut controls.seek, now, out);
 
     let y = bar.bottom() - 26.0;
@@ -261,7 +261,7 @@ pub(super) fn next_popup(
         ),
         size,
     );
-    egui::Area::new(ui.id().with("next-video"))
+    egui::Area::new(ui.scope_id().with("next-video"))
         .order(egui::Order::Foreground)
         .fixed_pos(card.min)
         .show(ui.ctx(), |ui| {
@@ -309,9 +309,9 @@ pub(super) fn next_popup(
             let play = Rect::from_center_size(pos2(c.x, c.y + 18.0), egui::Vec2::splat(56.0));
             let label = t!("Play");
             let response = ui
-                .interact(play, ui.id().with("next-play"), Sense::click())
+                .interact(play, ui.scope_id().with("next-play"), Sense::click())
                 .on_hover_cursor(CursorIcon::PointingHand);
-            response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+            response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
             let grow = ui
                 .ctx()
                 .animate_bool_with_time(response.id, response.hovered(), 0.12);
@@ -383,7 +383,7 @@ fn seek_bar(
         pos2(rect.left(), rect.top() - SEEK_REACH_UP),
         pos2(rect.right(), rect.bottom() + SEEK_REACH_DOWN),
     );
-    let response = ui.interact(hit, ui.id().with("seek"), Sense::click_and_drag());
+    let response = ui.interact(hit, ui.scope_id().with("seek"), Sense::click_and_drag());
     let duration = status.duration_s;
     let seekable = duration > 0.0;
     let seconds_at =
@@ -448,7 +448,7 @@ fn volume_slider(
     now: f64,
     out: &mut Vec<PlayerCommand>,
 ) {
-    let response = ui.interact(rect, ui.id().with("volume"), Sense::click_and_drag());
+    let response = ui.interact(rect, ui.scope_id().with("volume"), Sense::click_and_drag());
     if let Some(pos) = response.interact_pointer_pos()
         && (response.dragged() || response.clicked())
     {
@@ -489,9 +489,9 @@ fn volume_slider(
 
 fn icon_button(ui: &Ui, rect: Rect, icon: Icon, label: &str) -> Response {
     let response = ui
-        .interact(rect, ui.id().with(label), Sense::click())
+        .interact(rect, ui.scope_id().with(label), Sense::click())
         .on_hover_cursor(CursorIcon::PointingHand);
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, label));
     if response.hovered() {
         ui.painter().circle_filled(
             rect.center(),

@@ -61,7 +61,13 @@ fn the_interface_language_is_picked_in_settings() {
         system_locale: Locale::Spanish,
         ..settings_page()
     };
-    let mut harness = harness(State::default(), view);
+    let mut harness = Harness::builder()
+        .with_size([1280.0, 900.0])
+        .allow_missing_glyphs()
+        .build_ui_state(
+            |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+            (State::default(), view, Vec::new()),
+        );
     settle(&mut harness);
     harness.get_by_label("Idioma").click();
     settle(&mut harness);

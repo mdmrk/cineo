@@ -1,7 +1,7 @@
 use cineo_core::app::{Action, Setting, TorrentPort};
 use eframe::egui::{
-    self, Align, Align2, CornerRadius, Label, Layout, Popup, PopupCloseBehavior, Rect, ScrollArea,
-    Sense, TextEdit, Ui, WidgetInfo, WidgetType, pos2, vec2,
+    self, Align, Align2, CornerRadius, Label, Layout, Popup, PopupCloseBehavior, Rect, Role,
+    ScrollArea, Sense, TextEdit, Ui, WidgetInfo, pos2, vec2,
 };
 
 use crate::i18n::Text;
@@ -125,7 +125,7 @@ fn slider(ui: &mut Ui, label: &str, value: u32, (min, max, step): (u32, u32, u32
 }
 
 pub(super) fn port_field(ui: &mut Ui, label: &str, port: TorrentPort) -> Option<TorrentPort> {
-    let id = egui::Id::new("torrent-port");
+    let id = egui::Id::unique("torrent-port");
     let draft = id.with("draft");
     let mut text = ui
         .data(|d| d.get_temp::<String>(draft))
@@ -136,7 +136,7 @@ pub(super) fn port_field(ui: &mut Ui, label: &str, port: TorrentPort) -> Option<
             .char_limit(5)
             .desired_width(80.0),
     );
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::TextEdit, ui.is_enabled(), label));
+    response.widget_info(|| WidgetInfo::labeled(Role::TextInput, ui.is_enabled(), label));
     let mut chosen = None;
     if response.lost_focus() {
         chosen = text
@@ -185,7 +185,7 @@ pub(crate) fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mu
 
 fn toggle(ui: &mut Ui, label: &str, on: bool) -> bool {
     let (rect, response) = ui.allocate_exact_size(vec2(40.0, 22.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), on, label));
+    response.widget_info(|| WidgetInfo::selected(Role::CheckBox, ui.is_enabled(), on, label));
     if ui.is_rect_visible(rect) {
         let t = ui
             .ctx()
@@ -221,7 +221,7 @@ pub(super) fn select<T: Copy + PartialEq, I: IntoIterator<Item = T>>(
         Sense::click(),
     );
     response.widget_info(|| {
-        let mut info = WidgetInfo::labeled(WidgetType::ComboBox, ui.is_enabled(), label);
+        let mut info = WidgetInfo::labeled(Role::ComboBox, ui.is_enabled(), label);
         info.current_text_value = Some(name(current).into_owned());
         info
     });

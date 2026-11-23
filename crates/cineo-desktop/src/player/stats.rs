@@ -16,7 +16,7 @@ const SAMPLE_S: f64 = 1.0;
 const SAMPLES: usize = 60;
 
 fn stats_id() -> egui::Id {
-    egui::Id::new("player-stats")
+    egui::Id::unique("player-stats")
 }
 
 pub(super) fn stats_shown(ctx: &egui::Context) -> bool {

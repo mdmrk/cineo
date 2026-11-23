@@ -153,7 +153,7 @@ pub fn show(
     track_activity(ui, controls, now);
     shortcuts(ui, status, settings, controls, now, &mut out);
 
-    let video = ui.interact(rect, ui.id().with("video"), Sense::click());
+    let video = ui.interact(rect, ui.scope_id().with("video"), Sense::click());
     let moved_click = moved_click(ui, &video, controls);
     if video.double_clicked() {
         toggle_fullscreen(ui);

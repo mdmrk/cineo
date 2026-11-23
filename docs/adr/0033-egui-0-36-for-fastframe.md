@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-11-08
+- Amended by: 0042 (egui 0.37.0, fastframe from `main`)
 
 ## Context
 The owner asked to use fastframe as far as possible, and to lower egui if

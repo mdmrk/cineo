@@ -16,7 +16,9 @@ use cineo_core::app::{
 use cineo_desktop::i18n::Locale;
 use cineo_desktop::view::{Page, ViewState, show};
 use eframe::egui::accesskit::Role;
-use eframe::egui::{Event, Key, Modifiers, MouseWheelUnit, TouchPhase, pos2, vec2};
+use eframe::egui::{
+    Event, Key, Modifiers, MouseWheelSource, MouseWheelUnit, TouchPhase, pos2, vec2,
+};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 

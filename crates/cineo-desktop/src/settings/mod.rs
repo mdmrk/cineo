@@ -4,8 +4,8 @@ use cineo_core::app::{
     UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
-    self, Align, CornerRadius, Label, Layout, Rect, Response, RichText, ScrollArea, Sense,
-    TextFormat, Ui, UiBuilder, WidgetInfo, WidgetType, pos2, text::LayoutJob, vec2,
+    self, Align, CornerRadius, Label, Layout, Rect, Response, RichText, Role, ScrollArea, Sense,
+    TextFormat, Ui, UiBuilder, WidgetInfo, pos2, text::LayoutJob, vec2,
 };
 
 use crate::brand;
@@ -686,7 +686,7 @@ fn language(
 fn nav_item(ui: &mut Ui, part: Section, selected: bool) -> Response {
     let label = part.label();
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
-    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, &label));
+    response.widget_info(|| WidgetInfo::selected(Role::Button, true, selected, &label));
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
         if selected || response.hovered() {

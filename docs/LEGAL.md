@@ -66,9 +66,10 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   0.17.1 is `MIT AND OFL-1.1`, the OFL covering the Inter font in its
   source. Cineo builds it without the `inter` feature, so that font is not
   in the binary.
-- Crate-scoped exceptions for the Windows clipboard (2026-11-08, ADR-0033):
-  `clipboard-win` 5.4.3 and `error-code` 3.4.0 are BSL-1.0. eframe 0.36
-  always builds with the clipboard, through `arboard`. BSL-1.0 asks for no
+- Crate-scoped exceptions for the Windows clipboard (2026-11-08, ADR-0033,
+  ADR-0042): `clipboard-win` 5.4.3 and `error-code` 3.4.0 are BSL-1.0.
+  eframe builds the clipboard, through `arboard`, with its `clipboard`
+  feature. BSL-1.0 asks for no
   notice in binary distributions.
 
 ## Android app dependencies

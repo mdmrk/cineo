@@ -455,16 +455,6 @@ Format:
 - Exit: move the old folder on the first start when the new one does not
   exist.
 
-### Desktop: egui is held at 0.36.2 for fastframe
-- Where: [Cargo.toml](../Cargo.toml) (ADR-0033)
-- Gap: Cineo is one egui release behind. It misses 0.37's accessibility
-  improvements and fixes. Emoji, other scripts and scrolling come from
-  fastframe instead, and that wiring, the font settings and the graphics
-  dialog have no test on a real desktop.
-- Why: fastframe's egui crates need 0.36, and it has no move to 0.37 yet.
-- Instead: text and scrolling follow fastframe's behavior, not egui's.
-- Exit: move to the egui release fastframe adopts.
-
 ### Desktop: MPRIS has no next or previous
 - Where: [media_keys.rs](../crates/cineo-desktop/src/media_keys.rs)
 - Gap: the media controls offer play, pause, stop, raise, seek, position and

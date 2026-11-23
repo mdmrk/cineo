@@ -81,7 +81,7 @@ _Last reviewed: 2026-10-13._
 | Audio and subtitle track selection | Partial | Audio and Subtitles menus; preferred and second languages. [Details](#audio-and-subtitle-tracks) |
 | Settings (stremio-core `Settings` equivalents) | Partial | Player, subtitle, torrent and interface settings; some Stremio options not offered. [Details](#settings) |
 | Interface language | Supported | Nine languages, from the OS locale or Settings; Chinese not yet seen on screen. [Details](#interface-language) |
-| Desktop text and scrolling | Partial | On egui 0.36.2; none of it seen on a real desktop. [Details](#desktop-text-and-scrolling) |
+| Desktop text and scrolling | Partial | On egui 0.37.0; none of it seen on a real desktop. [Details](#desktop-text-and-scrolling) |
 | Library | Supported | Recorded on play and persisted; favourites are a Cineo extra. [Details](#library) |
 | Watch progress / continue watching | Supported | Survives restarts; resumes the last stream that played, at the saved position. [Details](#watch-progress) |
 | Retry after the computer wakes | Partial | Desktop: 5 s after waking, connections are renewed and failed addons and views are asked for again (`failed_loads_are_retried_once_the_network_has_had_time_to_return`); a wake on a real desktop has no test, and a change of network without sleep is not noticed |
@@ -416,7 +416,7 @@ The full evidence for the rows above whose notes do not fit in the table.
 
 ### Desktop text and scrolling
 
-- On egui 0.36.2 (ADR-0033).
+- On egui 0.37.0 (ADR-0033, ADR-0042).
 - Text follows the desktop's font rendering, other scripts use installed
   fonts behind Cineo's own (`installed_fonts_come_after_cineos_own` covers
   the order), emoji are drawn in colour, and Linux touchpads scroll with

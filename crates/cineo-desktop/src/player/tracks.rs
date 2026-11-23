@@ -3,8 +3,8 @@ use cineo_player::embedded::{PlayerCommand, Status, Track, TrackKind};
 use cineo_player::plain_text;
 use cineo_player::subtitles::AddonSubtitle;
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, CursorIcon, Rect, RichText, Sense, Ui, UiBuilder,
-    WidgetInfo, WidgetType, pos2, vec2,
+    self, Align2, Color32, CornerRadius, CursorIcon, Rect, RichText, Role, Sense, Ui, UiBuilder,
+    WidgetInfo, pos2, vec2,
 };
 
 use url::Url;
@@ -94,7 +94,7 @@ pub(super) fn track_menu(
         ),
         vec2(width, height),
     );
-    egui::Area::new(ui.id().with("track-menu"))
+    egui::Area::new(ui.scope_id().with("track-menu"))
         .order(egui::Order::Foreground)
         .fixed_pos(menu.min)
         .show(ui.ctx(), |ui| {
@@ -113,12 +113,7 @@ pub(super) fn track_menu(
                             );
                             let response = response.on_hover_cursor(CursorIcon::PointingHand);
                             response.widget_info(|| {
-                                WidgetInfo::selected(
-                                    WidgetType::RadioButton,
-                                    true,
-                                    selected,
-                                    &label,
-                                )
+                                WidgetInfo::selected(Role::RadioButton, true, selected, &label)
                             });
                             let painter = ui.painter();
                             if response.hovered() {
@@ -179,8 +174,12 @@ fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
         vec2(menu.width() - 8.0, row),
     );
     let label = t!("Style and delay");
-    let response = ui.interact(item, ui.id().with("subtitle-style-row"), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, &label));
+    let response = ui.interact(
+        item,
+        ui.scope_id().with("subtitle-style-row"),
+        Sense::hover(),
+    );
+    response.widget_info(|| WidgetInfo::labeled(Role::Button, true, &label));
     let painter = ui.painter();
     painter.hline(
         item.x_range().shrink(6.0),
@@ -227,7 +226,7 @@ pub(super) fn style_panel(
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
 ) {
-    egui::Area::new(ui.id().with("subtitle-style"))
+    egui::Area::new(ui.scope_id().with("subtitle-style"))
         .order(egui::Order::Foreground)
         .fixed_pos(panel.min)
         .show(ui.ctx(), |ui| {
@@ -285,14 +284,14 @@ fn delay(ui: &mut Ui, controls: &mut Controls, out: &mut Vec<PlayerCommand>) {
         let rect = Rect::from_min_size(pos2(left, strip.top()), vec2(width, strip.height()));
         let middle = step == 0;
         let enabled = !middle || ms != 0;
-        let response = ui.interact(rect, ui.id().with(("delay", i)), Sense::click());
+        let response = ui.interact(rect, ui.scope_id().with(("delay", i)), Sense::click());
         response.widget_info(|| {
             let label = if middle {
                 t!("Subtitle delay {delay}, reset", delay = delay_label(ms))
             } else {
                 label.clone()
             };
-            WidgetInfo::labeled(WidgetType::Button, enabled, label)
+            WidgetInfo::labeled(Role::Button, enabled, label)
         });
         let hovered = enabled && response.hovered();
         if hovered {

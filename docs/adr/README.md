@@ -57,6 +57,7 @@ old one *Superseded by NNNN*.
 | [0039](0039-linux-appimage.md) | A Linux AppImage with its own LGPL libmpv | Withdrawn |
 | [0040](0040-windows-in-app-update.md) | In-app update on Windows | Accepted |
 | [0041](0041-linux-in-app-update.md) | In-app update on Linux | Accepted |
+| [0042](0042-egui-0-37-with-fastframe-main.md) | egui 0.37 with fastframe from its main branch | Accepted |
 
 ## What we took from the reference projects
 
