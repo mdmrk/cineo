@@ -600,11 +600,11 @@ alpha (`colour_and_transparency_survive_downscaling`).
 
 | Tool          | Version | Use                                 |
 | ------------- | ------- | ----------------------------------- |
-| cargo-nextest | 0.9.150 | CI test runner                      |
-| cargo-deny    | 0.20.2  | Licenses, advisories, bans, sources |
+| cargo-nextest | 0.9.152 | CI test runner                      |
+| cargo-deny    | 0.22.0  | Licenses, advisories, bans, sources |
 | taplo         | 0.10.0  | TOML format and lint                |
-| typos         | 1.51.1  | Spell check of code and docs        |
-| cargo-machete | 0.9.2   | Unused dependencies                 |
+| typos         | 1.52.2  | Spell check of code and docs        |
+| cargo-machete | 0.10.1  | Unused dependencies                 |
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
 | minisign      | 0.12    | Release checksum signatures; CI takes the author's static Linux build, checked by SHA-256 (`scripts/release.sh tool`), not Ubuntu's archive |
@@ -618,7 +618,7 @@ pinned commit in `.github/` is not in this table.
 | Action                        | Version | Commit                                     |
 | ----------------------------- | ------- | ------------------------------------------ |
 | `Swatinem/rust-cache`         | v2.9.3  | `d1527c8f67ef9af357290475d4af4b0fab8f12e0` |
-| `taiki-e/install-action`      | v2.90.5 | `ab49d3c64680143e184118bed66a46419fc15519` |
+| `taiki-e/install-action`      | v2.90.8 | `fe3acb53a98b62c772db35de75ce0e4595e7ca8c` |
 | `samypr100/setup-dev-drive`   | v4.1.0  | `562171fe8df7401fdf582d766cd3b6ab80d5b1a0` |
 | `gradle/actions/setup-gradle` | v6.4.1  | `8da46b539cd8fe6ab27ca75128919a18d757604c` |
 
