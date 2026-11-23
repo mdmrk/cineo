@@ -398,6 +398,11 @@ Format:
   them from their default branch with cached sources, so the exact
   revisions in the DLL, and whether every package is linked in, are
   INFERRED; this is not legal advice.
+- Gap: the pin moved to the 2026-11-23 build (mpv `35efcf5`, FFmpeg
+  `N-129249-g4dfdbc94c` by the DLL's own strings), and the texts and
+  `licenses.txt` were not redone: they are still those of the 2026-11-05
+  build. The recipe at its last commit before that build (`7e36e1e`) moved
+  libiconv to 1.19.1, libopenmpt to 0.8.10 and SVT-AV1 to GitHub.
 - Why: the build publishes no list of what it linked, and its logs need a
   GitHub login.
 - Instead: the list errs on the side of more packages, and copyright
