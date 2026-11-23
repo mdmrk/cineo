@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-19 21:38+0100\n"
+"POT-Creation-Date: 2026-11-23 13:14+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -289,48 +289,48 @@ msgstr "位置"
 msgid "Volume"
 msgstr "音量"
 
-#: crates/cineo-desktop/src/player/stats.rs:37
+#: crates/cineo-desktop/src/player/stats.rs:139
 msgid "Download"
 msgstr "下载"
 
-#: crates/cineo-desktop/src/player/stats.rs:38
+#: crates/cineo-desktop/src/player/stats.rs:140
 msgid "Peers"
 msgstr "节点"
 
-#: crates/cineo-desktop/src/player/stats.rs:40
-msgid "Downloaded"
-msgstr "已下载"
-
-#: crates/cineo-desktop/src/player/stats.rs:42
+#: crates/cineo-desktop/src/player/stats.rs:142
 #, rust-format
 msgid "{done} of {total}"
 msgstr "{done} / {total}"
 
-#: crates/cineo-desktop/src/player/stats.rs:51
+#: crates/cineo-desktop/src/player/stats.rs:153
+msgid "Downloaded"
+msgstr "已下载"
+
+#: crates/cineo-desktop/src/player/stats.rs:157
 msgid "Network"
 msgstr "网络"
 
-#: crates/cineo-desktop/src/player/stats.rs:54
+#: crates/cineo-desktop/src/player/stats.rs:160
 msgid "Buffered"
 msgstr "已缓冲"
 
-#: crates/cineo-desktop/src/player/stats.rs:57
+#: crates/cineo-desktop/src/player/stats.rs:164
 msgid "Resolution"
 msgstr "分辨率"
 
-#: crates/cineo-desktop/src/player/stats.rs:66
-msgid "Video"
-msgstr "视频"
+#: crates/cineo-desktop/src/player/stats.rs:175
+msgid "Codec"
+msgstr "编码"
 
-#: crates/cineo-desktop/src/player/stats.rs:70
+#: crates/cineo-desktop/src/player/stats.rs:179
 msgid "Software"
 msgstr "软件"
 
-#: crates/cineo-desktop/src/player/stats.rs:74
+#: crates/cineo-desktop/src/player/stats.rs:183
 msgid "Decoder"
 msgstr "解码器"
 
-#: crates/cineo-desktop/src/player/stats.rs:77
+#: crates/cineo-desktop/src/player/stats.rs:186
 msgid "Dropped frames"
 msgstr "丢帧"
 
@@ -1510,3 +1510,6 @@ msgstr "取消"
 msgctxt "clear-field"
 msgid "Clear"
 msgstr "清除"
+
+#~ msgid "Video"
+#~ msgstr "视频"

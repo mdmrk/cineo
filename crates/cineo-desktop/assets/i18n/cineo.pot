@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-19 21:38+0100\n"
+"POT-Creation-Date: 2026-11-23 13:14+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -276,48 +276,48 @@ msgstr ""
 msgid "Volume"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:37
+#: crates/cineo-desktop/src/player/stats.rs:139
 msgid "Download"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:38
+#: crates/cineo-desktop/src/player/stats.rs:140
 msgid "Peers"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:40
-msgid "Downloaded"
-msgstr ""
-
-#: crates/cineo-desktop/src/player/stats.rs:42
+#: crates/cineo-desktop/src/player/stats.rs:142
 #, rust-format
 msgid "{done} of {total}"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:51
+#: crates/cineo-desktop/src/player/stats.rs:153
+msgid "Downloaded"
+msgstr ""
+
+#: crates/cineo-desktop/src/player/stats.rs:157
 msgid "Network"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:54
+#: crates/cineo-desktop/src/player/stats.rs:160
 msgid "Buffered"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:57
+#: crates/cineo-desktop/src/player/stats.rs:164
 msgid "Resolution"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:66
-msgid "Video"
+#: crates/cineo-desktop/src/player/stats.rs:175
+msgid "Codec"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:70
+#: crates/cineo-desktop/src/player/stats.rs:179
 msgid "Software"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:74
+#: crates/cineo-desktop/src/player/stats.rs:183
 msgid "Decoder"
 msgstr ""
 
-#: crates/cineo-desktop/src/player/stats.rs:77
+#: crates/cineo-desktop/src/player/stats.rs:186
 msgid "Dropped frames"
 msgstr ""
 

@@ -13,7 +13,7 @@ pub(crate) mod stats;
 mod tracks;
 
 use bars::{bottom_bar, next_popup, top_bar};
-use stats::{stat_rows, stats_overlay, stats_shown, toggle_stats_shown};
+use stats::{Trends, stat_rows, stats_overlay, stats_shown, toggle_stats_shown};
 
 use crate::theme;
 use crate::view::{IMAGE_FILTER, paint_cover, paint_loading};
@@ -81,6 +81,7 @@ pub struct Controls {
     started: bool,
     click_toggled_pause: bool,
     video_pressed: bool,
+    trends: Trends,
 }
 
 impl Controls {
@@ -184,8 +185,16 @@ pub fn show(
         paint_loading(ui, rect.center(), LOADING_WIDTH, theme::TEXT_BRIGHT);
     }
 
+    controls.trends.sample(status, playback.torrent, now);
     if stats_shown(ui.ctx()) {
-        stats_overlay(ui, rect, &stat_rows(status, playback.torrent));
+        stats_overlay(
+            ui,
+            rect,
+            &stat_rows(status, playback.torrent),
+            &controls.trends,
+        );
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_secs(1));
     }
 
     if let Some(next) = &playback.next {

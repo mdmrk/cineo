@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-19 21:38+0100\n"
+"POT-Creation-Date: 2026-11-23 13:14+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -291,48 +291,48 @@ msgstr "Position"
 msgid "Volume"
 msgstr "Lautstärke"
 
-#: crates/cineo-desktop/src/player/stats.rs:37
+#: crates/cineo-desktop/src/player/stats.rs:139
 msgid "Download"
 msgstr "Download"
 
-#: crates/cineo-desktop/src/player/stats.rs:38
+#: crates/cineo-desktop/src/player/stats.rs:140
 msgid "Peers"
 msgstr "Peers"
 
-#: crates/cineo-desktop/src/player/stats.rs:40
-msgid "Downloaded"
-msgstr "Heruntergeladen"
-
-#: crates/cineo-desktop/src/player/stats.rs:42
+#: crates/cineo-desktop/src/player/stats.rs:142
 #, rust-format
 msgid "{done} of {total}"
 msgstr "{done} von {total}"
 
-#: crates/cineo-desktop/src/player/stats.rs:51
+#: crates/cineo-desktop/src/player/stats.rs:153
+msgid "Downloaded"
+msgstr "Heruntergeladen"
+
+#: crates/cineo-desktop/src/player/stats.rs:157
 msgid "Network"
 msgstr "Netzwerk"
 
-#: crates/cineo-desktop/src/player/stats.rs:54
+#: crates/cineo-desktop/src/player/stats.rs:160
 msgid "Buffered"
 msgstr "Gepuffert"
 
-#: crates/cineo-desktop/src/player/stats.rs:57
+#: crates/cineo-desktop/src/player/stats.rs:164
 msgid "Resolution"
 msgstr "Auflösung"
 
-#: crates/cineo-desktop/src/player/stats.rs:66
-msgid "Video"
-msgstr "Video"
+#: crates/cineo-desktop/src/player/stats.rs:175
+msgid "Codec"
+msgstr "Codec"
 
-#: crates/cineo-desktop/src/player/stats.rs:70
+#: crates/cineo-desktop/src/player/stats.rs:179
 msgid "Software"
 msgstr "Software"
 
-#: crates/cineo-desktop/src/player/stats.rs:74
+#: crates/cineo-desktop/src/player/stats.rs:183
 msgid "Decoder"
 msgstr "Decoder"
 
-#: crates/cineo-desktop/src/player/stats.rs:77
+#: crates/cineo-desktop/src/player/stats.rs:186
 msgid "Dropped frames"
 msgstr "Verworfene Frames"
 
@@ -1554,3 +1554,6 @@ msgstr "Abbrechen"
 msgctxt "clear-field"
 msgid "Clear"
 msgstr "Leeren"
+
+#~ msgid "Video"
+#~ msgstr "Video"

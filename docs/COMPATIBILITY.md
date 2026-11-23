@@ -264,10 +264,16 @@ The full evidence for the rows above whose notes do not fit in the table.
 - Video in the window seen under Wayland and X11 (XWayland), 2026-10-07,
   with a test build; the full app is covered by the [manual
   test](DEVELOPMENT.md#manual-gui-test).
-- A streaming stats overlay (player button or `I`) shows torrent download
-  speed, peers and progress, and mpv's network speed, buffered seconds,
-  resolution, codec and bitrate, decoder and dropped frames
+- A streaming stats overlay (player button or `I`, closed with its ×) lists
+  torrent download speed, peers and progress, mpv's network speed and
+  buffered seconds, and the video's resolution, codec and bitrate, decoder
+  and dropped frames in a panel of fixed width; a graph before each speed
+  and the buffer shows its last minute, and zero peers or dropped frames
+  show in the warning color
   (`stats_show_torrent_and_player_figures_that_exist`,
+  `stalled_peers_and_dropped_frames_are_flagged`,
+  `trends_follow_each_figure_once_a_second`,
+  `a_history_keeps_one_sample_a_second_for_a_minute`,
   `stats_take_mpv_values_and_drop_unavailable_ones`); not seen with a real
   stream.
 - mpv buffers at most 120 s ahead of the playhead, and at most 512 MiB
