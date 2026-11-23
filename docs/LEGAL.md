@@ -96,14 +96,15 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   ships it in `cineo-arm64-android.apk` (ADR-0029).
   `scripts/build-libmpv-android.sh` builds it (2026-11-03, ADR-0028), from the sources
   pinned in `scripts/libmpv-android.env`: mpv 0.42.0 with `-Dgpl=false`
-  and FFmpeg 8.1.3 without `--enable-gpl`, `--enable-version3` or
-  `--enable-nonfree`, so both are LGPL-2.1-or-later (VERIFIED:
-  `libavutil` reports "LGPL version 2.1 or later" and mpv's `HAVE_GPL` is
-  0). FFmpeg uses OpenSSL 3.5.9 (Apache-2.0) for HTTPS: FFmpeg's
+  and FFmpeg 9.1 without `--enable-gpl`, `--enable-version3` or
+  `--enable-nonfree`, so both are LGPL-2.1-or-later (VERIFIED with FFmpeg
+  8.1.3: `libavutil` reports "LGPL version 2.1 or later" and mpv's
+  `HAVE_GPL` is 0; INFERRED for 9.1, which has not been built yet; the
+  build script still stops on those flags). FFmpeg uses OpenSSL 3.5.9 (Apache-2.0) for HTTPS: FFmpeg's
   `configure` puts mbedTLS, not OpenSSL, on its version3 list. It also
-  links dav1d 1.5.4 (BSD-2-Clause); mpv links libass 0.17.5 (ISC),
+  links dav1d 1.5.5 (BSD-2-Clause); mpv links libass 0.17.5 (ISC),
   freetype 2.15.0 (FTL), fribidi 1.0.18 (LGPL-2.1-or-later), harfbuzz
-  15.0.0 (MIT), libplacebo 7.387.0 (LGPL-2.1-or-later, with the OpenGL
+  15.2.0 (MIT), libplacebo 7.387.0 (LGPL-2.1-or-later, with the OpenGL
   loader glad generates, MIT and Apache-2.0 for the Khronos specifications,
   and the fast_float headers, MIT; VERIFIED 2026-11-17 in its
   `src/meson.build` and the glad templates) and the NDK's
