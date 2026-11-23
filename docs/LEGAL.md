@@ -76,8 +76,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
 The Android app (`android/`, ADR-0028) also uses Gradle dependencies,
 which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
 2026-11-03):
-- AndroidX Compose (BOM 2026.09.00), `activity-compose` 1.13.0 and
-  `lifecycle-runtime-compose` 2.11.0: Apache-2.0.
+- AndroidX Compose (BOM 2026.11.01), `activity-compose` 1.13.0 and
+  `lifecycle-runtime-compose` 2.11.1: Apache-2.0.
 - `kotlinx-coroutines-android` 1.11.0: Apache-2.0.
 - JNA 5.19.1, needed by the UniFFI Kotlin code: Apache-2.0 or
   LGPL-2.1-or-later, used under Apache-2.0.
