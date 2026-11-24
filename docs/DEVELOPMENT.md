@@ -664,8 +664,11 @@ checks, and `publish` waits for both:
 - `build` builds `cineo-desktop` for Linux x86_64 and Windows x86_64 at the
   `x86-64-v2` level (Windows with `bundled-libmpv`, after
   `scripts/fetch-libmpv.sh windows` checks the pinned archive), and one universal
-  macOS binary for `aarch64-apple-darwin` and `x86_64-apple-darwin`
+  macOS binary for `aarch64-apple-darwin` and `x86_64-apple-darwin`, its
+  x86_64 half also at `x86-64-v2`
   (`MACOSX_DEPLOYMENT_TARGET=11.0`, after `scripts/fetch-libmpv.sh macos`).
+  The level is set per target with `CARGO_TARGET_<TRIPLE>_RUSTFLAGS`, not
+  `RUSTFLAGS`, which would also reach the arm64 half.
   It puts the files into `dist/` with
   `scripts/package.sh <linux|windows|macos>`, which fails if the binary's
   `--version` is not `cineo` followed by the workspace version, and
@@ -736,7 +739,7 @@ Every release has these files, with the same names in every release so that
 | `cineo-x86_64-linux` | The executable, built for `x86-64-v2` (`-C target-cpu=x86-64-v2`) against glibc 2.39; uses the system libmpv        |
 | `cineo-x86_64-windows.exe` | The Windows executable, built for `x86-64-v2`, with `libmpv-2.dll` embedded gzip-compressed (ADR-0027)      |
 | `cineo-arm64-android.apk` | The Android app for arm64-v8a, signed with the release key, with libmpv and its licenses; `libmpv.md` names the pinned sources (ADR-0029) |
-| `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
+| `cineo-universal-macos.dmg` | `Cineo.app` for arm64 and x86_64 (`x86-64-v2`; macOS 11 or newer), signed ad hoc, with libmpv's dylibs and their licenses (ADR-0035) |
 | `mpv-dev-lgpl-x86_64-….7z` | The unmodified libmpv archive the Windows build embeds, named as upstream names it (`LIBMPV_FILE`, so the name changes with the pin); `scripts/fetch-libmpv.sh` takes it from here before upstream, which deletes old builds (ADR-0027) |
 | `cineo-licenses.zip` | Cineo's license, the font licenses, `libmpv.md` and, in `libmpv/`, the license texts of every package in the Windows libmpv build (`scripts/windows/licenses/`) |
 | `cineo.png`          | App icon, used by `install.sh`                                                                                      |

@@ -120,8 +120,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - { platform: linux, os: ubuntu-24.04, rustflags: -C target-cpu=x86-64-v2 }
-          - { platform: windows, os: windows-latest, features: bundled-libmpv, rustflags: -C target-cpu=x86-64-v2 }
+          - { platform: linux, os: ubuntu-24.04 }
+          - { platform: windows, os: windows-latest, features: bundled-libmpv }
           - { platform: macos, os: macos-latest, targets: aarch64-apple-darwin x86_64-apple-darwin }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -164,7 +164,9 @@ jobs:
         env:
           CARGO_PROFILE_RELEASE_LTO: ${{ startsWith(github.ref, 'refs/tags/') && 'thin' || 'off' }}
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: ${{ startsWith(github.ref, 'refs/tags/') && '1' || '16' }}
-          RUSTFLAGS: ${{ matrix.rustflags }}
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: &x86-64-v2 -C target-cpu=x86-64-v2
+          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: *x86-64-v2
+          CARGO_TARGET_X86_64_APPLE_DARWIN_RUSTFLAGS: *x86-64-v2
           FEATURES: ${{ matrix.features }}
           TARGETS: ${{ matrix.targets }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
