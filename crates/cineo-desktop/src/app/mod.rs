@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use anyhow::Context as _;
 use cineo_core::app::{
     Action, Effect, Language, Notice, Settings, State, TorrentRequest, UpdateFailure,
-    UpdateRequest, UpdateTarget, parse_link, update,
+    UpdateRequest, parse_link, update,
 };
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::embedded::{Display, Player, PlayerCommand, ProcAddress, Renderer, Status};
@@ -254,6 +254,7 @@ pub(crate) struct CineoApp {
     titled_after: Option<String>,
     power: fastframe_power::Power,
     wake_retry: WakeRetry,
+    exe: Option<PathBuf>,
 }
 
 impl CineoApp {
@@ -270,9 +271,10 @@ impl CineoApp {
             fastframe_power::Power::spawn(move || ctx.request_repaint())
         };
         let torrents = Torrents::new(io.runtime.clone(), io.engine.clone());
+        let exe = std::env::current_exe().ok();
         let mut app = Self {
             state: State {
-                self_update: can_update_itself(),
+                self_update: exe.as_deref().and_then(crate::self_update::target),
                 ..State::default()
             },
             view: ViewState {
@@ -295,6 +297,7 @@ impl CineoApp {
             titled_after: None,
             power,
             wake_retry: WakeRetry::default(),
+            exe,
         };
         for action in restore {
             app.dispatch(action);
@@ -351,8 +354,8 @@ impl CineoApp {
 
     fn install_update(&mut self, request: UpdateRequest) {
         let client = AddonClient::new(crate::self_update::policy());
-        match (std::env::current_exe(), client) {
-            (Ok(exe), Ok(client)) => {
+        match (self.exe.clone(), client) {
+            (Some(exe), Ok(client)) => {
                 let send = self.sender();
                 self.spawn(async move {
                     let progress =
@@ -367,7 +370,11 @@ impl CineoApp {
     }
 
     fn restart_to_update(&self) {
-        match std::env::current_exe().and_then(|exe| crate::self_update::restart(&exe)) {
+        let Some(exe) = &self.exe else {
+            warn!("cannot find the updated Cineo");
+            return;
+        };
+        match crate::self_update::restart(exe) {
             Ok(()) => self.ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Err(err) => warn!(%err, "cannot start the updated Cineo"),
         }
@@ -532,12 +539,6 @@ impl eframe::App for CineoApp {
         self.store_tx = None;
         self.torrents.shutdown(Duration::from_secs(2));
     }
-}
-
-fn can_update_itself() -> Option<UpdateTarget> {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| crate::self_update::target(&exe))
 }
 
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {

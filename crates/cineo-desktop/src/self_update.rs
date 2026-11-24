@@ -448,6 +448,45 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_swapped_copy_finds_itself_at_the_replaced_executable_on_linux() {
+        if let Some(report) = std::env::var_os("CINEO_SWAP_REPORT") {
+            std::thread::sleep(Duration::from_millis(1500));
+            let me = std::env::current_exe().unwrap();
+            std::fs::write(report, me.as_os_str().as_encoded_bytes()).unwrap();
+            return;
+        }
+        let me = std::env::current_exe().unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let exe = dir.path().join(INSTALLED_NAMES[0]);
+        let report = dir.path().join("report");
+        std::fs::copy(&me, &exe).unwrap();
+        let mut running = std::process::Command::new(&exe)
+            .args([
+                "--exact",
+                "self_update::tests::a_swapped_copy_finds_itself_at_the_replaced_executable_on_linux",
+            ])
+            .env("CINEO_SWAP_REPORT", &report)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        std::thread::sleep(Duration::from_millis(300));
+        let swapped = swap(&exe, &std::fs::read(&me).unwrap());
+        let exited = running.wait().unwrap();
+        assert_eq!(swapped, Ok(()));
+        assert!(exited.success());
+        assert_eq!(
+            PathBuf::from(std::fs::read_to_string(&report).unwrap()),
+            beside(
+                &dir.path().canonicalize().unwrap().join(INSTALLED_NAMES[0]),
+                ".old"
+            ),
+            "a restart must start the path taken before the update, not current_exe()"
+        );
+    }
+
     #[cfg(windows)]
     #[test]
     fn a_running_executable_can_be_swapped() {

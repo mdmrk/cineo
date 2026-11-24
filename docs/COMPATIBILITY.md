@@ -532,11 +532,15 @@ The full evidence for the rows above whose notes do not fit in the table.
 - Linux (ADR-0041): the same update for a `cineo` (or `cineo-desktop`) in a writable
   folder, as `install.sh` installs it, with `cineo-x86_64-linux` as the
   executable; the new one is written runnable and the running one is
-  swapped while it runs; the license texts are not replaced
+  swapped while it runs; the license texts are not replaced. "Restart
+  to update" starts the path Cineo was launched from, because after the
+  swap the running copy's own path is the replaced `cineo.old`
   (`installing_an_update_downloads_the_offered_release`,
   `the_new_executable_can_run`,
-  `a_running_executable_can_be_swapped_on_linux`). An update from one
-  published release to the next is UNKNOWN (not done yet).
+  `a_running_executable_can_be_swapped_on_linux`,
+  `a_swapped_copy_finds_itself_at_the_replaced_executable_on_linux`).
+  An update from one published release to the next is UNKNOWN (not done
+  yet).
 - On both, while the executable downloads the link shows the percent
   received when the server sends the length, and its tooltip the size
   received and the total as "12.6 MB / 30.1 MB"
