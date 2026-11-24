@@ -33,37 +33,63 @@ It works with Stremio addons. No account, no cloud.
 
 ## Install
 
-Linux (needs mpv):
+**Linux**
 
-```sh
-curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
-```
+1. Install mpv.
+2. Run this in a terminal:
 
-Windows:
+   ```sh
+   curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh
+   ```
 
-```powershell
-irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
-```
+**Windows**
 
-macOS and Android: [latest release](https://github.com/mdmrk/cineo/releases/latest).
+1. Open PowerShell.
+2. Run:
+
+   ```powershell
+   irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+   ```
+
+**macOS**
+
+1. Download `cineo-universal-macos.dmg` from the [latest release](https://github.com/mdmrk/cineo/releases/latest).
+2. Open it and drag Cineo to Applications.
+
+**Android**
+
+1. Download `cineo-arm64-android.apk` from the [latest release](https://github.com/mdmrk/cineo/releases/latest).
+2. Open it and tap Install.
 
 ## Uninstall
 
-Linux:
+**Linux**
 
-```sh
-curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh -s -- --uninstall
-```
+1. Open a terminal.
+2. Run:
 
-Windows:
+   ```sh
+   curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh -s -- --uninstall
+   ```
 
-```powershell
-$env:CINEO_UNINSTALL = 1; irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
-```
+**Windows**
 
-macOS: drag Cineo from Applications to the Trash.
+1. Open PowerShell.
+2. Run:
 
-Android: uninstall it like any other app. This also removes its data.
+   ```powershell
+   $env:CINEO_UNINSTALL = 1; irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+   ```
+
+**macOS**
+
+1. Quit Cineo.
+2. Drag Cineo from Applications to the Trash.
+
+**Android**
+
+1. Long-press the Cineo icon.
+2. Tap Uninstall. This also removes its data.
 
 On the desktop, your addons and library are kept. To remove them too, delete:
 
