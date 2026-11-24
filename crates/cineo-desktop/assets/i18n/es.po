@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-23 13:14+0100\n"
+"POT-Creation-Date: 2026-11-24 08:59+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:567
+#: crates/cineo-desktop/src/app/mod.rs:568
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -32,7 +32,7 @@ msgstr ""
 "\n"
 "¿Abrir su página en Microsoft Store?"
 
-#: crates/cineo-desktop/src/app/mod.rs:571
+#: crates/cineo-desktop/src/app/mod.rs:572
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
@@ -42,7 +42,7 @@ msgstr ""
 "Windows Update, y vuelve a abrir Cineo. Escritorio remoto y las máquinas "
 "virtuales necesitan la aceleración 3D activada."
 
-#: crates/cineo-desktop/src/app/mod.rs:575
+#: crates/cineo-desktop/src/app/mod.rs:576
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
@@ -51,7 +51,7 @@ msgstr ""
 "Las sesiones remotas y las máquinas virtuales necesitan la aceleración 3D "
 "activada."
 
-#: crates/cineo-desktop/src/app/mod.rs:578
+#: crates/cineo-desktop/src/app/mod.rs:579
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -68,15 +68,15 @@ msgstr ""
 "\n"
 "Detalles: {details}"
 
-#: crates/cineo-desktop/src/app/mod.rs:581
+#: crates/cineo-desktop/src/app/mod.rs:582
 msgid "Cineo cannot open its window"
 msgstr "Cineo no puede abrir su ventana"
 
-#: crates/cineo-desktop/src/app/mod.rs:583
+#: crates/cineo-desktop/src/app/mod.rs:584
 msgid "Open Microsoft Store"
 msgstr "Abrir Microsoft Store"
 
-#: crates/cineo-desktop/src/app/mod.rs:584
+#: crates/cineo-desktop/src/app/mod.rs:585
 msgid "Close"
 msgstr "Cerrar"
 
@@ -219,7 +219,7 @@ msgstr "Atrás"
 
 #: crates/cineo-desktop/src/player/bars.rs:94
 #: crates/cineo-desktop/src/player/bars.rs:310
-#: crates/cineo-desktop/src/view/detail.rs:683
+#: crates/cineo-desktop/src/view/detail.rs:681
 msgid "Play"
 msgstr "Reproducir"
 
@@ -345,36 +345,36 @@ msgstr "Desactivados"
 msgid "No audio tracks"
 msgstr "No hay pistas de audio"
 
-#: crates/cineo-desktop/src/player/tracks.rs:181
+#: crates/cineo-desktop/src/player/tracks.rs:176
 msgid "Style and delay"
 msgstr "Estilo y retraso"
 
-#: crates/cineo-desktop/src/player/tracks.rs:251
+#: crates/cineo-desktop/src/player/tracks.rs:250
 msgid "Delay"
 msgstr "Retraso"
 
-#: crates/cineo-desktop/src/player/tracks.rs:255
+#: crates/cineo-desktop/src/player/tracks.rs:254
 msgid "This video only."
 msgstr "Solo este vídeo."
 
-#: crates/cineo-desktop/src/player/tracks.rs:262
-#: crates/cineo-desktop/src/player/tracks.rs:267
+#: crates/cineo-desktop/src/player/tracks.rs:261
+#: crates/cineo-desktop/src/player/tracks.rs:266
 #, rust-format
 msgid "Subtitles {amount} earlier"
 msgstr "Subtítulos {amount} antes"
 
-#: crates/cineo-desktop/src/player/tracks.rs:273
-#: crates/cineo-desktop/src/player/tracks.rs:275
+#: crates/cineo-desktop/src/player/tracks.rs:272
+#: crates/cineo-desktop/src/player/tracks.rs:274
 #, rust-format
 msgid "Subtitles {amount} later"
 msgstr "Subtítulos {amount} después"
 
-#: crates/cineo-desktop/src/player/tracks.rs:291
+#: crates/cineo-desktop/src/player/tracks.rs:290
 #, rust-format
 msgid "Subtitle delay {delay}, reset"
 msgstr "Retraso de subtítulos {delay}, restablecer"
 
-#: crates/cineo-desktop/src/player/tracks.rs:332
+#: crates/cineo-desktop/src/player/tracks.rs:331
 #, rust-format
 msgid "Track {number}"
 msgstr "Pista {number}"
@@ -1199,89 +1199,89 @@ msgstr "{rating} IMDb"
 msgid "Episodes"
 msgstr "Episodios"
 
-#: crates/cineo-desktop/src/view/detail.rs:384
+#: crates/cineo-desktop/src/view/detail.rs:383
 msgid "Addon order"
 msgstr "Orden de add-ons"
 
-#: crates/cineo-desktop/src/view/detail.rs:385
+#: crates/cineo-desktop/src/view/detail.rs:384
 msgid "Quality"
 msgstr "Calidad"
 
-#: crates/cineo-desktop/src/view/detail.rs:386
+#: crates/cineo-desktop/src/view/detail.rs:385
 msgid "Seeders"
 msgstr "Semillas"
 
-#: crates/cineo-desktop/src/view/detail.rs:387
+#: crates/cineo-desktop/src/view/detail.rs:386
 msgctxt "sort-size"
 msgid "Size"
 msgstr "Tamaño"
 
-#: crates/cineo-desktop/src/view/detail.rs:405
+#: crates/cineo-desktop/src/view/detail.rs:404
 msgid "Search streams"
 msgstr "Buscar transmisiones"
 
-#: crates/cineo-desktop/src/view/detail.rs:449
+#: crates/cineo-desktop/src/view/detail.rs:448
 msgid "All"
 msgstr "Todas"
 
-#: crates/cineo-desktop/src/view/detail.rs:475
+#: crates/cineo-desktop/src/view/detail.rs:474
 msgid "Sort by"
 msgstr "Ordenar por"
 
-#: crates/cineo-desktop/src/view/detail.rs:513
+#: crates/cineo-desktop/src/view/detail.rs:512
 #, rust-format
 msgid "Streams: {count}"
 msgstr "Transmisiones: {count}"
 
-#: crates/cineo-desktop/src/view/detail.rs:524
+#: crates/cineo-desktop/src/view/detail.rs:523
 msgid "No streams"
 msgstr "No hay transmisiones"
 
-#: crates/cineo-desktop/src/view/detail.rs:558
+#: crates/cineo-desktop/src/view/detail.rs:557
 msgid "No matching streams"
 msgstr "Ninguna transmisión coincide"
 
-#: crates/cineo-desktop/src/view/detail.rs:562
+#: crates/cineo-desktop/src/view/detail.rs:561
 #, rust-format
 msgid "Torrent streams hidden: {count} (peer-to-peer is off in Settings)"
 msgstr ""
 "Transmisiones torrent ocultas: {count} (el streaming entre pares está "
 "desactivado en Ajustes)"
 
-#: crates/cineo-desktop/src/view/detail.rs:754
+#: crates/cineo-desktop/src/view/detail.rs:752
 msgid "Specials"
 msgstr "Especiales"
 
-#: crates/cineo-desktop/src/view/detail.rs:756
+#: crates/cineo-desktop/src/view/detail.rs:754
 #, rust-format
 msgid "Season {number}"
 msgstr "Temporada {number}"
 
-#: crates/cineo-desktop/src/view/detail.rs:762
+#: crates/cineo-desktop/src/view/detail.rs:760
 msgid "HTTP"
 msgstr "HTTP"
 
-#: crates/cineo-desktop/src/view/detail.rs:763
+#: crates/cineo-desktop/src/view/detail.rs:761
 msgid "URL"
 msgstr "URL"
 
-#: crates/cineo-desktop/src/view/detail.rs:764
+#: crates/cineo-desktop/src/view/detail.rs:762
 msgid "YouTube"
 msgstr "YouTube"
 
-#: crates/cineo-desktop/src/view/detail.rs:765
+#: crates/cineo-desktop/src/view/detail.rs:763
 msgid "Torrent"
 msgstr "Torrent"
 
-#: crates/cineo-desktop/src/view/detail.rs:766
+#: crates/cineo-desktop/src/view/detail.rs:764
 msgid "External"
 msgstr "Externa"
 
-#: crates/cineo-desktop/src/view/detail.rs:767
+#: crates/cineo-desktop/src/view/detail.rs:765
 msgid "Archive"
 msgstr "Archivo"
 
-#: crates/cineo-desktop/src/view/detail.rs:768
+#: crates/cineo-desktop/src/view/detail.rs:766
 msgid "Usenet"
 msgstr "Usenet"
 
@@ -1502,52 +1502,57 @@ msgstr "Cineo no pudo sustituir su ejecutable."
 msgid "Cineo keeps working while it downloads."
 msgstr "Cineo sigue funcionando mientras se descarga."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:117
+#: crates/cineo-desktop/src/view/sidebar.rs:126
 #, rust-format
 msgid "Update to v{version}"
 msgstr "Actualizar a v{version}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:118
+#: crates/cineo-desktop/src/view/sidebar.rs:127
 msgid "Download and check it; it runs after a restart."
 msgstr "Se descarga y se comprueba; se usará tras reiniciar."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:124
-#, rust-format
-msgid "Downloading v{version}… {percent}%"
-msgstr "Descargando v{version}… {percent} %"
-
-#: crates/cineo-desktop/src/view/sidebar.rs:128
+#: crates/cineo-desktop/src/view/sidebar.rs:132
 #, rust-format
 msgid "Downloading v{version}…"
 msgstr "Descargando v{version}…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:134
+#: crates/cineo-desktop/src/view/sidebar.rs:135
+#, rust-format
+msgid "Downloading v{version}… {percent}%"
+msgstr "Descargando v{version}… {percent} %"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:145
 msgid "Restart to update"
 msgstr "Reiniciar para actualizar"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:135
+#: crates/cineo-desktop/src/view/sidebar.rs:146
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr "Cineo se cierra y abre v{version}."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:139
+#: crates/cineo-desktop/src/view/sidebar.rs:150
 msgid "Update failed, try again"
 msgstr "La actualización falló, reintentar"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:146
+#: crates/cineo-desktop/src/view/sidebar.rs:157
 #, rust-format
 msgid "v{version} available"
 msgstr "v{version} disponible"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:147
+#: crates/cineo-desktop/src/view/sidebar.rs:158
 msgid "Open the release page to download it."
 msgstr "Abre la página de la versión para descargarla."
+
+#: crates/cineo-desktop/src/view/sidebar.rs:176
+#, rust-format
+msgid "{percent}%"
+msgstr "{percent} %"
 
 #: crates/cineo-desktop/src/view/widgets.rs:44
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: crates/cineo-desktop/src/view/widgets.rs:123
+#: crates/cineo-desktop/src/view/widgets.rs:122
 msgctxt "clear-field"
 msgid "Clear"
 msgstr "Borrar"

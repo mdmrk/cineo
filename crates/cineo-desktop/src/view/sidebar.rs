@@ -1,4 +1,4 @@
-use super::icons::{Icon, append_icon, paint_icon, paint_nav_label};
+use super::icons::{Icon, paint_icon, paint_nav_label};
 use super::widgets::{compact, faint, lerp_color, spinner};
 use super::{Page, ViewState, go};
 use crate::i18n::{Text, t};
@@ -7,7 +7,7 @@ use crate::{brand, theme};
 use cineo_core::app::{Action, State, UpdateFailure, UpdateProgress};
 use eframe::egui::{
     self, Align, Color32, CornerRadius, Frame, Layout, Margin, Mesh, Rect, Response, Role, Sense,
-    Stroke, TextFormat, Ui, WidgetInfo, pos2, text::LayoutJob, vec2,
+    Stroke, Ui, WidgetInfo, pos2, vec2,
 };
 
 pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
@@ -104,6 +104,13 @@ fn download_hover(received: u64, total: Option<u64>) -> Text {
     format!("{size}\n{keeps_working}").into()
 }
 
+const UPDATE_INDENT: f32 = 9.0;
+const UPDATE_ICON: f32 = 15.0;
+const UPDATE_GAP: f32 = 6.0;
+const UPDATE_ROW_GAP: f32 = 5.0;
+const UPDATE_BAR: f32 = 3.0;
+const UPDATE_COMPACT_BAR: f32 = 20.0;
+
 fn update_link(
     ui: &mut Ui,
     state: &State,
@@ -111,6 +118,8 @@ fn update_link(
     compact: bool,
 ) -> Option<Action> {
     let version = latest.to_string();
+    let mut shown = None;
+    let mut percent = None;
     let (text, hover, click) = if state.self_update.is_some() {
         match state.update_progress {
             UpdateProgress::Idle => (
@@ -118,18 +127,20 @@ fn update_link(
                 t!("Download and check it; it runs after a restart."),
                 UpdateClick::Install,
             ),
-            progress @ UpdateProgress::Downloading { received, total } => (
-                match progress.percent() {
+            progress @ UpdateProgress::Downloading { received, total } => {
+                percent = progress.percent();
+                let downloading = t!("Downloading v{version}…", version = version);
+                let text = match percent {
                     Some(percent) => t!(
                         "Downloading v{version}… {percent}%",
                         version = version,
                         percent = percent
                     ),
-                    None => t!("Downloading v{version}…", version = version),
-                },
-                download_hover(received, total),
-                UpdateClick::Nothing,
-            ),
+                    None => downloading.clone(),
+                };
+                shown = Some(downloading);
+                (text, download_hover(received, total), UpdateClick::Nothing)
+            }
             UpdateProgress::Ready => (
                 t!("Restart to update"),
                 t!("Cineo closes and starts v{version}.", version = version),
@@ -148,41 +159,125 @@ fn update_link(
             UpdateClick::OpenPage,
         )
     };
-    let mut job = LayoutJob::default();
-    append_icon(
-        &mut job,
-        Icon::Named("circle-arrow-up"),
-        15.0,
-        theme::ACCENT,
-    );
-    if !compact {
-        job.append(
-            &text,
-            6.0,
-            TextFormat::simple(theme::caption(), theme::ACCENT),
+    let shown = shown.unwrap_or_else(|| text.clone());
+    let clickable = !matches!(click, UpdateClick::Nothing);
+    let width = ui.available_width();
+    let text_left = UPDATE_INDENT + UPDATE_ICON + UPDATE_GAP;
+    let galley = (!compact).then(|| {
+        ui.painter().layout(
+            shown.into_owned(),
+            theme::caption(),
+            Color32::PLACEHOLDER,
+            (width - text_left).max(1.0),
+        )
+    });
+    let side = percent.filter(|_| !compact).map(|percent| {
+        ui.painter().layout_no_wrap(
+            t!("{percent}%", percent = percent).into_owned(),
+            theme::caption(),
+            theme::TEXT_DIM,
+        )
+    });
+    let line = galley
+        .as_ref()
+        .and_then(|galley| galley.rows.first())
+        .map_or(UPDATE_ICON, |row| row.rect().height());
+    let top = line.max(UPDATE_ICON);
+    let text_height = galley
+        .as_ref()
+        .map_or(top, |galley| galley.size().y + (top - line) / 2.0)
+        .max(top);
+    let row_height = match (&side, percent) {
+        (Some(side), _) => side.size().y,
+        (None, Some(_)) => UPDATE_BAR,
+        (None, None) => 0.0,
+    };
+    let height = if percent.is_some() {
+        text_height + UPDATE_ROW_GAP + row_height
+    } else {
+        text_height
+    };
+    let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(Role::Link, true, &text));
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter();
+        let hovered = clickable && (response.hovered() || response.has_focus());
+        let color = if hovered {
+            theme::ACCENT_HOVER
+        } else {
+            theme::ACCENT
+        };
+        let icon = pos2(
+            rect.left() + UPDATE_INDENT + UPDATE_ICON / 2.0,
+            rect.top() + top / 2.0,
         );
-    }
-    ui.horizontal(|ui| {
-        ui.add_space(9.0);
-        let link = ui.add(egui::Link::new(job)).on_hover_text(hover);
-        link.widget_info(|| WidgetInfo::labeled(Role::Link, true, &text));
-        if !link.clicked() {
-            return None;
+        paint_icon(
+            painter,
+            Icon::Named("circle-arrow-up"),
+            icon,
+            UPDATE_ICON,
+            color,
+        );
+        if let Some(galley) = galley {
+            let underline = if hovered {
+                Stroke::new(1.0, color)
+            } else {
+                Stroke::NONE
+            };
+            let at = pos2(rect.left() + text_left, rect.top() + (top - line) / 2.0);
+            painter.add(egui::epaint::TextShape::new(at, galley, color).with_underline(underline));
         }
-        match click {
-            UpdateClick::OpenPage => {
-                ui.ctx()
-                    .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
-                        latest,
-                    )));
-                None
+        if let Some(percent) = percent {
+            let row_top = rect.top() + text_height + UPDATE_ROW_GAP;
+            let middle = row_top + row_height / 2.0;
+            let (left, right) = match &side {
+                Some(side) => {
+                    let right = rect.right();
+                    painter.galley(
+                        pos2(right - side.size().x, row_top),
+                        side.clone(),
+                        theme::TEXT_DIM,
+                    );
+                    (rect.left() + text_left, right - side.size().x - UPDATE_GAP)
+                }
+                None => (
+                    icon.x - UPDATE_COMPACT_BAR / 2.0,
+                    icon.x + UPDATE_COMPACT_BAR / 2.0,
+                ),
+            };
+            let track = Rect::from_min_max(
+                pos2(left, middle - UPDATE_BAR / 2.0),
+                pos2(right.max(left), middle + UPDATE_BAR / 2.0),
+            );
+            let radius = CornerRadius::same(2);
+            painter.rect_filled(track, radius, theme::SURFACE);
+            let mut done = track;
+            done.set_width(track.width() * f32::from(percent.min(100)) / 100.0);
+            if done.width() > 0.0 {
+                painter.rect_filled(done, radius, theme::ACCENT);
             }
-            UpdateClick::Install => Some(Action::InstallUpdate),
-            UpdateClick::Restart => Some(Action::RestartToUpdate),
-            UpdateClick::Nothing => None,
         }
-    })
-    .inner
+    }
+    let response = if clickable {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    };
+    if !response.on_hover_text(hover).clicked() {
+        return None;
+    }
+    match click {
+        UpdateClick::OpenPage => {
+            ui.ctx()
+                .open_url(egui::OpenUrl::new_tab(cineo_core::app::release_page(
+                    latest,
+                )));
+            None
+        }
+        UpdateClick::Install => Some(Action::InstallUpdate),
+        UpdateClick::Restart => Some(Action::RestartToUpdate),
+        UpdateClick::Nothing => None,
+    }
 }
 
 fn logo(ui: &mut Ui, sidebar_width: f32) {
