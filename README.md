@@ -9,6 +9,8 @@
 A fast, native media center for Linux, Windows, macOS and Android phones.
 It works with Stremio addons. No account, no cloud.
 
+[Install](#install) · [Uninstall](#uninstall) · [Build](#build) · [License](#license)
+
 <table>
   <tr>
     <td><img src="docs/images/home.png" alt="Cineo home screen"></td>
@@ -44,6 +46,32 @@ irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
 ```
 
 macOS and Android: [latest release](https://github.com/mdmrk/cineo/releases/latest).
+
+## Uninstall
+
+Linux:
+
+```sh
+curl -fsSL https://github.com/mdmrk/cineo/releases/latest/download/install.sh | sh -s -- --uninstall
+```
+
+Windows:
+
+```powershell
+$env:CINEO_UNINSTALL = 1; irm https://github.com/mdmrk/cineo/releases/latest/download/install.ps1 | iex
+```
+
+macOS: drag Cineo from Applications to the Trash.
+
+Android: uninstall it like any other app. This also removes its data.
+
+On the desktop, your addons and library are kept. To remove them too, delete:
+
+| Platform | Folders |
+| --- | --- |
+| Linux | `~/.local/state/cineo`, `~/.cache/cineo` |
+| Windows | `%LOCALAPPDATA%\Cineo` |
+| macOS | `~/Library/Application Support/Cineo`, `~/Library/Caches/Cineo` |
 
 ## Build
 
