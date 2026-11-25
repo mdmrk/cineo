@@ -33,7 +33,10 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                 ui.max_rect().y_range().expand(14.0),
                 Stroke::new(1.0, theme::RULE),
             );
-            logo(ui, width);
+            let rest_id = ui.id().with("nav_rest");
+            let rest = ui.data(|data| data.get_temp::<f32>(rest_id)).unwrap_or(0.0);
+            logo(ui, width, rest);
+            let items_top = ui.cursor().min.y;
             ui.spacing_mut().item_spacing.y = 2.0;
             let mut item = |ui: &mut Ui, page: Page| {
                 let selected = view.page == page && state.detail.is_none();
@@ -46,8 +49,9 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                     item(ui, page);
                 }
             }
+            let items = ui.cursor().min.y - items_top;
             let mut clicked = None;
-            ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+            let bottom = ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
                 if let Some(latest) = state.available_update() {
                     clicked = update_link(ui, state, latest, compact);
                 }
@@ -69,6 +73,11 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                     });
                 }
             });
+            let measured = items + bottom.response.rect.height() + NAV_GAP;
+            if (measured - rest).abs() > 0.5 {
+                ui.data_mut(|data| data.insert_temp(rest_id, measured));
+                ui.ctx().request_discard("sidebar height changed");
+            }
             out.extend(clicked);
         });
 }
@@ -280,7 +289,9 @@ fn update_link(
     }
 }
 
-fn logo(ui: &mut Ui, sidebar_width: f32) {
+const NAV_GAP: f32 = 8.0;
+
+fn logo(ui: &mut Ui, sidebar_width: f32, rest: f32) {
     let window = ui.ctx().content_rect();
     let size = vec2(theme::LOGO_WIDTH, theme::LOGO_WIDTH * theme::LOGO_ASPECT);
     let left = if sidebar_width < theme::SIDEBAR_WIDTH {
@@ -289,7 +300,9 @@ fn logo(ui: &mut Ui, sidebar_width: f32) {
         theme::LOGO_BLEED.x
     };
     let rect = Rect::from_min_size(window.min + vec2(left, theme::LOGO_BLEED.y), size);
-    let height = window.min.y + theme::NAV_TOP - ui.cursor().min.y;
+    let height = (window.min.y + theme::NAV_TOP - ui.cursor().min.y)
+        .min(ui.available_height() - rest)
+        .max(0.0);
     let (_, response) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Image, true, "Cineo"));
     let sidebar = Rect::from_min_max(window.min, pos2(window.min.x + sidebar_width, window.max.y));
