@@ -79,7 +79,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         .with_title("Cineo")
         .with_app_id("cineo")
         .with_inner_size([1280.0, 800.0])
-        .with_min_inner_size([800.0, 500.0]);
+        .with_min_inner_size([400.0, 250.0]);
     if let Some(icon) = brand::icon() {
         viewport = viewport.with_icon(icon);
     }
