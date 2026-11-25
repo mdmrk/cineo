@@ -33,7 +33,7 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                 ui.max_rect().y_range().expand(14.0),
                 Stroke::new(1.0, theme::RULE),
             );
-            let rest_id = egui::Id::new("nav_rest");
+            let rest_id = egui::Id::unique("nav_rest");
             let rest = ui.data(|data| data.get_temp::<f32>(rest_id)).unwrap_or(0.0);
             logo(ui, width, rest);
             let items_top = ui.cursor().min.y;
