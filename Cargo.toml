@@ -4,14 +4,14 @@ members = ["crates/*"]
 default-members = ["crates/cineo-desktop"]
 
 [workspace.package]
-version = "1.10.1"
+version = "1.10.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/mdmrk/cineo"
 publish = false
 
 [workspace.metadata.android]
-version-code = 11001
+version-code = 11002
 
 [workspace.dependencies]
 cineo-core = { path = "crates/cineo-core" }
