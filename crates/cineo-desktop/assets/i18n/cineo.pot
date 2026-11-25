@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-24 09:06+0100\n"
+"POT-Creation-Date: 2026-11-25 20:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -601,7 +601,7 @@ msgid "Reset…"
 msgstr ""
 
 #: crates/cineo-desktop/src/settings/mod.rs:418
-#: crates/cineo-desktop/src/view/sidebar.rs:54
+#: crates/cineo-desktop/src/view/sidebar.rs:58
 #, rust-format
 msgid "Cineo v{version}"
 msgstr ""
@@ -1102,6 +1102,10 @@ msgstr ""
 msgid "Remove from library"
 msgstr ""
 
+#: crates/cineo-desktop/src/view/cards.rs:277
+msgid "Details"
+msgstr ""
+
 #: crates/cineo-desktop/src/view/detail.rs:126
 msgid "Where to watch"
 msgstr ""
@@ -1407,72 +1411,72 @@ msgstr ""
 msgid "{name} {kind}"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:67
+#: crates/cineo-desktop/src/view/sidebar.rs:71
 msgid "Loading addons…"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:85
+#: crates/cineo-desktop/src/view/sidebar.rs:94
 msgid "The download failed. Check the connection and try again."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:87
+#: crates/cineo-desktop/src/view/sidebar.rs:96
 msgid "The release's signature did not verify, so nothing was installed."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:90
+#: crates/cineo-desktop/src/view/sidebar.rs:99
 msgid "A downloaded file did not match its checksum, so nothing was installed."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:92
+#: crates/cineo-desktop/src/view/sidebar.rs:101
 msgid "Cineo could not replace its executable."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:98
+#: crates/cineo-desktop/src/view/sidebar.rs:107
 msgid "Cineo keeps working while it downloads."
-msgstr ""
-
-#: crates/cineo-desktop/src/view/sidebar.rs:126
-#, rust-format
-msgid "Update to v{version}"
-msgstr ""
-
-#: crates/cineo-desktop/src/view/sidebar.rs:127
-msgid "Download and check it; it runs after a restart."
-msgstr ""
-
-#: crates/cineo-desktop/src/view/sidebar.rs:132
-#, rust-format
-msgid "Downloading v{version}…"
 msgstr ""
 
 #: crates/cineo-desktop/src/view/sidebar.rs:135
 #, rust-format
+msgid "Update to v{version}"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:136
+msgid "Download and check it; it runs after a restart."
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:141
+#, rust-format
+msgid "Downloading v{version}…"
+msgstr ""
+
+#: crates/cineo-desktop/src/view/sidebar.rs:144
+#, rust-format
 msgid "Downloading v{version}… {percent}%"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:145
+#: crates/cineo-desktop/src/view/sidebar.rs:154
 msgid "Restart to update"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:146
+#: crates/cineo-desktop/src/view/sidebar.rs:155
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:150
+#: crates/cineo-desktop/src/view/sidebar.rs:159
 msgid "Update failed, try again"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:157
+#: crates/cineo-desktop/src/view/sidebar.rs:166
 #, rust-format
 msgid "v{version} available"
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:158
+#: crates/cineo-desktop/src/view/sidebar.rs:167
 msgid "Open the release page to download it."
 msgstr ""
 
-#: crates/cineo-desktop/src/view/sidebar.rs:176
+#: crates/cineo-desktop/src/view/sidebar.rs:185
 #, rust-format
 msgid "{percent}%"
 msgstr ""

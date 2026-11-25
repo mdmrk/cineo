@@ -250,6 +250,7 @@ pub(super) fn library_card(
         )),
         Shelf::Library | Shelf::Favorites => None,
     };
+    let removable_shown = removable.is_some();
     if let Some((label, action)) = removable
         && card_button(
             ui,
@@ -261,6 +262,23 @@ pub(super) fn library_card(
         )
     {
         out.push(action);
+    }
+    let details = if removable_shown {
+        remove - vec2(32.0, 0.0)
+    } else {
+        remove
+    };
+    if shelf != Shelf::Favorites
+        && card_button(
+            ui,
+            item,
+            ("details", details),
+            Icon::Named("info-circle"),
+            &t!("Details"),
+            hover,
+        )
+    {
+        out.push(open_detail(&item.preview()));
     }
     if response.clicked() && shelf == Shelf::Favorites {
         out.push(open_detail(&item.preview()));

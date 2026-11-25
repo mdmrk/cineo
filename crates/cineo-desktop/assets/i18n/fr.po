@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-24 08:59+0100\n"
+"POT-Creation-Date: 2026-11-25 20:12+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -628,7 +628,7 @@ msgid "Reset…"
 msgstr "Réinitialiser…"
 
 #: crates/cineo-desktop/src/settings/mod.rs:418
-#: crates/cineo-desktop/src/view/sidebar.rs:54
+#: crates/cineo-desktop/src/view/sidebar.rs:58
 #, rust-format
 msgid "Cineo v{version}"
 msgstr "Cineo v{version}"
@@ -1162,6 +1162,10 @@ msgstr "Retirer de Reprendre la lecture"
 msgid "Remove from library"
 msgstr "Retirer de la bibliothèque"
 
+#: crates/cineo-desktop/src/view/cards.rs:277
+msgid "Details"
+msgstr "Détails"
+
 #: crates/cineo-desktop/src/view/detail.rs:126
 msgid "Where to watch"
 msgstr "Où regarder"
@@ -1477,74 +1481,74 @@ msgstr "TV"
 msgid "{name} {kind}"
 msgstr "{name} {kind}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:67
+#: crates/cineo-desktop/src/view/sidebar.rs:71
 msgid "Loading addons…"
 msgstr "Chargement des extensions…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:85
+#: crates/cineo-desktop/src/view/sidebar.rs:94
 msgid "The download failed. Check the connection and try again."
 msgstr "Le téléchargement a échoué. Vérifiez la connexion et réessayez."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:87
+#: crates/cineo-desktop/src/view/sidebar.rs:96
 msgid "The release's signature did not verify, so nothing was installed."
 msgstr "La signature de la version n'est pas valide, rien n'a été installé."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:90
+#: crates/cineo-desktop/src/view/sidebar.rs:99
 msgid "A downloaded file did not match its checksum, so nothing was installed."
 msgstr ""
 "Un fichier téléchargé ne correspond pas à sa somme de contrôle, rien n'a été "
 "installé."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:92
+#: crates/cineo-desktop/src/view/sidebar.rs:101
 msgid "Cineo could not replace its executable."
 msgstr "Cineo n'a pas pu remplacer son exécutable."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:98
+#: crates/cineo-desktop/src/view/sidebar.rs:107
 msgid "Cineo keeps working while it downloads."
 msgstr "Cineo continue de fonctionner pendant le téléchargement."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:126
+#: crates/cineo-desktop/src/view/sidebar.rs:135
 #, rust-format
 msgid "Update to v{version}"
 msgstr "Mettre à jour vers v{version}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:127
+#: crates/cineo-desktop/src/view/sidebar.rs:136
 msgid "Download and check it; it runs after a restart."
 msgstr "Téléchargée et vérifiée ; active après un redémarrage."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:132
+#: crates/cineo-desktop/src/view/sidebar.rs:141
 #, rust-format
 msgid "Downloading v{version}…"
 msgstr "Téléchargement de v{version}…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:135
+#: crates/cineo-desktop/src/view/sidebar.rs:144
 #, rust-format
 msgid "Downloading v{version}… {percent}%"
 msgstr "Téléchargement de v{version}… {percent} %"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:145
+#: crates/cineo-desktop/src/view/sidebar.rs:154
 msgid "Restart to update"
 msgstr "Redémarrer pour mettre à jour"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:146
+#: crates/cineo-desktop/src/view/sidebar.rs:155
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr "Cineo se ferme et lance v{version}."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:150
+#: crates/cineo-desktop/src/view/sidebar.rs:159
 msgid "Update failed, try again"
 msgstr "Échec de la mise à jour, réessayer"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:157
+#: crates/cineo-desktop/src/view/sidebar.rs:166
 #, rust-format
 msgid "v{version} available"
 msgstr "v{version} disponible"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:158
+#: crates/cineo-desktop/src/view/sidebar.rs:167
 msgid "Open the release page to download it."
 msgstr "Ouvrez la page de la version pour la télécharger."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:176
+#: crates/cineo-desktop/src/view/sidebar.rs:185
 #, rust-format
 msgid "{percent}%"
 msgstr "{percent} %"
