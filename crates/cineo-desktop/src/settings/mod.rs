@@ -16,9 +16,11 @@ use crate::view::{
     paint_nav_label, section,
 };
 
+mod keyboard;
 mod subtitles;
 mod widgets;
 
+use keyboard::keyboard;
 pub(crate) use subtitles::subtitle_controls;
 use subtitles::subtitle_style;
 pub(crate) use widgets::row;
@@ -705,41 +707,6 @@ fn nav_item(ui: &mut Ui, part: Section, selected: bool) -> Response {
         paint_nav_label(painter, rect, part.icon(), 16.0, &label, color);
     }
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
-}
-
-fn keyboard(ui: &mut Ui) {
-    egui::Grid::new("shortcuts")
-        .num_columns(2)
-        .spacing(vec2(32.0, 10.0))
-        .show(ui, |ui| {
-            let key = TextFormat::simple(theme::body(), theme::TEXT_BRIGHT);
-            let plain = |text: &str| LayoutJob::single_section(text.to_owned(), key.clone());
-            let or = |a: &str, b: &str| plain(&t!("{a}  or  {b}", a = a, b = b));
-            let mut back = plain("Esc  ·  Alt+");
-            append_icon(&mut back, Icon::ArrowLeft, 15.0, theme::TEXT_BRIGHT);
-            back.append(&format!("  ·  {}", t!("mouse back")), 0.0, key.clone());
-            let rows = [
-                (or("Ctrl+F", "/"), pt!("shortcut-search", "Search")),
-                (plain("Ctrl+1 … Ctrl+6"), t!("Switch page")),
-                (back, t!("Leave a detail page")),
-                (plain(&t!("Shift+wheel")), t!("Scroll a row sideways")),
-                (or(&t!("Space"), "K"), t!("Play or pause")),
-                (or("←/→", "J/L"), t!("Seek by the seek step")),
-                (plain("Shift+←/→"), t!("Seek by the short seek step")),
-                (plain("↑/↓  ·  M"), t!("Volume  ·  mute")),
-                (plain("C"), t!("Subtitles on or off")),
-                (
-                    plain(&format!("[/]  ·  {}", t!("Backspace"))),
-                    t!("Slower or faster  ·  normal speed"),
-                ),
-                (or("F", "F11"), t!("Fullscreen")),
-            ];
-            for (keys, what) in rows {
-                ui.label(keys);
-                ui.label(dim(&what));
-                ui.end_row();
-            }
-        });
 }
 
 fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
