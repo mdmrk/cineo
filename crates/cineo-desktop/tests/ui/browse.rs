@@ -244,3 +244,34 @@ fn a_failed_update_can_be_tried_again() {
     harness.run();
     assert_eq!(harness.state().2, [Action::InstallUpdate]);
 }
+
+#[test]
+fn sidebar_items_do_not_overlap_in_the_smallest_window() {
+    use cineo_core::app::UpdateProgress;
+    let mut state = self_updating(UpdateProgress::Downloading {
+        received: 21,
+        total: Some(50),
+    });
+    state
+        .addons_loading
+        .push(TransportUrl::parse(BASIC).unwrap());
+    let mut harness = Harness::builder().with_size([400.0, 250.0]).build_ui_state(
+        |ui, (state, view, actions): &mut Ui| actions.extend(show(ui, state, view)),
+        (state, ViewState::default(), Vec::new()),
+    );
+    harness.run_steps(4);
+    let rects: Vec<_> = [
+        "Home", "Discover", "Search", "Library", "Addons", "Settings",
+    ]
+    .into_iter()
+    .map(|label| harness.get_by_role_and_label(Role::Button, label).rect())
+    .collect();
+    for (i, a) in rects.iter().enumerate() {
+        for b in &rects[i + 1..] {
+            assert!(
+                !a.shrink(0.5).intersects(b.shrink(0.5)),
+                "{a:?} overlaps {b:?}"
+            );
+        }
+    }
+}

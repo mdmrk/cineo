@@ -6,8 +6,8 @@ use crate::player::stats::bytes;
 use crate::{brand, theme};
 use cineo_core::app::{Action, State, UpdateFailure, UpdateProgress};
 use eframe::egui::{
-    self, Align, Color32, CornerRadius, Frame, Layout, Margin, Mesh, Rect, Response, Role, Sense,
-    Stroke, Ui, WidgetInfo, pos2, vec2,
+    self, Color32, CornerRadius, Frame, Margin, Mesh, Rect, Response, Role, Sense, Stroke, Ui,
+    WidgetInfo, pos2, vec2,
 };
 
 pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
@@ -33,49 +33,69 @@ pub(super) fn sidebar(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mu
                 ui.max_rect().y_range().expand(14.0),
                 Stroke::new(1.0, theme::RULE),
             );
-            let rest_id = egui::Id::unique("nav_rest");
-            let rest = ui.data(|data| data.get_temp::<f32>(rest_id)).unwrap_or(0.0);
-            logo(ui, width, rest);
-            let items_top = ui.cursor().min.y;
-            ui.spacing_mut().item_spacing.y = 2.0;
-            let mut item = |ui: &mut Ui, page: Page| {
-                let selected = view.page == page && state.detail.is_none();
-                if nav_item(ui, page, selected, compact).clicked() {
-                    go(page, state, view, out);
-                }
-            };
-            for page in Page::ALL {
-                if page != Page::Settings {
-                    item(ui, page);
-                }
-            }
-            let items = ui.cursor().min.y - items_top;
+            let heights_id = egui::Id::unique("nav_heights");
+            let [items_height, bottom_height] = ui
+                .data(|data| data.get_temp::<[f32; 2]>(heights_id))
+                .unwrap_or_default();
+            let viewport = ui.available_height();
+            let logo_room = (ui.ctx().content_rect().min.y + theme::NAV_TOP - ui.cursor().min.y)
+                .min(viewport - items_height - bottom_height - NAV_GAP)
+                .max(0.0);
             let mut clicked = None;
-            let bottom = ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
-                if let Some(latest) = state.available_update() {
-                    clicked = update_link(ui, state, latest, compact);
-                }
-                let version = faint(&t!("Cineo v{version}", version = env!("CARGO_PKG_VERSION")));
-                ui.horizontal(|ui| {
-                    ui.add_space(9.0);
-                    ui.add_visible(!compact, egui::Label::new(version).truncate());
-                });
-                ui.add_space(2.0);
-                item(ui, Page::Settings);
-                if !state.addons_loading.is_empty() {
-                    ui.add_space(8.0);
-                    ui.horizontal(|ui| {
-                        ui.add_space(8.0);
-                        spinner(ui);
-                        if !compact {
-                            ui.label(faint(&t!("Loading addons…")));
+            let mut measured = [0.0; 2];
+            egui::ScrollArea::vertical()
+                .id_salt("nav")
+                .auto_shrink(false)
+                .show(ui, |ui| {
+                    let top = ui.cursor().min.y;
+                    logo(ui, width, logo_room);
+                    let items_top = ui.cursor().min.y;
+                    ui.spacing_mut().item_spacing.y = 2.0;
+                    let mut item = |ui: &mut Ui, page: Page| {
+                        let selected = view.page == page && state.detail.is_none();
+                        if nav_item(ui, page, selected, compact).clicked() {
+                            go(page, state, view, out);
+                        }
+                    };
+                    for page in Page::ALL {
+                        if page != Page::Settings {
+                            item(ui, page);
+                        }
+                    }
+                    measured[0] = ui.cursor().min.y - items_top;
+                    let used = ui.cursor().min.y - top;
+                    ui.add_space((viewport - used - bottom_height - 0.5).max(NAV_GAP));
+                    let bottom = ui.scope(|ui| {
+                        if !state.addons_loading.is_empty() {
+                            ui.horizontal(|ui| {
+                                ui.add_space(8.0);
+                                spinner(ui);
+                                if !compact {
+                                    ui.label(faint(&t!("Loading addons…")));
+                                }
+                            });
+                            ui.add_space(8.0);
+                        }
+                        item(ui, Page::Settings);
+                        ui.add_space(2.0);
+                        let version =
+                            faint(&t!("Cineo v{version}", version = env!("CARGO_PKG_VERSION")));
+                        ui.horizontal(|ui| {
+                            ui.add_space(9.0);
+                            ui.add_visible(!compact, egui::Label::new(version).truncate());
+                        });
+                        if let Some(latest) = state.available_update() {
+                            clicked = update_link(ui, state, latest, compact);
                         }
                     });
-                }
-            });
-            let measured = items + bottom.response.rect.height() + NAV_GAP;
-            if (measured - rest).abs() > 0.5 {
-                ui.data_mut(|data| data.insert_temp(rest_id, measured));
+                    measured[1] = bottom.response.rect.height();
+                });
+            if measured
+                .iter()
+                .zip([items_height, bottom_height])
+                .any(|(now, before)| (now - before).abs() > 0.5)
+            {
+                ui.data_mut(|data| data.insert_temp(heights_id, measured));
                 ui.ctx().request_discard("sidebar height changed");
             }
             out.extend(clicked);
@@ -291,7 +311,7 @@ fn update_link(
 
 const NAV_GAP: f32 = 8.0;
 
-fn logo(ui: &mut Ui, sidebar_width: f32, rest: f32) {
+fn logo(ui: &mut Ui, sidebar_width: f32, height: f32) {
     let window = ui.ctx().content_rect();
     let size = vec2(theme::LOGO_WIDTH, theme::LOGO_WIDTH * theme::LOGO_ASPECT);
     let left = if sidebar_width < theme::SIDEBAR_WIDTH {
@@ -300,9 +320,6 @@ fn logo(ui: &mut Ui, sidebar_width: f32, rest: f32) {
         theme::LOGO_BLEED.x
     };
     let rect = Rect::from_min_size(window.min + vec2(left, theme::LOGO_BLEED.y), size);
-    let height = (window.min.y + theme::NAV_TOP - ui.cursor().min.y)
-        .min(ui.available_height() - rest)
-        .max(0.0);
     let (_, response) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     response.widget_info(|| WidgetInfo::labeled(Role::Image, true, "Cineo"));
     let sidebar = Rect::from_min_max(window.min, pos2(window.min.x + sidebar_width, window.max.y));
