@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-25 20:12+0100\n"
+"POT-Creation-Date: 2026-11-26 20:34+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -212,169 +212,178 @@ msgstr "Украинский"
 msgid "Vietnamese"
 msgstr "Вьетнамский"
 
-#: crates/cineo-desktop/src/player/bars.rs:38
+#: crates/cineo-desktop/src/player/bars.rs:42
 #: crates/cineo-desktop/src/view/detail.rs:68
 msgid "Back"
 msgstr "Назад"
 
-#: crates/cineo-desktop/src/player/bars.rs:94
-#: crates/cineo-desktop/src/player/bars.rs:310
+#: crates/cineo-desktop/src/player/bars.rs:124
+#: crates/cineo-desktop/src/player/bars.rs:393
 #: crates/cineo-desktop/src/view/detail.rs:681
 msgid "Play"
 msgstr "Смотреть"
 
-#: crates/cineo-desktop/src/player/bars.rs:96
+#: crates/cineo-desktop/src/player/bars.rs:126
 msgid "Pause"
 msgstr "Пауза"
 
-#: crates/cineo-desktop/src/player/bars.rs:106
-#: crates/cineo-desktop/src/player/bars.rs:288
+#: crates/cineo-desktop/src/player/bars.rs:137
+#: crates/cineo-desktop/src/player/bars.rs:371
 msgid "Next episode"
 msgstr "Следующая серия"
 
-#: crates/cineo-desktop/src/player/bars.rs:116
+#: crates/cineo-desktop/src/player/bars.rs:149
 #, rust-format
 msgid "Seek back {seconds} seconds"
 msgstr "Назад на {seconds} с"
 
-#: crates/cineo-desktop/src/player/bars.rs:126
+#: crates/cineo-desktop/src/player/bars.rs:161
 #, rust-format
 msgid "Seek forward {seconds} seconds"
 msgstr "Вперёд на {seconds} с"
 
-#: crates/cineo-desktop/src/player/bars.rs:151
+#: crates/cineo-desktop/src/player/bars.rs:200
 msgid "Exit fullscreen"
 msgstr "Выйти из полноэкранного режима"
 
-#: crates/cineo-desktop/src/player/bars.rs:153
-#: crates/cineo-desktop/src/settings/mod.rs:731
+#: crates/cineo-desktop/src/player/bars.rs:202
+#: crates/cineo-desktop/src/settings/mod.rs:735
 msgid "Fullscreen"
 msgstr "Полный экран"
 
-#: crates/cineo-desktop/src/player/bars.rs:162
+#: crates/cineo-desktop/src/player/bars.rs:209
 msgid "Streaming stats"
 msgstr "Статистика потока"
 
-#: crates/cineo-desktop/src/player/bars.rs:169
+#: crates/cineo-desktop/src/player/bars.rs:222
 #: crates/cineo-desktop/src/settings/mod.rs:58
 msgid "Subtitles"
 msgstr "Субтитры"
 
-#: crates/cineo-desktop/src/player/bars.rs:173
+#: crates/cineo-desktop/src/player/bars.rs:228
 #: crates/cineo-desktop/src/settings/mod.rs:59
 msgid "Audio"
 msgstr "Аудио"
 
-#: crates/cineo-desktop/src/player/bars.rs:186
+#: crates/cineo-desktop/src/player/bars.rs:246
 msgid "Unmute"
 msgstr "Включить звук"
 
-#: crates/cineo-desktop/src/player/bars.rs:188
+#: crates/cineo-desktop/src/player/bars.rs:248
 msgid "Mute"
 msgstr "Выключить звук"
 
-#: crates/cineo-desktop/src/player/bars.rs:286
+#: crates/cineo-desktop/src/player/bars.rs:369
 #, rust-format
 msgid "Next episode in {seconds} s"
 msgstr "Следующая серия через {seconds} с"
 
-#: crates/cineo-desktop/src/player/bars.rs:338
+#: crates/cineo-desktop/src/player/bars.rs:421
 #: crates/cineo-desktop/src/view/mod.rs:331
 msgid "Dismiss"
 msgstr "Закрыть"
 
-#: crates/cineo-desktop/src/player/bars.rs:401
+#: crates/cineo-desktop/src/player/bars.rs:568
 msgid "Position"
 msgstr "Позиция"
 
-#: crates/cineo-desktop/src/player/bars.rs:468
+#: crates/cineo-desktop/src/player/bars.rs:635
 msgid "Volume"
 msgstr "Громкость"
 
-#: crates/cineo-desktop/src/player/stats.rs:139
+#: crates/cineo-desktop/src/player/bars.rs:658
+msgid "Playback speed"
+msgstr "Скорость воспроизведения"
+
+#: crates/cineo-desktop/src/player/stats.rs:140
 msgid "Download"
 msgstr "Загрузка"
 
-#: crates/cineo-desktop/src/player/stats.rs:140
+#: crates/cineo-desktop/src/player/stats.rs:141
 msgid "Peers"
 msgstr "Пиры"
 
-#: crates/cineo-desktop/src/player/stats.rs:142
+#: crates/cineo-desktop/src/player/stats.rs:143
 #, rust-format
 msgid "{done} of {total}"
 msgstr "{done} из {total}"
 
-#: crates/cineo-desktop/src/player/stats.rs:153
+#: crates/cineo-desktop/src/player/stats.rs:154
 msgid "Downloaded"
 msgstr "Загружено"
 
-#: crates/cineo-desktop/src/player/stats.rs:157
+#: crates/cineo-desktop/src/player/stats.rs:158
 msgid "Network"
 msgstr "Сеть"
 
-#: crates/cineo-desktop/src/player/stats.rs:160
+#: crates/cineo-desktop/src/player/stats.rs:161
 msgid "Buffered"
 msgstr "В буфере"
 
-#: crates/cineo-desktop/src/player/stats.rs:164
+#: crates/cineo-desktop/src/player/stats.rs:165
 msgid "Resolution"
 msgstr "Разрешение"
 
-#: crates/cineo-desktop/src/player/stats.rs:175
+#: crates/cineo-desktop/src/player/stats.rs:176
 msgid "Codec"
 msgstr "Кодек"
 
-#: crates/cineo-desktop/src/player/stats.rs:179
+#: crates/cineo-desktop/src/player/stats.rs:180
 msgid "Software"
 msgstr "Программный"
 
-#: crates/cineo-desktop/src/player/stats.rs:183
+#: crates/cineo-desktop/src/player/stats.rs:184
 msgid "Decoder"
 msgstr "Декодер"
 
-#: crates/cineo-desktop/src/player/stats.rs:186
+#: crates/cineo-desktop/src/player/stats.rs:187
 msgid "Dropped frames"
 msgstr "Пропущенные кадры"
 
-#: crates/cineo-desktop/src/player/tracks.rs:55
+#: crates/cineo-desktop/src/player/tracks.rs:64
 msgctxt "subtitles-off"
 msgid "Off"
 msgstr "Выкл."
 
-#: crates/cineo-desktop/src/player/tracks.rs:75
+#: crates/cineo-desktop/src/player/tracks.rs:84
 msgid "No audio tracks"
 msgstr "Нет звуковых дорожек"
 
-#: crates/cineo-desktop/src/player/tracks.rs:176
+#: crates/cineo-desktop/src/player/tracks.rs:166
+msgctxt "playback-speed"
+msgid "Normal"
+msgstr "Обычная"
+
+#: crates/cineo-desktop/src/player/tracks.rs:226
 msgid "Style and delay"
 msgstr "Стиль и задержка"
 
-#: crates/cineo-desktop/src/player/tracks.rs:250
+#: crates/cineo-desktop/src/player/tracks.rs:311
 msgid "Delay"
 msgstr "Задержка"
 
-#: crates/cineo-desktop/src/player/tracks.rs:254
+#: crates/cineo-desktop/src/player/tracks.rs:315
 msgid "This video only."
 msgstr "Только для этого видео."
 
-#: crates/cineo-desktop/src/player/tracks.rs:261
-#: crates/cineo-desktop/src/player/tracks.rs:266
+#: crates/cineo-desktop/src/player/tracks.rs:322
+#: crates/cineo-desktop/src/player/tracks.rs:327
 #, rust-format
 msgid "Subtitles {amount} earlier"
 msgstr "Субтитры на {amount} раньше"
 
-#: crates/cineo-desktop/src/player/tracks.rs:272
-#: crates/cineo-desktop/src/player/tracks.rs:274
+#: crates/cineo-desktop/src/player/tracks.rs:333
+#: crates/cineo-desktop/src/player/tracks.rs:335
 #, rust-format
 msgid "Subtitles {amount} later"
 msgstr "Субтитры на {amount} позже"
 
-#: crates/cineo-desktop/src/player/tracks.rs:290
+#: crates/cineo-desktop/src/player/tracks.rs:351
 #, rust-format
 msgid "Subtitle delay {delay}, reset"
 msgstr "Задержка субтитров {delay}, сбросить"
 
-#: crates/cineo-desktop/src/player/tracks.rs:331
+#: crates/cineo-desktop/src/player/tracks.rs:392
 #, rust-format
 msgid "Track {number}"
 msgstr "Дорожка {number}"
@@ -629,7 +638,7 @@ msgid "Reset…"
 msgstr "Сбросить…"
 
 #: crates/cineo-desktop/src/settings/mod.rs:418
-#: crates/cineo-desktop/src/view/sidebar.rs:58
+#: crates/cineo-desktop/src/view/sidebar.rs:82
 #, rust-format
 msgid "Cineo v{version}"
 msgstr "Cineo v{version}"
@@ -863,31 +872,39 @@ msgstr "Громкость  ·  без звука"
 msgid "Subtitles on or off"
 msgstr "Включить или выключить субтитры"
 
-#: crates/cineo-desktop/src/settings/mod.rs:747
+#: crates/cineo-desktop/src/settings/mod.rs:732
+msgid "Backspace"
+msgstr "Backspace"
+
+#: crates/cineo-desktop/src/settings/mod.rs:733
+msgid "Slower or faster  ·  normal speed"
+msgstr "Медленнее или быстрее  ·  обычная скорость"
+
+#: crates/cineo-desktop/src/settings/mod.rs:751
 msgid "Reset all settings?"
 msgstr "Сбросить все настройки?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:748
+#: crates/cineo-desktop/src/settings/mod.rs:752
 msgid ""
 "Every setting goes back to its default. Your addons and library are kept."
 msgstr ""
 "Все настройки вернутся к значениям по умолчанию. Аддоны и библиотека "
 "сохранятся."
 
-#: crates/cineo-desktop/src/settings/mod.rs:749
+#: crates/cineo-desktop/src/settings/mod.rs:753
 msgid "Reset"
 msgstr "Сбросить"
 
-#: crates/cineo-desktop/src/settings/mod.rs:753
+#: crates/cineo-desktop/src/settings/mod.rs:757
 msgid "Clear watch history?"
 msgstr "Очистить историю просмотра?"
 
-#: crates/cineo-desktop/src/settings/mod.rs:754
+#: crates/cineo-desktop/src/settings/mod.rs:758
 msgid "Every item and its progress leaves the Library. This cannot be undone."
 msgstr ""
 "Все элементы и их прогресс будут удалены из библиотеки. Это нельзя отменить."
 
-#: crates/cineo-desktop/src/settings/mod.rs:755
+#: crates/cineo-desktop/src/settings/mod.rs:759
 msgctxt "clear"
 msgid "Clear"
 msgstr "Очистить"
@@ -1474,74 +1491,74 @@ msgstr "ТВ"
 msgid "{name} {kind}"
 msgstr "{name} {kind}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:71
+#: crates/cineo-desktop/src/view/sidebar.rs:74
 msgid "Loading addons…"
 msgstr "Загрузка аддонов…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:94
+#: crates/cineo-desktop/src/view/sidebar.rs:114
 msgid "The download failed. Check the connection and try again."
 msgstr "Загрузка не удалась. Проверьте подключение и повторите."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:96
+#: crates/cineo-desktop/src/view/sidebar.rs:116
 msgid "The release's signature did not verify, so nothing was installed."
 msgstr "Подпись выпуска не прошла проверку, поэтому ничего не установлено."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:99
+#: crates/cineo-desktop/src/view/sidebar.rs:119
 msgid "A downloaded file did not match its checksum, so nothing was installed."
 msgstr ""
 "Загруженный файл не совпал с контрольной суммой, поэтому ничего не "
 "установлено."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:101
+#: crates/cineo-desktop/src/view/sidebar.rs:121
 msgid "Cineo could not replace its executable."
 msgstr "Cineo не удалось заменить свой исполняемый файл."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:107
+#: crates/cineo-desktop/src/view/sidebar.rs:127
 msgid "Cineo keeps working while it downloads."
 msgstr "Cineo продолжает работать во время загрузки."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:135
+#: crates/cineo-desktop/src/view/sidebar.rs:155
 #, rust-format
 msgid "Update to v{version}"
 msgstr "Обновить до v{version}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:136
+#: crates/cineo-desktop/src/view/sidebar.rs:156
 msgid "Download and check it; it runs after a restart."
 msgstr "Загружается и проверяется; заработает после перезапуска."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:141
+#: crates/cineo-desktop/src/view/sidebar.rs:161
 #, rust-format
 msgid "Downloading v{version}…"
 msgstr "Загрузка v{version}…"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:144
+#: crates/cineo-desktop/src/view/sidebar.rs:164
 #, rust-format
 msgid "Downloading v{version}… {percent}%"
 msgstr "Загрузка v{version}… {percent}%"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:154
+#: crates/cineo-desktop/src/view/sidebar.rs:174
 msgid "Restart to update"
 msgstr "Перезапустить для обновления"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:155
+#: crates/cineo-desktop/src/view/sidebar.rs:175
 #, rust-format
 msgid "Cineo closes and starts v{version}."
 msgstr "Cineo закроется и запустит v{version}."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:159
+#: crates/cineo-desktop/src/view/sidebar.rs:179
 msgid "Update failed, try again"
 msgstr "Не удалось обновить, повторить"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:166
+#: crates/cineo-desktop/src/view/sidebar.rs:186
 #, rust-format
 msgid "v{version} available"
 msgstr "Доступна v{version}"
 
-#: crates/cineo-desktop/src/view/sidebar.rs:167
+#: crates/cineo-desktop/src/view/sidebar.rs:187
 msgid "Open the release page to download it."
 msgstr "Открыть страницу версии, чтобы скачать её."
 
-#: crates/cineo-desktop/src/view/sidebar.rs:185
+#: crates/cineo-desktop/src/view/sidebar.rs:205
 #, rust-format
 msgid "{percent}%"
 msgstr "{percent}%"

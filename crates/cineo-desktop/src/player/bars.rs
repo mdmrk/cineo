@@ -7,9 +7,9 @@ use eframe::egui::{
 };
 
 use super::stats::toggle_stats_shown;
-use super::tracks::{style_covers_menu, style_panel, style_rect, track_menu};
+use super::tracks::{speed_menu, style_covers_menu, style_panel, style_rect, track_menu};
 use super::{
-    Controls, Held, NextUp, Playback, STYLE_GAP, is_fullscreen, seek_icons, toggle_fullscreen,
+    Controls, Held, Menu, NextUp, Playback, STYLE_GAP, is_fullscreen, seek_icons, toggle_fullscreen,
 };
 use crate::i18n::t;
 use crate::theme;
@@ -173,10 +173,13 @@ pub(super) fn bottom_bar(
             .wrap_mode(egui::TextWrapMode::Extend),
     );
 
-    let mut right = Vec::with_capacity(4);
+    let mut right = Vec::with_capacity(5);
     right.push(RightButton::Fullscreen);
     if fit.stats {
         right.push(RightButton::Stats);
+    }
+    if fit.speed {
+        right.push(RightButton::Speed);
     }
     right.push(RightButton::Subtitles);
     if fit.audio {
@@ -185,6 +188,7 @@ pub(super) fn bottom_bar(
     let mut x = bar.right() - margin - BUTTON / 2.0 + 6.0;
     let mut subtitles = Rect::NOTHING;
     let mut audio = None;
+    let mut speed = None;
     for (i, button) in right.iter().enumerate() {
         let rect = Rect::from_center_size(pos2(x, y), egui::Vec2::splat(BUTTON));
         x -= slot_step(i + 1 == right.len());
@@ -205,16 +209,22 @@ pub(super) fn bottom_bar(
                     toggle_stats_shown(ui.ctx());
                 }
             }
+            RightButton::Speed => {
+                speed = Some(rect);
+                if icon_button(ui, rect, Icon::Named("gauge"), &t!("Playback speed")).clicked() {
+                    controls.menu = toggle(controls.menu, Menu::Speed);
+                }
+            }
             RightButton::Subtitles => {
                 subtitles = rect;
                 if icon_button(ui, rect, Icon::Named("badge-cc"), &t!("Subtitles")).clicked() {
-                    controls.menu = toggle(controls.menu, TrackKind::Subtitle);
+                    controls.menu = toggle(controls.menu, Menu::Track(TrackKind::Subtitle));
                 }
             }
             RightButton::Audio => {
                 audio = Some(rect);
                 if icon_button(ui, rect, Icon::Named("language"), &t!("Audio")).clicked() {
-                    controls.menu = toggle(controls.menu, TrackKind::Audio);
+                    controls.menu = toggle(controls.menu, Menu::Track(TrackKind::Audio));
                 }
             }
         }
@@ -238,12 +248,15 @@ pub(super) fn bottom_bar(
     if icon_button(ui, mute, Icon::Named(icon), &label).clicked() {
         out.push(PlayerCommand::ToggleMute);
     }
-    if controls.menu == Some(TrackKind::Audio) && audio.is_none() {
+    if (controls.menu == Some(Menu::Track(TrackKind::Audio)) && audio.is_none())
+        || (controls.menu == Some(Menu::Speed) && speed.is_none())
+    {
         controls.menu = None;
     }
 
-    match (controls.menu, audio) {
-        (Some(TrackKind::Audio), Some(audio)) => {
+    match (controls.menu, audio, speed) {
+        (Some(Menu::Speed), _, Some(speed)) => speed_menu(ui, speed, controls, out),
+        (Some(Menu::Track(TrackKind::Audio)), Some(audio), _) => {
             track_menu(
                 ui,
                 audio,
@@ -255,7 +268,7 @@ pub(super) fn bottom_bar(
                 true,
             );
         }
-        (Some(TrackKind::Subtitle), _) => {
+        (Some(Menu::Track(TrackKind::Subtitle)), _, _) => {
             let covers = style_covers_menu(ui, subtitles);
             let (menu, style_hovered) = track_menu(
                 ui,
@@ -280,7 +293,7 @@ pub(super) fn bottom_bar(
         }
         _ => {}
     }
-    if controls.menu != Some(TrackKind::Subtitle) {
+    if controls.menu != Some(Menu::Track(TrackKind::Subtitle)) {
         controls.style_open = false;
     }
 }
@@ -441,6 +454,7 @@ enum LeftButton {
 enum RightButton {
     Fullscreen,
     Stats,
+    Speed,
     Subtitles,
     Audio,
 }
@@ -456,6 +470,7 @@ struct BarFit {
     duration: bool,
     audio: bool,
     stats: bool,
+    speed: bool,
     volume: bool,
 }
 
@@ -467,11 +482,13 @@ impl BarFit {
             duration: true,
             audio: true,
             stats: true,
+            speed: true,
             volume: true,
         };
-        let drops: [fn(&mut Self); 6] = [
+        let drops: [fn(&mut Self); 7] = [
             |fit| fit.volume = false,
             |fit| fit.stats = false,
+            |fit| fit.speed = false,
             |fit| fit.duration = false,
             |fit| fit.seek = false,
             |fit| fit.audio = false,
@@ -495,7 +512,8 @@ impl BarFit {
         let left_buttons = 1 + usize::from(self.next) + 2 * usize::from(self.seek);
         let time = if self.duration { full_time } else { position };
         let left = steps(left_buttons) - 6.0 + time;
-        let right_buttons = 2 + usize::from(self.stats) + usize::from(self.audio);
+        let right_buttons =
+            2 + usize::from(self.stats) + usize::from(self.speed) + usize::from(self.audio);
         let mute = if self.volume {
             VOLUME_WIDTH + BUTTON + BUTTON_GAP - 6.0
         } else {
@@ -514,8 +532,8 @@ fn left_label(ui: &mut Ui, rect: Rect, label: Label) {
     );
 }
 
-fn toggle(menu: Option<TrackKind>, kind: TrackKind) -> Option<TrackKind> {
-    (menu != Some(kind)).then_some(kind)
+fn toggle(open: Option<Menu>, menu: Menu) -> Option<Menu> {
+    (open != Some(menu)).then_some(menu)
 }
 
 fn seek_bar(
@@ -688,12 +706,13 @@ mod tests {
         let (full, short) = (90.0, 40.0);
         let wide = BarFit::new(2000.0, true, full, short);
         assert!(wide.next && wide.seek && wide.duration && wide.audio && wide.stats);
-        assert!(wide.volume);
+        assert!(wide.speed && wide.volume);
 
         let order = |fit: BarFit| {
             [
                 fit.volume,
                 fit.stats,
+                fit.speed,
                 fit.duration,
                 fit.seek,
                 fit.audio,
@@ -716,7 +735,7 @@ mod tests {
         }
 
         let small = BarFit::new(360.0, true, full, short);
-        assert!(!small.volume && !small.stats && !small.duration && !small.seek);
+        assert!(!small.volume && !small.stats && !small.speed && !small.duration && !small.seek);
         assert!(small.audio && small.next);
         assert!(!BarFit::new(2000.0, false, full, short).next);
     }

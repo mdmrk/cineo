@@ -27,6 +27,7 @@ const STYLE_GAP: f32 = 8.0;
 const SEEK_SETTLE_S: f64 = 1.0;
 const VOLUME_SETTLE: f64 = 0.5;
 const HOLD_TIMEOUT_S: f64 = 2.0;
+const SPEEDS: [f64; 8] = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
 #[derive(Debug, Clone, Copy, Default)]
 struct Held {
@@ -63,16 +64,23 @@ impl Held {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Menu {
+    Track(TrackKind),
+    Speed,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Controls {
     last_activity: f64,
     last_pointer: Option<Pos2>,
-    menu: Option<TrackKind>,
+    menu: Option<Menu>,
     style_open: bool,
     seek: Held,
     volume: Held,
     addon_request: Option<Url>,
     subtitle_delay_ms: i32,
+    speed: Option<f64>,
     last_subtitle: Option<i64>,
     settings: Vec<Action>,
     next_dismissed: bool,
@@ -91,6 +99,27 @@ impl Controls {
             self.seek.commit(target, now);
         }
         PlayerCommand::SeekBy(delta)
+    }
+
+    fn speed(&self) -> f64 {
+        self.speed.unwrap_or(1.0)
+    }
+
+    fn set_speed(&mut self, speed: f64) -> Option<PlayerCommand> {
+        (speed != self.speed()).then(|| {
+            self.speed = Some(speed);
+            PlayerCommand::SetSpeed(speed)
+        })
+    }
+
+    fn step_speed(&mut self, faster: bool) -> Option<PlayerCommand> {
+        let current = self.speed();
+        let next = if faster {
+            SPEEDS.into_iter().find(|s| *s > current)
+        } else {
+            SPEEDS.into_iter().rev().find(|s| *s < current)
+        };
+        next.and_then(|speed| self.set_speed(speed))
     }
 
     pub fn take_addon_subtitle(&mut self) -> Option<Url> {
@@ -306,6 +335,15 @@ fn shortcuts(
         if key(Key::M) {
             out.push(PlayerCommand::ToggleMute);
         }
+        if key(Key::OpenBracket) {
+            out.extend(controls.step_speed(false));
+        }
+        if key(Key::CloseBracket) {
+            out.extend(controls.step_speed(true));
+        }
+        if key(Key::Backspace) {
+            out.extend(controls.set_speed(1.0));
+        }
         if key(Key::I) {
             toggle_stats = true;
         }
@@ -450,6 +488,24 @@ mod tests {
         assert!(
             !first_load(&mut controls, &status),
             "later waits are not the first load"
+        );
+    }
+
+    #[test]
+    fn speed_steps_through_the_list_and_stops_at_its_ends() {
+        let mut controls = Controls::default();
+        assert_eq!(
+            controls.step_speed(true),
+            Some(PlayerCommand::SetSpeed(1.25))
+        );
+        assert_eq!(controls.set_speed(1.25), None, "already at that speed");
+        assert_eq!(controls.set_speed(2.0), Some(PlayerCommand::SetSpeed(2.0)));
+        assert_eq!(controls.step_speed(true), None, "the fastest speed");
+        controls.set_speed(0.25);
+        assert_eq!(controls.step_speed(false), None, "the slowest speed");
+        assert_eq!(
+            controls.step_speed(true),
+            Some(PlayerCommand::SetSpeed(0.5))
         );
     }
 

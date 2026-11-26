@@ -14,7 +14,7 @@ use crate::settings::subtitle_controls;
 use crate::theme;
 use crate::view::{Icon, dim, paint_icon};
 
-use super::{Controls, STYLE_GAP};
+use super::{Controls, SPEEDS, STYLE_GAP};
 
 const MENU_MAX_HEIGHT: f32 = 320.0;
 const STYLE_WIDTH: f32 = 420.0;
@@ -22,6 +22,7 @@ const STYLE_MAX_HEIGHT: f32 = 520.0;
 const STYLE_MIN_WIDTH: f32 = 300.0;
 const MENU_WIDTH: f32 = 240.0;
 const EDGE: f32 = 8.0;
+const ROW: f32 = 30.0;
 
 enum Entry {
     Track(Option<i64>),
@@ -82,22 +83,13 @@ pub(super) fn track_menu(
     if entries.is_empty() {
         entries.push((Entry::Empty, t!("No audio tracks"), false));
     }
-    let row = 30.0;
-    #[expect(clippy::cast_precision_loss, reason = "a short list")]
-    let content = entries.len() as f32 * row;
     let footer = if kind == TrackKind::Subtitle {
-        row + 4.0
+        ROW + 4.0
     } else {
         0.0
     };
-    let room = (anchor.top() - ui.max_rect().top() - 24.0 - footer - 2.0 * EDGE).max(row);
-    let list = content.min(MENU_MAX_HEIGHT).min(room);
-    let height = list + footer + EDGE;
+    let (menu, list) = menu_rect(ui, anchor, entries.len(), footer);
     let mut style_hovered = false;
-    let menu = Rect::from_min_size(
-        pos2(menu_left(ui, anchor), anchor.top() - EDGE - height),
-        vec2(MENU_WIDTH, height),
-    );
     if !shown {
         return (menu, false);
     }
@@ -114,45 +106,7 @@ pub(super) fn track_menu(
                     .show(ui, |ui| {
                         ui.spacing_mut().item_spacing.y = 0.0;
                         for (id, label, selected) in entries {
-                            let (item, response) = ui.allocate_exact_size(
-                                vec2(ui.available_width(), row),
-                                Sense::click(),
-                            );
-                            let response = response.on_hover_cursor(CursorIcon::PointingHand);
-                            response.widget_info(|| {
-                                WidgetInfo::selected(Role::RadioButton, true, selected, &label)
-                            });
-                            let painter = ui.painter();
-                            if response.hovered() {
-                                painter.rect_filled(
-                                    item,
-                                    CornerRadius::same(theme::RADIUS),
-                                    theme::SURFACE_HOVER,
-                                );
-                            }
-                            if selected {
-                                paint_icon(
-                                    painter,
-                                    Icon::Named("check"),
-                                    pos2(item.left() + 14.0, item.center().y),
-                                    16.0,
-                                    theme::ACCENT,
-                                );
-                            }
-                            let color = if selected {
-                                theme::TEXT_BRIGHT
-                            } else {
-                                theme::TEXT
-                            };
-                            let text = item
-                                .with_min_x(item.left() + 30.0)
-                                .with_max_x(item.right() - 8.0);
-                            let response = if paint_elided(painter, text, &label, color) {
-                                response.on_hover_text(&*label)
-                            } else {
-                                response
-                            };
-                            if response.clicked() {
+                            if menu_item(ui, &label, selected).clicked() {
                                 match id {
                                     Entry::Track(id) if kind == TrackKind::Subtitle => {
                                         out.push(PlayerCommand::SetSubtitle(id));
@@ -169,10 +123,99 @@ pub(super) fn track_menu(
                     });
             });
             if footer > 0.0 {
-                style_hovered = style_row(ui, menu, row, controls.style_open);
+                style_hovered = style_row(ui, menu, ROW, controls.style_open);
             }
         });
     (menu, style_hovered)
+}
+
+pub(super) fn speed_menu(
+    ui: &Ui,
+    anchor: Rect,
+    controls: &mut Controls,
+    out: &mut Vec<PlayerCommand>,
+) {
+    let (menu, list) = menu_rect(ui, anchor, SPEEDS.len(), 0.0);
+    egui::Area::new(ui.scope_id().with("speed-menu"))
+        .order(egui::Order::Foreground)
+        .fixed_pos(menu.min)
+        .show(ui.ctx(), |ui| {
+            ui.painter()
+                .rect_filled(menu, CornerRadius::same(theme::RADIUS), theme::PANEL);
+            ui.scope_builder(UiBuilder::new().max_rect(menu.shrink(4.0)), |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(list)
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        let current = controls.speed();
+                        for speed in SPEEDS {
+                            let label = speed_label(speed);
+                            if menu_item(ui, &label, speed == current).clicked() {
+                                out.extend(controls.set_speed(speed));
+                                controls.menu = None;
+                            }
+                        }
+                    });
+            });
+        });
+}
+
+fn speed_label(speed: f64) -> Text {
+    if speed == 1.0 {
+        pt!("playback-speed", "Normal")
+    } else {
+        format!("{speed}×").into()
+    }
+}
+
+fn menu_rect(ui: &Ui, anchor: Rect, rows: usize, footer: f32) -> (Rect, f32) {
+    #[expect(clippy::cast_precision_loss, reason = "a short list")]
+    let content = rows as f32 * ROW;
+    let room = (anchor.top() - ui.max_rect().top() - 24.0 - footer - 2.0 * EDGE).max(ROW);
+    let list = content.min(MENU_MAX_HEIGHT).min(room);
+    let height = list + footer + EDGE;
+    let menu = Rect::from_min_size(
+        pos2(menu_left(ui, anchor), anchor.top() - EDGE - height),
+        vec2(MENU_WIDTH, height),
+    );
+    (menu, list)
+}
+
+fn menu_item(ui: &mut Ui, label: &str, selected: bool) -> egui::Response {
+    let (item, response) = ui.allocate_exact_size(vec2(ui.available_width(), ROW), Sense::click());
+    let response = response.on_hover_cursor(CursorIcon::PointingHand);
+    response.widget_info(|| WidgetInfo::selected(Role::RadioButton, true, selected, label));
+    let painter = ui.painter();
+    if response.hovered() {
+        painter.rect_filled(
+            item,
+            CornerRadius::same(theme::RADIUS),
+            theme::SURFACE_HOVER,
+        );
+    }
+    if selected {
+        paint_icon(
+            painter,
+            Icon::Named("check"),
+            pos2(item.left() + 14.0, item.center().y),
+            16.0,
+            theme::ACCENT,
+        );
+    }
+    let color = if selected {
+        theme::TEXT_BRIGHT
+    } else {
+        theme::TEXT
+    };
+    let text = item
+        .with_min_x(item.left() + 30.0)
+        .with_max_x(item.right() - 8.0);
+    if paint_elided(painter, text, label, color) {
+        response.on_hover_text(label)
+    } else {
+        response
+    }
 }
 
 fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {

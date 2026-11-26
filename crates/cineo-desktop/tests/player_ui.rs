@@ -224,6 +224,45 @@ fn the_subtitles_menu_changes_the_style_and_the_delay() {
 }
 
 #[test]
+fn the_speed_menu_and_brackets_change_the_playback_speed() {
+    let mut harness = harness(status());
+    harness.get_by_label("Playback speed").click();
+    harness.run();
+    harness.get_by_label("Normal");
+    harness.get_by_label("1.5×").click();
+    harness.run();
+    assert!(
+        harness.query_by_label("Normal").is_none(),
+        "the menu closes after a choice"
+    );
+    for key in [
+        Key::CloseBracket,
+        Key::OpenBracket,
+        Key::OpenBracket,
+        Key::Backspace,
+        Key::Backspace,
+    ] {
+        harness.key_press(key);
+        harness.run();
+    }
+    harness.get_by_label("Playback speed").click();
+    harness.run();
+    harness.get_by_label("0.5×").click();
+    harness.run();
+    assert_eq!(
+        harness.state().2,
+        vec![
+            PlayerCommand::SetSpeed(1.5),
+            PlayerCommand::SetSpeed(1.75),
+            PlayerCommand::SetSpeed(1.5),
+            PlayerCommand::SetSpeed(1.25),
+            PlayerCommand::SetSpeed(1.0),
+            PlayerCommand::SetSpeed(0.5),
+        ]
+    );
+}
+
+#[test]
 fn keys_control_playback_and_escape_leaves() {
     let mut harness = harness(status());
     for key in [

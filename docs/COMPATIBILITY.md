@@ -290,6 +290,12 @@ The full evidence for the rows above whose notes do not fit in the table.
   `cached_ranges_become_fractions_of_the_duration`; real libmpv 0.41 reports
   them while playing over HTTP,
   `real_libmpv_plays_to_the_end_with_headers_and_tracks`, run 2026-10-15).
+- Playback speed from 0.25× to 2× in quarter steps, from the player's speed
+  menu or with `[` and `]` (Backspace goes back to normal), for the playing
+  video only; each video starts at normal speed
+  (`the_speed_menu_and_brackets_change_the_playback_speed`,
+  `speed_steps_through_the_list_and_stops_at_its_ends`,
+  `commands_are_built_from_typed_values`); not seen with a real stream.
 - The seek bar takes clicks up to 16 px above its line; above that a click
   pauses, as on the video (untested layout).
 - After a seek or a volume change, the seek bar, time and volume keep the
