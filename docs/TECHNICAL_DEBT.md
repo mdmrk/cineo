@@ -45,6 +45,15 @@ Format:
 - Instead: subtitles can be covered for up to 2.5 s after input.
 - Exit: adjust `sub-margin-y` when the controls show and hide.
 
+### Embedded player: next-episode card hidden in small windows
+- Where: [player/bars.rs](../crates/cineo-desktop/src/player/bars.rs) (`next_popup`)
+- Gap: the card needs about 260×170 between the top and bottom bars; in a
+  smaller player it is not shown.
+- Why: its contents are laid out at fixed offsets for the full-size card.
+- Instead: the countdown still runs and binge-watching still starts the next
+  episode; the bottom bar's next-episode button stays while it fits.
+- Exit: lay the card out to its size, with a compact variant.
+
 ### Embedded player: VA-API interop not seen working
 - Where: [render.rs](../crates/cineo-player/src/embedded/render.rs)
 - Gap: the render context now gets the window's Wayland or Xlib display,

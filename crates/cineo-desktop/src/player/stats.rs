@@ -6,9 +6,10 @@ use cineo_player::plain_text;
 use eframe::egui::text::LayoutJob;
 use eframe::egui::{
     self, Color32, CornerRadius, CursorIcon, FontId, Painter, Pos2, Rect, Sense, Shape, Stroke, Ui,
-    pos2, vec2,
+    UiBuilder, pos2, vec2,
 };
 
+use super::bars::BAR_HEIGHT;
 use crate::i18n::{Text, t};
 use crate::theme;
 
@@ -205,6 +206,7 @@ pub(crate) fn bytes(count: f64) -> String {
 
 const FONT_SIZE: f32 = 12.0;
 const PAD: f32 = 10.0;
+const TOP: f32 = 80.0;
 const WIDTH: f32 = 340.0;
 const LABEL_WIDTH: f32 = 116.0;
 const ROW_HEIGHT: f32 = 16.0;
@@ -222,21 +224,39 @@ fn one_line(text: &str, font: FontId, max_width: f32, color: Color32) -> LayoutJ
     job
 }
 
-pub(super) fn stats_overlay(ui: &Ui, rect: Rect, rows: &[Row], trends: &Trends) {
+pub(super) fn stats_overlay(ui: &mut Ui, rect: Rect, rows: &[Row], trends: &Trends) {
     if rows.is_empty() {
         return;
     }
-    let painter = ui.painter();
+    #[expect(clippy::cast_precision_loss, reason = "a handful of rows")]
+    let content = rows.len() as f32 * ROW_HEIGHT;
+    let top = rect.top() + TOP;
+    let room = (rect.bottom() - BAR_HEIGHT - top - 2.0 * PAD).max(ROW_HEIGHT);
+    let body = content.min(room);
+    let panel = Rect::from_min_size(pos2(rect.left() + 24.0, top), vec2(WIDTH, body + 2.0 * PAD));
+    ui.painter()
+        .rect_filled(panel, CornerRadius::same(theme::RADIUS), BACKGROUND);
+    let viewport = Rect::from_min_size(panel.min + vec2(0.0, PAD), vec2(panel.width(), body));
+    let mut child = ui.new_child(UiBuilder::new().max_rect(viewport));
+    egui::ScrollArea::vertical()
+        .id_salt(stats_id().with("scroll"))
+        .max_height(body)
+        .auto_shrink(false)
+        .show(&mut child, |ui| {
+            let (area, _) =
+                ui.allocate_exact_size(vec2(ui.available_width(), content), Sense::hover());
+            paint_rows(ui.painter(), panel, area.top(), rows, trends);
+        });
+    close_button(ui, panel);
+}
+
+fn paint_rows(painter: &Painter, panel: Rect, top: f32, rows: &[Row], trends: &Trends) {
     let label_font = FontId::new(FONT_SIZE, theme::strong_family());
     let value_font = FontId::new(FONT_SIZE, egui::FontFamily::Proportional);
-    #[expect(clippy::cast_precision_loss, reason = "a handful of rows")]
-    let height = 2.0 * PAD + rows.len() as f32 * ROW_HEIGHT;
-    let panel = Rect::from_min_size(rect.min + vec2(24.0, 80.0), vec2(WIDTH, height));
-    painter.rect_filled(panel, CornerRadius::same(theme::RADIUS), BACKGROUND);
     let left = panel.left() + PAD;
     let values_left = left + LABEL_WIDTH;
     let right = panel.right() - PAD - CLOSE - GAP;
-    let mut y = panel.top() + PAD;
+    let mut y = top;
     for row in rows {
         let mid = y + ROW_HEIGHT / 2.0;
         let label = painter.layout_job(one_line(
@@ -271,7 +291,6 @@ pub(super) fn stats_overlay(ui: &Ui, rect: Rect, rows: &[Row], trends: &Trends) 
         painter.galley(pos2(x, mid - value.size().y / 2.0), value, color);
         y += ROW_HEIGHT;
     }
-    close_button(ui, panel);
 }
 
 fn close_button(ui: &Ui, panel: Rect) {

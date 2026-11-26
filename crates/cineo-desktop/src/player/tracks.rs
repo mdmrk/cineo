@@ -19,6 +19,9 @@ use super::{Controls, STYLE_GAP};
 const MENU_MAX_HEIGHT: f32 = 320.0;
 const STYLE_WIDTH: f32 = 420.0;
 const STYLE_MAX_HEIGHT: f32 = 520.0;
+const STYLE_MIN_WIDTH: f32 = 300.0;
+const MENU_WIDTH: f32 = 240.0;
+const EDGE: f32 = 8.0;
 
 enum Entry {
     Track(Option<i64>),
@@ -38,6 +41,10 @@ fn paint_elided(painter: &egui::Painter, rect: Rect, text: &str, color: Color32)
     elided
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the menu needs the player state and whether it is covered"
+)]
 pub(super) fn track_menu(
     ui: &Ui,
     anchor: Rect,
@@ -46,6 +53,7 @@ pub(super) fn track_menu(
     kind: TrackKind,
     controls: &mut Controls,
     out: &mut Vec<PlayerCommand>,
+    shown: bool,
 ) -> (Rect, bool) {
     let tracks: Vec<&Track> = status.tracks.iter().filter(|t| t.kind == kind).collect();
     let mut entries: Vec<(Entry, Text, bool)> = Vec::new();
@@ -75,25 +83,24 @@ pub(super) fn track_menu(
         entries.push((Entry::Empty, t!("No audio tracks"), false));
     }
     let row = 30.0;
-    let width = 240.0;
     #[expect(clippy::cast_precision_loss, reason = "a short list")]
     let content = entries.len() as f32 * row;
-    let room = (anchor.top() - ui.max_rect().top() - 24.0).max(row);
     let footer = if kind == TrackKind::Subtitle {
         row + 4.0
     } else {
         0.0
     };
+    let room = (anchor.top() - ui.max_rect().top() - 24.0 - footer - 2.0 * EDGE).max(row);
     let list = content.min(MENU_MAX_HEIGHT).min(room);
-    let height = list + footer + 8.0;
+    let height = list + footer + EDGE;
     let mut style_hovered = false;
     let menu = Rect::from_min_size(
-        pos2(
-            (anchor.right() - width).max(ui.max_rect().left() + 8.0),
-            anchor.top() - 8.0 - height,
-        ),
-        vec2(width, height),
+        pos2(menu_left(ui, anchor), anchor.top() - EDGE - height),
+        vec2(MENU_WIDTH, height),
     );
+    if !shown {
+        return (menu, false);
+    }
     egui::Area::new(ui.scope_id().with("track-menu"))
         .order(egui::Order::Foreground)
         .fixed_pos(menu.min)
@@ -210,13 +217,24 @@ fn style_row(ui: &Ui, menu: Rect, row: f32, open: bool) -> bool {
     response.hovered()
 }
 
-pub(super) fn style_rect(ui: &Ui, menu: Rect) -> Rect {
-    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(ui.max_rect().top() + 24.0);
-    let left = (menu.left() - STYLE_GAP - STYLE_WIDTH).max(ui.max_rect().left() + 8.0);
-    Rect::from_min_max(
-        pos2(left, top),
-        pos2(menu.left() - STYLE_GAP, menu.bottom()),
-    )
+fn menu_left(ui: &Ui, anchor: Rect) -> f32 {
+    (anchor.right() - MENU_WIDTH).max(ui.max_rect().left() + EDGE)
+}
+
+pub(super) fn style_covers_menu(ui: &Ui, anchor: Rect) -> bool {
+    menu_left(ui, anchor) - STYLE_GAP - (ui.max_rect().left() + EDGE) < STYLE_MIN_WIDTH
+}
+
+pub(super) fn style_rect(ui: &Ui, menu: Rect, covers: bool) -> Rect {
+    let bounds = ui.max_rect();
+    let top = (menu.bottom() - STYLE_MAX_HEIGHT).max(bounds.top() + 24.0);
+    let right = if covers {
+        menu.right().min(bounds.right() - EDGE)
+    } else {
+        menu.left() - STYLE_GAP
+    };
+    let left = (right - STYLE_WIDTH).max(bounds.left() + EDGE);
+    Rect::from_min_max(pos2(left, top), pos2(right, menu.bottom()))
 }
 
 pub(super) fn style_panel(

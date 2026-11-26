@@ -7,7 +7,7 @@ use eframe::egui::{
 };
 
 use super::stats::toggle_stats_shown;
-use super::tracks::{style_panel, style_rect, track_menu};
+use super::tracks::{style_covers_menu, style_panel, style_rect, track_menu};
 use super::{
     Controls, Held, NextUp, Playback, STYLE_GAP, is_fullscreen, seek_icons, toggle_fullscreen,
 };
@@ -15,7 +15,9 @@ use crate::i18n::t;
 use crate::theme;
 use crate::view::{Icon, gradient, paint_cover, paint_icon};
 
-const BAR_HEIGHT: f32 = 96.0;
+pub(super) const BAR_HEIGHT: f32 = 96.0;
+const TOP_BAR_HEIGHT: f32 = 72.0;
+const NEXT_CARD_MIN: egui::Vec2 = vec2(260.0, 170.0);
 const BUTTON: f32 = 36.0;
 const AUTO_NEXT_S: f64 = 10.0;
 const NEXT_CARD: egui::Vec2 = vec2(384.0, 216.0);
@@ -23,7 +25,7 @@ const SEEK_REACH_UP: f32 = 16.0;
 const SEEK_REACH_DOWN: f32 = 2.0;
 
 pub(super) fn top_bar(ui: &mut Ui, rect: Rect, title: &str, out: &mut Vec<PlayerCommand>) {
-    let bar = Rect::from_min_size(rect.min, vec2(rect.width(), 72.0));
+    let bar = Rect::from_min_size(rect.min, vec2(rect.width(), TOP_BAR_HEIGHT));
     gradient(
         ui,
         bar,
@@ -84,56 +86,86 @@ pub(super) fn bottom_bar(
     seek_bar(ui, seek, status, &mut controls.seek, now, out);
 
     let y = bar.bottom() - 26.0;
-    let mut x = bar.left() + margin + BUTTON / 2.0 - 6.0;
-    let mut slot = |step: f32| {
-        let c = pos2(x, y);
-        x += step;
-        Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
-    };
-    let (icon, label) = if status.paused {
-        (Icon::Play, t!("Play"))
-    } else {
-        (Icon::Pause, t!("Pause"))
-    };
-    if icon_button(ui, slot(BUTTON + 4.0), icon, &label).clicked() {
-        out.push(PlayerCommand::TogglePause);
-    }
-    if playback.next.is_some()
-        && icon_button(
-            ui,
-            slot(BUTTON + 4.0),
-            Icon::Named("player-skip-forward"),
-            &t!("Next episode"),
-        )
-        .clicked()
-    {
-        controls.next_requested = true;
-    }
-    if icon_button(
-        ui,
-        slot(BUTTON + 4.0),
-        Icon::Named(back_icon),
-        &t!("Seek back {seconds} seconds", seconds = seconds),
-    )
-    .clicked()
-    {
-        out.push(controls.seek_by(-seconds, status, now));
-    }
-    if icon_button(
-        ui,
-        slot(BUTTON + 12.0),
-        Icon::Named(forward_icon),
-        &t!("Seek forward {seconds} seconds", seconds = seconds),
-    )
-    .clicked()
-    {
-        out.push(controls.seek_by(seconds, status, now));
-    }
-    let time = format!(
-        "{} / {}",
-        clock(controls.seek.or(status.position_s), status.duration_s),
+    let position = clock(controls.seek.or(status.position_s), status.duration_s);
+    let full_time = format!(
+        "{position} / {}",
         clock(status.duration_s, status.duration_s)
     );
+    let text_width = |text: &str| {
+        ui.painter()
+            .layout_no_wrap(text.to_owned(), theme::body(), theme::TEXT)
+            .size()
+            .x
+    };
+    let fit = BarFit::new(
+        bar.width() - 2.0 * margin,
+        playback.next.is_some(),
+        text_width(&full_time),
+        text_width(&position),
+    );
+
+    let mut left = Vec::with_capacity(4);
+    left.push(LeftButton::Pause);
+    if fit.next {
+        left.push(LeftButton::Next);
+    }
+    if fit.seek {
+        left.extend([LeftButton::Back, LeftButton::Forward]);
+    }
+    let mut x = bar.left() + margin + BUTTON / 2.0 - 6.0;
+    for (i, button) in left.iter().enumerate() {
+        let rect = Rect::from_center_size(pos2(x, y), egui::Vec2::splat(BUTTON));
+        x += slot_step(i + 1 == left.len());
+        match button {
+            LeftButton::Pause => {
+                let (icon, label) = if status.paused {
+                    (Icon::Play, t!("Play"))
+                } else {
+                    (Icon::Pause, t!("Pause"))
+                };
+                if icon_button(ui, rect, icon, &label).clicked() {
+                    out.push(PlayerCommand::TogglePause);
+                }
+            }
+            LeftButton::Next => {
+                if icon_button(
+                    ui,
+                    rect,
+                    Icon::Named("player-skip-forward"),
+                    &t!("Next episode"),
+                )
+                .clicked()
+                {
+                    controls.next_requested = true;
+                }
+            }
+            LeftButton::Back => {
+                if icon_button(
+                    ui,
+                    rect,
+                    Icon::Named(back_icon),
+                    &t!("Seek back {seconds} seconds", seconds = seconds),
+                )
+                .clicked()
+                {
+                    out.push(controls.seek_by(-seconds, status, now));
+                }
+            }
+            LeftButton::Forward => {
+                if icon_button(
+                    ui,
+                    rect,
+                    Icon::Named(forward_icon),
+                    &t!("Seek forward {seconds} seconds", seconds = seconds),
+                )
+                .clicked()
+                {
+                    out.push(controls.seek_by(seconds, status, now));
+                }
+            }
+        }
+    }
+    let time = if fit.duration { full_time } else { position };
     left_label(
         ui,
         Rect::from_min_size(pos2(x - BUTTON / 2.0, y - 10.0), vec2(160.0, 20.0)),
@@ -141,47 +173,63 @@ pub(super) fn bottom_bar(
             .wrap_mode(egui::TextWrapMode::Extend),
     );
 
+    let mut right = Vec::with_capacity(4);
+    right.push(RightButton::Fullscreen);
+    if fit.stats {
+        right.push(RightButton::Stats);
+    }
+    right.push(RightButton::Subtitles);
+    if fit.audio {
+        right.push(RightButton::Audio);
+    }
     let mut x = bar.right() - margin - BUTTON / 2.0 + 6.0;
-    let mut slot = |step: f32| {
-        let c = pos2(x, y);
-        x -= step;
-        Rect::from_center_size(c, egui::Vec2::splat(BUTTON))
-    };
-    let (icon, label) = if is_fullscreen(ui.ctx()) {
-        ("minimize", t!("Exit fullscreen"))
+    let mut subtitles = Rect::NOTHING;
+    let mut audio = None;
+    for (i, button) in right.iter().enumerate() {
+        let rect = Rect::from_center_size(pos2(x, y), egui::Vec2::splat(BUTTON));
+        x -= slot_step(i + 1 == right.len());
+        match button {
+            RightButton::Fullscreen => {
+                let (icon, label) = if is_fullscreen(ui.ctx()) {
+                    ("minimize", t!("Exit fullscreen"))
+                } else {
+                    ("maximize", t!("Fullscreen"))
+                };
+                if icon_button(ui, rect, Icon::Named(icon), &label).clicked() {
+                    toggle_fullscreen(ui);
+                }
+            }
+            RightButton::Stats => {
+                if icon_button(ui, rect, Icon::Named("activity"), &t!("Streaming stats")).clicked()
+                {
+                    toggle_stats_shown(ui.ctx());
+                }
+            }
+            RightButton::Subtitles => {
+                subtitles = rect;
+                if icon_button(ui, rect, Icon::Named("badge-cc"), &t!("Subtitles")).clicked() {
+                    controls.menu = toggle(controls.menu, TrackKind::Subtitle);
+                }
+            }
+            RightButton::Audio => {
+                audio = Some(rect);
+                if icon_button(ui, rect, Icon::Named("language"), &t!("Audio")).clicked() {
+                    controls.menu = toggle(controls.menu, TrackKind::Audio);
+                }
+            }
+        }
+    }
+    let mute_center = if fit.volume {
+        let volume = Rect::from_min_max(
+            pos2(x - VOLUME_WIDTH + BUTTON / 2.0, y - 8.0),
+            pos2(x + BUTTON / 2.0, y + 8.0),
+        );
+        volume_slider(ui, volume, status, &mut controls.volume, now, out);
+        pos2(volume.left() - BUTTON / 2.0 - 4.0, y)
     } else {
-        ("maximize", t!("Fullscreen"))
+        pos2(x, y)
     };
-    if icon_button(ui, slot(BUTTON + 4.0), Icon::Named(icon), &label).clicked() {
-        toggle_fullscreen(ui);
-    }
-    if icon_button(
-        ui,
-        slot(BUTTON + 4.0),
-        Icon::Named("activity"),
-        &t!("Streaming stats"),
-    )
-    .clicked()
-    {
-        toggle_stats_shown(ui.ctx());
-    }
-    let subtitles = slot(BUTTON + 4.0);
-    if icon_button(ui, subtitles, Icon::Named("badge-cc"), &t!("Subtitles")).clicked() {
-        controls.menu = toggle(controls.menu, TrackKind::Subtitle);
-    }
-    let audio = slot(BUTTON + 12.0);
-    if icon_button(ui, audio, Icon::Named("language"), &t!("Audio")).clicked() {
-        controls.menu = toggle(controls.menu, TrackKind::Audio);
-    }
-    let volume = Rect::from_min_max(
-        pos2(x - 80.0 + BUTTON / 2.0, y - 8.0),
-        pos2(x + BUTTON / 2.0, y + 8.0),
-    );
-    volume_slider(ui, volume, status, &mut controls.volume, now, out);
-    let mute = Rect::from_center_size(
-        pos2(volume.left() - BUTTON / 2.0 - 4.0, y),
-        egui::Vec2::splat(BUTTON),
-    );
+    let mute = Rect::from_center_size(mute_center, egui::Vec2::splat(BUTTON));
     let (icon, label) = if status.muted || status.volume <= 0.0 {
         ("volume-off", t!("Unmute"))
     } else {
@@ -190,12 +238,25 @@ pub(super) fn bottom_bar(
     if icon_button(ui, mute, Icon::Named(icon), &label).clicked() {
         out.push(PlayerCommand::ToggleMute);
     }
+    if controls.menu == Some(TrackKind::Audio) && audio.is_none() {
+        controls.menu = None;
+    }
 
-    match controls.menu {
-        Some(TrackKind::Audio) => {
-            track_menu(ui, audio, status, &[], TrackKind::Audio, controls, out);
+    match (controls.menu, audio) {
+        (Some(TrackKind::Audio), Some(audio)) => {
+            track_menu(
+                ui,
+                audio,
+                status,
+                &[],
+                TrackKind::Audio,
+                controls,
+                out,
+                true,
+            );
         }
-        Some(TrackKind::Subtitle) => {
+        (Some(TrackKind::Subtitle), _) => {
+            let covers = style_covers_menu(ui, subtitles);
             let (menu, style_hovered) = track_menu(
                 ui,
                 subtitles,
@@ -204,8 +265,9 @@ pub(super) fn bottom_bar(
                 TrackKind::Subtitle,
                 controls,
                 out,
+                !(covers && controls.style_open),
             );
-            let panel = style_rect(ui, menu);
+            let panel = style_rect(ui, menu, covers);
             let ctx = ui.ctx();
             let keep = ctx.pointer_hover_pos().is_some_and(|p| {
                 panel.expand(STYLE_GAP).contains(p) || menu.expand(STYLE_GAP).contains(p)
@@ -253,7 +315,13 @@ pub(super) fn next_popup(
     if auto && left <= 0.0 {
         controls.next_requested = true;
     }
-    let size = NEXT_CARD.min(vec2(rect.width() - 16.0, rect.height() * 0.5));
+    let size = NEXT_CARD.min(vec2(
+        rect.width() - 16.0,
+        rect.height() - TOP_BAR_HEIGHT - BAR_HEIGHT - 16.0,
+    ));
+    if size.x < NEXT_CARD_MIN.x || size.y < NEXT_CARD_MIN.y {
+        return;
+    }
     let card = Rect::from_min_size(
         pos2(
             (rect.right() - size.x - 24.0).max(rect.left() + 8.0),
@@ -356,6 +424,85 @@ pub(super) fn next_popup(
                 );
             }
         });
+}
+
+const VOLUME_WIDTH: f32 = 80.0;
+const BUTTON_GAP: f32 = 4.0;
+const GROUP_GAP: f32 = 12.0;
+const BARS_GAP: f32 = 16.0;
+
+enum LeftButton {
+    Pause,
+    Next,
+    Back,
+    Forward,
+}
+
+enum RightButton {
+    Fullscreen,
+    Stats,
+    Subtitles,
+    Audio,
+}
+
+fn slot_step(last: bool) -> f32 {
+    BUTTON + if last { GROUP_GAP } else { BUTTON_GAP }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct BarFit {
+    next: bool,
+    seek: bool,
+    duration: bool,
+    audio: bool,
+    stats: bool,
+    volume: bool,
+}
+
+impl BarFit {
+    fn new(width: f32, has_next: bool, full_time: f32, position: f32) -> Self {
+        let mut fit = Self {
+            next: has_next,
+            seek: true,
+            duration: true,
+            audio: true,
+            stats: true,
+            volume: true,
+        };
+        let drops: [fn(&mut Self); 6] = [
+            |fit| fit.volume = false,
+            |fit| fit.stats = false,
+            |fit| fit.duration = false,
+            |fit| fit.seek = false,
+            |fit| fit.audio = false,
+            |fit| fit.next = false,
+        ];
+        for drop in drops {
+            if fit.width(full_time, position) <= width {
+                break;
+            }
+            drop(&mut fit);
+        }
+        fit
+    }
+
+    fn width(self, full_time: f32, position: f32) -> f32 {
+        let steps = |count: usize| {
+            #[expect(clippy::cast_precision_loss, reason = "a handful of buttons")]
+            let count = count as f32;
+            count * (BUTTON + BUTTON_GAP) + GROUP_GAP - BUTTON_GAP
+        };
+        let left_buttons = 1 + usize::from(self.next) + 2 * usize::from(self.seek);
+        let time = if self.duration { full_time } else { position };
+        let left = steps(left_buttons) - 6.0 + time;
+        let right_buttons = 2 + usize::from(self.stats) + usize::from(self.audio);
+        let mute = if self.volume {
+            VOLUME_WIDTH + BUTTON + BUTTON_GAP - 6.0
+        } else {
+            BUTTON / 2.0 + BUTTON / 2.0 - 6.0
+        };
+        left + BARS_GAP + steps(right_buttons) + mute
+    }
 }
 
 fn left_label(ui: &mut Ui, rect: Rect, label: Label) {
@@ -534,5 +681,43 @@ mod tests {
         assert_eq!(clock(3725.0, 7200.0), "1:02:05");
         assert_eq!(clock(f64::NAN, 10.0), "0:00");
         assert_eq!(clock(-5.0, 10.0), "0:00");
+    }
+
+    #[test]
+    fn the_bottom_bar_drops_controls_in_order_until_it_fits() {
+        let (full, short) = (90.0, 40.0);
+        let wide = BarFit::new(2000.0, true, full, short);
+        assert!(wide.next && wide.seek && wide.duration && wide.audio && wide.stats);
+        assert!(wide.volume);
+
+        let order = |fit: BarFit| {
+            [
+                fit.volume,
+                fit.stats,
+                fit.duration,
+                fit.seek,
+                fit.audio,
+                fit.next,
+            ]
+        };
+        let mut dropped_before = 0;
+        for width in (200..=1000).rev().step_by(10) {
+            #[expect(clippy::cast_precision_loss, reason = "small widths")]
+            let width = width as f32;
+            let fit = BarFit::new(width, true, full, short);
+            let kept = order(fit);
+            let dropped = kept.iter().take_while(|kept| !**kept).count();
+            assert!(kept[dropped..].iter().all(|kept| *kept), "{fit:?}");
+            assert!(dropped >= dropped_before, "{fit:?}");
+            dropped_before = dropped;
+            if dropped < kept.len() {
+                assert!(fit.width(full, short) <= width, "{width} {fit:?}");
+            }
+        }
+
+        let small = BarFit::new(360.0, true, full, short);
+        assert!(!small.volume && !small.stats && !small.duration && !small.seek);
+        assert!(small.audio && small.next);
+        assert!(!BarFit::new(2000.0, false, full, short).next);
     }
 }
