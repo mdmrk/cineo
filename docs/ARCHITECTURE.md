@@ -43,6 +43,7 @@ flowchart TB
   STORE --> CORE
   STREAM --> CORE
   NET -. HTTPS .-> ADDONS[(Addons)]
+  NET -. HTTPS, sealed records .-> SYNC[(Sync server<br/>cineo-sync-server)]
   PLAYER -. loaded at runtime .-> MPV[[libmpv]]
   STREAM -. BitTorrent .-> PEERS[(Peers, trackers, DHT)]
   MPV -. loopback HTTP .-> STREAM
@@ -103,6 +104,8 @@ All HTTP goes through `cineo-net`'s `AddonClient`, which enforces `NetPolicy`
 ([SECURITY.md](SECURITY.md)). The core only builds `Url`s; it never fetches.
 The update check is one more request through the same client: the core asks
 for it with `Effect::CheckForUpdate` and compares the version it gets back.
+Sync requests (`Effect::SyncPull`, `SyncPush`, `DeleteSyncSpace`) go
+through the same client and policy too; see [Sync boundary](#sync-boundary-adr-0043).
 
 ### Player boundary (ADR-0014)
 
@@ -135,10 +138,87 @@ an fsync, and a power loss can drop the last commits but not corrupt the
 file.
 The API is blocking; async shells call it off the runtime's worker threads.
 
-### Sync boundary (ADR-0043, partly built)
+### Sync boundary (ADR-0043)
 
-Sync is optional and off by default. Everything below exists. The desktop
-and Android turn it on in Settings → Data (ADR-0043).
+Sync is optional and off by default. The desktop and Android turn it on in
+Settings → Data. There are no accounts: a random 16-byte sync key, shown as
+a 32-character code and a QR code, is the only credential, and everything
+is encrypted on the device before it is sent.
+
+```mermaid
+sequenceDiagram
+  participant Core as cineo-core (reducer + Replica)
+  participant Shell as Shell (desktop / Android)
+  participant Net as cineo-net (SyncClient)
+  participant Server as Sync server (Worker + D1)
+  Shell->>Core: Action::Tick(now) / edit / SyncNow
+  Core-->>Shell: Effect::SyncPull (pairing, since)
+  Shell->>Net: fetch_task
+  Net->>Server: GET /v1/records?since&limit (Bearer token)
+  Server-->>Net: sealed records, seq, born
+  Net-->>Shell: Action::SyncPulled (opened records)
+  Shell->>Core: merge, then library, settings and addon effects
+  Core-->>Shell: Effect::SyncPush (outgoing records)
+  Shell->>Net: fetch_task
+  Net->>Server: POST /v1/records (writes: key, base_seq, blob)
+  Server-->>Net: seqs, or 409 conflicts
+  Net-->>Shell: Action::SyncPushed
+  Shell->>Core: round done, or pull again after a conflict
+```
+
+#### On the wire
+
+- **Server.** By default `https://cineo-sync.cineo-sync-server.workers.dev/`
+  (`cineo_core::sync::DEFAULT_SERVER`), the Cloudflare Worker host on D1.
+  Each pairing stores its server URL, so changing the setting only affects
+  new pairings. It must be `https`, or `http` to this machine only
+  (`server_allowed`, `parse_server`). Self-hosting: the native host behind
+  a TLS proxy ([SYNC_SERVER.md](SYNC_SERVER.md)).
+- **Routes.** `GET /v1/records?since=<seq>&limit=<n>` pulls pages of at
+  most 2 MiB; `POST /v1/records` pushes at most 64 writes and 256 KiB per
+  batch, each a record key, the version it replaces (`base_seq`) and a
+  sealed blob of at most 32 KiB, and answers 409 with the server's
+  versions when another device wrote first; `DELETE /v1/space` deletes the
+  space after "Turn off and delete" or a key change. `GET /v1/info` exists
+  for checks; the app does not call it. 410 means the space was deleted,
+  429 and 503 mean busy (with `Retry-After`). A space holds at most 10,000
+  records and 8 MiB.
+- **What the server gets.** `Authorization: Bearer <token>`, where the
+  token comes from the key through HKDF-SHA256 and the server stores only
+  its SHA-256; record keys, the first 16 bytes of an HMAC of each record
+  name; and blobs sealed with ChaCha20-Poly1305 under a key derived from
+the sync key, with the format byte and record key as associated data, so a
+blob cannot be moved to another record. It
+  never sees titles, ids, progress, addon URLs or settings, but it sees the
+  address, times and sizes of requests.
+
+#### When devices connect
+
+`Replica` decides, from the time the shell passes in:
+- an edit goes out once a minute passes without further changes;
+- progress goes out at most every five minutes while playing, and at once
+  when playback stops;
+- other devices' changes are pulled every ten minutes, and on "Sync now";
+- once after start and then daily, a full check pushes again whatever the
+  server lost (a restored backup or a swept space);
+- after a failure the next round waits a minute, or the server's
+  `Retry-After`; after a deleted space, sync pauses until the device is
+  paired again.
+
+The desktop ticks every second; Android ticks before each action and every
+15 seconds, and also syncs when the app comes to the foreground. Nothing is
+pushed on exit; waiting edits go out on the next start.
+
+#### Pairing links
+
+A device shows `cineo:///sync/<code>`, plus `?server=<url>` when its server
+is not the default, as text and as a QR code (`pairing_link`). Opening the
+link (`Route::Sync`), or scanning the QR code with Android's in-app
+scanner, only fills the code and server in Settings → Data; nothing is
+sent until "Pair" is pressed. Whoever holds the code can read everything
+synced.
+
+#### Modules
 
 - `cineo_core::app` (built): `State::sync` holds the pairing, the replica
   and the round. `update` runs the reducer, then passes its persistence
@@ -166,7 +246,6 @@ and Android turn it on in Settings → Data (ADR-0043).
   from CameraX frames with ZXing (`QrFrames`) and hands the text to the
   same `sync_link`. Tests:
   `crates/cineo-android/tests/shell/sync.rs`, against the native server.
-
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the
   persistence effects into records, merges remote records last writer wins
@@ -345,4 +424,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md#testing):
 `stremio://` and `cineo://` URLs parse into typed routes in the core
 (`app::parse_link`). The desktop shell opens a link given on the command
 line, hands it to an already running window (`instance.rs`), and registers
-the schemes per user on request (`register.rs`).
+the schemes per user on request (`register.rs`). `cineo:///sync/<code>`
+(`Route::Sync`) fills the sync code in Settings → Data
+([Sync boundary](#sync-boundary-adr-0043)). Android has an intent filter
+for the `cineo` scheme and acts only on sync links (`sync_link`).
