@@ -460,7 +460,7 @@ Assumed: 2 h of playback a day, the app open 3 h, a library of 600 items
 | 100,000 rows written/day | ~1,000 daily active |
 | 5 M rows read/day | far beyond the others |
 | 500 MB per database | **~500 users in total** (the first limit hit; sharding across the 10 free databases would give ~5,000) |
-| 10 ms CPU per request | medians 0–6 ms, peaks 12–23 ms (see below) |
+| 10 ms CPU per request | medians 1–8 ms, peaks 14–27 ms (see below) |
 
 CPU per request on Cloudflare, from `wrangler tail` over 37 requests of
 the ignored end-to-end test (VERIFIED, 2026-11-27): info 0 ms, delete
@@ -471,6 +471,14 @@ delete, which does almost no work, varied from 1 to 13 ms, so the peaks
 seem to include isolate warm-up rather than our code (INFERRED). If
 requests start failing with error 1102, the options are smaller pull
 pages or the $5 plan.
+
+After signed requests (step 9), over 44 requests of the same test run
+four times and 15 requests with a stale signature (VERIFIED, 2026-11-27):
+pull median 3.5 ms (max 27), push median 8 ms (max 14), a push answered
+428 for proof of work 3 ms, delete 1.5 ms, and a request refused for its
+time 1 ms. Verifying Ed25519 in wasm without precomputed tables adds about
+1 to 2 ms (INFERRED from the medians before and after); a push stays
+close to 10 ms, as before.
 
 On the $5 plan, the same model allows about 6,000 daily active users by
 requests, about 16,000 by rows written and about 10,000 users per 10 GB
