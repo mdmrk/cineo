@@ -164,14 +164,17 @@ server parts exist; the app does not call them yet.
   503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
 - `cineo_core::sync::protocol` (built): the limits and the request and
   response bodies, used by both the client and the server.
-- `crates/cineo-sync-server` (native host built, Worker host not built):
+- `crates/cineo-sync-server` (both hosts built; the Worker is not deployed):
   `handler::handle` decides each answer (token, sizes, quotas, versions)
   over a crate-private `Db` trait that runs SQL statements and atomic
   batches. The SQL in `handler.rs` and `schema.sql` is meant for both
   SQLite and D1. The native host (`SqliteDb`, `serve`, the
   `cineo-sync-server` binary) uses hyper and rusqlite, limits requests
   per address (`RateLimiter`) and sweeps idle spaces every hour. It
-  stores encrypted, opaque records and never sees plaintext. Tests: unit
+  stores encrypted, opaque records and never sees plaintext. The Worker
+  host (`worker_host.rs`, `cfg(target_arch = "wasm32")`) runs the same
+  handler over D1, binding blobs as `Uint8Array`, and sweeps from a Cron
+  Trigger; `scripts/check.sh` runs clippy on it for wasm32. Tests: unit
   tests in `src/handler/tests.rs` and `src/limit.rs`, and the client
   against the native host in `tests/end_to_end.rs`.
 

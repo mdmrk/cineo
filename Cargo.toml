@@ -70,6 +70,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
 uniffi = { version = "0.32.2", default-features = false }
 url = "2.5.9"
 winresource = { version = "0.1.34", default-features = false }
+worker = { version = "0.9.0", features = ["d1"] }
 zeroize = "1.9.2"
 zbus = { version = "5.19.0", default-features = false, features = ["async-io"] }
 

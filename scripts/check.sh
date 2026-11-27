@@ -6,6 +6,13 @@ step "format"
 scripts/fmt.sh --check
 step "clippy"
 cargo clippy --workspace --all-targets --locked -- -D warnings
+step "clippy (sync worker, wasm32)"
+if rustup target list --installed | grep -qx wasm32-unknown-unknown; then
+  cargo clippy -p cineo-sync-server --lib --bins --target wasm32-unknown-unknown --locked -- -D warnings
+else
+  [[ -z "${CI:-}" ]] || die "the wasm32-unknown-unknown target is required in CI"
+  echo "wasm32-unknown-unknown not installed; skipped. Install: rustup target add wasm32-unknown-unknown"
+fi
 step "tests"
 if need cargo-nextest "cargo install --locked cargo-nextest"; then
   cargo nextest run --workspace --locked

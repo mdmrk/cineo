@@ -326,12 +326,17 @@ errors.
   valid write; quotas per space as above. The native host allows 120
   requests a minute and 10 new spaces an hour per IP address (behind a
   proxy, the last `X-Forwarded-For` address, when told to trust it). The
-  Worker host uses the Rate Limiting binding if the free plan has it
-  (UNKNOWN), else a Cloudflare WAF rate-limiting rule; spaces
+  Worker host has no limit of its own yet: it will use the Rate Limiting
+  binding if the free plan has it (UNKNOWN), else a Cloudflare WAF
+  rate-limiting rule; spaces
   without a write for 365 days are deleted by a scheduled job. When D1 or
   the Worker hits its daily limit, the server returns 503 with
   `Retry-After` until 00:00 UTC, and the client backs off and keeps working
   locally.
+- **Integers** stay below 2⁵³, because D1 passes them as JavaScript
+  numbers (VERIFIED: D1 type conversion docs, workers-rs `D1Type`):
+  versions are about 1.8 × 10¹⁵ today, and `lock` and `born` are random
+  53-bit numbers on both hosts.
 - **Schema** (`crates/cineo-sync-server/schema.sql`, for SQLite and D1):
   `spaces(id, seq, records, bytes, touched_ms, deleted, lock) WITHOUT
   ROWID` and `records(space, key, seq, blob, PRIMARY KEY (space, key))
@@ -434,7 +439,12 @@ database.
      guide.
    - **5b.** The Worker host with D1, a CI job that builds it for wasm32,
      measurements of rows written, UPSERT counting and CPU per request,
-     and the deploy of the default instance.
+     and the deploy of the default instance. Done so far (2026-11-27):
+     the host (`worker_host.rs`), `wrangler.toml`, the wasm32 clippy step
+     in `scripts/check.sh` and CI, and a run under `wrangler dev` with its
+     local D1 (`a_running_server_syncs_recovers_and_deletes`, ignored
+     unless `CINEO_SYNC_SERVER` is set). Still to do: the deploy and the
+     measurements on real D1.
    - **5c.** Recovery from a server that went back (§4), and
      `SyncClient::sync`, one full round of pull, push and retry that the
      shells will call. Found in step 5a: without it, a restored backup or

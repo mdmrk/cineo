@@ -162,8 +162,8 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 
 ### Sync (ADR-0043)
 
-The client and the self-hosted server exist; the app does not call them
-yet, and the Cloudflare Worker host is not built. Sync is off by default.
+The client and both server hosts exist; the app does not call them yet,
+and the Cloudflare Worker is not deployed. Sync is off by default.
 
 - **Key.** 16 random bytes from `aws_lc_rs::rand`, stored in the private
   database (`sync_pairing`). It is shown as a 32-character code with a
@@ -216,7 +216,9 @@ yet, and the Cloudflare Worker host is not built. Sync is off by default.
   spaces without a write for 365 days are swept
   (`idle_spaces_and_deletion_markers_are_swept`). The binary serves plain
   HTTP and is meant to sit behind a TLS reverse proxy
-  ([SYNC_SERVER.md](SYNC_SERVER.md)).
+  ([SYNC_SERVER.md](SYNC_SERVER.md)). The Cloudflare Worker host has the
+  same checks except the per-address limits, which it does not have yet
+  (ADR-0043).
 
 ### Process execution
 

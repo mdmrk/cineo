@@ -168,8 +168,11 @@ pub async fn serve(listener: TcpListener, db: Arc<SqliteDb>, options: ServeOptio
     }
 }
 
-fn random_i64() -> i64 {
-    getrandom::u64().map_or(1, |n| i64::from_le_bytes(n.to_le_bytes()))
+fn random53() -> i64 {
+    match getrandom::u64().map(|n| n >> 11) {
+        Ok(0) | Err(_) => 1,
+        Ok(n) => i64::try_from(n).unwrap_or(1),
+    }
 }
 
 pub fn system_ms() -> u64 {
@@ -248,11 +251,8 @@ async fn respond(
     };
     let ctx = Context {
         now_ms: now,
-        nonce: random_i64(),
-        born: match random_i64() {
-            0 => 1,
-            n => n,
-        },
+        nonce: random53(),
+        born: random53(),
         may_create: shared
             .limiter
             .lock()

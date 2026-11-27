@@ -419,3 +419,37 @@ async fn a_record_only_one_device_had_comes_back_with_the_daily_check() {
     assert_eq!(ids(&a), ids(&b));
     assert_eq!(a.library().len(), 3);
 }
+
+#[tokio::test]
+#[ignore = "needs a running server in CINEO_SYNC_SERVER, such as `wrangler dev`"]
+async fn a_running_server_syncs_recovers_and_deletes() {
+    let server = std::env::var("CINEO_SYNC_SERVER").expect("CINEO_SYNC_SERVER is set");
+    let key: [u8; 16] = std::array::from_fn(|i| {
+        u8::try_from(system_ms() % 251).unwrap_or(0) ^ u8::try_from(i).unwrap_or(0)
+    });
+    let mut a = Replica::new(DeviceId(1), Settings::default());
+    let mut b = Replica::new(DeviceId(2), Settings::default());
+    for i in 0..150 {
+        a.record_effect(
+            &Effect::SaveLibraryItem(item(&format!("tt{i:07}"), &"n".repeat(300), i)),
+            1_000,
+        );
+    }
+    let report = client(&server, key).sync(&mut a, 1_000).await.unwrap();
+    assert_eq!(report.pushed, 150);
+    client(&server, key).sync(&mut b, 1_000).await.unwrap();
+    assert_eq!(b.library().len(), 150);
+
+    a.record_effect(&Effect::SaveLibraryItem(item("tt0000001", "x", 7)), 2_000);
+    b.record_effect(&Effect::SaveLibraryItem(item("tt0000001", "x", 9)), 3_000);
+    client(&server, key).sync(&mut a, 2_000).await.unwrap();
+    client(&server, key).sync(&mut b, 3_000).await.unwrap();
+    client(&server, key).sync(&mut a, 4_000).await.unwrap();
+    assert_eq!(ids(&a), ids(&b));
+
+    client(&server, key).delete_space().await.unwrap();
+    assert!(matches!(
+        client(&server, key).pull(0).await,
+        Err(SyncError::SpaceGone)
+    ));
+}

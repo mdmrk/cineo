@@ -497,6 +497,7 @@ current version when adding one.
 | `data-encoding`                                                                        | 2.11.1                                                                                                                                 | Base32 sync codes and base64url sync tokens and blobs (net, ADR-0043); already in the graph | MIT |
 | `zeroize`                                                                              | 1.9.2                                                                                                                                  | Wipes the derived sync token from memory (net, ADR-0043); already in the graph | Apache-2.0 OR MIT |
 | `sha2`                                                                                 | 0.11.1 (0.11.2 was two days old)                                                                                                       | SHA-256 of sync tokens on the server, in pure Rust so that the Worker host builds for wasm32 (sync server, ADR-0043) | MIT OR Apache-2.0 |
+| `worker` (`d1`; wasm32 only)                                                           | 0.9.0                                                                                                                                  | Cloudflare Worker host of the sync server with its D1 database (sync server, ADR-0043) | Apache-2.0 |
 | `fast_image_resize` (default features)                                                 | 6.2.0                                                                                                                                  | SIMD downscaling of posters and backdrops (desktop)                                                                                             | MIT/Apache                           |
 | `egui_kittest` (dev, no default features)                                              | 0.37.0 (ADR-0042)                                                                                                                                 | Headless UI tests via AccessKit (desktop)                                                                                                       | MIT/Apache                           |
 | `librqbit` (`rust-tls`, `disable-upload`, no default features)                         | 9.1.0 + our patch, from branch `main` of the [fork](https://github.com/mdmrk/rqbit) (upstream `main` merged with `feat/stream-window`) | BitTorrent session (stream, ADR-0012)                                                                                                           | Apache-2.0                           |
@@ -611,6 +612,8 @@ alpha (`colour_and_transparency_survive_downscaling`).
 | shellcheck    | 0.11.0  | Shell script lint                   |
 | shfmt         | 3.14.1  | Shell script format                 |
 | minisign      | 0.12    | Release checksum signatures; CI takes the author's static Linux build, checked by SHA-256 (`scripts/release.sh tool`), not Ubuntu's archive |
+| worker-build  | 0.9.0   | Builds the sync server's Worker host to `build/worker/shim.mjs` (run by wrangler, ADR-0043) |
+| wrangler      | 4.161.0 | Runs the sync Worker locally and deploys it (`npx wrangler@4.161.0`, [SYNC_SERVER.md](SYNC_SERVER.md)); not used by CI |
 
 ### CI actions
 

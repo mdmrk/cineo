@@ -5,6 +5,8 @@ mod handler;
 mod limit;
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
+#[cfg(target_arch = "wasm32")]
+mod worker_host;
 
 pub use db::DbError;
 pub use handler::{

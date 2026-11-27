@@ -56,3 +56,23 @@ records that only the device in question still has.
 Versions are numbered from the server clock, so keep it right: a restore
 together with a clock set far into the past can make the server reuse
 version numbers, and devices then miss writes until their daily check.
+
+## On Cloudflare Workers
+
+The same server also builds as a Cloudflare Worker with a D1 database
+(`crates/cineo-sync-server/wrangler.toml`). It has run only under
+`wrangler dev` with its local D1 so far; a deploy has not been tried
+(UNKNOWN), and this host has no per-address rate limit yet. Steps, from
+`crates/cineo-sync-server`:
+
+```sh
+npx wrangler@4.161.0 login
+npx wrangler@4.161.0 d1 create cineo-sync     # put the printed id in wrangler.toml
+npx wrangler@4.161.0 d1 execute DB --remote --file schema.sql
+npx wrangler@4.161.0 deploy
+```
+
+To try it locally, run `npx wrangler@4.161.0 d1 execute DB --local --file
+schema.sql` and `npx wrangler@4.161.0 dev --local --port 8788`, then
+`CINEO_SYNC_SERVER=http://127.0.0.1:8788/ cargo test -p cineo-sync-server
+--test end_to_end -- --ignored`.

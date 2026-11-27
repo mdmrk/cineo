@@ -3,3 +3,5 @@
 /.claude/
 CLAUDE.local.md
 .env
+/crates/cineo-sync-server/build/
+/crates/cineo-sync-server/.wrangler/

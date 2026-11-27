@@ -43,6 +43,7 @@ jobs:
           tool: cargo-nextest@0.9.152,cargo-deny@0.22.0,taplo@0.10.0,typos@1.52.2,cargo-machete@0.10.1,shellcheck@0.11.0,shfmt@3.14.1
       - &minisign
         run: scripts/release.sh tool "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: rustup target add wasm32-unknown-unknown
       - run: scripts/check.sh
       - run: sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -y -qq --no-install-recommends libmpv2 > /dev/null
       - run: cargo nextest run -p cineo-player --locked --run-ignored only
