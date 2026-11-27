@@ -8,6 +8,7 @@ use cineo_core::app::{
 };
 
 mod detail;
+pub(crate) mod remote;
 mod settings;
 mod sync;
 
@@ -15,6 +16,10 @@ use detail::detail;
 pub use detail::{
     DetailView, MetaStatus, QualityView, StreamFilterView, StreamGroupView, StreamItems,
     StreamView, VideoView,
+};
+pub use remote::{
+    NowPlayingView, RemoteCommandView, RemoteFailure, RemoteInputError, RemoteLinkView,
+    RemotePeerView, RemoteStatusView, RemoteTrackView,
 };
 use settings::settings;
 pub use settings::{ChoiceView, RangeView, SettingsView, SubtitlePreviewView, ToggleView};
@@ -42,6 +47,7 @@ pub struct AppView {
     pub notice: Option<NoticeView>,
     pub update: Option<UpdateView>,
     pub sync: Option<SyncView>,
+    pub remote: Option<RemotePeerView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -296,6 +302,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
             page_url: release_page(version),
         }),
         sync: None,
+        remote: state.remote.peer.as_ref().map(remote::peer),
     };
     if view.playback.is_none() && view.connecting.is_none() {
         fill_browsing(&mut view, state, filter);

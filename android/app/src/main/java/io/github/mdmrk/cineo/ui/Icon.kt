@@ -37,5 +37,9 @@ enum class Icon(val regular: Char?, val filled: Char?, val shiftEm: Float = 0f) 
     DEVICE_MOBILE_ROTATED('\ue77a', null),
     BADGE_CC('\ue172', '\ue05b'),
     LANGUAGE('\ueb03', null),
-    PLAYER_SKIP_FORWARD('\ueedb', '\ue2ed');
+    PLAYER_SKIP_FORWARD('\ueedb', '\ue2ed'),
+    PLAYER_STOP('\ueedc', '\ue2ee'),
+    VOLUME('\uf2d1', null),
+    VOLUME_OFF('\uf2d0', null),
+    DEVICE_DESKTOP('\ue721', '\ue18e');
 }

@@ -8,15 +8,16 @@ pub use player::{Playback, Players, Started};
 pub use shell::{
     AddonSubtitleView, CachedSpanView, Cineo, DecoderView, ImageError, PlayerStatsView,
     PlayerStatusView, SettingChange, StartError, StateListener, SyncInputError, TrackView,
-    VideoSizeView, default_sync_server, sync_link,
+    VideoSizeView, default_sync_server, remote_link, sync_link,
 };
 pub use view::{
     AddonListItems, AddonListView, AddonView, AppView, ArtView, ChoiceView, DetailView,
-    InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView,
-    PlaybackView, PosterView, ProblemView, QrView, QualityView, RangeView, RowItems, RowView,
-    SettingsView, StreamFilterView, StreamGroupView, StreamItems, StreamView, SubtitlePreviewView,
-    SyncFailureView, SyncLinkView, SyncStatusView, SyncView, ToggleView, TorrentView, UpdateView,
-    VideoView,
+    InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, NowPlayingView,
+    PlaybackFailureView, PlaybackView, PosterView, ProblemView, QrView, QualityView, RangeView,
+    RemoteCommandView, RemoteFailure, RemoteInputError, RemoteLinkView, RemotePeerView,
+    RemoteStatusView, RemoteTrackView, RowItems, RowView, SettingsView, StreamFilterView,
+    StreamGroupView, StreamItems, StreamView, SubtitlePreviewView, SyncFailureView, SyncLinkView,
+    SyncStatusView, SyncView, ToggleView, TorrentView, UpdateView, VideoView,
 };
 
 #[uniffi::export]

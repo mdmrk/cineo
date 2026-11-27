@@ -24,8 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mdmrk.cineo.rust.PosterView
+import io.github.mdmrk.cineo.rust.RemoteLinkView
 import io.github.mdmrk.cineo.rust.SyncLinkView
+import io.github.mdmrk.cineo.rust.remoteLink
 import io.github.mdmrk.cineo.rust.syncLink
+import io.github.mdmrk.cineo.ui.RemoteScreen
 import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.SearchScreen
@@ -76,13 +79,20 @@ class MainActivity : ComponentActivity() {
 
     private var inPip by mutableStateOf(false)
     private var pendingSync by mutableStateOf<SyncLinkView?>(null)
+    private var pendingRemote by mutableStateOf<RemoteLinkView?>(null)
 
-    private fun syncLinkOf(intent: Intent?): SyncLinkView? =
-        intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString?.let(::syncLink)
+    private fun linkOf(intent: Intent?): String? =
+        intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString
+
+    private fun takeLinks(intent: Intent?) {
+        val link = linkOf(intent) ?: return
+        syncLink(link)?.let { pendingSync = it }
+        remoteLink(link)?.let { pendingRemote = it }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        syncLinkOf(intent)?.let { pendingSync = it }
+        takeLinks(intent)
     }
     private var pipOnLeave: PictureInPictureParams? = null
 
@@ -125,7 +135,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val app = application as CineoApplication
-        syncLinkOf(intent)?.let { pendingSync = it }
+        takeLinks(intent)
         setContent {
             CineoTheme {
                 when (val started = app.started) {
@@ -135,16 +145,19 @@ class MainActivity : ComponentActivity() {
                         val player = app.player ?: return@CineoTheme
                         val images = remember(cineo) { Images(cineo) }
                         var page by rememberSaveable { mutableStateOf(Page.HOME) }
+                        var remoteOpen by rememberSaveable { mutableStateOf(false) }
                         val savedPages = rememberSaveableStateHolder()
                         val current = view
                         val playback = current?.playback
                         val detail = current?.detail
-                        LaunchedEffect(pendingSync) {
-                            if (pendingSync != null) {
+                        LaunchedEffect(pendingSync, pendingRemote) {
+                            if (pendingSync != null || pendingRemote != null) {
                                 page = Page.SETTINGS
+                                remoteOpen = false
                                 cineo.closeDetail()
                             }
                         }
+                        val remote = current?.remote
                         val connecting = current?.connecting
                         PlaybackForeground(playback != null || connecting != null || current?.torrent != null)
                         LaunchedEffect(inPip, playback == null && connecting == null) {
@@ -163,6 +176,10 @@ class MainActivity : ComponentActivity() {
                                 onPip = ::pictureInPicture,
                             )
                             connecting != null -> ConnectingScreen(connecting, current.torrent, images, cineo::stopPlayback)
+                            remoteOpen && remote != null -> {
+                                BackHandler { remoteOpen = false }
+                                RemoteScreen(remote, cineo) { remoteOpen = false }
+                            }
                             detail != null -> {
                                 BackHandler { cineo.closeDetail() }
                                 DetailScreen(
@@ -218,6 +235,10 @@ class MainActivity : ComponentActivity() {
                                                     it.sync,
                                                     pendingSync,
                                                     { pendingSync = null },
+                                                    it.remote,
+                                                    pendingRemote,
+                                                    { pendingRemote = null },
+                                                    { remoteOpen = true },
                                                     cineo,
                                                     padding,
                                                 )

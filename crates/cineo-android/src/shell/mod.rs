@@ -10,7 +10,9 @@ use cineo_core::app::{
     Action, Effect, Language, Notice, Resolution, Route, SeekStep, Setting, Settings, State,
     StreamSort, SubtitleGroup, TorrentStorage, WatchedAt, parse_link,
 };
+use cineo_core::remote::{Command, Peer, parse_address};
 use cineo_core::sync::{Pairing, SyncKey};
+use cineo_net::remote::{RemoteClient, parse_remote_code};
 use cineo_net::sync::{CodeError, new_device, new_key, parse_code, parse_server};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
@@ -23,7 +25,10 @@ use tracing::{error, warn};
 use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
-use crate::view::{AppView, ArtView, StreamFilterView, SyncLinkView};
+use crate::view::{
+    AppView, ArtView, RemoteCommandView, RemoteFailure, RemoteInputError, RemoteLinkView,
+    RemoteStatusView, StreamFilterView, SyncLinkView,
+};
 
 mod worker;
 
@@ -101,6 +106,24 @@ pub fn sync_link(link: &str) -> Option<SyncLinkView> {
             server: server.map_or_else(String::new, |s| s.to_string()),
         }),
         _ => None,
+    }
+}
+
+#[uniffi::export]
+pub fn remote_link(link: &str) -> Option<RemoteLinkView> {
+    match parse_link(link) {
+        Ok(Route::Remote { code, address }) => Some(RemoteLinkView { code, address }),
+        _ => None,
+    }
+}
+
+impl From<CodeError> for RemoteInputError {
+    fn from(err: CodeError) -> Self {
+        match err {
+            CodeError::Length => Self::CodeLength,
+            CodeError::Typo => Self::CodeTypo,
+            _ => Self::NotACode,
+        }
     }
 }
 
@@ -337,6 +360,7 @@ impl Drop for AbortOnDrop {
 pub struct Cineo {
     tx: Sender<Msg>,
     client: AddonClient,
+    remote: Mutex<Option<Arc<RemoteClient>>>,
     screen: Arc<Mutex<Screen>>,
     shell: Option<JoinHandle<()>>,
     runtime: Option<Runtime>,
@@ -418,6 +442,48 @@ impl Cineo {
 
     pub fn sync_turn_off(&self, delete_server_data: bool) {
         self.send(Action::LeaveSync { delete_server_data });
+    }
+
+    pub fn remote_pair(&self, address: &str, code: &str) -> Result<(), RemoteInputError> {
+        let address = parse_address(address).ok_or(RemoteInputError::Address)?;
+        let key = parse_remote_code(code)?;
+        let peer = Peer { address, key };
+        let client = RemoteClient::new(&peer).map_err(|_| RemoteInputError::Address)?;
+        *self.remote.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::new(client));
+        self.send(Action::SetRemotePeer(Some(peer)));
+        Ok(())
+    }
+
+    pub fn remote_forget(&self) {
+        *self.remote.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        self.send(Action::SetRemotePeer(None));
+    }
+
+    pub async fn remote_send(
+        &self,
+        command: Option<RemoteCommandView>,
+    ) -> Result<RemoteStatusView, RemoteFailure> {
+        let command = command.map(Command::from);
+        if command.is_some_and(|c| !c.is_valid()) {
+            return Err(RemoteFailure::Invalid);
+        }
+        let client = self
+            .remote
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+            .ok_or(RemoteFailure::NotPaired)?;
+        let runtime = self.runtime.as_ref().ok_or(RemoteFailure::Unreachable)?;
+        let task = runtime
+            .handle()
+            .spawn(async move { client.send(command, wall_ms()).await });
+        let _abort = AbortOnDrop(task.abort_handle());
+        match task.await {
+            Ok(result) => result
+                .map(|status| crate::view::remote::status(&status))
+                .map_err(RemoteFailure::from),
+            Err(_) => Err(RemoteFailure::Unreachable),
+        }
     }
 
     pub fn app_visible(&self, visible: bool) {
@@ -676,6 +742,11 @@ impl Cineo {
         };
         let settings = store.settings_over(phone_settings()).map_err(store_error)?;
         let sync = store.sync(phone_settings()).map_err(store_error)?;
+        let (_, remote_peer) = store.remote().map_err(store_error)?;
+        let remote = remote_peer
+            .as_ref()
+            .and_then(|peer| RemoteClient::new(peer).ok())
+            .map(Arc::new);
         let client = AddonClient::new(NetPolicy {
             allow_private_networks: settings.allow_private_network,
             ..NetPolicy::default()
@@ -719,7 +790,14 @@ impl Cineo {
             filtered: None,
             shown: None,
         };
-        let mut restore = vec![restore, Action::RestoreSettings(settings)];
+        let mut restore = vec![
+            restore,
+            Action::RestoreSettings(settings),
+            Action::RestoreRemote {
+                host: None,
+                peer: remote_peer,
+            },
+        ];
         if let Some((pairing, replica)) = sync {
             restore.push(Action::RestoreSync {
                 pairing,
@@ -748,6 +826,7 @@ impl Cineo {
         Ok(Arc::new(Self {
             tx,
             client,
+            remote: Mutex::new(remote),
             screen,
             shell: Some(shell),
             runtime: Some(runtime),

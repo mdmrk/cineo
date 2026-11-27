@@ -56,6 +56,7 @@ import io.github.mdmrk.cineo.rust.SyncLinkView
 import io.github.mdmrk.cineo.rust.SyncStatusView
 import io.github.mdmrk.cineo.rust.SyncView
 import io.github.mdmrk.cineo.rust.defaultSyncServer
+import io.github.mdmrk.cineo.rust.syncLink
 
 private const val QR_QUIET = 4
 private const val QR_MODULE_DP = 4
@@ -129,6 +130,8 @@ internal fun SyncSettings(sync: SyncView?, link: SyncLinkView?, onLinkUsed: () -
         }
         if (scanning) {
             QrScanner(
+                hint = stringResource(R.string.sync_scan_hint),
+                read = ::syncLink,
                 onFound = { link ->
                     code = link.code
                     server = link.server

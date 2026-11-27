@@ -32,9 +32,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import io.github.mdmrk.cineo.R
 
-private const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
+internal const val LOCAL_NETWORK = "android.permission.ACCESS_LOCAL_NETWORK"
 
-private fun localNetworkAllowed(context: Context) =
+internal fun localNetworkAllowed(context: Context) =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN ||
         ContextCompat.checkSelfPermission(context, LOCAL_NETWORK) == PackageManager.PERMISSION_GRANTED
 

@@ -172,14 +172,14 @@ internal fun Controls(
     }
 }
 
-private fun clock(seconds: Double): String {
+internal fun clock(seconds: Double): String {
     val total = seconds.toLong().coerceAtLeast(0)
     val (h, m, s) = Triple(total / 3600, total / 60 % 60, total % 60)
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
 @Composable
-private fun SeekBar(position: Float, duration: Float, cached: List<CachedSpanView>, onDrag: (Float) -> Unit, onDone: () -> Unit) {
+internal fun SeekBar(position: Float, duration: Float, cached: List<CachedSpanView>, onDrag: (Float) -> Unit, onDone: () -> Unit) {
     var width by remember { mutableIntStateOf(1) }
     val fraction = if (duration > 0f) (position / duration).coerceIn(0f, 1f) else 0f
     val latestDuration by rememberUpdatedState(duration)

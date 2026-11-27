@@ -69,6 +69,8 @@ import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.ChoiceView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.RangeView
+import io.github.mdmrk.cineo.rust.RemoteLinkView
+import io.github.mdmrk.cineo.rust.RemotePeerView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
 import io.github.mdmrk.cineo.rust.SubtitlePreviewView
@@ -82,6 +84,7 @@ import kotlin.math.roundToInt
 
 private val GroupShape = RoundedCornerShape(10.dp)
 private const val DATA_ITEM = 6
+private const val REMOTE_ITEM = 7
 
 private typealias Content = @Composable () -> Unit
 
@@ -104,6 +107,10 @@ fun SettingsScreen(
     sync: SyncView?,
     syncLink: SyncLinkView?,
     onSyncLinkUsed: () -> Unit,
+    remote: RemotePeerView?,
+    remoteLink: RemoteLinkView?,
+    onRemoteLinkUsed: () -> Unit,
+    onOpenRemote: () -> Unit,
     cineo: Cineo,
     padding: PaddingValues,
 ) {
@@ -306,6 +313,13 @@ fun SettingsScreen(
                 cineo::resetSettings,
             )
         },
+        group("remote", stringResource(R.string.section_remote)) {
+            add(
+                stringResource(R.string.section_remote),
+                stringResource(R.string.remote_pair_title),
+                stringResource(R.string.remote_pair_help),
+            ) { RemoteSettings(remote, remoteLink, onRemoteLinkUsed, onOpenRemote, cineo) }
+        },
         group("about", stringResource(R.string.section_about)) {
             val version = stringResource(R.string.app_version, version())
             add(version) { ListItem(colors = rowColors) { Text(version) } }
@@ -329,12 +343,18 @@ fun SettingsScreen(
     )
     var query by rememberSaveable { mutableStateOf("") }
     val focus = LocalFocusManager.current
-    val shown = if (syncLink != null) groups else groups.search(query)
+    val shown = if (syncLink != null || remoteLink != null) groups else groups.search(query)
     val list = rememberLazyListState()
     LaunchedEffect(syncLink) {
         if (syncLink != null) {
             query = ""
             list.scrollToItem(DATA_ITEM)
+        }
+    }
+    LaunchedEffect(remoteLink) {
+        if (remoteLink != null) {
+            query = ""
+            list.scrollToItem(REMOTE_ITEM)
         }
     }
     LazyColumn(

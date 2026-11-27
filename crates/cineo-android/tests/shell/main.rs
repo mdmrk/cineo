@@ -39,6 +39,7 @@ struct Views(Mutex<Sender<AppView>>);
 
 mod browse;
 mod playback;
+mod remote;
 mod settings;
 mod sync;
 mod torrent;

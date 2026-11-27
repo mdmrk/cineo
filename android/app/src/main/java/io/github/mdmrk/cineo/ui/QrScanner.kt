@@ -36,8 +36,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.mdmrk.cineo.R
-import io.github.mdmrk.cineo.rust.SyncLinkView
-import io.github.mdmrk.cineo.rust.syncLink
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.awaitCancellation
@@ -51,10 +49,11 @@ private fun QrFrames.read(image: ImageProxy): String? {
 }
 
 @Composable
-internal fun QrScanner(onFound: (SyncLinkView) -> Unit, onClose: () -> Unit) {
+internal fun <T : Any> QrScanner(hint: String, read: (String) -> T?, onFound: (T) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
     val found by rememberUpdatedState(onFound)
+    val parse by rememberUpdatedState(read)
     val preview = remember { PreviewView(context) }
     LaunchedEffect(lifecycle) {
         val provider = ProcessCameraProvider.awaitInstance(context)
@@ -67,7 +66,7 @@ internal fun QrScanner(onFound: (SyncLinkView) -> Unit, onClose: () -> Unit) {
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
         analysis.setAnalyzer(worker) { image ->
-            val link = image.use { frames.read(it) }?.let(::syncLink)
+            val link = image.use { frames.read(it) }?.let { parse(it) }
             if (link != null && done.compareAndSet(false, true)) main.execute { found(link) }
         }
         try {
@@ -92,7 +91,7 @@ internal fun QrScanner(onFound: (SyncLinkView) -> Unit, onClose: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    stringResource(R.string.sync_scan_hint),
+                    hint,
                     color = Brand.TextBright,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
