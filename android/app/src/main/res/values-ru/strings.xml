@@ -333,7 +333,6 @@
     <string name="remote_paired">Связан с %1$s</string>
     <string name="remote_paired_help">Управляйте тем, что воспроизводится в Cineo на этом компьютере. Телефон должен быть в той же сети.</string>
     <string name="remote_found_help">Найден через синхронизацию. Управляйте тем, что воспроизводится в Cineo на этом компьютере; телефон должен быть в той же сети.</string>
-    <string name="remote_open">Открыть пульт</string>
     <string name="remote_forget">Забыть этот компьютер</string>
     <string name="remote_forget_help">Телефон перестанет им управлять, пока вы не свяжете их снова.</string>
     <string name="remote_forget_button">Забыть</string>

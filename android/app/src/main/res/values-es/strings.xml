@@ -331,7 +331,6 @@
     <string name="remote_paired">Emparejado con %1$s</string>
     <string name="remote_paired_help">Controla lo que se reproduce en Cineo en ese ordenador. El móvil debe estar en la misma red.</string>
     <string name="remote_found_help">Encontrado mediante la sincronización. Controla lo que se reproduce en Cineo en ese ordenador; el móvil debe estar en la misma red.</string>
-    <string name="remote_open">Abrir mando</string>
     <string name="remote_forget">Olvidar este ordenador</string>
     <string name="remote_forget_help">Este móvil deja de controlarlo hasta que lo vuelvas a emparejar.</string>
     <string name="remote_forget_button">Olvidar</string>

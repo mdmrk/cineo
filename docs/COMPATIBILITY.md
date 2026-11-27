@@ -636,7 +636,7 @@ local network (ADR-0044). On by default on the desktop.
   several computers, the one that announced last is used.
 - **Android, Settings → Remote control.** Pair by scanning the QR code, by
   a `cineo:///remote/<code>?at=<address>` link, or by typing the address
-  and code; "Open remote" shows the controls; "Forget" unpairs. A paired
+  and code; the bar above the navigation opens the controls; "Forget" unpairs. A paired
   phone controls the computer and stays paired after a restart
   (`a_paired_phone_controls_the_desktop_and_stays_paired_after_a_restart`);
   public addresses and mistyped codes are refused

@@ -329,7 +329,6 @@
     <string name="remote_paired">Gekoppelt mit %1$s</string>
     <string name="remote_paired_help">Steuere, was in Cineo auf diesem Computer läuft. Das Handy muss im selben Netzwerk sein.</string>
     <string name="remote_found_help">Über die Synchronisierung gefunden. Steuere, was in Cineo auf diesem Computer läuft; das Handy muss im selben Netzwerk sein.</string>
-    <string name="remote_open">Fernbedienung öffnen</string>
     <string name="remote_forget">Diesen Computer vergessen</string>
     <string name="remote_forget_help">Dieses Handy steuert ihn nicht mehr, bis du es erneut koppelst.</string>
     <string name="remote_forget_button">Vergessen</string>

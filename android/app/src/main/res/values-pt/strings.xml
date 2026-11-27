@@ -331,7 +331,6 @@
     <string name="remote_paired">Pareado com %1$s</string>
     <string name="remote_paired_help">Controle o que toca no Cineo nesse computador. O celular precisa estar na mesma rede.</string>
     <string name="remote_found_help">Encontrado pela sincronização. Controle o que toca no Cineo nesse computador; o celular precisa estar na mesma rede.</string>
-    <string name="remote_open">Abrir controle</string>
     <string name="remote_forget">Esquecer este computador</string>
     <string name="remote_forget_help">Este celular deixa de controlá-lo até você parear de novo.</string>
     <string name="remote_forget_button">Esquecer</string>

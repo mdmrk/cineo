@@ -327,7 +327,6 @@
     <string name="remote_paired">已与 %1$s 配对</string>
     <string name="remote_paired_help">控制那台电脑上 Cineo 正在播放的内容。手机必须在同一网络中。</string>
     <string name="remote_found_help">通过同步找到。控制那台电脑上 Cineo 正在播放的内容；手机必须在同一网络中。</string>
-    <string name="remote_open">打开遥控</string>
     <string name="remote_forget">忘记这台电脑</string>
     <string name="remote_forget_help">在重新配对之前，这部手机将不再控制它。</string>
     <string name="remote_forget_button">忘记</string>

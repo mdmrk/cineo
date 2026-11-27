@@ -87,9 +87,7 @@ internal fun RemoteSettings(
         SettingRow(
             stringResource(R.string.remote_paired, peer.address),
             stringResource(if (peer.throughSync) R.string.remote_found_help else R.string.remote_paired_help),
-        ) {
-            OutlinedButton(onClick = onOpen) { Text(stringResource(R.string.remote_open), color = Brand.Accent) }
-        }
+        ) {}
         Divider()
     }
     if (peer != null && !another) {

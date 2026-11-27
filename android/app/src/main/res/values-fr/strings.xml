@@ -331,7 +331,6 @@
     <string name="remote_paired">Associé à %1$s</string>
     <string name="remote_paired_help">Contrôlez ce qui est lu dans Cineo sur cet ordinateur. Le téléphone doit être sur le même réseau.</string>
     <string name="remote_found_help">Trouvé grâce à la synchronisation. Contrôlez ce qui est lu dans Cineo sur cet ordinateur ; le téléphone doit être sur le même réseau.</string>
-    <string name="remote_open">Ouvrir la télécommande</string>
     <string name="remote_forget">Oublier cet ordinateur</string>
     <string name="remote_forget_help">Ce téléphone ne le contrôle plus tant que vous ne l\'associez pas à nouveau.</string>
     <string name="remote_forget_button">Oublier</string>

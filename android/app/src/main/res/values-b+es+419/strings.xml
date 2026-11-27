@@ -331,7 +331,6 @@
     <string name="remote_paired">Vinculado con %1$s</string>
     <string name="remote_paired_help">Controla lo que se reproduce en Cineo en esa computadora. El celular debe estar en la misma red.</string>
     <string name="remote_found_help">Encontrada mediante la sincronización. Controla lo que se reproduce en Cineo en esa computadora; el celular debe estar en la misma red.</string>
-    <string name="remote_open">Abrir control</string>
     <string name="remote_forget">Olvidar esta computadora</string>
     <string name="remote_forget_help">Este celular deja de controlarla hasta que la vuelvas a vincular.</string>
     <string name="remote_forget_button">Olvidar</string>
