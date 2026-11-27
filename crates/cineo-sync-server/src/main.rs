@@ -42,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
         Arc::new(db),
         ServeOptions {
             trust_forwarded_for: args.trust_forwarded_for,
+            ..ServeOptions::default()
         },
     )
     .await;

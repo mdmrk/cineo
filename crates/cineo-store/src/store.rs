@@ -202,10 +202,10 @@ impl Store {
     }
 
     pub fn sync(&self, defaults: Settings) -> Result<Option<(Pairing, Replica)>, StoreError> {
-        let Some((key, server, device, clock_ms, clock_counter, since)) = self
+        let Some((key, server, device, clock_ms, clock_counter, since, born)) = self
             .conn
             .query_row(
-                "SELECT key, server, device, clock_ms, clock_counter, since
+                "SELECT key, server, device, clock_ms, clock_counter, since, born
                  FROM sync_pairing WHERE id = 1",
                 [],
                 |row| {
@@ -216,6 +216,7 @@ impl Store {
                         row.get::<_, i64>(3)?,
                         row.get::<_, i64>(4)?,
                         row.get::<_, i64>(5)?,
+                        row.get::<_, i64>(6)?,
                     ))
                 },
             )
@@ -261,7 +262,13 @@ impl Store {
                 None => warn!("skipping an unreadable sync record"),
             }
         }
-        let replica = Replica::restore(defaults, clock, from_sql_int(since), entries);
+        let replica = Replica::restore(
+            defaults,
+            clock,
+            from_sql_int(since),
+            u64::from_le_bytes(born.to_le_bytes()),
+            entries,
+        );
         Ok(Some((pairing, replica)))
     }
 
@@ -285,11 +292,13 @@ impl Store {
     pub fn save_sync_changes(&mut self, changes: &Changes) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
         let paired = tx.execute(
-            "UPDATE sync_pairing SET clock_ms = ?1, clock_counter = ?2, since = ?3 WHERE id = 1",
+            "UPDATE sync_pairing SET clock_ms = ?1, clock_counter = ?2, since = ?3, born = ?4
+             WHERE id = 1",
             params![
                 to_sql_int(changes.clock.physical_ms),
                 changes.clock.counter,
                 to_sql_int(changes.since),
+                i64::from_le_bytes(changes.born.to_le_bytes()),
             ],
         )?;
         if paired == 0 {

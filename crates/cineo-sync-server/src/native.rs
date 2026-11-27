@@ -107,9 +107,19 @@ impl Db for SqliteDb {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct ServeOptions {
     pub trust_forwarded_for: bool,
+    pub clock: fn() -> u64,
+}
+
+impl Default for ServeOptions {
+    fn default() -> Self {
+        Self {
+            trust_forwarded_for: false,
+            clock: system_ms,
+        }
+    }
 }
 
 struct Shared {
@@ -124,7 +134,7 @@ pub async fn serve(listener: TcpListener, db: Arc<SqliteDb>, options: ServeOptio
         let mut every = tokio::time::interval(SWEEP_EVERY);
         loop {
             every.tick().await;
-            if let Err(err) = handler::sweep(&*sweeper, now_ms()).await {
+            if let Err(err) = handler::sweep(&*sweeper, (options.clock)()).await {
                 warn!(%err, "sweeping idle sync spaces failed");
             }
         }
@@ -158,7 +168,11 @@ pub async fn serve(listener: TcpListener, db: Arc<SqliteDb>, options: ServeOptio
     }
 }
 
-fn now_ms() -> u64 {
+fn random_i64() -> i64 {
+    getrandom::u64().map_or(1, |n| i64::from_le_bytes(n.to_le_bytes()))
+}
+
+pub fn system_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
@@ -178,7 +192,7 @@ async fn respond(
     req: hyper::Request<Incoming>,
     peer: SocketAddr,
 ) -> hyper::Response<Full<Bytes>> {
-    let now = now_ms();
+    let now = (shared.options.clock)();
     let ip = client_ip(&req, peer, shared.options.trust_forwarded_for);
     let limited = shared
         .limiter
@@ -234,7 +248,11 @@ async fn respond(
     };
     let ctx = Context {
         now_ms: now,
-        nonce: getrandom::u64().map_or(0, |n| i64::from_le_bytes(n.to_le_bytes())),
+        nonce: random_i64(),
+        born: match random_i64() {
+            0 => 1,
+            n => n,
+        },
         may_create: shared
             .limiter
             .lock()

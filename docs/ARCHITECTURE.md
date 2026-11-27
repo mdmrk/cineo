@@ -157,7 +157,9 @@ server parts exist; the app does not call them yet.
   `SpaceKeys` (HKDF-SHA256 to a bearer token, an HMAC key for record names
   and a ChaCha20-Poly1305 key, all with `aws-lc-rs`), and `SyncClient`
   (`pull`, `push` in batches of at most 64 records and 256 KiB,
-  `delete_space`). HTTP goes through `AddonClient::send`, which applies
+  `delete_space`, and `sync`, which pulls every page, pushes, retries
+  after a conflict, and starts over when the server went back).
+  HTTP goes through `AddonClient::send`, which applies
   `NetPolicy` and a body cap and returns the status, so 404, 409, 410 and
   503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
 - `cineo_core::sync::protocol` (built): the limits and the request and

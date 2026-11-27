@@ -8,7 +8,7 @@ use cineo_core::app::{
 };
 use cineo_core::sync::{
     Clock, DeviceId, Merged, PUSH_AFTER_QUIET_MS, PUSH_AT_MOST_MS, Record, RecordName, Replica,
-    Stamp, Value,
+    Stamp, VERIFY_EVERY_MS, Value,
 };
 
 const A: DeviceId = DeviceId(1);
@@ -553,16 +553,20 @@ fn changes_hold_only_what_changed_since_the_last_take() {
 fn a_restored_replica_continues_where_it_left_off() {
     let mut local = replica(A);
     local.merge(item_record("tt1", 5, stamp(9_000, 0, B)), 12, 9_000);
+    local.observe_space(55, 12);
     local.record_effect(&Effect::SaveLibraryItem(item("tt2", 7)), 9_000);
     let changes = local.take_changes().unwrap();
+    assert_eq!(changes.born, 55);
     let mut restored = Replica::restore(
         Settings::default(),
         changes.clock,
         changes.since,
+        changes.born,
         changes.entries,
     );
     assert_eq!(ids(&restored), ids(&local));
     assert_eq!(restored.since(), 12);
+    assert_eq!(restored.born(), local.born());
     assert_eq!(restored.outgoing(), local.outgoing());
     assert!(restored.push_due(0), "unpushed edits go out on start");
     restored.record_effect(&Effect::SaveLibraryItem(item("tt3", 1)), 1);
@@ -585,4 +589,120 @@ fn the_sync_key_is_never_printed() {
         "{printed}"
     );
     assert!(printed.contains("SyncKey(..)"));
+}
+
+fn synced(entries: &[(&str, u64)]) -> Replica {
+    let mut local = replica(A);
+    for (seq, (id, _)) in (1..).zip(entries) {
+        local.merge(item_record(id, seq, stamp(1_000 + seq, 0, B)), seq, 2_000);
+    }
+    assert!(!local.observe_space(77, entries.len() as u64));
+    local
+}
+
+#[test]
+fn the_first_sight_of_a_space_is_not_a_restart() {
+    let mut local = replica(A);
+    assert!(!local.observe_space(0, 0), "nobody wrote yet");
+    assert!(!local.observe_space(77, 3), "then a device created it");
+    assert_eq!(local.born(), 77);
+}
+
+#[test]
+fn a_server_that_went_back_makes_the_replica_start_over() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2), ("tt3", 3)]);
+    assert_eq!(local.since(), 3);
+    assert!(local.observe_space(77, 1));
+    assert_eq!(local.since(), 0);
+    let outgoing = local.outgoing();
+    assert_eq!(outgoing.len(), 3);
+    assert!(outgoing.iter().all(|o| o.base_seq == 0));
+    assert!(local.push_due(0));
+}
+
+#[test]
+fn a_replaced_space_makes_the_replica_start_over() {
+    let mut local = synced(&[("tt1", 1)]);
+    assert!(local.observe_space(0, 0), "swept or emptied");
+    assert!(
+        !local.observe_space(78, 1),
+        "recreated by this device's push"
+    );
+    let mut other = synced(&[("tt1", 1)]);
+    assert!(other.observe_space(78, 5), "recreated by another device");
+}
+
+#[test]
+fn after_starting_over_only_what_the_server_lacks_is_pushed() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2), ("tt3", 3)]);
+    local.record_effect(&Effect::SaveLibraryItem(item("tt9", 1)), 5_000);
+    assert!(local.observe_space(77, 1));
+    let kept = local.get(&RecordName::Item("tt1".into())).unwrap().clone();
+    local.merge(kept, 1, 6_000);
+    let mut names: Vec<(String, u64)> = local
+        .outgoing()
+        .into_iter()
+        .map(|o| (o.record.name.to_string(), o.base_seq))
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        [
+            ("library/tt2".to_owned(), 0),
+            ("library/tt3".to_owned(), 0),
+            ("library/tt9".to_owned(), 0)
+        ]
+    );
+}
+
+#[test]
+fn a_conflict_below_the_known_version_starts_over() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2)]);
+    assert!(local.conflicted(&[(RecordName::Item("tt2".into()), 0)]));
+    assert_eq!(local.since(), 0);
+}
+
+#[test]
+fn a_conflict_with_a_version_already_passed_starts_over() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2), ("tt3", 3)]);
+    assert!(
+        local.conflicted(&[(RecordName::Item("tt1".into()), 2)]),
+        "seq 2 is behind the pull position, so this device missed it"
+    );
+}
+
+#[test]
+fn a_conflict_with_a_newer_version_only_needs_a_pull() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2)]);
+    assert!(!local.conflicted(&[(RecordName::Item("tt1".into()), 9)]));
+    assert!(!local.conflicted(&[]), "a lost race names no records");
+    assert_eq!(local.since(), 2);
+}
+
+#[test]
+fn a_pushed_version_above_the_space_also_means_it_went_back() {
+    let mut local = replica(A);
+    local.record_effect(&Effect::SaveLibraryItem(item("tt1", 1)), 1_000);
+    let out = local.outgoing().remove(0);
+    local.pushed(&out.record.name, out.record.stamp, 50);
+    assert_eq!(local.since(), 0);
+    assert!(local.observe_space(0, 10));
+}
+
+#[test]
+fn the_daily_check_pushes_what_the_server_lost() {
+    let mut local = synced(&[("tt1", 1), ("tt2", 2)]);
+    assert!(local.verify_due(0), "on the first sync");
+    local.verify(5_000);
+    assert!(!local.verify_due(5_000 + VERIFY_EVERY_MS - 1));
+    assert!(local.verify_due(5_000 + VERIFY_EVERY_MS));
+    assert_eq!(local.since(), 0);
+    let kept = local.get(&RecordName::Item("tt1".into())).unwrap().clone();
+    local.merge(kept, 1, 6_000);
+    let names: Vec<String> = local
+        .outgoing()
+        .into_iter()
+        .map(|o| o.record.name.to_string())
+        .collect();
+    assert_eq!(names, ["library/tt2"]);
 }

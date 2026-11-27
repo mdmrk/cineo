@@ -11,16 +11,35 @@ use cineo_core::app::{Effect, LibraryItem, SeekStep, Setting, Settings};
 use cineo_core::sync::{DeviceId, Pairing, Replica, SyncKey};
 use cineo_net::sync::{SyncClient, SyncError};
 use cineo_net::{AddonClient, NetPolicy};
-use cineo_sync_server::{ServeOptions, SqliteDb, serve};
+use cineo_sync_server::{ServeOptions, SqliteDb, serve, system_ms};
 use tokio::net::TcpListener;
 
 const KEY: [u8; 16] = [3; 16];
 
 async fn start(db: SqliteDb) -> String {
+    start_with(db, ServeOptions::default()).await
+}
+
+async fn start_with(db: SqliteDb, options: ServeOptions) -> String {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
-    tokio::spawn(serve(listener, Arc::new(db), ServeOptions::default()));
+    tokio::spawn(serve(listener, Arc::new(db), options));
     format!("http://{address}/")
+}
+
+fn an_hour_later() -> u64 {
+    system_ms() + 3_600_000
+}
+
+async fn start_later(db: SqliteDb) -> String {
+    start_with(
+        db,
+        ServeOptions {
+            clock: an_hour_later,
+            ..ServeOptions::default()
+        },
+    )
+    .await
 }
 
 fn client(server: &str, key: [u8; 16]) -> SyncClient {
@@ -115,7 +134,7 @@ async fn a_conflict_is_resolved_by_pulling_and_merging() {
     b.record_effect(&Effect::SaveLibraryItem(item("tt1", "One", 20)), 2_000);
     push(&mut a, &phone).await.unwrap();
     let err = push(&mut b, &desktop).await.unwrap_err();
-    assert!(matches!(err, SyncError::Conflict), "{err:?}");
+    assert!(matches!(err, SyncError::Conflict(_)), "{err:?}");
     pull(&mut b, &desktop, 2_000).await.unwrap();
     push(&mut b, &desktop).await.unwrap();
     pull(&mut a, &phone, 3_000).await.unwrap();
@@ -242,6 +261,7 @@ async fn behind_a_proxy_the_forwarded_address_is_limited() {
         Arc::new(SqliteDb::open_in_memory().unwrap()),
         ServeOptions {
             trust_forwarded_for: true,
+            ..ServeOptions::default()
         },
     ));
     let server = format!("http://{address}/");
@@ -263,4 +283,139 @@ async fn behind_a_proxy_the_forwarded_address_is_limited() {
             .await
             .starts_with("HTTP/1.1 200")
     );
+}
+
+fn snapshot(path: &std::path::Path, to: &std::path::Path) {
+    rusqlite::Connection::open(path)
+        .unwrap()
+        .execute("VACUUM INTO ?1", [to.to_str().unwrap()])
+        .unwrap();
+}
+
+#[tokio::test]
+async fn devices_recover_when_the_server_restores_an_older_backup() {
+    let dir = tempfile::tempdir().unwrap();
+    let (live, backup) = (dir.path().join("sync.db"), dir.path().join("backup.db"));
+    let first = start(SqliteDb::open(&live).unwrap()).await;
+    let mut a = Replica::new(DeviceId(1), Settings::default());
+    let mut b = Replica::new(DeviceId(2), Settings::default());
+    a.record_effect(&Effect::SaveLibraryItem(item("tt1", "One", 1)), 1_000);
+    client(&first, KEY).sync(&mut a, 1_000).await.unwrap();
+    client(&first, KEY).sync(&mut b, 1_000).await.unwrap();
+    snapshot(&live, &backup);
+    a.record_effect(&Effect::SaveLibraryItem(item("tt2", "Two", 2)), 2_000);
+    a.record_effect(&Effect::SaveLibraryItem(item("tt3", "Three", 3)), 2_000);
+    client(&first, KEY).sync(&mut a, 2_000).await.unwrap();
+    client(&first, KEY).sync(&mut b, 2_000).await.unwrap();
+    assert_eq!(b.library().len(), 3);
+
+    let restored = start_later(SqliteDb::open(&backup).unwrap()).await;
+    b.record_effect(&Effect::SaveLibraryItem(item("tt4", "Four", 4)), 3_000);
+    let report = client(&restored, KEY).sync(&mut b, 3_000).await.unwrap();
+    assert!(report.started_over);
+    client(&restored, KEY).sync(&mut a, 4_000).await.unwrap();
+    client(&restored, KEY).sync(&mut b, 5_000).await.unwrap();
+    assert_eq!(ids(&a), ids(&b));
+    assert_eq!(a.library().len(), 4);
+    assert!(a.outgoing().is_empty() && b.outgoing().is_empty());
+    let mut fresh = Replica::new(DeviceId(3), Settings::default());
+    client(&restored, KEY)
+        .sync(&mut fresh, 6_000)
+        .await
+        .unwrap();
+    assert_eq!(ids(&fresh), ids(&a), "the server has everything again");
+}
+
+#[tokio::test]
+async fn devices_recover_when_the_server_starts_empty() {
+    let first = start(SqliteDb::open_in_memory().unwrap()).await;
+    let mut a = Replica::new(DeviceId(1), Settings::default());
+    for i in 0..3 {
+        a.record_effect(
+            &Effect::SaveLibraryItem(item(&format!("tt{i}"), "x", i)),
+            1_000,
+        );
+    }
+    client(&first, KEY).sync(&mut a, 1_000).await.unwrap();
+    let empty = start(SqliteDb::open_in_memory().unwrap()).await;
+    let report = client(&empty, KEY).sync(&mut a, 2_000).await.unwrap();
+    assert!(report.started_over);
+    assert_eq!(report.pushed, 3);
+    let mut b = Replica::new(DeviceId(2), Settings::default());
+    client(&empty, KEY).sync(&mut b, 3_000).await.unwrap();
+    assert_eq!(b.library().len(), 3);
+}
+
+#[tokio::test]
+async fn a_device_that_missed_records_after_a_restore_recovers_when_it_pushes() {
+    let dir = tempfile::tempdir().unwrap();
+    let (live, backup) = (dir.path().join("sync.db"), dir.path().join("backup.db"));
+    let first = start(SqliteDb::open(&live).unwrap()).await;
+    let mut a = Replica::new(DeviceId(1), Settings::default());
+    let mut b = Replica::new(DeviceId(2), Settings::default());
+    a.record_effect(&Effect::SaveLibraryItem(item("tt1", "One", 1)), 1_000);
+    client(&first, KEY).sync(&mut a, 1_000).await.unwrap();
+    snapshot(&live, &backup);
+    for i in 2..6 {
+        a.record_effect(
+            &Effect::SaveLibraryItem(item(&format!("tt{i}"), "x", i)),
+            2_000,
+        );
+    }
+    client(&first, KEY).sync(&mut a, 2_000).await.unwrap();
+    client(&first, KEY).sync(&mut b, 2_000).await.unwrap();
+
+    let restored = start_later(SqliteDb::open(&backup).unwrap()).await;
+    for i in 6..12 {
+        a.record_effect(
+            &Effect::SaveLibraryItem(item(&format!("tt{i}"), "x", i)),
+            3_000,
+        );
+    }
+    client(&restored, KEY).sync(&mut a, 3_000).await.unwrap();
+    b.record_effect(&Effect::SaveLibraryItem(item("tt1", "One", 99)), 4_000);
+    client(&restored, KEY).sync(&mut b, 4_000).await.unwrap();
+    assert_eq!(b.library().len(), 11, "new versions are above the old ones");
+    client(&restored, KEY).sync(&mut a, 5_000).await.unwrap();
+    assert_eq!(ids(&a), ids(&b));
+}
+
+#[tokio::test]
+async fn a_record_only_one_device_had_comes_back_with_the_daily_check() {
+    let dir = tempfile::tempdir().unwrap();
+    let (live, backup) = (dir.path().join("sync.db"), dir.path().join("backup.db"));
+    let first = start(SqliteDb::open(&live).unwrap()).await;
+    let mut a = Replica::new(DeviceId(1), Settings::default());
+    let mut b = Replica::new(DeviceId(2), Settings::default());
+    a.record_effect(&Effect::SaveLibraryItem(item("tt1", "One", 1)), 1_000);
+    client(&first, KEY).sync(&mut a, 1_000).await.unwrap();
+    client(&first, KEY).sync(&mut b, 1_000).await.unwrap();
+    snapshot(&live, &backup);
+    b.record_effect(&Effect::SaveLibraryItem(item("only-b", "B", 2)), 2_000);
+    client(&first, KEY).sync(&mut b, 2_000).await.unwrap();
+
+    let restored = start_later(SqliteDb::open(&backup).unwrap()).await;
+    a.record_effect(&Effect::SaveLibraryItem(item("tt2", "Two", 3)), 3_000);
+    client(&restored, KEY).sync(&mut a, 3_000).await.unwrap();
+    let report = client(&restored, KEY).sync(&mut b, 4_000).await.unwrap();
+    assert!(
+        !report.started_over,
+        "nothing told b that the server went back"
+    );
+    assert!(
+        a.get(&cineo_core::sync::RecordName::Item("only-b".into()))
+            .is_none()
+    );
+
+    let day = cineo_core::sync::VERIFY_EVERY_MS;
+    client(&restored, KEY)
+        .sync(&mut b, 1_000 + day)
+        .await
+        .unwrap();
+    client(&restored, KEY)
+        .sync(&mut a, 2_000 + day)
+        .await
+        .unwrap();
+    assert_eq!(ids(&a), ids(&b));
+    assert_eq!(a.library().len(), 3);
 }

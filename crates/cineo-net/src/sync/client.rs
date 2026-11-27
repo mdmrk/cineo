@@ -1,8 +1,8 @@
 use cineo_core::sync::protocol::{
     MAX_BATCH_BYTES, MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_PULL_BYTES, PULL_PAGE_RECORDS,
-    PullPage, PushRequest, PushResponse, Write,
+    PullPage, PushRequest, PushResponse, Write, parse_conflicts,
 };
-use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Stamp};
+use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Replica, Stamp};
 use reqwest::{Method, StatusCode};
 use tracing::{Instrument, info_span, warn};
 use url::{Host, Url};
@@ -13,6 +13,7 @@ use crate::{AddonClient, FetchError};
 
 const MAX_PUSH_RESPONSE_BYTES: usize = 64 * 1024;
 const REQUEST_OVERHEAD_BYTES: usize = 32;
+const PUSH_ATTEMPTS: usize = 3;
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -22,7 +23,7 @@ pub enum SyncError {
     #[error(transparent)]
     Fetch(#[from] FetchError),
     #[error("another device changed the same records first")]
-    Conflict,
+    Conflict(Vec<(RecordName, u64)>),
     #[error("the sync space was deleted")]
     SpaceGone,
     #[error("the sync server is busy")]
@@ -47,6 +48,17 @@ pub struct Pulled {
     pub records: Vec<(Record, u64)>,
     pub unreadable: usize,
     pub more: bool,
+    pub space_seq: u64,
+    pub born: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SyncReport {
+    pub pulled: usize,
+    pub pushed: usize,
+    pub unreadable: usize,
+    pub oversized: Vec<RecordName>,
+    pub started_over: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,6 +113,8 @@ impl SyncClient {
         let mut pulled = Pulled {
             more: page.more,
             unreadable: page.skipped,
+            space_seq: page.space_seq,
+            born: page.born,
             ..Pulled::default()
         };
         for entry in page.records {
@@ -158,8 +172,8 @@ impl SyncClient {
             writes: batch.iter().map(|(_, w)| w.clone()).collect(),
         };
         let url = self.url("v1/records")?;
-        let response = self
-            .call(
+        let (status, retry_after_s, body) = self
+            .exchange(
                 "push",
                 Method::POST,
                 url,
@@ -167,6 +181,17 @@ impl SyncClient {
                 MAX_PUSH_RESPONSE_BYTES,
             )
             .await?;
+        if status == StatusCode::CONFLICT {
+            let names: Vec<(RecordName, u64)> = parse_conflicts(&body)
+                .into_iter()
+                .filter_map(|(key, seq)| {
+                    let (out, _) = batch.iter().find(|(_, w)| w.key == key)?;
+                    Some((out.record.name.clone(), seq))
+                })
+                .collect();
+            return Err(SyncError::Conflict(names));
+        }
+        let response = check(status, retry_after_s, body)?;
         let response = PushResponse::parse(&response).ok_or(SyncError::Malformed)?;
         if response.seqs.len() != batch.len() {
             return Err(SyncError::Malformed);
@@ -197,16 +222,73 @@ impl SyncClient {
         self.base.join(path).map_err(|_| SyncError::Malformed)
     }
 
-    async fn call(
+    pub async fn sync(&self, replica: &mut Replica, now_ms: u64) -> Result<SyncReport, SyncError> {
+        let mut report = SyncReport::default();
+        if replica.verify_due(now_ms) {
+            replica.verify(now_ms);
+        }
+        for attempt in 1..=PUSH_ATTEMPTS {
+            self.pull_all(replica, now_ms, &mut report).await?;
+            let outgoing = replica.outgoing();
+            if outgoing.is_empty() {
+                break;
+            }
+            let outcome = self.push(&outgoing).await;
+            for pushed in &outcome.pushed {
+                replica.pushed(&pushed.name, pushed.stamp, pushed.seq);
+            }
+            report.pushed += outcome.pushed.len();
+            report.oversized = outcome.oversized;
+            match outcome.error {
+                None => break,
+                Some(SyncError::Conflict(server)) if attempt < PUSH_ATTEMPTS => {
+                    report.started_over |= replica.conflicted(&server);
+                }
+                Some(err) => return Err(err),
+            }
+        }
+        replica.pulled(now_ms);
+        Ok(report)
+    }
+
+    async fn pull_all(
+        &self,
+        replica: &mut Replica,
+        now_ms: u64,
+        report: &mut SyncReport,
+    ) -> Result<(), SyncError> {
+        let mut started_over = false;
+        loop {
+            let pulled = self.pull(replica.since()).await?;
+            if replica.observe_space(pulled.born, pulled.space_seq) {
+                if started_over {
+                    return Err(SyncError::Malformed);
+                }
+                started_over = true;
+                report.started_over = true;
+                continue;
+            }
+            report.pulled += pulled.records.len();
+            report.unreadable += pulled.unreadable;
+            for (record, seq) in pulled.records {
+                replica.merge(record, seq, now_ms);
+            }
+            if !pulled.more {
+                return Ok(());
+            }
+        }
+    }
+
+    async fn exchange(
         &self,
         op: &'static str,
         method: Method,
         url: Url,
         body: Option<Vec<u8>>,
         limit: usize,
-    ) -> Result<Vec<u8>, SyncError> {
+    ) -> Result<(StatusCode, Option<u64>, Vec<u8>), SyncError> {
         let span = info_span!("sync_request", req = next_request_id(), server = %origin(&url), op);
-        let (status, retry_after_s, body) = self
+        Ok(self
             .http
             .send(SyncRequest {
                 method,
@@ -216,16 +298,35 @@ impl SyncClient {
                 limit,
             })
             .instrument(span)
-            .await?;
-        match status {
-            status if status.is_success() => Ok(body),
-            StatusCode::CONFLICT => Err(SyncError::Conflict),
-            StatusCode::GONE => Err(SyncError::SpaceGone),
-            StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE => {
-                Err(SyncError::Unavailable { retry_after_s })
-            }
-            status => Err(SyncError::Rejected(status)),
+            .await?)
+    }
+
+    async fn call(
+        &self,
+        op: &'static str,
+        method: Method,
+        url: Url,
+        body: Option<Vec<u8>>,
+        limit: usize,
+    ) -> Result<Vec<u8>, SyncError> {
+        let (status, retry_after_s, body) = self.exchange(op, method, url, body, limit).await?;
+        check(status, retry_after_s, body)
+    }
+}
+
+fn check(
+    status: StatusCode,
+    retry_after_s: Option<u64>,
+    body: Vec<u8>,
+) -> Result<Vec<u8>, SyncError> {
+    match status {
+        status if status.is_success() => Ok(body),
+        StatusCode::CONFLICT => Err(SyncError::Conflict(Vec::new())),
+        StatusCode::GONE => Err(SyncError::SpaceGone),
+        StatusCode::TOO_MANY_REQUESTS | StatusCode::SERVICE_UNAVAILABLE => {
+            Err(SyncError::Unavailable { retry_after_s })
         }
+        status => Err(SyncError::Rejected(status)),
     }
 }
 

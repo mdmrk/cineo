@@ -8,7 +8,7 @@ use cineo_core::sync::protocol::{
 use super::*;
 use crate::native::SqliteDb;
 
-const NOW: u64 = 1_700_000_000_000;
+const NOW: u64 = 0;
 
 fn token(n: u8) -> String {
     encode(&[n; 32])
@@ -18,6 +18,7 @@ fn ctx() -> Context {
     Context {
         now_ms: NOW,
         nonce: 7,
+        born: 41,
         may_create: true,
     }
 }
@@ -179,6 +180,49 @@ async fn pushed_records_come_back_in_order_with_their_versions() {
 }
 
 #[tokio::test]
+async fn a_page_tells_the_space_version_and_birth() {
+    let db = SqliteDb::open_in_memory().unwrap();
+    seqs(&push(&db, vec![write(1, 0, b"a"), write(2, 0, b"b")]).await);
+    let born = Context {
+        born: 1234,
+        ..ctx()
+    };
+    seqs(
+        &push_as(&db, 1, vec![write(3, 0, b"c")], born)
+            .await
+            .response,
+    );
+    let page = page(&pull(&db, "since=3").await);
+    assert!(page.records.is_empty());
+    assert_eq!((page.space_seq, page.born), (3, 41), "born is set once");
+}
+
+#[tokio::test]
+async fn versions_follow_the_clock_so_a_restored_server_never_reuses_them() {
+    let db = SqliteDb::open_in_memory().unwrap();
+    let at = |now_ms| Context { now_ms, ..ctx() };
+    let early = push_as(
+        &db,
+        1,
+        vec![write(1, 0, b"a"), write(2, 0, b"b")],
+        at(1_000),
+    )
+    .await;
+    assert_eq!(
+        seqs(&early.response),
+        [1_000 * SEQS_PER_MS + 1, 1_000 * SEQS_PER_MS + 2]
+    );
+    let same_ms = push_as(&db, 1, vec![write(3, 0, b"c")], at(1_000)).await;
+    assert_eq!(seqs(&same_ms.response), [1_000 * SEQS_PER_MS + 3]);
+    let clock_back = push_as(&db, 1, vec![write(4, 0, b"d")], at(10)).await;
+    assert_eq!(
+        seqs(&clock_back.response),
+        [1_000 * SEQS_PER_MS + 4],
+        "never below a version already given"
+    );
+}
+
+#[tokio::test]
 async fn spaces_are_separate() {
     let db = SqliteDb::open_in_memory().unwrap();
     seqs(&push(&db, vec![write(1, 0, b"a")]).await);
@@ -198,8 +242,11 @@ async fn a_stale_base_version_is_refused_with_the_conflicting_keys() {
     seqs(&push(&db, vec![write(1, 0, b"a")]).await);
     let response = push(&db, vec![write(1, 0, b"x"), write(2, 0, b"y")]).await;
     assert_eq!(response.status, 409);
-    assert!(response.body.contains(&encode(&[1; 16])));
-    assert!(!response.body.contains(&encode(&[2; 16])));
+    assert_eq!(
+        cineo_core::sync::protocol::parse_conflicts(response.body.as_bytes()),
+        [(vec![1; 16], 1)],
+        "only the stale key, with the server's version"
+    );
     assert_eq!(
         page(&pull(&db, "since=0").await).records.len(),
         1,

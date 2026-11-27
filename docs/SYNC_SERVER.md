@@ -47,9 +47,12 @@ All data is in the `--database` file (SQLite in WAL mode, so also its
 `-wal` and `-shm` files). Nothing in it is readable without the sync codes,
 which never reach the server. Every device keeps its own full copy.
 
-Do not restore an older copy of the database, or replace it with an empty
-one, while devices are paired. Devices remember record versions and a pull
-position newer than what the server then has; they get conflicts on every
-push and miss other devices' new records. Recovering from that is not built
-yet (ADR-0043, step 5c). The same applies to a space swept after 365
-days.
+Restoring an older copy, or starting from an empty file, is recovered by
+the devices: each one notices that the server went back (or that a space is
+new) and pushes what the server lacks, at the latest on its first sync
+after the app starts or a day later. Until then, other devices do not see
+records that only the device in question still has.
+
+Versions are numbered from the server clock, so keep it right: a restore
+together with a clock set far into the past can make the server reuse
+version numbers, and devices then miss writes until their daily check.

@@ -219,6 +219,8 @@ async fn pull_opens_records_and_skips_unreadable_ones() {
                 { "seq": 45 },
             ],
             "more": true,
+            "seq": 45,
+            "born": 9,
         })))
         .expect(1)
         .mount(&server)
@@ -227,6 +229,7 @@ async fn pull_opens_records_and_skips_unreadable_ones() {
     assert_eq!(pulled.records, [(record, 42)]);
     assert_eq!(pulled.unreadable, 3);
     assert!(pulled.more);
+    assert_eq!((pulled.space_seq, pulled.born), (45, 9));
 }
 
 #[tokio::test]
@@ -394,8 +397,16 @@ async fn a_conflict_stops_the_push_and_keeps_what_went_through() {
         .up_to_n_times(1)
         .mount(&server)
         .await;
+    let keys = SpaceKeys::derive(&key()).unwrap();
+    let clash = format!("tt{MAX_BATCH_RECORDS}");
+    let clash_key = keys.record_key(&RecordName::Item(clash.clone()));
     Mock::given(method("POST"))
-        .respond_with(ResponseTemplate::new(409))
+        .respond_with(ResponseTemplate::new(409).set_body_json(json!({
+            "conflicts": [
+                { "key": BASE64URL_NOPAD.encode(&clash_key), "seq": 5 },
+                { "key": BASE64URL_NOPAD.encode(&[0; 16]), "seq": 6 },
+            ],
+        })))
         .mount(&server)
         .await;
     let out: Vec<Outgoing> = (0..150)
@@ -403,7 +414,14 @@ async fn a_conflict_stops_the_push_and_keeps_what_went_through() {
         .collect();
     let outcome = client(&server).push(&out).await;
     assert_eq!(outcome.pushed.len(), MAX_BATCH_RECORDS);
-    assert!(matches!(outcome.error, Some(SyncError::Conflict)));
+    let Some(SyncError::Conflict(conflicts)) = outcome.error else {
+        panic!("{:?}", outcome.error);
+    };
+    assert_eq!(
+        conflicts,
+        [(RecordName::Item(clash), 5)],
+        "keys the batch did not send are ignored"
+    );
 }
 
 #[tokio::test]

@@ -532,6 +532,7 @@ fn sync_state_survives_a_reopen() {
     replica.record_effect(&Effect::SaveLibraryItem(item("tt2", 20, 1)), 6_000);
     let out = replica.outgoing().remove(0);
     replica.pushed(&out.record.name, out.record.stamp, 41);
+    replica.observe_space(9, 41);
     store
         .save_sync_changes(&replica.take_changes().unwrap())
         .unwrap();
@@ -549,6 +550,7 @@ fn sync_state_survives_a_reopen() {
     assert_eq!(restored.outgoing(), replica.outgoing());
     assert_eq!(restored.clock(), replica.clock());
     assert_eq!(restored.since(), replica.since());
+    assert_eq!(restored.born(), 9);
 }
 
 #[test]

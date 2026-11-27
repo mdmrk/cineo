@@ -273,8 +273,8 @@ errors.
 | Endpoint | Purpose |
 |---|---|
 | `GET /v1/info` | `{ protocol: 1, max_record_bytes, max_batch_bytes, max_batch_records, max_space_records, max_space_bytes }` |
-| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more }`. A page stops before 2 MiB. A space nobody has written to yet answers 200 with no records; a deleted one answers 410. A 404 means a wrong address, and the client reports it as an error (amended in step 5a: the first version answered 404 for an empty space, which hid a wrong server address) |
-| `POST /v1/records` | `{ writes: [{ key, base_seq, blob }] }`. Applied **atomically** (one D1 `batch()`, one SQLite transaction). Each `base_seq` must equal the record's current `seq` (0 = new), or the whole batch fails with **409** and the conflicting keys. The space is created on its first write. Response: `{ seqs: [...] }` |
+| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more, seq, born }`, where the last two are the space's current version and a random number fixed when the space was created (0 and 0 before any write). A page stops before 2 MiB. A space nobody has written to yet answers 200 with no records; a deleted one answers 410. A 404 means a wrong address, and the client reports it as an error (amended in step 5a: the first version answered 404 for an empty space, which hid a wrong server address) |
+| `POST /v1/records` | `{ writes: [{ key, base_seq, blob }] }`. Applied **atomically** (one D1 `batch()`, one SQLite transaction). Each `base_seq` must equal the record's current `seq` (0 = new), or the whole batch fails with **409** and the conflicting keys with their current versions. The space is created on its first write. Response: `{ seqs: [...] }` |
 | `DELETE /v1/space` | Deletes the records and keeps a marker, so the space answers 410 and refuses writes from then on. An old code can therefore not bring a rotated space back |
 
 - **Concurrency control:** a per-space counter `seq`, raised on every
@@ -283,6 +283,27 @@ errors.
   decides, not the server. Per-record versions mean that two devices
   editing different items never conflict. A whole-space ETag would make
   every concurrent push a conflict.
+- **Versions follow the server clock** (step 5c): a push numbers its
+  records from `max(space seq, now_ms × 1024) + 1`, so versions keep
+  growing even when the database is restored from an older copy, and no
+  device skips a new write because it reuses a number it has already
+  passed (`versions_follow_the_clock_so_a_restored_server_never_reuses_them`).
+  This holds while the server clock does not go back across a restore.
+- **Recovery when the server went back** (step 5c). A device starts over,
+  pulling from 0 and pushing what the server lacks with the server's
+  versions, when:
+  - the space's `born` changed (swept, emptied or recreated);
+  - the highest version it knows (its pull position or any record's,
+    including its own pushes) is above the space's `seq`;
+  - a 409 names a version below the one it knows, or one it should already
+    have pulled;
+  - on the first sync after the app starts and then once a day, as a
+    check that also brings back records only this device still has.
+
+  Tests: `devices_recover_when_the_server_restores_an_older_backup`,
+  `devices_recover_when_the_server_starts_empty`,
+  `a_device_that_missed_records_after_a_restore_recovers_when_it_pushes`,
+  `a_record_only_one_device_had_comes_back_with_the_daily_check`.
 - **Atomic without a lock** (step 5a): D1 has no transaction across
   requests, so the server reads the space's `seq` and the records' versions,
   checks them, and then sends one batch. The batch first moves the space
@@ -359,8 +380,8 @@ Assumed: 2 h of playback a day, the app open 3 h, a library of 600 items
   edits), about 1.2 records each. Rows written per push is about
   2 × records (row + `seq` index) + 1 (space row), so **≈ 100 rows
   written/day**.
-- **Pulls:** about 25 a day at ≈ 3 rows read each, so **≈ 75 rows
-  read/day**.
+- **Pulls:** about 25 a day at ≈ 3 rows read each, plus one full pull a
+  day as the check in §4 (≈ 600 rows), so **≈ 700 rows read/day**.
 - **Requests:** **≈ 55/day**.
 - **Storage:** ≈ 1 MB per user, records and index.
 - **Without batching** (one push per 5 s progress save) the same day would
@@ -414,12 +435,10 @@ database.
    - **5b.** The Worker host with D1, a CI job that builds it for wasm32,
      measurements of rows written, UPSERT counting and CPU per request,
      and the deploy of the default instance.
-   - **5c.** Recovery from a server that went back: the pull answer
-     carries the space's `seq`, and a device whose pull position or
-     record versions are ahead of it starts over (pull from 0, then push
-     everything with the server's versions). Without it, a restored backup
-     or a swept space leaves paired devices in conflicts
-     (`docs/SYNC_SERVER.md`). Found in step 5a.
+   - **5c.** Recovery from a server that went back (§4), and
+     `SyncClient::sync`, one full round of pull, push and retry that the
+     shells will call. Found in step 5a: without it, a restored backup or
+     a swept space left paired devices in conflicts.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
    URL, change key, leave, last sync status). `cineo://sync/` deep link.
 7. Android: the same screen, the intent filter for `cineo://sync`, and

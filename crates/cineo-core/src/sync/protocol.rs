@@ -63,6 +63,8 @@ pub struct PullPage {
     pub records: Vec<WireRecord>,
     pub skipped: usize,
     pub more: bool,
+    pub space_seq: u64,
+    pub born: u64,
 }
 
 impl PullPage {
@@ -74,6 +76,8 @@ impl PullPage {
                 "blob": encode(&r.blob),
             })).collect::<Vec<_>>(),
             "more": self.more,
+            "seq": self.space_seq,
+            "born": self.born,
         })
         .to_string()
     }
@@ -82,6 +86,8 @@ impl PullPage {
         let page: Json = serde_json::from_slice(bytes).ok()?;
         let mut parsed = Self {
             more: page.get("more").and_then(Json::as_bool).unwrap_or(false),
+            space_seq: page.get("seq")?.as_u64()?,
+            born: page.get("born")?.as_u64()?,
             ..Self::default()
         };
         for entry in page.get("records")?.as_array()? {
@@ -197,8 +203,28 @@ impl PushResponse {
     }
 }
 
-pub fn conflict_json(keys: &[Vec<u8>]) -> String {
-    json!({ "conflicts": keys.iter().map(|k| encode(k)).collect::<Vec<_>>() }).to_string()
+pub fn conflict_json(conflicts: &[(Vec<u8>, u64)]) -> String {
+    json!({
+        "conflicts": conflicts
+            .iter()
+            .map(|(key, seq)| json!({ "key": encode(key), "seq": seq }))
+            .collect::<Vec<_>>(),
+    })
+    .to_string()
+}
+
+pub fn parse_conflicts(bytes: &[u8]) -> Vec<(Vec<u8>, u64)> {
+    let Ok(body) = serde_json::from_slice::<Json>(bytes) else {
+        return Vec::new();
+    };
+    body.get("conflicts")
+        .and_then(Json::as_array)
+        .map_or_else(Vec::new, |entries| {
+            entries
+                .iter()
+                .filter_map(|e| Some((decode(e.get("key")?.as_str()?)?, e.get("seq")?.as_u64()?)))
+                .collect()
+        })
 }
 
 pub fn error_json(reason: &str) -> String {

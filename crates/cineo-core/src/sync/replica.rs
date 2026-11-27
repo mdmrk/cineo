@@ -8,6 +8,7 @@ use crate::app::{Effect, LibraryItem, Setting, Settings};
 pub const PUSH_AFTER_QUIET_MS: u64 = 60_000;
 pub const PUSH_AT_MOST_MS: u64 = 300_000;
 pub const PULL_EVERY_MS: u64 = 600_000;
+pub const VERIFY_EVERY_MS: u64 = 24 * 60 * 60 * 1000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
@@ -21,6 +22,7 @@ pub struct Entry {
 pub struct Changes {
     pub clock: Stamp,
     pub since: u64,
+    pub born: u64,
     pub entries: Vec<Entry>,
 }
 
@@ -42,10 +44,12 @@ pub struct Replica {
     defaults: Settings,
     entries: BTreeMap<RecordName, Entry>,
     since: u64,
+    born: u64,
     dirty_since: Option<u64>,
     last_change: Option<u64>,
     flush: bool,
     last_pull: Option<u64>,
+    last_verify: Option<u64>,
     changed: BTreeSet<RecordName>,
     touched: bool,
 }
@@ -57,19 +61,28 @@ impl Replica {
             defaults,
             entries: BTreeMap::new(),
             since: 0,
+            born: 0,
             dirty_since: None,
             last_change: None,
             flush: false,
             last_pull: None,
+            last_verify: None,
             changed: BTreeSet::new(),
             touched: false,
         }
     }
 
-    pub fn restore(defaults: Settings, clock: Stamp, since: u64, entries: Vec<Entry>) -> Self {
+    pub fn restore(
+        defaults: Settings,
+        clock: Stamp,
+        since: u64,
+        born: u64,
+        entries: Vec<Entry>,
+    ) -> Self {
         let mut replica = Self::new(clock.device, defaults);
         replica.clock = Clock::resume(clock);
         replica.since = since;
+        replica.born = born;
         for entry in entries {
             replica.clock.observe(entry.record.stamp);
             replica.entries.insert(entry.record.name.clone(), entry);
@@ -92,6 +105,7 @@ impl Replica {
         Some(Changes {
             clock: self.clock.latest(),
             since: self.since,
+            born: self.born,
             entries,
         })
     }
@@ -279,6 +293,70 @@ impl Replica {
             self.last_change = None;
             self.flush = false;
         }
+    }
+
+    pub fn observe_space(&mut self, born: u64, space_seq: u64) -> bool {
+        let replaced = self.born != 0 && born != self.born;
+        let went_back = self.highest_seq() > space_seq;
+        if born != self.born {
+            self.born = born;
+            self.touched = true;
+        }
+        if replaced || went_back {
+            self.start_over();
+            return true;
+        }
+        false
+    }
+
+    pub fn conflicted(&mut self, server: &[(RecordName, u64)]) -> bool {
+        let missed = server.iter().any(|(name, server_seq)| {
+            let known = self.entries.get(name).map_or(0, |entry| entry.seq);
+            *server_seq < known || *server_seq != known && *server_seq <= self.since
+        });
+        if missed {
+            self.start_over();
+        }
+        missed
+    }
+
+    fn highest_seq(&self) -> u64 {
+        self.entries
+            .values()
+            .map(|entry| entry.seq)
+            .fold(self.since, u64::max)
+    }
+
+    pub fn verify_due(&self, now_ms: u64) -> bool {
+        self.last_verify
+            .is_none_or(|last| now_ms >= last.saturating_add(VERIFY_EVERY_MS))
+    }
+
+    pub fn verify(&mut self, now_ms: u64) {
+        self.last_verify = Some(now_ms);
+        self.start_over();
+    }
+
+    fn start_over(&mut self) {
+        self.since = 0;
+        let names: Vec<RecordName> = self.entries.keys().cloned().collect();
+        for name in &names {
+            if let Some(entry) = self.entries.get_mut(name) {
+                entry.seq = 0;
+                entry.dirty = true;
+            }
+            self.touch(name);
+        }
+        self.touched = true;
+        if !names.is_empty() {
+            self.dirty_since.get_or_insert(0);
+            self.last_change.get_or_insert(0);
+            self.flush = true;
+        }
+    }
+
+    pub const fn born(&self) -> u64 {
+        self.born
     }
 
     pub fn flush(&mut self) {

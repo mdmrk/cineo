@@ -12,6 +12,7 @@ use crate::db::{Db, DbError, SqlValue, Statement};
 pub const IDLE_MS: u64 = 365 * 24 * 60 * 60 * 1000;
 pub const BUSY_RETRY_S: u64 = 60;
 pub const CREATE_RETRY_S: u64 = 3600;
+pub const SEQS_PER_MS: u64 = 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Method {
@@ -62,6 +63,7 @@ impl Response {
 pub struct Context {
     pub now_ms: u64,
     pub nonce: i64,
+    pub born: i64,
     pub may_create: bool,
 }
 
@@ -93,13 +95,14 @@ struct Space {
     records: u64,
     bytes: u64,
     deleted: bool,
+    born: u64,
 }
 
-const SPACE: &str = "SELECT seq, records, bytes, deleted FROM spaces WHERE id = ?1";
+const SPACE: &str = "SELECT seq, records, bytes, deleted, born FROM spaces WHERE id = ?1";
 const PULL: &str = "SELECT key, seq, blob FROM records
      WHERE space = ?1 AND seq > ?2 ORDER BY seq LIMIT ?3";
-const CLAIM: &str = "INSERT INTO spaces (id, seq, records, bytes, touched_ms, deleted, lock)
-     VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6)
+const CLAIM: &str = "INSERT INTO spaces (id, seq, records, bytes, touched_ms, deleted, lock, born)
+     VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?8)
      ON CONFLICT (id) DO UPDATE SET
          seq = excluded.seq,
          records = excluded.records,
@@ -111,8 +114,9 @@ const WRITE: &str = "INSERT INTO records (space, key, seq, blob)
      SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM spaces WHERE id = ?1 AND lock = ?5)
      ON CONFLICT (space, key) DO UPDATE SET seq = excluded.seq, blob = excluded.blob";
 const DELETE_RECORDS: &str = "DELETE FROM records WHERE space = ?1";
-const MARK_DELETED: &str = "INSERT INTO spaces (id, seq, records, bytes, touched_ms, deleted, lock)
-     VALUES (?1, 0, 0, 0, ?2, 1, 0)
+const MARK_DELETED: &str =
+    "INSERT INTO spaces (id, seq, records, bytes, touched_ms, deleted, lock, born)
+     VALUES (?1, 0, 0, 0, ?2, 1, 0, 0)
      ON CONFLICT (id) DO UPDATE SET
          records = 0, bytes = 0, touched_ms = excluded.touched_ms, deleted = 1";
 const SWEEP_RECORDS: &str =
@@ -163,6 +167,10 @@ async fn space(db: &impl Db, id: &[u8]) -> Result<Option<Space>, DbError> {
             records: row.get(1)?.int()?,
             bytes: row.get(2)?.int()?,
             deleted: row.get(3)?.int()? != 0,
+            born: row.get(4).and_then(|v| match v {
+                SqlValue::Int(n) => Some(u64::from_le_bytes(n.to_le_bytes())),
+                _ => None,
+            })?,
         })
     }))
 }
@@ -181,11 +189,11 @@ async fn pull(db: &impl Db, id: &[u8], query: Option<&str>) -> Result<Response, 
         .and_then(|n| usize::try_from(n).ok())
         .unwrap_or(PULL_PAGE_RECORDS)
         .clamp(1, PULL_PAGE_RECORDS);
-    match space(db, id).await? {
+    let space = match space(db, id).await? {
         None => return Ok(Response::json(200, PullPage::default().to_json())),
         Some(space) if space.deleted => return Ok(Response::error(410, "space deleted")),
-        Some(_) => {}
-    }
+        Some(space) => space,
+    };
     let rows = db
         .rows(Statement::new(
             PULL,
@@ -196,8 +204,12 @@ async fn pull(db: &impl Db, id: &[u8], query: Option<&str>) -> Result<Response, 
             ],
         ))
         .await?;
-    let mut page = PullPage::default();
-    let mut bytes = 64;
+    let mut page = PullPage {
+        space_seq: space.seq,
+        born: space.born,
+        ..PullPage::default()
+    };
+    let mut bytes = 96;
     for (index, row) in rows.into_iter().enumerate() {
         let mut row = row.into_iter();
         let (Some(key), Some(seq), Some(blob)) = (
@@ -237,11 +249,12 @@ async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outc
         _ => {}
     }
     let current = current_versions(db, id, &request).await?;
-    let conflicts: Vec<Vec<u8>> = request
+    let conflicts: Vec<(Vec<u8>, u64)> = request
         .writes
         .iter()
-        .filter(|w| current.get(&w.key).map_or(0, |(seq, _)| *seq) != w.base_seq)
-        .map(|w| w.key.clone())
+        .map(|w| (w, current.get(&w.key).map_or(0, |(seq, _)| *seq)))
+        .filter(|(w, seq)| *seq != w.base_seq)
+        .map(|(w, seq)| (w.key.clone(), seq))
         .collect();
     if !conflicts.is_empty() {
         return Ok(Response::json(409, conflict_json(&conflicts)).into());
@@ -251,6 +264,7 @@ async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outc
         records: 0,
         bytes: 0,
         deleted: false,
+        born: 0,
     });
     let added = request
         .writes
@@ -265,8 +279,9 @@ async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outc
     if records > MAX_SPACE_RECORDS || bytes > MAX_SPACE_BYTES {
         return Ok(Response::error(413, "space full").into());
     }
+    let first = base.seq.max(ctx.now_ms.saturating_mul(SEQS_PER_MS));
     let seqs: Vec<u64> = (1..=request.writes.len() as u64)
-        .map(|n| base.seq + n)
+        .map(|n| first + n)
         .collect();
     let last = seqs.last().copied().unwrap_or(base.seq);
     let mut statements = vec![Statement::new(
@@ -279,6 +294,7 @@ async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outc
             SqlValue::from_u64(ctx.now_ms),
             SqlValue::Int(ctx.nonce),
             SqlValue::from_u64(base.seq),
+            SqlValue::Int(ctx.born),
         ],
     )];
     for (write, seq) in request.writes.iter().zip(&seqs) {

@@ -40,6 +40,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         dirty INTEGER NOT NULL,
         seeded INTEGER NOT NULL
     ) STRICT;",
+    "ALTER TABLE sync_pairing ADD COLUMN born INTEGER NOT NULL DEFAULT 0;",
 ];
 
 const FIRST_RUN_ADDONS: &[&str] = &["https://v3-cinemeta.strem.io/manifest.json"];
