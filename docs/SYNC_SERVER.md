@@ -60,10 +60,11 @@ version numbers, and devices then miss writes until their daily check.
 ## On Cloudflare Workers
 
 The same server also builds as a Cloudflare Worker with a D1 database
-(`crates/cineo-sync-server/wrangler.toml`). It has run only under
-`wrangler dev` with its local D1 so far; a deploy has not been tried
-(UNKNOWN), and this host has no per-address rate limit yet. Steps, from
-`crates/cineo-sync-server`:
+(`crates/cineo-sync-server/wrangler.toml`). The default instance runs
+this way at `https://cineo-sync.cineo-sync-server.workers.dev`; this host
+has no per-address rate limit yet. To deploy your own, from
+`crates/cineo-sync-server` (with your own database id in
+`wrangler.toml`):
 
 ```sh
 npx wrangler@4.161.0 login

@@ -164,7 +164,8 @@ server parts exist; the app does not call them yet.
   503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
 - `cineo_core::sync::protocol` (built): the limits and the request and
   response bodies, used by both the client and the server.
-- `crates/cineo-sync-server` (both hosts built; the Worker is not deployed):
+- `crates/cineo-sync-server` (both hosts built; the Worker is deployed at
+  `cineo-sync.cineo-sync-server.workers.dev`):
   `handler::handle` decides each answer (token, sizes, quotas, versions)
   over a crate-private `Db` trait that runs SQL statements and atomic
   batches. The SQL in `handler.rs` and `schema.sql` is meant for both

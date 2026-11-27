@@ -1,6 +1,5 @@
 use cineo_core::sync::protocol::{MAX_BATCH_BYTES, error_json};
-use serde_json::Value as Json;
-use worker::js_sys::{Math, Uint8Array};
+use worker::js_sys::{Array, Math, Uint8Array};
 use worker::wasm_bindgen::JsValue;
 use worker::{
     D1Database, D1PreparedStatement, Date, Env, Headers, ScheduleContext, ScheduledEvent, event,
@@ -35,35 +34,28 @@ impl D1Db {
     }
 }
 
-fn from_json(value: Json) -> SqlValue {
-    match value {
-        Json::Number(n) => n
-            .as_i64()
-            .or_else(|| n.as_f64().map(|f| f as i64))
-            .map_or(SqlValue::Null, SqlValue::Int),
-        Json::Array(bytes) => SqlValue::Blob(
-            bytes
-                .iter()
-                .filter_map(Json::as_u64)
-                .filter_map(|b| u8::try_from(b).ok())
-                .collect(),
-        ),
-        Json::String(text) => SqlValue::Blob(text.into_bytes()),
-        Json::Bool(b) => SqlValue::Int(i64::from(b)),
-        Json::Null | Json::Object(_) => SqlValue::Null,
+fn from_js(value: &JsValue) -> SqlValue {
+    if let Some(n) = value.as_f64() {
+        SqlValue::Int(n as i64)
+    } else if Array::is_array(value) {
+        SqlValue::Blob(Uint8Array::new(value).to_vec())
+    } else if let Some(text) = value.as_string() {
+        SqlValue::Blob(text.into_bytes())
+    } else {
+        SqlValue::Null
     }
 }
 
 impl Db for D1Db {
     async fn rows(&self, statement: Statement) -> Result<Vec<Vec<SqlValue>>, DbError> {
-        let rows: Vec<Vec<Json>> = self
+        let rows = self
             .bound(&statement)?
-            .raw()
+            .raw_js_value()
             .await
             .map_err(|err| db_error(&err))?;
         Ok(rows
-            .into_iter()
-            .map(|row| row.into_iter().map(from_json).collect())
+            .iter()
+            .map(|row| Array::from(row).iter().map(|v| from_js(&v)).collect())
             .collect())
     }
 

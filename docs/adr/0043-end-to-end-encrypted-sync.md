@@ -378,13 +378,15 @@ errors.
 - **QR rendering:** `qrcode` in `cineo-desktop` and `cineo-android` (the
   latter hands Kotlin the module matrix).
 
-### 6. Cost per active user (INFERRED estimates, to be measured in step 5)
+### 6. Cost per active user (INFERRED estimates; rows written and CPU measured in step 5b)
 Assumed: 2 h of playback a day, the app open 3 h, a library of 600 items
 (~1 KB per sealed record).
 - **Pushes:** about 30 a day (every 5 min while playing, plus stops and
-  edits), about 1.2 records each. Rows written per push is about
+  edits), about 1.2 records each. Rows written per push is
   2 × records (row + `seq` index) + 1 (space row), so **≈ 100 rows
-  written/day**.
+  written/day**. (VERIFIED on real D1, 2026-11-27: creating or updating a
+  space writes 1 row; writing a record writes 2, whether the upsert
+  inserts or updates; a write that loses the race writes 0.)
 - **Pulls:** about 25 a day at ≈ 3 rows read each, plus one full pull a
   day as the check in §4 (≈ 600 rows), so **≈ 700 rows read/day**.
 - **Requests:** **≈ 55/day**.
@@ -398,7 +400,17 @@ Assumed: 2 h of playback a day, the app open 3 h, a library of 600 items
 | 100,000 rows written/day | ~1,000 daily active |
 | 5 M rows read/day | far beyond the others |
 | 500 MB per database | **~500 users in total** (the first limit hit; sharding across the 10 free databases would give ~5,000) |
-| 10 ms CPU per request | a 256 KiB batch should fit (UNKNOWN until measured) |
+| 10 ms CPU per request | medians 0–6 ms, peaks 12–23 ms (see below) |
+
+CPU per request on Cloudflare, from `wrangler tail` over 37 requests of
+the ignored end-to-end test (VERIFIED, 2026-11-27): info 0 ms, delete
+1–13 ms, push median 6 ms (max 19), pull median 2.5 ms (max 23, for pages
+of 150 records). Startup is 1 ms. No request was cut off, but whether the
+free plan cuts requests over 10 ms, or tolerates peaks, is UNKNOWN. A
+delete, which does almost no work, varied from 1 to 13 ms, so the peaks
+seem to include isolate warm-up rather than our code (INFERRED). If
+requests start failing with error 1102, the options are smaller pull
+pages or the $5 plan.
 
 On the $5 plan, the same model allows about 6,000 daily active users by
 requests, about 16,000 by rows written and about 10,000 users per 10 GB
@@ -443,8 +455,11 @@ database.
      the host (`worker_host.rs`), `wrangler.toml`, the wasm32 clippy step
      in `scripts/check.sh` and CI, and a run under `wrangler dev` with its
      local D1 (`a_running_server_syncs_recovers_and_deletes`, ignored
-     unless `CINEO_SYNC_SERVER` is set). Still to do: the deploy and the
-     measurements on real D1.
+     unless `CINEO_SYNC_SERVER` is set). Deployed the same day as
+     `https://cineo-sync.cineo-sync-server.workers.dev` (D1 in WEUR); the
+     same test passes against it, which shows that real D1 accepts the
+     schema (`WITHOUT ROWID`) and the conditional upserts (VERIFIED).
+     Measured there: §6. Still to do: a rate limit for this host.
    - **5c.** Recovery from a server that went back (§4), and
      `SyncClient::sync`, one full round of pull, push and retry that the
      shells will call. Found in step 5a: without it, a restored backup or
