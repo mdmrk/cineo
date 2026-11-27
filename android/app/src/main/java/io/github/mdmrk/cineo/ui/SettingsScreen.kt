@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -305,7 +306,7 @@ fun SettingsScreen(
         },
         group("about", stringResource(R.string.section_about)) {
             val version = stringResource(R.string.app_version, version())
-            add(version) { ListItem(colors = rowColors, headlineContent = { Text(version) }) }
+            add(version) { ListItem(colors = rowColors) { Text(version) } }
             if (update != null) {
                 val title = stringResource(R.string.update_available, update.version)
                 val help = stringResource(R.string.update_available_help)
@@ -550,11 +551,10 @@ internal fun SettingRow(
 ) {
     ListItem(
         colors = rowColors,
-        headlineContent = { Text(title) },
         supportingContent = { Text(help, style = MaterialTheme.typography.bodySmall) },
         trailingContent = trailing,
         modifier = modifier,
-    )
+    ) { Text(title) }
 }
 
 @Composable
@@ -589,17 +589,17 @@ private fun Range(title: String, help: String, view: RangeView, step: Int, set: 
     var dragged by remember(view.value) { mutableFloatStateOf(view.value.toFloat()) }
     val min = view.min.toInt()
     val max = view.max.toInt()
+    val slider = remember(min, max) { SliderState(dragged, trackRange = min.toFloat()..max.toFloat()) }
+    slider.value = dragged
     ListItem(
         colors = rowColors,
-        headlineContent = { Text(title) },
         supportingContent = {
             Column {
                 Text(help, style = MaterialTheme.typography.bodySmall)
                 Slider(
-                    value = dragged,
+                    state = slider,
                     onValueChange = { dragged = (min + ((it - min) / step).roundToInt() * step).toFloat() },
                     onValueChangeFinished = { set(view.key, dragged.toInt().toString()) },
-                    valueRange = min.toFloat()..max.toFloat(),
                     colors = SliderDefaults.colors(thumbColor = Brand.Accent, activeTrackColor = Brand.Accent),
                 )
             }
@@ -607,7 +607,7 @@ private fun Range(title: String, help: String, view: RangeView, step: Int, set: 
         trailingContent = {
             Text(stringResource(R.string.percent, dragged.toInt()), color = Brand.TextBright, style = MaterialTheme.typography.labelLarge)
         },
-    )
+    ) { Text(title) }
 }
 
 @Composable

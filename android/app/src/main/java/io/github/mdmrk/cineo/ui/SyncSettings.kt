@@ -209,14 +209,13 @@ private fun SyncOn(sync: SyncView, cineo: Cineo, error: SyncInputException?, att
 private fun Field(title: String, help: String, content: @Composable ColumnScope.() -> Unit) {
     ListItem(
         colors = rowColors,
-        headlineContent = { Text(title) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(help, style = MaterialTheme.typography.bodySmall)
                 content()
             }
         },
-    )
+    ) { Text(title) }
 }
 
 @Composable

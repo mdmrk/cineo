@@ -20,6 +20,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.scale
 import io.github.mdmrk.cineo.rust.AppView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.ImageException
@@ -50,7 +51,7 @@ class PlaybackService : Service() {
     }
     private val wifi by lazy {
         applicationContext.getSystemService(WifiManager::class.java)
-            .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "cineo:playback")
+            .createWifiLock(wifiMode(), "cineo:playback")
             .apply { setReferenceCounted(false) }
     }
     private val noisy = object : BroadcastReceiver() {
@@ -132,7 +133,7 @@ class PlaybackService : Service() {
             stopSelf()
             return
         }
-        loadArt(cineo, (playback?.art ?: view?.connecting)?.let { it.background ?: it.logo })
+        loadArt(cineo, (playback?.art ?: view.connecting)?.let { it.background ?: it.logo })
         val reported = session?.update(playback, status, art) == true
         if (status?.loaded == true && !status.paused) focus?.playing()
         keepAwake(status?.paused != true)
@@ -256,7 +257,12 @@ class PlaybackService : Service() {
             if (scale >= 1f) return decoded
             val width = (decoded.width * scale).roundToInt().coerceAtLeast(1)
             val height = (decoded.height * scale).roundToInt().coerceAtLeast(1)
-            return Bitmap.createScaledBitmap(decoded, width, height, true)
+            return decoded.scale(width, height)
         }
     }
 }
+
+@Suppress("DEPRECATION")
+private fun wifiMode() =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+    else WifiManager.WIFI_MODE_FULL_HIGH_PERF

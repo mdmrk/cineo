@@ -89,14 +89,13 @@ fun AddonsScreen(view: AppView?, images: Images, cineo: Cineo, padding: PaddingV
             ListItem(
                 colors = ListItemDefaults.colors(containerColor = Brand.Background),
                 leadingContent = { CineoIcon(Icon.ALERT_CIRCLE, tint = Brand.Warning) },
-                headlineContent = { Text(transport, color = Brand.TextBright, maxLines = 1) },
                 supportingContent = { Text(stringResource(R.string.badge_unavailable), color = Brand.Warning) },
                 trailingContent = {
                     IconButton(onClick = { cineo.removeAddon(transport) }) {
                         CineoIcon(Icon.TRASH, tint = Brand.Danger, label = stringResource(R.string.remove))
                     }
                 },
-            )
+            ) { Text(transport, color = Brand.TextBright, maxLines = 1) }
         }
         if (lists.isNotEmpty() && list != null) {
             item(key = "discover") {
@@ -203,7 +202,6 @@ private fun AddonRow(
     ListItem(
         colors = ListItemDefaults.colors(containerColor = Brand.Background),
         leadingContent = { AddonLogo(addon.name, addon.logo, images) },
-        headlineContent = { Text(addon.name, color = Brand.TextBright, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = { Text("v${addon.version}", color = Brand.TextDim) },
         trailingContent = {
             Row {
@@ -231,7 +229,7 @@ private fun AddonRow(
                 }
             }
         },
-    )
+    ) { Text(addon.name, color = Brand.TextBright, maxLines = 1, overflow = TextOverflow.Ellipsis) }
 }
 
 @Composable

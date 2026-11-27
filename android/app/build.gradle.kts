@@ -7,7 +7,7 @@ plugins {
 }
 
 val cargoWorkspace: Directory = rootProject.layout.projectDirectory.dir("..")
-val minApi: Int by rootProject.extra
+val minApi = rootProject.extra["minApi"] as Int
 
 fun cargoLockVersion(crate: String): String {
     val lines = cargoWorkspace.file("Cargo.lock").asFile.readLines()
@@ -137,6 +137,10 @@ android {
         version = release(37) { minorApiLevel = 2 }
     }
     ndkVersion = rootProject.extra["ndkVersion"] as String
+
+    lint {
+        disable += "ChromeOsAbiSupport"
+    }
 
     defaultConfig {
         applicationId = "io.github.mdmrk.cineo"

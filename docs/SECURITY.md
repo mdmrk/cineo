@@ -159,6 +159,11 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   lenient parser as an addon response, and only playable sources are kept
   (`playable_streams_survive_saving_and_others_are_not_saved`,
   `an_unreadable_saved_stream_is_dropped_and_the_item_kept`).
+- Android keeps the library, addon URLs and sync key out of Android backups:
+  `allowBackup="false"`, plus backup rules that exclude every domain from
+  cloud backup and from device-to-device transfer, which `allowBackup`
+  alone does not stop on Android 12 and later (`AndroidManifest.xml`,
+  `res/xml/`; checked by Android Lint, not by a test).
 
 ### Sync (ADR-0043)
 

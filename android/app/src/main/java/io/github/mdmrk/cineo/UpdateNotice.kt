@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import io.github.mdmrk.cineo.rust.UpdateView
 
 @Composable
@@ -57,7 +57,7 @@ private object UpdateNotice {
         val open = PendingIntent.getActivity(
             context,
             NOTIFICATION,
-            Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)),
+            Intent(Intent.ACTION_VIEW, update.pageUrl.toUri()),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL)

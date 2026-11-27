@@ -167,7 +167,7 @@ fun PlayerScreen(
                 LoadingBackdrop(playback.art, images, firstLoad = false)
             }
         }
-        if (inPip || !started || current == null) return@Box
+        if (inPip || !started) return@Box
         AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut()) {
             Controls(
                 title = playback.art.title,
