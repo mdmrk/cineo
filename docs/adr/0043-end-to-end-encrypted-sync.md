@@ -265,17 +265,16 @@ set of records from three devices, including skewed clocks and repeats),
 All requests go through `cineo-net`'s `AddonClient` and `NetPolicy`
 (ADR-0006). The server URL must be `https`, except `http` to this machine
 (`localhost`, `127.0.0.1`, `::1`) for a self-hosted or development server,
-which still needs the private-network opt-in. The client gains POST and DELETE with a body cap. The sync
-server is treated like an addon host: a private-network address needs the
-existing opt-in. `Authorization: Bearer <base64url token>` is sent on every
+which still needs the private-network opt-in. The client gains POST and
+DELETE with a body cap. `Authorization: Bearer <base64url token>` is sent on every
 request except `/v1/info`. The token, code and key never appear in logs or
 errors.
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /v1/info` | `{ protocol: 1, max_record_bytes, max_batch_bytes, max_batch_records, max_space_records, max_space_bytes }` |
-| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more }`. 404 if nobody has written to the space yet (the client reads it as empty); 410 if it was deleted |
-| `POST /v1/records` | `{ writes: [{ key, base_seq, blob }] }`. Applied **atomically** (one D1 `batch()`). Each `base_seq` must equal the record's current `seq` (0 = new), or the whole batch fails with **409** and the conflicting keys. The space is created on its first write. Response: `{ seqs: [...] }` |
+| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more }`. A page stops before 2 MiB. A space nobody has written to yet answers 200 with no records; a deleted one answers 410. A 404 means a wrong address, and the client reports it as an error (amended in step 5a: the first version answered 404 for an empty space, which hid a wrong server address) |
+| `POST /v1/records` | `{ writes: [{ key, base_seq, blob }] }`. Applied **atomically** (one D1 `batch()`, one SQLite transaction). Each `base_seq` must equal the record's current `seq` (0 = new), or the whole batch fails with **409** and the conflicting keys. The space is created on its first write. Response: `{ seqs: [...] }` |
 | `DELETE /v1/space` | Deletes the records and keeps a marker, so the space answers 410 and refuses writes from then on. An old code can therefore not bring a rotated space back |
 
 - **Concurrency control:** a per-space counter `seq`, raised on every
@@ -284,25 +283,39 @@ errors.
   decides, not the server. Per-record versions mean that two devices
   editing different items never conflict. A whole-space ETag would make
   every concurrent push a conflict.
+- **Atomic without a lock** (step 5a): D1 has no transaction across
+  requests, so the server reads the space's `seq` and the records' versions,
+  checks them, and then sends one batch. The batch first moves the space
+  from the `seq` it read to the new one and stamps it with a random
+  `lock`, and each record write runs only while the space carries that
+  `lock`. If another push got in between, the first statement changes no
+  row, nothing is written, and the answer is 409
+  (`a_write_that_loses_a_race_is_refused_whole`). The same SQL runs on
+  SQLite and D1.
 - **Versioning:** path prefix `/v1`, `protocol` in `/v1/info`, and a format
   byte in each blob. A breaking change adds `/v2` and the server keeps `/v1`
   until no supported release uses it.
 - **Size limits** (server-enforced, Content-Length checked before reading,
-  body read with a cap): blob ≤ 32 KiB, request ≤ 256 KiB and ≤ 100 writes,
+  body read with a cap): blob ≤ 32 KiB, request ≤ 256 KiB and ≤ 64 writes
+  (amended in step 5a from 100: D1 allows 100 bound parameters per query,
+  and reading a batch's versions takes 1 + writes),
   space ≤ 10,000 records and ≤ 8 MiB. The client's response cap for sync is
   2 MiB (one pull page).
 - **Abuse limits:** the token is required; a space exists only after a
-  valid write; quotas per space as above; requests per token hash and new
-  spaces per IP limited with the Rate Limiting binding if the free plan
-  has it (UNKNOWN), else with a Cloudflare WAF rate-limiting rule; spaces
+  valid write; quotas per space as above. The native host allows 120
+  requests a minute and 10 new spaces an hour per IP address (behind a
+  proxy, the last `X-Forwarded-For` address, when told to trust it). The
+  Worker host uses the Rate Limiting binding if the free plan has it
+  (UNKNOWN), else a Cloudflare WAF rate-limiting rule; spaces
   without a write for 365 days are deleted by a scheduled job. When D1 or
   the Worker hits its daily limit, the server returns 503 with
   `Retry-After` until 00:00 UTC, and the client backs off and keeps working
   locally.
-- **D1 schema:** `spaces(id BLOB PRIMARY KEY, seq INTEGER, records INTEGER,
-  bytes INTEGER, touched_ms INTEGER) WITHOUT ROWID` and `records(space BLOB,
-  key BLOB, seq INTEGER, blob BLOB, PRIMARY KEY (space, key)) WITHOUT
-  ROWID`, plus an index on `records(space, seq)`.
+- **Schema** (`crates/cineo-sync-server/schema.sql`, for SQLite and D1):
+  `spaces(id, seq, records, bytes, touched_ms, deleted, lock) WITHOUT
+  ROWID` and `records(space, key, seq, blob, PRIMARY KEY (space, key))
+  WITHOUT ROWID`, plus an index on `records(space, seq)`. `id` is
+  SHA-256 of the token.
 
 ### 5. Where each part lives
 - **Merge, stamps, record model, settings split, push and pull planning:**
@@ -393,7 +406,7 @@ database.
    endpoints, tested against a wiremock server (409 → pull, merge, retry;
    size caps; a tampered or moved blob is rejected; a typo in the code is
    rejected).
-5. Server, in two parts:
+5. Server, in three parts:
    - **5a.** `cineo_core::sync::protocol` (the client moves to it), the
      `cineo-sync-server` crate with its handling, the SQLite storage and
      the native binary; end-to-end tests with `SyncClient`; a self-hosting
@@ -401,6 +414,12 @@ database.
    - **5b.** The Worker host with D1, a CI job that builds it for wasm32,
      measurements of rows written, UPSERT counting and CPU per request,
      and the deploy of the default instance.
+   - **5c.** Recovery from a server that went back: the pull answer
+     carries the space's `seq`, and a device whose pull position or
+     record versions are ahead of it starts over (pull from 0, then push
+     everything with the server's versions). Without it, a restored backup
+     or a swept space leaves paired devices in conflicts
+     (`docs/SYNC_SERVER.md`). Found in step 5a.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
    URL, change key, leave, last sync status). `cineo://sync/` deep link.
 7. Android: the same screen, the intent filter for `cineo://sync`, and

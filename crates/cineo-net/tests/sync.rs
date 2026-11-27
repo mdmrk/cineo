@@ -230,14 +230,17 @@ async fn pull_opens_records_and_skips_unreadable_ones() {
 }
 
 #[tokio::test]
-async fn pulling_a_space_nobody_wrote_to_yet_is_empty() {
+async fn a_wrong_server_address_is_an_error_not_an_empty_space() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .respond_with(ResponseTemplate::new(404))
         .mount(&server)
         .await;
-    let pulled = client(&server).pull(0).await.unwrap();
-    assert!(pulled.records.is_empty() && !pulled.more);
+    let err = client(&server).pull(0).await.unwrap_err();
+    assert!(
+        matches!(err, SyncError::Rejected(status) if status == 404),
+        "{err:?}"
+    );
 }
 
 #[tokio::test]
@@ -372,7 +375,15 @@ async fn pushes_are_split_into_batches() {
                 .len()
         })
         .collect();
-    assert_eq!(sizes, [MAX_BATCH_RECORDS, MAX_BATCH_RECORDS, 50]);
+    assert_eq!(
+        sizes,
+        [
+            MAX_BATCH_RECORDS,
+            MAX_BATCH_RECORDS,
+            MAX_BATCH_RECORDS,
+            250 - 3 * MAX_BATCH_RECORDS
+        ]
+    );
 }
 
 #[tokio::test]
@@ -414,7 +425,7 @@ async fn a_record_too_large_to_push_is_reported_and_skipped() {
 
 #[tokio::test]
 async fn deleting_the_space_tolerates_one_already_gone() {
-    for status in [204, 404, 410] {
+    for status in [204, 410] {
         let server = MockServer::start().await;
         Mock::given(method("DELETE"))
             .and(path("/base/v1/space"))

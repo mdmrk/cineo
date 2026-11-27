@@ -1,21 +1,18 @@
+use cineo_core::sync::protocol::{
+    MAX_BATCH_BYTES, MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_PULL_BYTES, PULL_PAGE_RECORDS,
+    PullPage, PushRequest, PushResponse, Write,
+};
 use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Stamp};
-use data_encoding::BASE64URL_NOPAD;
 use reqwest::{Method, StatusCode};
-use serde_json::{Value, json};
 use tracing::{Instrument, info_span, warn};
 use url::{Host, Url};
 
-use super::keys::{Sealed, SpaceKeys};
+use super::keys::SpaceKeys;
 use crate::addon_client::{SyncRequest, next_request_id, origin};
 use crate::{AddonClient, FetchError};
 
-pub const MAX_BLOB_BYTES: usize = 32 * 1024;
-pub const MAX_BATCH_BYTES: usize = 256 * 1024;
-pub const MAX_BATCH_RECORDS: usize = 100;
-pub const PULL_PAGE_RECORDS: usize = 500;
-pub const MAX_PULL_BYTES: usize = 2 * 1024 * 1024;
 const MAX_PUSH_RESPONSE_BYTES: usize = 64 * 1024;
-const WRITE_OVERHEAD_BYTES: usize = 64;
+const REQUEST_OVERHEAD_BYTES: usize = 32;
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -66,11 +63,6 @@ pub struct PushOutcome {
     pub error: Option<SyncError>,
 }
 
-struct Write<'a> {
-    out: &'a Outgoing,
-    sealed: Sealed,
-}
-
 impl SyncClient {
     pub fn new(http: AddonClient, pairing: &Pairing) -> Result<Self, SyncError> {
         let server = &pairing.server;
@@ -102,25 +94,18 @@ impl SyncClient {
         url.query_pairs_mut()
             .append_pair("since", &since.to_string())
             .append_pair("limit", &PULL_PAGE_RECORDS.to_string());
-        let body = match self
+        let body = self
             .call("pull", Method::GET, url, None, MAX_PULL_BYTES)
-            .await
-        {
-            Err(SyncError::Rejected(StatusCode::NOT_FOUND)) => return Ok(Pulled::default()),
-            other => other?,
-        };
-        let page: Value = serde_json::from_slice(&body).map_err(|_| SyncError::Malformed)?;
-        let entries = page
-            .get("records")
-            .and_then(Value::as_array)
-            .ok_or(SyncError::Malformed)?;
+            .await?;
+        let page = PullPage::parse(&body).ok_or(SyncError::Malformed)?;
         let mut pulled = Pulled {
-            more: page.get("more").and_then(Value::as_bool).unwrap_or(false),
+            more: page.more,
+            unreadable: page.skipped,
             ..Pulled::default()
         };
-        for entry in entries {
-            match self.open_entry(entry) {
-                Some(opened) => pulled.records.push(opened),
+        for entry in page.records {
+            match self.keys.open(&entry.key, &entry.blob) {
+                Some(record) => pulled.records.push((record, entry.seq)),
                 None => pulled.unreadable += 1,
             }
         }
@@ -133,37 +118,30 @@ impl SyncClient {
         Ok(pulled)
     }
 
-    fn open_entry(&self, entry: &Value) -> Option<(Record, u64)> {
-        let decode = |key| {
-            BASE64URL_NOPAD
-                .decode(entry.get(key)?.as_str()?.as_bytes())
-                .ok()
-        };
-        let seq = entry.get("seq")?.as_u64()?;
-        let record = self.keys.open(&decode("key")?, &decode("blob")?)?;
-        Some((record, seq))
-    }
-
     pub async fn push(&self, outgoing: &[Outgoing]) -> PushOutcome {
         let mut outcome = PushOutcome::default();
-        let mut writes = Vec::new();
+        let mut sealed = Vec::new();
         for out in outgoing {
             match self.keys.seal(&out.record) {
-                Ok(sealed) if sealed.blob.len() > MAX_BLOB_BYTES => {
-                    warn!(
-                        bytes = sealed.blob.len(),
-                        "a sync record is too large to push"
-                    );
+                Ok(s) if s.blob.len() > MAX_BLOB_BYTES => {
+                    warn!(bytes = s.blob.len(), "a sync record is too large to push");
                     outcome.oversized.push(out.record.name.clone());
                 }
-                Ok(sealed) => writes.push(Write { out, sealed }),
+                Ok(s) => sealed.push((
+                    out,
+                    Write {
+                        key: s.key.to_vec(),
+                        base_seq: out.base_seq,
+                        blob: s.blob,
+                    },
+                )),
                 Err(err) => {
                     outcome.error = Some(err);
                     return outcome;
                 }
             }
         }
-        for batch in batches(&writes) {
+        for batch in batches(&sealed) {
             match self.push_batch(batch).await {
                 Ok(pushed) => outcome.pushed.extend(pushed),
                 Err(err) => {
@@ -175,43 +153,30 @@ impl SyncClient {
         outcome
     }
 
-    async fn push_batch(&self, batch: &[Write<'_>]) -> Result<Vec<Pushed>, SyncError> {
-        let body = json!({
-            "writes": batch.iter().map(|w| json!({
-                "key": BASE64URL_NOPAD.encode(&w.sealed.key),
-                "base_seq": w.out.base_seq,
-                "blob": BASE64URL_NOPAD.encode(&w.sealed.blob),
-            })).collect::<Vec<_>>(),
-        });
+    async fn push_batch(&self, batch: &[(&Outgoing, Write)]) -> Result<Vec<Pushed>, SyncError> {
+        let request = PushRequest {
+            writes: batch.iter().map(|(_, w)| w.clone()).collect(),
+        };
         let url = self.url("v1/records")?;
         let response = self
             .call(
                 "push",
                 Method::POST,
                 url,
-                Some(body.to_string().into_bytes()),
+                Some(request.to_json().into_bytes()),
                 MAX_PUSH_RESPONSE_BYTES,
             )
             .await?;
-        let response: Value =
-            serde_json::from_slice(&response).map_err(|_| SyncError::Malformed)?;
-        let seqs: Vec<u64> = response
-            .get("seqs")
-            .and_then(Value::as_array)
-            .ok_or(SyncError::Malformed)?
-            .iter()
-            .map(Value::as_u64)
-            .collect::<Option<_>>()
-            .ok_or(SyncError::Malformed)?;
-        if seqs.len() != batch.len() {
+        let response = PushResponse::parse(&response).ok_or(SyncError::Malformed)?;
+        if response.seqs.len() != batch.len() {
             return Err(SyncError::Malformed);
         }
         Ok(batch
             .iter()
-            .zip(seqs)
-            .map(|(w, seq)| Pushed {
-                name: w.out.record.name.clone(),
-                stamp: w.out.record.stamp,
+            .zip(response.seqs)
+            .map(|((out, _), seq)| Pushed {
+                name: out.record.name.clone(),
+                stamp: out.record.stamp,
                 seq,
             })
             .collect())
@@ -223,9 +188,7 @@ impl SyncClient {
             .call("delete", Method::DELETE, url, None, MAX_PUSH_RESPONSE_BYTES)
             .await
         {
-            Ok(_) | Err(SyncError::SpaceGone | SyncError::Rejected(StatusCode::NOT_FOUND)) => {
-                Ok(())
-            }
+            Ok(_) | Err(SyncError::SpaceGone) => Ok(()),
             Err(err) => Err(err),
         }
     }
@@ -266,22 +229,21 @@ impl SyncClient {
     }
 }
 
-fn batches<'w, 'a>(writes: &'w [Write<'a>]) -> Vec<&'w [Write<'a>]> {
+fn batches<'s, 'o>(sealed: &'s [(&'o Outgoing, Write)]) -> Vec<&'s [(&'o Outgoing, Write)]> {
     let mut batches = Vec::new();
     let mut start = 0;
-    let mut bytes = 0;
-    for (index, write) in writes.iter().enumerate() {
-        let size =
-            (write.sealed.blob.len() + write.sealed.key.len()) * 4 / 3 + WRITE_OVERHEAD_BYTES;
+    let mut bytes = REQUEST_OVERHEAD_BYTES;
+    for (index, (_, write)) in sealed.iter().enumerate() {
+        let size = write.encoded_len();
         if index > start && (index - start == MAX_BATCH_RECORDS || bytes + size > MAX_BATCH_BYTES) {
-            batches.push(&writes[start..index]);
+            batches.push(&sealed[start..index]);
             start = index;
-            bytes = 0;
+            bytes = REQUEST_OVERHEAD_BYTES;
         }
         bytes += size;
     }
-    if start < writes.len() {
-        batches.push(&writes[start..]);
+    if start < sealed.len() {
+        batches.push(&sealed[start..]);
     }
     batches
 }

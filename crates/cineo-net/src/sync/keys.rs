@@ -2,8 +2,8 @@ use std::fmt;
 
 use aws_lc_rs::aead::{self, Aad, LessSafeKey, NONCE_LEN, Nonce, UnboundKey};
 use aws_lc_rs::{hkdf, hmac, rand};
+use cineo_core::sync::protocol::{RECORD_KEY_LEN, encode};
 use cineo_core::sync::{DeviceId, Record, RecordName, SyncKey};
-use data_encoding::BASE64URL_NOPAD;
 use zeroize::Zeroizing;
 
 use super::SyncError;
@@ -11,7 +11,6 @@ use super::SyncError;
 pub const BLOB_FORMAT: u8 = 1;
 const SALT: &[u8] = b"cineo-sync-v1";
 const TAG_LEN: usize = 16;
-pub const RECORD_KEY_LEN: usize = 16;
 
 pub fn new_key() -> Result<SyncKey, SyncError> {
     let mut bytes = [0; 16];
@@ -65,7 +64,7 @@ impl SpaceKeys {
         let names = expand(b"names")?;
         let seal = expand(b"seal")?;
         Ok(Self {
-            token: Zeroizing::new(BASE64URL_NOPAD.encode(token.as_ref())),
+            token: Zeroizing::new(encode(token.as_ref())),
             names: hmac::Key::new(hmac::HMAC_SHA256, names.as_ref()),
             seal: LessSafeKey::new(
                 UnboundKey::new(&aead::CHACHA20_POLY1305, seal.as_ref())

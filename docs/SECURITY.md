@@ -162,8 +162,8 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 
 ### Sync (ADR-0043)
 
-Only the client parts exist; nothing calls them yet, and the server is not
-built. Sync is off by default.
+The client and the self-hosted server exist; the app does not call them
+yet, and the Cloudflare Worker host is not built. Sync is off by default.
 
 - **Key.** 16 random bytes from `aws_lc_rs::rand`, stored in the private
   database (`sync_pairing`). It is shown as a 32-character code with a
@@ -196,6 +196,27 @@ built. Sync is off by default.
   (`device_local_settings_are_never_pushed_or_applied`).
 - **Who holds the code reads everything synced**, including addon URLs
   that can carry API keys.
+- **Server (`cineo-sync-server`).** It stores SHA-256 of the token, never
+  the token, and only sealed blobs under opaque keys
+  (`the_server_stores_nothing_readable`). A request without a valid
+  32-byte token is refused (`records_need_a_valid_token`). Malformed
+  pushes, more than 64 writes, wrong key sizes, empty or oversized blobs
+  and repeated keys are refused (`malformed_pushes_are_refused`); a body
+  over 256 KiB is refused before it is read
+  (`an_oversized_request_is_refused_before_it_is_read`). A space holds at
+  most 10,000 records and 8 MiB
+  (`a_full_space_refuses_more_but_takes_replacements`). Each address may
+  make 120 requests a minute and 10 new spaces an hour
+  (`requests_are_limited_per_address_and_minute`,
+  `new_spaces_are_limited_per_address_and_hour`,
+  `too_many_requests_from_one_address_are_refused`); behind a proxy, only
+  when started with `--trust-forwarded-for`
+  (`behind_a_proxy_the_forwarded_address_is_limited`). A deleted space
+  stays deleted (`a_deleted_space_is_gone_and_cannot_come_back`), and
+  spaces without a write for 365 days are swept
+  (`idle_spaces_and_deletion_markers_are_swept`). The binary serves plain
+  HTTP and is meant to sit behind a TLS reverse proxy
+  ([SYNC_SERVER.md](SYNC_SERVER.md)).
 
 ### Process execution
 

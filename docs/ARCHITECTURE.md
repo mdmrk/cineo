@@ -70,6 +70,7 @@ flowchart TB
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
 | `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010); `Torrents` runs the start, stop, status and lookahead steps for both shells |
 | `cineo-android` | Rust half of the Android shell (ADR-0028): holds the core `State`, runs effects through the IO crates, and hands Kotlin `AppView` snapshots through UniFFI; the TLS verifier's JNI entry point |
+| `cineo-sync-server` | The sync server (ADR-0043): request handling over SQL shared by SQLite and D1, and a native host for self-hosting. It depends only on `cineo-core`; the app does not depend on it |
 | `cineo-uniffi-bindgen` | Only UniFFI's `uniffi-bindgen` binary, which Gradle runs to write the Kotlin bindings, so the Android build does not compile the app's Rust for the host too (ADR-0038) |
 
 **When to add a crate:** only when the new code has a different dependency
@@ -136,8 +137,8 @@ The API is blocking; async shells call it off the runtime's worker threads.
 
 ### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. The core, store and client parts
-exist; nothing calls them yet.
+Sync is optional and off by default. The core, store, client and native
+server parts exist; the app does not call them yet.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the
@@ -155,15 +156,22 @@ exist; nothing calls them yet.
 - `cineo_net::sync` (built): the sync code (`format_code`, `parse_code`),
   `SpaceKeys` (HKDF-SHA256 to a bearer token, an HMAC key for record names
   and a ChaCha20-Poly1305 key, all with `aws-lc-rs`), and `SyncClient`
-  (`pull`, `push` in batches of at most 100 records and 256 KiB,
+  (`pull`, `push` in batches of at most 64 records and 256 KiB,
   `delete_space`). HTTP goes through `AddonClient::send`, which applies
   `NetPolicy` and a body cap and returns the status, so 404, 409, 410 and
   503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
-- `crates/cineo-sync-server` (not built): pure request handling over a
-  storage trait, shared SQL, a native host (hyper and rusqlite) for
-  self-hosting and a Worker host (workers-rs with D1) for Cloudflare. It
-  stores encrypted, opaque records and never sees plaintext. The protocol
-  types will live in `cineo_core::sync::protocol`, shared with the client.
+- `cineo_core::sync::protocol` (built): the limits and the request and
+  response bodies, used by both the client and the server.
+- `crates/cineo-sync-server` (native host built, Worker host not built):
+  `handler::handle` decides each answer (token, sizes, quotas, versions)
+  over a crate-private `Db` trait that runs SQL statements and atomic
+  batches. The SQL in `handler.rs` and `schema.sql` is meant for both
+  SQLite and D1. The native host (`SqliteDb`, `serve`, the
+  `cineo-sync-server` binary) uses hyper and rusqlite, limits requests
+  per address (`RateLimiter`) and sweeps idle spaces every hour. It
+  stores encrypted, opaque records and never sees plaintext. Tests: unit
+  tests in `src/handler/tests.rs` and `src/limit.rs`, and the client
+  against the native host in `tests/end_to_end.rs`.
 
 ### UI boundary (ADR-0011)
 

@@ -1,5 +1,6 @@
 mod clock;
 mod pairing;
+pub mod protocol;
 mod record;
 mod replica;
 
