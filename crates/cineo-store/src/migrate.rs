@@ -24,6 +24,22 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     ) STRICT;",
     "ALTER TABLE library_items ADD COLUMN stream TEXT;",
     "ALTER TABLE library_items ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;",
+    "CREATE TABLE sync_pairing (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        key BLOB NOT NULL,
+        server TEXT NOT NULL,
+        device INTEGER NOT NULL,
+        clock_ms INTEGER NOT NULL,
+        clock_counter INTEGER NOT NULL,
+        since INTEGER NOT NULL
+    ) STRICT;
+    CREATE TABLE sync_records (
+        name TEXT PRIMARY KEY NOT NULL,
+        record TEXT NOT NULL,
+        seq INTEGER NOT NULL,
+        dirty INTEGER NOT NULL,
+        seeded INTEGER NOT NULL
+    ) STRICT;",
 ];
 
 const FIRST_RUN_ADDONS: &[&str] = &["https://v3-cinemeta.strem.io/manifest.json"];

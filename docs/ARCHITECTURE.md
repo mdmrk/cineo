@@ -136,8 +136,8 @@ The API is blocking; async shells call it off the runtime's worker threads.
 
 ### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. Only the core part exists; nothing
-calls it yet.
+Sync is optional and off by default. The core and store parts exist;
+nothing calls them yet.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the
@@ -146,8 +146,12 @@ calls it yet.
   lists when joining) and decides when to push and pull. Time and the
   device id are inputs. Settings in `DEVICE_LOCAL_SETTINGS` are never
   pushed or applied. Tests: `crates/cineo-core/tests/sync.rs`.
-- `cineo-store` (not built): the sync key, server URL, device id, clock
-  and per-record sync state.
+- `cineo-store` (built): the pairing (sync key, server URL, device id,
+  clock and pull position) in `sync_pairing`, and each record with its
+  server version and its unpushed and seeded flags in `sync_records`.
+  `Replica::take_changes` hands over only what changed, so a progress save
+  rewrites one row. Changes saved after `forget_sync` are dropped. Tests:
+  the `sync` tests in `crates/cineo-store/tests/store.rs`.
 - `cineo_net::sync` (not built): the sync code, key derivation, encryption
   and the HTTP calls, through `AddonClient` and `NetPolicy`.
 - `server/sync/` (not built): a TypeScript Cloudflare Worker with D1 that

@@ -526,3 +526,63 @@ fn seeding_pushes_customized_settings_but_a_space_value_wins() {
     );
     assert_eq!(joining.settings_over(settings).seek_step, SeekStep::S5);
 }
+
+#[test]
+fn changes_hold_only_what_changed_since_the_last_take() {
+    let mut local = replica(A);
+    assert_eq!(local.take_changes(), None);
+    local.record_effect(&Effect::SaveLibraryItem(item("tt1", 1)), 1_000);
+    local.record_effect(&Effect::SaveLibraryItem(item("tt2", 1)), 1_000);
+    let first = local.take_changes().unwrap();
+    assert_eq!(first.entries.len(), 2);
+    assert_eq!(first.clock, local.clock().latest());
+    local.record_effect(&Effect::SaveLibraryItem(item("tt2", 9)), 2_000);
+    let second = local.take_changes().unwrap();
+    assert_eq!(
+        second
+            .entries
+            .iter()
+            .map(|e| e.record.name.clone())
+            .collect::<Vec<_>>(),
+        [RecordName::Item("tt2".into())]
+    );
+    assert_eq!(local.take_changes(), None);
+}
+
+#[test]
+fn a_restored_replica_continues_where_it_left_off() {
+    let mut local = replica(A);
+    local.merge(item_record("tt1", 5, stamp(9_000, 0, B)), 12, 9_000);
+    local.record_effect(&Effect::SaveLibraryItem(item("tt2", 7)), 9_000);
+    let changes = local.take_changes().unwrap();
+    let mut restored = Replica::restore(
+        Settings::default(),
+        changes.clock,
+        changes.since,
+        changes.entries,
+    );
+    assert_eq!(ids(&restored), ids(&local));
+    assert_eq!(restored.since(), 12);
+    assert_eq!(restored.outgoing(), local.outgoing());
+    assert!(restored.push_due(0), "unpushed edits go out on start");
+    restored.record_effect(&Effect::SaveLibraryItem(item("tt3", 1)), 1);
+    let tt3 = restored.get(&RecordName::Item("tt3".into())).unwrap();
+    assert!(
+        tt3.stamp > stamp(9_000, 0, B),
+        "the clock resumes past what it saw"
+    );
+}
+
+#[test]
+fn the_sync_key_is_never_printed() {
+    let pairing = cineo_core::sync::Pairing {
+        key: cineo_core::sync::SyncKey::from_bytes([0xAB; 16]),
+        server: "https://sync.example/".parse().unwrap(),
+    };
+    let printed = format!("{pairing:?}");
+    assert!(
+        !printed.contains("171") && !printed.to_lowercase().contains("ab, "),
+        "{printed}"
+    );
+    assert!(printed.contains("SyncKey(..)"));
+}

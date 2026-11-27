@@ -3,7 +3,8 @@ use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
-use rusqlite::{Connection, ErrorCode, Row, params};
+use cineo_core::sync::{Changes, DeviceId, Entry, Pairing, Record, Replica, Stamp, SyncKey};
+use rusqlite::{Connection, ErrorCode, OptionalExtension, Row, params};
 use tracing::warn;
 use url::Url;
 
@@ -200,6 +201,132 @@ impl Store {
         Ok(())
     }
 
+    pub fn sync(&self, defaults: Settings) -> Result<Option<(Pairing, Replica)>, StoreError> {
+        let Some((key, server, device, clock_ms, clock_counter, since)) = self
+            .conn
+            .query_row(
+                "SELECT key, server, device, clock_ms, clock_counter, since
+                 FROM sync_pairing WHERE id = 1",
+                [],
+                |row| {
+                    Ok((
+                        row.get::<_, Vec<u8>>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, i64>(2)?,
+                        row.get::<_, i64>(3)?,
+                        row.get::<_, i64>(4)?,
+                        row.get::<_, i64>(5)?,
+                    ))
+                },
+            )
+            .optional()?
+        else {
+            return Ok(None);
+        };
+        let (Ok(key), Ok(server)) = (<[u8; 16]>::try_from(key), Url::parse(&server)) else {
+            warn!("ignoring an unreadable sync pairing");
+            return Ok(None);
+        };
+        let pairing = Pairing {
+            key: SyncKey::from_bytes(key),
+            server,
+        };
+        let clock = Stamp {
+            physical_ms: from_sql_int(clock_ms),
+            counter: u32::try_from(clock_counter).unwrap_or(0),
+            device: DeviceId(u64::from_le_bytes(device.to_le_bytes())),
+        };
+        let mut stmt = self
+            .conn
+            .prepare("SELECT name, record, seq, dirty, seeded FROM sync_records")?;
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, bool>(3)?,
+                row.get::<_, bool>(4)?,
+            ))
+        })?;
+        let mut entries = Vec::new();
+        for row in rows {
+            let (name, record, seq, dirty, seeded) = row?;
+            match Record::parse(&record).filter(|r| r.name.to_string() == name) {
+                Some(record) => entries.push(Entry {
+                    record,
+                    seq: from_sql_int(seq),
+                    dirty,
+                    seeded,
+                }),
+                None => warn!("skipping an unreadable sync record"),
+            }
+        }
+        let replica = Replica::restore(defaults, clock, from_sql_int(since), entries);
+        Ok(Some((pairing, replica)))
+    }
+
+    pub fn pair(&mut self, pairing: &Pairing, device: DeviceId) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute("DELETE FROM sync_records", [])?;
+        tx.execute(
+            "INSERT OR REPLACE INTO sync_pairing
+                 (id, key, server, device, clock_ms, clock_counter, since)
+             VALUES (1, ?1, ?2, ?3, 0, 0, 0)",
+            params![
+                pairing.key.as_bytes().as_slice(),
+                pairing.server.as_str(),
+                i64::from_le_bytes(device.0.to_le_bytes()),
+            ],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn save_sync_changes(&mut self, changes: &Changes) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        let paired = tx.execute(
+            "UPDATE sync_pairing SET clock_ms = ?1, clock_counter = ?2, since = ?3 WHERE id = 1",
+            params![
+                to_sql_int(changes.clock.physical_ms),
+                changes.clock.counter,
+                to_sql_int(changes.since),
+            ],
+        )?;
+        if paired == 0 {
+            return Ok(());
+        }
+        {
+            let mut upsert = tx.prepare(
+                "INSERT INTO sync_records (name, record, seq, dirty, seeded)
+                 VALUES (?1, ?2, ?3, ?4, ?5)
+                 ON CONFLICT (name) DO UPDATE SET
+                     record = excluded.record,
+                     seq = excluded.seq,
+                     dirty = excluded.dirty,
+                     seeded = excluded.seeded",
+            )?;
+            for entry in &changes.entries {
+                upsert.execute(params![
+                    entry.record.name.to_string(),
+                    entry.record.to_json(),
+                    to_sql_int(entry.seq),
+                    entry.dirty,
+                    entry.seeded,
+                ])?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn forget_sync(&mut self) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute("DELETE FROM sync_records", [])?;
+        tx.execute("DELETE FROM sync_pairing", [])?;
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn apply(&mut self, effect: &Effect) -> Result<bool, StoreError> {
         match effect {
             Effect::SaveAddons(addons) => self.save_addons(addons)?,
@@ -215,6 +342,10 @@ impl Store {
 
 fn to_sql_int(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn from_sql_int(value: i64) -> u64 {
+    u64::try_from(value).unwrap_or(0)
 }
 
 fn read_item(row: &Row<'_>) -> rusqlite::Result<Result<LibraryItem, (String, &'static str)>> {

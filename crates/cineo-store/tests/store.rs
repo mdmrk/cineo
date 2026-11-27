@@ -14,6 +14,7 @@ use cineo_core::app::{
     Action, Effect, Language, LibraryItem, ManifestOrigin, Percent, SeekStep, Settings, State,
     WatchedAt, continue_watching, update,
 };
+use cineo_core::sync::{DeviceId, Pairing, RecordName, Replica, SyncKey};
 use cineo_store::{DB_FILE, SCHEMA_VERSION, Store, StoreError};
 use url::Url;
 
@@ -493,4 +494,108 @@ fn an_unreadable_saved_stream_is_dropped_and_the_item_kept() {
         .unwrap();
     let store = Store::open_in(&dir).unwrap();
     assert_eq!(store.library().unwrap(), vec![item("tt1", 5, 1)]);
+}
+
+fn pairing(server: &str) -> Pairing {
+    Pairing {
+        key: SyncKey::from_bytes([7; 16]),
+        server: Url::parse(server).unwrap(),
+    }
+}
+
+const DEVICE: DeviceId = DeviceId(u64::MAX - 5);
+
+#[test]
+fn sync_is_off_until_paired_and_forgetting_turns_it_off() {
+    let mut store = Store::open_in_memory().unwrap();
+    assert!(store.sync(Settings::default()).unwrap().is_none());
+    store
+        .pair(&pairing("https://sync.example/"), DEVICE)
+        .unwrap();
+    let (paired, replica) = store.sync(Settings::default()).unwrap().unwrap();
+    assert_eq!(paired, pairing("https://sync.example/"));
+    assert_eq!(replica.clock().device(), DEVICE);
+    assert!(replica.library().is_empty());
+    store.forget_sync().unwrap();
+    assert!(store.sync(Settings::default()).unwrap().is_none());
+}
+
+#[test]
+fn sync_state_survives_a_reopen() {
+    let dir = temp_dir("sync");
+    let mut store = Store::open_in(&dir).unwrap();
+    store
+        .pair(&pairing("https://sync.example/"), DEVICE)
+        .unwrap();
+    let mut replica = Replica::new(DEVICE, Settings::default());
+    replica.record_effect(&Effect::SaveLibraryItem(item("tt1", 10, 1)), 5_000);
+    replica.record_effect(&Effect::SaveLibraryItem(item("tt2", 20, 1)), 6_000);
+    let out = replica.outgoing().remove(0);
+    replica.pushed(&out.record.name, out.record.stamp, 41);
+    store
+        .save_sync_changes(&replica.take_changes().unwrap())
+        .unwrap();
+    replica.record_effect(&Effect::DeleteLibraryItem("tt2".into()), 7_000);
+    store
+        .save_sync_changes(&replica.take_changes().unwrap())
+        .unwrap();
+    drop(store);
+    let (_, restored) = Store::open_in(&dir)
+        .unwrap()
+        .sync(Settings::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(restored.library(), replica.library());
+    assert_eq!(restored.outgoing(), replica.outgoing());
+    assert_eq!(restored.clock(), replica.clock());
+    assert_eq!(restored.since(), replica.since());
+}
+
+#[test]
+fn sync_changes_after_forgetting_are_dropped() {
+    let mut store = Store::open_in_memory().unwrap();
+    store
+        .pair(&pairing("https://sync.example/"), DEVICE)
+        .unwrap();
+    let mut replica = Replica::new(DEVICE, Settings::default());
+    replica.record_effect(&Effect::SaveLibraryItem(item("tt1", 10, 1)), 5_000);
+    let changes = replica.take_changes().unwrap();
+    store.forget_sync().unwrap();
+    store.save_sync_changes(&changes).unwrap();
+    assert!(store.sync(Settings::default()).unwrap().is_none());
+    store
+        .pair(&pairing("https://other.example/"), DEVICE)
+        .unwrap();
+    let (_, replica) = store.sync(Settings::default()).unwrap().unwrap();
+    assert!(replica.library().is_empty(), "pairing starts empty");
+}
+
+#[test]
+fn unreadable_sync_records_are_skipped() {
+    let dir = temp_dir("sync-junk");
+    let mut store = Store::open_in(&dir).unwrap();
+    store
+        .pair(&pairing("https://sync.example/"), DEVICE)
+        .unwrap();
+    let mut replica = Replica::new(DEVICE, Settings::default());
+    replica.record_effect(&Effect::SaveLibraryItem(item("tt1", 10, 1)), 5_000);
+    store
+        .save_sync_changes(&replica.take_changes().unwrap())
+        .unwrap();
+    drop(store);
+    rusqlite::Connection::open(dir.join(DB_FILE))
+        .unwrap()
+        .execute_batch(
+            "INSERT INTO sync_records VALUES ('library/tt2', 'not json', 0, 1, 0);
+             INSERT INTO sync_records SELECT 'library/tt3', record, 0, 1, 0
+                 FROM sync_records WHERE name = 'library/tt1';",
+        )
+        .unwrap();
+    let (_, restored) = Store::open_in(&dir)
+        .unwrap()
+        .sync(Settings::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!(restored.library(), replica.library());
+    assert!(restored.get(&RecordName::Item("tt3".into())).is_none());
 }

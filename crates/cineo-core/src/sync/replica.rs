@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::clock::{Clock, DeviceId, Stamp};
 use super::record::{Record, RecordName, Value};
@@ -10,11 +10,18 @@ pub const PUSH_AT_MOST_MS: u64 = 300_000;
 pub const PULL_EVERY_MS: u64 = 600_000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Entry {
-    record: Record,
-    seq: u64,
-    dirty: bool,
-    seeded: bool,
+pub struct Entry {
+    pub record: Record,
+    pub seq: u64,
+    pub dirty: bool,
+    pub seeded: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Changes {
+    pub clock: Stamp,
+    pub since: u64,
+    pub entries: Vec<Entry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,6 +46,8 @@ pub struct Replica {
     last_change: Option<u64>,
     flush: bool,
     last_pull: Option<u64>,
+    changed: BTreeSet<RecordName>,
+    touched: bool,
 }
 
 impl Replica {
@@ -52,7 +61,44 @@ impl Replica {
             last_change: None,
             flush: false,
             last_pull: None,
+            changed: BTreeSet::new(),
+            touched: false,
         }
+    }
+
+    pub fn restore(defaults: Settings, clock: Stamp, since: u64, entries: Vec<Entry>) -> Self {
+        let mut replica = Self::new(clock.device, defaults);
+        replica.clock = Clock::resume(clock);
+        replica.since = since;
+        for entry in entries {
+            replica.clock.observe(entry.record.stamp);
+            replica.entries.insert(entry.record.name.clone(), entry);
+        }
+        if replica.entries.values().any(|entry| entry.dirty) {
+            replica.mark_change(0);
+            replica.flush = true;
+        }
+        replica
+    }
+
+    pub fn take_changes(&mut self) -> Option<Changes> {
+        if !std::mem::take(&mut self.touched) {
+            return None;
+        }
+        let entries = std::mem::take(&mut self.changed)
+            .into_iter()
+            .filter_map(|name| self.entries.get(&name).cloned())
+            .collect();
+        Some(Changes {
+            clock: self.clock.latest(),
+            since: self.since,
+            entries,
+        })
+    }
+
+    fn touch(&mut self, name: &RecordName) {
+        self.changed.insert(name.clone());
+        self.touched = true;
     }
 
     pub fn seed(
@@ -91,6 +137,7 @@ impl Replica {
 
     fn seed_entry(&mut self, name: RecordName, stamp: Stamp, value: Value) {
         self.clock.observe(stamp);
+        self.touch(&name);
         self.entries.insert(
             name.clone(),
             Entry {
@@ -142,6 +189,7 @@ impl Replica {
         }
         let stamp = self.clock.tick(now_ms);
         let seq = self.entries.get(&name).map_or(0, |entry| entry.seq);
+        self.touch(&name);
         self.entries.insert(
             name.clone(),
             Entry {
@@ -162,6 +210,7 @@ impl Replica {
     pub fn merge(&mut self, remote: Record, seq: u64, now_ms: u64) -> Merged {
         self.clock.observe(remote.stamp);
         self.since = self.since.max(seq);
+        self.touch(&remote.name);
         if let Some(local) = self.entries.get_mut(&remote.name)
             && local.record.stamp >= remote.stamp
         {
@@ -213,6 +262,7 @@ impl Replica {
     }
 
     pub fn pushed(&mut self, name: &RecordName, stamp: Stamp, seq: u64) {
+        self.touch(name);
         if let Some(entry) = self.entries.get_mut(name) {
             entry.seq = entry.seq.max(seq);
             if entry.record.stamp == stamp {
