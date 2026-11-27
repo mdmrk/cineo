@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +52,7 @@ internal fun RemoteSettings(
     var code by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<RemoteInputException?>(null) }
     var scanning by remember { mutableStateOf(false) }
+    var another by rememberSaveable { mutableStateOf(false) }
     var cameraDenied by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val hasCamera = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
@@ -62,6 +65,7 @@ internal fun RemoteSettings(
             cineo.remotePair(newAddress, newCode)
             address = ""
             code = ""
+            another = false
             null
         } catch (e: RemoteInputException) {
             address = newAddress
@@ -75,6 +79,7 @@ internal fun RemoteSettings(
             address = link.address
             code = link.code
             error = null
+            another = true
             onLinkUsed()
         }
     }
@@ -87,7 +92,11 @@ internal fun RemoteSettings(
         }
         Divider()
     }
-    ListItem(
+    if (peer != null && !another) {
+        TextButton(onClick = { another = true }, modifier = Modifier.padding(horizontal = 8.dp)) {
+            Text(stringResource(R.string.remote_pair_other), color = Brand.Accent)
+        }
+    } else ListItem(
         colors = rowColors,
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
