@@ -61,8 +61,12 @@ version numbers, and devices then miss writes until their daily check.
 
 The same server also builds as a Cloudflare Worker with a D1 database
 (`crates/cineo-sync-server/wrangler.toml`). The default instance runs
-this way at `https://cineo-sync.cineo-sync-server.workers.dev`; this host
-has no per-address rate limit yet. To deploy your own, from
+this way at `https://cineo-sync.cineo-sync-server.workers.dev`. Its rate
+limits are Cloudflare Rate Limiting bindings in `wrangler.toml` (120
+requests a minute per space, 10 new spaces a minute per address); they are
+approximate and per location, so short bursts get through. If you deploy
+your own, pick other `namespace_id` values only if they clash with
+limiters you already have. To deploy your own, from
 `crates/cineo-sync-server` (with your own database id in
 `wrangler.toml`):
 

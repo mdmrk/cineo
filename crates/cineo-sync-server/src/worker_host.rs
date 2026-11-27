@@ -6,9 +6,37 @@ use worker::{
 };
 
 use crate::db::{Db, DbError, SqlValue, Statement};
-use crate::handler::{self, Context, Method, Request, Response};
+use crate::handler::{self, Context, Gate, Method, Request, Response};
 
 const DATABASE: &str = "DB";
+const REQUESTS: &str = "REQUESTS";
+const NEW_SPACES: &str = "NEW_SPACES";
+const LIMIT_RETRY_S: u64 = 60;
+
+async fn allowed(env: &Env, binding: &str, key: String) -> bool {
+    let outcome = match env.rate_limiter(binding) {
+        Ok(limiter) => limiter.limit(key).await,
+        Err(err) => Err(err),
+    };
+    outcome.map_or_else(
+        |err| {
+            worker::console_warn!("rate limiter {binding} failed, allowing: {err}");
+            true
+        },
+        |outcome| outcome.success,
+    )
+}
+
+struct AddressGate<'a> {
+    env: &'a Env,
+    ip: String,
+}
+
+impl Gate for AddressGate<'_> {
+    async fn may_create(&self) -> bool {
+        allowed(self.env, NEW_SPACES, self.ip.clone()).await
+    }
+}
 
 struct D1Db(D1Database);
 
@@ -123,6 +151,17 @@ async fn fetch(
         .headers()
         .get("authorization")?
         .and_then(|v| v.strip_prefix("Bearer ").map(str::to_owned));
+    if let Some(id) = handler::space_id(bearer.as_deref()) {
+        let key: String = id.iter().take(16).map(|b| format!("{b:02x}")).collect();
+        if !allowed(&env, REQUESTS, key).await {
+            return to_worker(&Response {
+                status: 429,
+                body: error_json("too many requests"),
+                retry_after_s: Some(LIMIT_RETRY_S),
+            });
+        }
+    }
+    let ip = req.headers().get("cf-connecting-ip")?.unwrap_or_default();
     let body = req.bytes().await?;
     if body.len() > MAX_BATCH_BYTES {
         return to_worker(&too_large);
@@ -138,10 +177,10 @@ async fn fetch(
         now_ms: Date::now().as_millis(),
         nonce: random53(),
         born: random53(),
-        may_create: true,
     };
     let db = D1Db(env.d1(DATABASE)?);
-    let outcome = handler::handle(&db, &request, ctx).await;
+    let gate = AddressGate { env: &env, ip };
+    let outcome = handler::handle(&db, &gate, &request, ctx).await;
     to_worker(&outcome.response)
 }
 

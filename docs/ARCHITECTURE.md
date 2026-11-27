@@ -168,7 +168,9 @@ server parts exist; the app does not call them yet.
   `cineo-sync.cineo-sync-server.workers.dev`):
   `handler::handle` decides each answer (token, sizes, quotas, versions)
   over a crate-private `Db` trait that runs SQL statements and atomic
-  batches. The SQL in `handler.rs` and `schema.sql` is meant for both
+  batches, and asks a `Gate` before a push creates a new space (the
+  native host's per-address limiter, or the Worker's `NEW_SPACES`
+  binding). The SQL in `handler.rs` and `schema.sql` is meant for both
   SQLite and D1. The native host (`SqliteDb`, `serve`, the
   `cineo-sync-server` binary) uses hyper and rusqlite, limits requests
   per address (`RateLimiter`) and sweeps idle spaces every hour. It

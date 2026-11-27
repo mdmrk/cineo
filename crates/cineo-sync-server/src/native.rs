@@ -16,7 +16,7 @@ use tokio::net::TcpListener;
 use tracing::{debug, warn};
 
 use crate::db::{Db, DbError, SqlValue, Statement};
-use crate::handler::{self, Context, Method, Request, Response};
+use crate::handler::{self, Context, Gate, Method, Request, Response};
 use crate::limit::RateLimiter;
 
 const SWEEP_EVERY: Duration = Duration::from_secs(3600);
@@ -253,13 +253,9 @@ async fn respond(
         now_ms: now,
         nonce: random53(),
         born: random53(),
-        may_create: shared
-            .limiter
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .may_create(ip, now),
     };
-    let outcome = handler::handle(&*shared.db, &request, ctx).await;
+    let gate = AddressGate { shared, ip, now };
+    let outcome = handler::handle(&*shared.db, &gate, &request, ctx).await;
     if outcome.created {
         shared
             .limiter
@@ -268,6 +264,22 @@ async fn respond(
             .created(ip, now);
     }
     to_http(&outcome.response)
+}
+
+struct AddressGate<'a> {
+    shared: &'a Shared,
+    ip: IpAddr,
+    now: u64,
+}
+
+impl Gate for AddressGate<'_> {
+    async fn may_create(&self) -> bool {
+        self.shared
+            .limiter
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .may_create(self.ip, self.now)
+    }
 }
 
 fn to_http(response: &Response) -> hyper::Response<Full<Bytes>> {

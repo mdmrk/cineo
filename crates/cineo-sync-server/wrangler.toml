@@ -10,5 +10,21 @@ binding = "DB"
 database_name = "cineo-sync"
 database_id = "2b6d47df-1f30-4b5c-a0ac-c15ba7550e67"
 
+[[ratelimits]]
+name = "REQUESTS"
+namespace_id = "4301"
+
+[ratelimits.simple]
+limit = 120
+period = 60
+
+[[ratelimits]]
+name = "NEW_SPACES"
+namespace_id = "4302"
+
+[ratelimits.simple]
+limit = 10
+period = 60
+
 [triggers]
 crons = ["17 * * * *"]

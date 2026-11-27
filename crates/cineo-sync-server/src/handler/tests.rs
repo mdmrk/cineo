@@ -19,8 +19,11 @@ fn ctx() -> Context {
         now_ms: NOW,
         nonce: 7,
         born: 41,
-        may_create: true,
     }
+}
+
+async fn handle(db: &impl Db, request: &Request, ctx: Context) -> Outcome {
+    super::handle(db, &true, request, ctx).await
 }
 
 fn request(method: Method, path: &str, bearer: Option<String>, body: Vec<u8>) -> Request {
@@ -359,21 +362,57 @@ async fn a_deleted_space_is_gone_and_cannot_come_back() {
     assert_eq!(space_row(&db, 1).await[1], SqlValue::Int(0));
 }
 
+struct CountingGate {
+    allow: bool,
+    asked: std::cell::Cell<u32>,
+}
+
+impl Gate for CountingGate {
+    async fn may_create(&self) -> bool {
+        self.asked.set(self.asked.get() + 1);
+        self.allow
+    }
+}
+
+async fn push_gated(db: &impl Db, gate: &CountingGate, key: u8) -> Outcome {
+    let body = PushRequest {
+        writes: vec![write(key, 0, b"x")],
+    }
+    .to_json()
+    .into_bytes();
+    super::handle(
+        db,
+        gate,
+        &request(Method::Post, "/v1/records", Some(token(1)), body),
+        ctx(),
+    )
+    .await
+}
+
 #[tokio::test]
-async fn new_spaces_need_permission_but_existing_ones_do_not() {
+async fn only_new_spaces_ask_for_permission() {
     let db = SqliteDb::open_in_memory().unwrap();
-    let refused = Context {
-        may_create: false,
-        ..ctx()
+    let refuse = CountingGate {
+        allow: false,
+        asked: 0.into(),
     };
-    let response = push_as(&db, 1, vec![write(1, 0, b"a")], refused).await;
-    assert_eq!(response.response.status, 429);
-    assert_eq!(response.response.retry_after_s, Some(CREATE_RETRY_S));
-    let created = push_as(&db, 1, vec![write(1, 0, b"a")], ctx()).await;
+    let refused = push_gated(&db, &refuse, 1).await;
+    assert_eq!(refused.response.status, 429);
+    assert_eq!(refused.response.retry_after_s, Some(CREATE_RETRY_S));
+    let allow = CountingGate {
+        allow: true,
+        asked: 0.into(),
+    };
+    let created = push_gated(&db, &allow, 1).await;
     assert!(created.created);
-    let again = push_as(&db, 1, vec![write(2, 0, b"b")], refused).await;
+    let again = push_gated(&db, &refuse, 2).await;
     assert_eq!(again.response.status, 200);
     assert!(!again.created);
+    assert_eq!(
+        (refuse.asked.get(), allow.asked.get()),
+        (1, 1),
+        "an existing space never asks"
+    );
 }
 
 struct RacingDb {

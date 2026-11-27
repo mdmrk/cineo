@@ -326,9 +326,15 @@ errors.
   valid write; quotas per space as above. The native host allows 120
   requests a minute and 10 new spaces an hour per IP address (behind a
   proxy, the last `X-Forwarded-For` address, when told to trust it). The
-  Worker host has no limit of its own yet: it will use the Rate Limiting
-  binding if the free plan has it (UNKNOWN), else a Cloudflare WAF
-  rate-limiting rule; spaces
+  Worker host uses two Rate Limiting bindings: 120 requests a minute per
+  space (keyed by the token hash, because Cloudflare advises against
+  address keys that many users share) and 10 new spaces a minute per
+  address (`cf-connecting-ip`; there is no other identity before a space
+  exists), asked only when a push would create a space. Their counts are
+  approximate and per location: a burst of 500 requests drew 12 refusals
+  and 30 quick new spaces drew none (VERIFIED, 2026-11-27), so they slow
+  sustained abuse and the per-space quotas stay the hard limit. A failing
+  binding lets the request through. Spaces
   without a write for 365 days are deleted by a scheduled job. When D1 or
   the Worker hits its daily limit, the server returns 503 with
   `Retry-After` until 00:00 UTC, and the client backs off and keeps working
@@ -459,7 +465,7 @@ database.
      `https://cineo-sync.cineo-sync-server.workers.dev` (D1 in WEUR); the
      same test passes against it, which shows that real D1 accepts the
      schema (`WITHOUT ROWID`) and the conditional upserts (VERIFIED).
-     Measured there: §6. Still to do: a rate limit for this host.
+     Measured there: §6. Rate limits added afterwards (§4).
    - **5c.** Recovery from a server that went back (§4), and
      `SyncClient::sync`, one full round of pull, push and retry that the
      shells will call. Found in step 5a: without it, a restored backup or

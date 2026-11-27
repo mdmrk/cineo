@@ -64,7 +64,16 @@ pub struct Context {
     pub now_ms: u64,
     pub nonce: i64,
     pub born: i64,
-    pub may_create: bool,
+}
+
+pub(crate) trait Gate {
+    async fn may_create(&self) -> bool;
+}
+
+impl Gate for bool {
+    async fn may_create(&self) -> bool {
+        *self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,7 +132,12 @@ const SWEEP_RECORDS: &str =
     "DELETE FROM records WHERE space IN (SELECT id FROM spaces WHERE touched_ms < ?1)";
 const SWEEP_SPACES: &str = "DELETE FROM spaces WHERE touched_ms < ?1";
 
-pub(crate) async fn handle(db: &impl Db, request: &Request, ctx: Context) -> Outcome {
+pub(crate) async fn handle(
+    db: &impl Db,
+    gate: &impl Gate,
+    request: &Request,
+    ctx: Context,
+) -> Outcome {
     let route = match request.path.rsplit_once("/v1/").map(|(_, tail)| tail) {
         Some("info") => Route::Info,
         Some("records") => Route::Records,
@@ -140,7 +154,7 @@ pub(crate) async fn handle(db: &impl Db, request: &Request, ctx: Context) -> Out
                 Method::Get => pull(db, &id, request.query.as_deref())
                     .await
                     .map(Outcome::from),
-                Method::Post => push(db, &id, &request.body, ctx).await,
+                Method::Post => push(db, gate, &id, &request.body, ctx).await,
                 _ => delete(db, &id, ctx.now_ms).await.map(Outcome::from),
             }
         }
@@ -152,7 +166,7 @@ pub(crate) async fn handle(db: &impl Db, request: &Request, ctx: Context) -> Out
     })
 }
 
-fn space_id(bearer: Option<&str>) -> Option<Vec<u8>> {
+pub(crate) fn space_id(bearer: Option<&str>) -> Option<Vec<u8>> {
     let token = decode_token(bearer?)?;
     Some(Sha256::digest(token).to_vec())
 }
@@ -232,7 +246,13 @@ async fn pull(db: &impl Db, id: &[u8], query: Option<&str>) -> Result<Response, 
     Ok(Response::json(200, page.to_json()))
 }
 
-async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outcome, DbError> {
+async fn push(
+    db: &impl Db,
+    gate: &impl Gate,
+    id: &[u8],
+    body: &[u8],
+    ctx: Context,
+) -> Result<Outcome, DbError> {
     let request = match PushRequest::parse(body) {
         Ok(request) => request,
         Err(err) => return Ok(Response::error(400, &err.to_string()).into()),
@@ -243,7 +263,7 @@ async fn push(db: &impl Db, id: &[u8], body: &[u8], ctx: Context) -> Result<Outc
     let existing = space(db, id).await?;
     match existing {
         Some(space) if space.deleted => return Ok(Response::error(410, "space deleted").into()),
-        None if !ctx.may_create => {
+        None if !gate.may_create().await => {
             return Ok(Response::retry(429, "too many new spaces", CREATE_RETRY_S).into());
         }
         _ => {}
