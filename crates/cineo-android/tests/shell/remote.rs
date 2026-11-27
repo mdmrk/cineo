@@ -178,3 +178,86 @@ fn a_scanned_desktop_link_gives_the_code_and_address() {
     assert_eq!(link.code, format_remote_code(&peer.key));
     assert!(remote_link("cineo:///sync/ABCD").is_none());
 }
+
+fn now_ms() -> u64 {
+    u64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
+    )
+    .unwrap()
+}
+
+async fn drive(
+    state: &mut cineo_core::app::State,
+    client: &cineo_net::AddonClient,
+    action: cineo_core::app::Action,
+) {
+    let mut effects = cineo_core::app::update(state, action);
+    while let Some(effect) = effects.pop() {
+        if let Some(task) = cineo_net::fetch_task(client, effect) {
+            let answer = task.await;
+            effects.extend(cineo_core::app::update(state, answer));
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_phone_in_the_same_sync_space_finds_and_controls_the_computer() {
+    use cineo_core::app::{Action, State};
+    use cineo_core::sync::{DeviceId, Pairing};
+    use cineo_net::sync::{format_code, new_key};
+
+    let server = super::sync::sync_server().await;
+    let desktop = Desktop::start();
+    let client = cineo_net::AddonClient::new(cineo_net::NetPolicy {
+        allow_private_networks: true,
+        ..cineo_net::NetPolicy::default()
+    })
+    .unwrap();
+    let key = new_key().unwrap();
+    let mut computer = State::default();
+    drive(&mut computer, &client, Action::Tick(now_ms())).await;
+    drive(
+        &mut computer,
+        &client,
+        Action::SetRemoteHost(Some(desktop.key)),
+    )
+    .await;
+    drive(
+        &mut computer,
+        &client,
+        Action::RemoteListening(Some(desktop.address().parse().unwrap())),
+    )
+    .await;
+    drive(
+        &mut computer,
+        &client,
+        Action::EnableSync {
+            pairing: Pairing {
+                key,
+                server: url::Url::parse(&server).unwrap(),
+            },
+            device: DeviceId(1),
+        },
+    )
+    .await;
+    assert!(computer.sync.as_ref().unwrap().last_ok_ms.is_some());
+
+    let dir = local_data_dir();
+    let (phone, views) = tokio::task::block_in_place(|| start(dir.path()));
+    phone.sync_pair(&format_code(&key), &server).unwrap();
+    let found = tokio::task::block_in_place(|| {
+        wait_for(&views, |v| {
+            v.remote.as_ref().is_some_and(|r| r.through_sync)
+        })
+    });
+    assert_eq!(found.remote.unwrap().address, desktop.address());
+    let status = phone
+        .remote_send(Some(RemoteCommandView::Pause { paused: true }))
+        .await
+        .unwrap();
+    assert!(status.playing.unwrap().paused);
+    assert_eq!(*desktop.commands.lock().unwrap(), [Command::Pause(true)]);
+}

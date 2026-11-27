@@ -31,6 +31,7 @@ impl CineoApp {
         self.remote.server = None;
         let Some(key) = key else {
             self.view.remote_listener = RemoteListener::Off;
+            self.announce_address();
             return;
         };
         let post = self.post();
@@ -56,6 +57,14 @@ impl CineoApp {
                 RemoteListener::Failed(err.to_string())
             }
         };
+        self.announce_address();
+    }
+
+    fn announce_address(&mut self) {
+        let address = listening_address(&self.view.remote_listener);
+        if address != self.state.remote.address {
+            self.dispatch(Action::RemoteListening(address));
+        }
     }
 
     pub(super) fn remote_request(&mut self, request: RemoteRequest) {
@@ -77,6 +86,7 @@ impl CineoApp {
         if let RemoteListener::On { ip, .. } = &mut self.view.remote_listener {
             *ip = lan_ip();
         }
+        self.announce_address();
     }
 
     pub(super) fn publish_remote(&self) {
@@ -141,6 +151,13 @@ pub(super) fn at_start(
                 vec![restore(None)]
             }
         },
+    }
+}
+
+fn listening_address(listener: &RemoteListener) -> Option<std::net::SocketAddr> {
+    match *listener {
+        RemoteListener::On { ip: Some(ip), port } => Some(std::net::SocketAddr::new(ip, port)),
+        _ => None,
     }
 }
 
@@ -333,6 +350,27 @@ mod tests {
         assert_eq!(
             at_start(Hosting::Unchosen, || Err(RemoteError::Crypto)),
             [restore(None)]
+        );
+    }
+
+    #[test]
+    fn only_a_listener_with_a_local_address_is_announced() {
+        let ip = std::net::IpAddr::from([192, 168, 1, 20]);
+        assert_eq!(
+            listening_address(&RemoteListener::On {
+                ip: Some(ip),
+                port: 18_765
+            }),
+            Some(std::net::SocketAddr::new(ip, 18_765))
+        );
+        assert_eq!(
+            listening_address(&RemoteListener::On { ip: None, port: 1 }),
+            None
+        );
+        assert_eq!(listening_address(&RemoteListener::Off), None);
+        assert_eq!(
+            listening_address(&RemoteListener::Failed("busy".into())),
+            None
         );
     }
 

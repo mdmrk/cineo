@@ -757,3 +757,86 @@ fn values_never_synced_give_way_to_the_space_whatever_the_device_ids() {
         Some(&[addon("theirs.example"), addon("mine.example")][..])
     );
 }
+
+#[test]
+fn a_computer_record_survives_its_json_and_bad_ones_are_unreadable() {
+    use cineo_core::remote::{Peer, RemoteKey};
+    let peer = Peer {
+        address: "192.168.1.20:18765".parse().unwrap(),
+        key: RemoteKey::from_bytes([7; 16]),
+    };
+    let computer = record(
+        RecordName::Computer(42),
+        stamp(5, 0, A),
+        Value::Computer(peer),
+    );
+    assert_eq!(Record::parse(&computer.to_json()), Some(computer));
+    let off = record(RecordName::Computer(42), stamp(6, 0, A), Value::Deleted);
+    assert_eq!(Record::parse(&off.to_json()), Some(off));
+    assert_eq!(
+        RecordName::parse("computer/42"),
+        Some(RecordName::Computer(42))
+    );
+    assert_eq!(
+        RecordName::parse("computer/042"),
+        Some(RecordName::Other("computer/042".into()))
+    );
+    let public = computer_json("8.8.8.8:18765", "BwcHBwcHBwcHBwcHBwcHBw");
+    assert_eq!(Record::parse(&public), None, "a public address");
+    let short_key = computer_json("192.168.1.20:18765", "Bwc");
+    assert_eq!(Record::parse(&short_key), None);
+}
+
+fn computer_json(address: &str, key: &str) -> String {
+    serde_json::json!({
+        "v": 1,
+        "name": "computer/42",
+        "stamp": { "t": 5, "c": 0, "d": 1 },
+        "computer": { "address": address, "key": key },
+    })
+    .to_string()
+}
+
+#[test]
+fn a_computer_is_found_from_other_devices_only_the_newest_wins() {
+    use cineo_core::remote::{Peer, RemoteKey};
+    let peer = |byte: u8| Peer {
+        address: format!("192.168.1.{byte}:18765").parse().unwrap(),
+        key: RemoteKey::from_bytes([byte; 16]),
+    };
+    let mut phone = replica(A);
+    phone.announce(Some(peer(1)), 10);
+    assert_eq!(phone.computer(), None, "its own announcement");
+    phone.merge(
+        record(
+            RecordName::Computer(2),
+            stamp(20, 0, B),
+            Value::Computer(peer(2)),
+        ),
+        1,
+        30,
+    );
+    phone.merge(
+        record(
+            RecordName::Computer(3),
+            stamp(25, 0, C),
+            Value::Computer(peer(3)),
+        ),
+        2,
+        30,
+    );
+    assert_eq!(phone.computer(), Some(peer(3)));
+    phone.merge(
+        record(RecordName::Computer(3), stamp(40, 0, C), Value::Deleted),
+        3,
+        50,
+    );
+    assert_eq!(phone.computer(), Some(peer(2)), "C turned it off");
+}
+
+#[test]
+fn turning_off_a_remote_never_announced_writes_nothing() {
+    let mut desktop = replica(A);
+    desktop.announce(None, 10);
+    assert!(desktop.outgoing().is_empty());
+}

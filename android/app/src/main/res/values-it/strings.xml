@@ -327,9 +327,10 @@
     <string name="section_remote">Telecomando</string>
     <string name="remote_pair_title">Associa un computer</string>
     <string name="remote_pair_other">Associa un altro computer</string>
-    <string name="remote_pair_help">Sul computer apri Impostazioni → Telecomando, attivalo e scansiona il suo codice QR, oppure inserisci l\'indirizzo e il codice mostrati.</string>
+    <string name="remote_pair_help">I computer della stessa sincronizzazione compaiono qui da soli. Per un altro computer, apri su di esso Impostazioni → Telecomando e scansiona il codice QR, oppure inserisci indirizzo e codice mostrati.</string>
     <string name="remote_paired">Associato a %1$s</string>
     <string name="remote_paired_help">Controlla ciò che è in riproduzione in Cineo su quel computer. Il telefono deve essere sulla stessa rete.</string>
+    <string name="remote_found_help">Trovato tramite la sincronizzazione. Controlla ciò che è in riproduzione in Cineo su quel computer; il telefono deve essere sulla stessa rete.</string>
     <string name="remote_open">Apri telecomando</string>
     <string name="remote_forget">Dimentica questo computer</string>
     <string name="remote_forget_help">Questo telefono smette di controllarlo finché non lo associ di nuovo.</string>

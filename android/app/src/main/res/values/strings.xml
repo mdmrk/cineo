@@ -326,9 +326,10 @@
     <string name="section_remote">Remote control</string>
     <string name="remote_pair_title">Pair with a computer</string>
     <string name="remote_pair_other">Pair with another computer</string>
-    <string name="remote_pair_help">On the computer, open Settings → Remote control, turn it on and scan its QR code, or enter the address and code it shows.</string>
+    <string name="remote_pair_help">Computers in the same sync appear here by themselves. For another computer, open Settings → Remote control on it and scan its QR code, or enter the address and code it shows.</string>
     <string name="remote_paired">Paired with %1$s</string>
     <string name="remote_paired_help">Control what plays in Cineo on that computer. The phone must be on the same network.</string>
+    <string name="remote_found_help">Found through sync. Control what plays in Cineo on that computer; the phone must be on the same network.</string>
     <string name="remote_open">Open remote</string>
     <string name="remote_forget">Forget this computer</string>
     <string name="remote_forget_help">This phone stops controlling it until you pair again.</string>

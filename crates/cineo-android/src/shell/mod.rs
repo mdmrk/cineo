@@ -356,11 +356,26 @@ impl Drop for AbortOnDrop {
     }
 }
 
+type Remote = Arc<Mutex<Option<(Peer, Arc<RemoteClient>)>>>;
+
+fn set_remote(remote: &Remote, peer: Option<Peer>) {
+    let mut current = remote.lock().unwrap_or_else(PoisonError::into_inner);
+    if current.as_ref().map(|(p, _)| *p) == peer {
+        return;
+    }
+    *current = peer.and_then(|peer| {
+        RemoteClient::new(&peer)
+            .map_err(|err| warn!(%err, "no client for the remote computer"))
+            .ok()
+            .map(|client| (peer, Arc::new(client)))
+    });
+}
+
 #[derive(Debug, uniffi::Object)]
 pub struct Cineo {
     tx: Sender<Msg>,
     client: AddonClient,
-    remote: Mutex<Option<Arc<RemoteClient>>>,
+    remote: Remote,
     screen: Arc<Mutex<Screen>>,
     shell: Option<JoinHandle<()>>,
     runtime: Option<Runtime>,
@@ -448,14 +463,14 @@ impl Cineo {
         let address = parse_address(address).ok_or(RemoteInputError::Address)?;
         let key = parse_remote_code(code)?;
         let peer = Peer { address, key };
-        let client = RemoteClient::new(&peer).map_err(|_| RemoteInputError::Address)?;
-        *self.remote.lock().unwrap_or_else(PoisonError::into_inner) = Some(Arc::new(client));
+        RemoteClient::new(&peer).map_err(|_| RemoteInputError::Address)?;
+        set_remote(&self.remote, Some(peer));
         self.send(Action::SetRemotePeer(Some(peer)));
         Ok(())
     }
 
     pub fn remote_forget(&self) {
-        *self.remote.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        set_remote(&self.remote, None);
         self.send(Action::SetRemotePeer(None));
     }
 
@@ -471,7 +486,8 @@ impl Cineo {
             .remote
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .clone()
+            .as_ref()
+            .map(|(_, client)| Arc::clone(client))
             .ok_or(RemoteFailure::NotPaired)?;
         let runtime = self.runtime.as_ref().ok_or(RemoteFailure::Unreachable)?;
         let task = runtime
@@ -743,10 +759,7 @@ impl Cineo {
         let settings = store.settings_over(phone_settings()).map_err(store_error)?;
         let sync = store.sync(phone_settings()).map_err(store_error)?;
         let (_, remote_peer) = store.remote().map_err(store_error)?;
-        let remote = remote_peer
-            .as_ref()
-            .and_then(|peer| RemoteClient::new(peer).ok())
-            .map(Arc::new);
+        let remote: Remote = Arc::default();
         let client = AddonClient::new(NetPolicy {
             allow_private_networks: settings.allow_private_network,
             ..NetPolicy::default()
@@ -789,6 +802,7 @@ impl Cineo {
             filter: StreamFilterView::default(),
             filtered: None,
             shown: None,
+            remote: Arc::clone(&remote),
         };
         let mut restore = vec![
             restore,
@@ -826,7 +840,7 @@ impl Cineo {
         Ok(Arc::new(Self {
             tx,
             client,
-            remote: Mutex::new(remote),
+            remote,
             screen,
             shell: Some(shell),
             runtime: Some(runtime),
@@ -900,4 +914,5 @@ struct Shell {
     filter: StreamFilterView,
     filtered: Option<String>,
     shown: Option<AppView>,
+    remote: Remote,
 }

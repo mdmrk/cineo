@@ -1,9 +1,11 @@
-use cineo_core::remote::{Command, NowPlaying, Peer, Status, Track};
+use cineo_core::app::RemoteState;
+use cineo_core::remote::{Command, NowPlaying, Status, Track};
 use cineo_net::remote::RemoteError;
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct RemotePeerView {
     pub address: String,
+    pub through_sync: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -113,10 +115,11 @@ pub enum RemoteInputError {
     NotACode,
 }
 
-pub(crate) fn peer(peer: &Peer) -> RemotePeerView {
-    RemotePeerView {
+pub(crate) fn peer(remote: &RemoteState) -> Option<RemotePeerView> {
+    remote.computer().map(|peer| RemotePeerView {
         address: peer.address.to_string(),
-    }
+        through_sync: remote.peer.is_none(),
+    })
 }
 
 fn tracks(tracks: &[Track]) -> Vec<RemoteTrackView> {

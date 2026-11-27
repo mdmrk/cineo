@@ -1,11 +1,13 @@
 use std::fmt;
 
+use data_encoding::BASE64URL_NOPAD;
 use serde_json::{Map, Value as Json, json};
 use url::Url;
 
 use super::clock::{DeviceId, Stamp};
 use crate::addon::{ContentType, TransportUrl};
 use crate::app::{LibraryItem, SavedStream};
+use crate::remote::{Peer, RemoteKey, parse_address};
 
 pub const FORMAT: u64 = 1;
 
@@ -15,6 +17,7 @@ pub enum RecordName {
     LibraryCleared,
     Addons,
     Setting(String),
+    Computer(u64),
     Other(String),
 }
 
@@ -29,6 +32,11 @@ impl RecordName {
             _ => match text.split_once('/') {
                 Some(("library", id)) if !id.is_empty() => Self::Item(id.to_owned()),
                 Some(("setting", key)) if !key.is_empty() => Self::Setting(key.to_owned()),
+                Some(("computer", device))
+                    if device.parse::<u64>().is_ok_and(|d| d.to_string() == device) =>
+                {
+                    Self::Computer(device.parse().ok()?)
+                }
                 _ => Self::Other(text.to_owned()),
             },
         })
@@ -42,6 +50,7 @@ impl fmt::Display for RecordName {
             Self::LibraryCleared => f.write_str("library-cleared"),
             Self::Addons => f.write_str("addons"),
             Self::Setting(key) => write!(f, "setting/{key}"),
+            Self::Computer(device) => write!(f, "computer/{device}"),
             Self::Other(name) => f.write_str(name),
         }
     }
@@ -54,6 +63,7 @@ pub enum Value {
     Cleared,
     Addons(Vec<TransportUrl>),
     Setting(String),
+    Computer(Peer),
     Other(Map<String, Json>),
 }
 
@@ -75,6 +85,12 @@ impl Record {
                 "addons": addons.iter().map(|a| a.as_url().as_str()).collect::<Vec<_>>(),
             }),
             Value::Setting(value) => json!({ "value": value }),
+            Value::Computer(peer) => json!({
+                "computer": {
+                    "address": peer.address.to_string(),
+                    "key": BASE64URL_NOPAD.encode(peer.key.as_bytes()),
+                },
+            }),
         };
         if let Json::Object(map) = &mut obj {
             map.insert("v".into(), FORMAT.into());
@@ -117,7 +133,7 @@ fn parse_stamp(value: &Json) -> Option<Stamp> {
 fn parse_value(name: &RecordName, obj: &Map<String, Json>) -> Option<Value> {
     let flag = |key| obj.get(key).and_then(Json::as_bool) == Some(true);
     Some(match name {
-        RecordName::Item(_) if flag("deleted") => Value::Deleted,
+        RecordName::Item(_) | RecordName::Computer(_) if flag("deleted") => Value::Deleted,
         RecordName::Item(id) => Value::Item(Box::new(parse_item(id, obj.get("item")?)?)),
         RecordName::LibraryCleared if flag("cleared") => Value::Cleared,
         RecordName::LibraryCleared => return None,
@@ -130,6 +146,16 @@ fn parse_value(name: &RecordName, obj: &Map<String, Json>) -> Option<Value> {
                 .collect(),
         ),
         RecordName::Setting(_) => Value::Setting(obj.get("value")?.as_str()?.to_owned()),
+        RecordName::Computer(_) => {
+            let computer = obj.get("computer")?;
+            let key = BASE64URL_NOPAD
+                .decode(computer.get("key")?.as_str()?.as_bytes())
+                .ok()?;
+            Value::Computer(Peer {
+                address: parse_address(computer.get("address")?.as_str()?)?,
+                key: RemoteKey::from_bytes(key.try_into().ok()?),
+            })
+        }
         RecordName::Other(_) => Value::Other(obj.clone()),
     })
 }

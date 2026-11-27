@@ -308,6 +308,12 @@ Sync is off by default.
   `cineo-net` with private addresses allowed, no redirects and a 5 s
   timeout. On Android 17 the remote screen asks for `ACCESS_LOCAL_NETWORK`
   (no automated test).
+- **Through sync.** The desktop's address and remote key travel in a
+  `computer/<device id>` sync record, sealed like every sync record
+  (ADR-0043): the sync server never sees them, and whoever holds the sync
+  code can also control the computer. The phone checks that a synced
+  address is on the local network, as for a typed one
+  (`a_computer_record_survives_its_json_and_bad_ones_are_unreadable`).
 - **Not protected.** Anyone on the network sees that the port is open and
   the size and timing of requests. A firewall may block the port; Cineo
   does not change firewall rules.

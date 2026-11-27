@@ -325,6 +325,7 @@ pub enum Action {
     },
     SetRemoteHost(Option<RemoteKey>),
     SetRemotePeer(Option<Peer>),
+    RemoteListening(Option<std::net::SocketAddr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -410,6 +411,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::RestoreRemote { host, peer } => remote::restore(state, host, peer),
         Action::SetRemoteHost(host) => remote::set_host(state, host),
         Action::SetRemotePeer(peer) => remote::set_peer(state, peer),
+        Action::RemoteListening(address) => remote::listening(state, address),
         action => reduce(state, action),
     };
     let more = sync::after(state, &effects, flush);
@@ -685,7 +687,8 @@ fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
         | Action::SyncSpaceDeleted(_)
         | Action::RestoreRemote { .. }
         | Action::SetRemoteHost(_)
-        | Action::SetRemotePeer(_) => Vec::new(),
+        | Action::SetRemotePeer(_)
+        | Action::RemoteListening(_) => Vec::new(),
     }
 }
 

@@ -81,7 +81,7 @@ internal fun RemoteSettings(
     if (peer != null) {
         SettingRow(
             stringResource(R.string.remote_paired, peer.address),
-            stringResource(R.string.remote_paired_help),
+            stringResource(if (peer.throughSync) R.string.remote_found_help else R.string.remote_paired_help),
         ) {
             OutlinedButton(onClick = onOpen) { Text(stringResource(R.string.remote_open), color = Brand.Accent) }
         }
@@ -140,7 +140,7 @@ internal fun RemoteSettings(
             onClose = { scanning = false },
         )
     }
-    if (peer != null) {
+    if (peer != null && !peer.throughSync) {
         Divider()
         SettingRow(stringResource(R.string.remote_forget), stringResource(R.string.remote_forget_help)) {
             OutlinedButton(onClick = cineo::remoteForget) { Text(stringResource(R.string.remote_forget_button), color = Brand.Danger) }

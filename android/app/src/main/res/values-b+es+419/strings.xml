@@ -327,9 +327,10 @@
     <string name="section_remote">Control remoto</string>
     <string name="remote_pair_title">Vincular con una computadora</string>
     <string name="remote_pair_other">Vincular con otra computadora</string>
-    <string name="remote_pair_help">En la computadora, abre Configuración → Control remoto, actívalo y escanea su código QR, o escribe la dirección y el código que muestra.</string>
+    <string name="remote_pair_help">Las computadoras de la misma sincronización aparecen aquí solas. Para otra computadora, abre en ella Configuración → Control remoto y escanea su código QR, o escribe la dirección y el código que muestra.</string>
     <string name="remote_paired">Vinculado con %1$s</string>
     <string name="remote_paired_help">Controla lo que se reproduce en Cineo en esa computadora. El celular debe estar en la misma red.</string>
+    <string name="remote_found_help">Encontrada mediante la sincronización. Controla lo que se reproduce en Cineo en esa computadora; el celular debe estar en la misma red.</string>
     <string name="remote_open">Abrir control</string>
     <string name="remote_forget">Olvidar esta computadora</string>
     <string name="remote_forget_help">Este celular deja de controlarla hasta que la vuelvas a vincular.</string>

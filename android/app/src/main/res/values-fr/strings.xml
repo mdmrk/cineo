@@ -327,9 +327,10 @@
     <string name="section_remote">Télécommande</string>
     <string name="remote_pair_title">Associer un ordinateur</string>
     <string name="remote_pair_other">Associer un autre ordinateur</string>
-    <string name="remote_pair_help">Sur l\'ordinateur, ouvrez Réglages → Télécommande, activez-la et scannez son code QR, ou saisissez l\'adresse et le code affichés.</string>
+    <string name="remote_pair_help">Les ordinateurs de la même synchronisation apparaissent ici d\'eux-mêmes. Pour un autre ordinateur, ouvrez-y Réglages → Télécommande et scannez son code QR, ou saisissez l\'adresse et le code affichés.</string>
     <string name="remote_paired">Associé à %1$s</string>
     <string name="remote_paired_help">Contrôlez ce qui est lu dans Cineo sur cet ordinateur. Le téléphone doit être sur le même réseau.</string>
+    <string name="remote_found_help">Trouvé grâce à la synchronisation. Contrôlez ce qui est lu dans Cineo sur cet ordinateur ; le téléphone doit être sur le même réseau.</string>
     <string name="remote_open">Ouvrir la télécommande</string>
     <string name="remote_forget">Oublier cet ordinateur</string>
     <string name="remote_forget_help">Ce téléphone ne le contrôle plus tant que vous ne l\'associez pas à nouveau.</string>

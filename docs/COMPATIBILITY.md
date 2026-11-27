@@ -601,6 +601,15 @@ local network (ADR-0044). On by default on the desktop.
   second while the remote screen is open
   (`the_phone_sees_what_plays_with_its_tracks`). While a torrent connects,
   only Stop works.
+- **Found through sync.** With sync on, the desktop writes its address
+  and remote key into the sealed sync space, and a phone in the same
+  space shows "Found through sync" and controls it without pairing; a new
+  address reaches the phone at its next pull, and turning the remote off
+  on the desktop removes it (`a_phone_finds_the_computer_through_sync_without_pairing`,
+  `a_phone_in_the_same_sync_space_finds_and_controls_the_computer`, against
+  the native sync server and the real listener). A computer paired by
+  hand wins (`a_computer_paired_by_hand_wins_over_the_synced_one`). With
+  several computers, the one that announced last is used.
 - **Android, Settings → Remote control.** Pair by scanning the QR code, by
   a `cineo:///remote/<code>?at=<address>` link, or by typing the address
   and code; "Open remote" shows the controls; "Forget" unpairs. A paired
@@ -616,7 +625,8 @@ local network (ADR-0044). On by default on the desktop.
   the computer" because the computer's `ufw` firewall dropped port 18765.
   Controlling a playing video from a real phone has not been tried.
 - **Not offered.** Starting a title from the phone, finding the computer
-  without the QR code (mDNS), more than one paired computer. Known
+  without sync or the QR code (mDNS), choosing between several
+  computers. Known
   limitations are in [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
 
 ### Update notice

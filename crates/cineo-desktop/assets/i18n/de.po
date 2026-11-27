@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-27 19:53+0100\n"
+"POT-Creation-Date: 2026-11-27 22:45+0100\n"
 "PO-Revision-Date: 2026-11-12 00:00+0000\n"
 "Last-Translator: Cineo contributors\n"
 "Language-Team: Cineo contributors\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:651
+#: crates/cineo-desktop/src/app/mod.rs:648
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -32,7 +32,7 @@ msgstr ""
 "\n"
 "Seine Seite im Microsoft Store öffnen?"
 
-#: crates/cineo-desktop/src/app/mod.rs:655
+#: crates/cineo-desktop/src/app/mod.rs:652
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
@@ -42,7 +42,7 @@ msgstr ""
 "Update, und öffne Cineo dann erneut. Remotedesktop und virtuelle Maschinen "
 "brauchen eingeschaltete 3D-Beschleunigung."
 
-#: crates/cineo-desktop/src/app/mod.rs:659
+#: crates/cineo-desktop/src/app/mod.rs:656
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
@@ -51,7 +51,7 @@ msgstr ""
 "erneut. Remote-Sitzungen und virtuelle Maschinen brauchen eingeschaltete 3D-"
 "Beschleunigung."
 
-#: crates/cineo-desktop/src/app/mod.rs:662
+#: crates/cineo-desktop/src/app/mod.rs:659
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -68,15 +68,15 @@ msgstr ""
 "\n"
 "Details: {details}"
 
-#: crates/cineo-desktop/src/app/mod.rs:665
+#: crates/cineo-desktop/src/app/mod.rs:662
 msgid "Cineo cannot open its window"
 msgstr "Cineo kann sein Fenster nicht öffnen"
 
-#: crates/cineo-desktop/src/app/mod.rs:667
+#: crates/cineo-desktop/src/app/mod.rs:664
 msgid "Open Microsoft Store"
 msgstr "Microsoft Store öffnen"
 
-#: crates/cineo-desktop/src/app/mod.rs:668
+#: crates/cineo-desktop/src/app/mod.rs:665
 msgid "Close"
 msgstr "Schließen"
 
@@ -1034,13 +1034,11 @@ msgstr "Handy koppeln"
 
 #: crates/cineo-desktop/src/settings/remote.rs:86
 msgid ""
-"In Cineo on your phone, open Settings → Remote control and scan this QR "
-"code, or enter the address and code. Anyone with the code on this network "
-"can control playback."
-msgstr ""
-"Öffne in Cineo auf deinem Handy Einstellungen → Fernbedienung und scanne "
-"diesen QR-Code oder gib Adresse und Code ein. Wer den Code hat, kann in "
-"diesem Netzwerk die Wiedergabe steuern."
+"Phones that share this computer's sync find it by themselves. Otherwise, in "
+"Cineo on your phone, open Settings → Remote control and scan this QR code, "
+"or enter the address and code. Anyone with the code on this network can "
+"control playback."
+msgstr "Handys mit derselben Synchronisierung wie dieser Computer finden ihn von selbst. Andernfalls öffne in Cineo auf deinem Handy Einstellungen → Fernbedienung und scanne diesen QR-Code oder gib Adresse und Code ein. Wer den Code hat, kann in diesem Netzwerk die Wiedergabe steuern."
 
 #: crates/cineo-desktop/src/settings/remote.rs:90
 msgid "Remote control QR code"
@@ -1907,6 +1905,15 @@ msgstr "Abbrechen"
 msgctxt "clear-field"
 msgid "Clear"
 msgstr "Leeren"
+
+#~ msgid ""
+#~ "In Cineo on your phone, open Settings → Remote control and scan this QR "
+#~ "code, or enter the address and code. Anyone with the code on this network "
+#~ "can control playback."
+#~ msgstr ""
+#~ "Öffne in Cineo auf deinem Handy Einstellungen → Fernbedienung und scanne "
+#~ "diesen QR-Code oder gib Adresse und Code ein. Wer den Code hat, kann in "
+#~ "diesem Netzwerk die Wiedergabe steuern."
 
 #, rust-format
 #~ msgid "{a}  or  {b}"

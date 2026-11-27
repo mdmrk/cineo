@@ -515,3 +515,85 @@ fn without_sync_nothing_extra_happens() {
     assert_eq!(effects, [Effect::DeleteLibraryItem("tt1".into())]);
     assert!(update(&mut a, Action::Tick(1_000 + 60 * MINUTE)).is_empty());
 }
+
+fn desktop_key(byte: u8) -> cineo_core::remote::RemoteKey {
+    cineo_core::remote::RemoteKey::from_bytes([byte; 16])
+}
+
+fn listening(state: &mut State, server: &mut FakeServer, key: u8, address: &str) {
+    act(state, server, Action::SetRemoteHost(Some(desktop_key(key))));
+    act(
+        state,
+        server,
+        Action::RemoteListening(Some(address.parse().unwrap())),
+    );
+    let later = state.now_ms + MINUTE;
+    act(state, server, Action::Tick(later));
+    act(state, server, Action::SyncNow);
+}
+
+#[test]
+fn a_phone_finds_the_computer_through_sync_without_pairing() {
+    let mut server = FakeServer::default();
+    let mut desktop = device(Vec::new(), 1_000);
+    enable(&mut desktop, &mut server, 1, 1);
+    listening(&mut desktop, &mut server, 9, "192.168.100.86:18765");
+    assert!(
+        server.spaces[&[1; 16]]
+            .records
+            .contains_key(&RecordName::Computer(1))
+    );
+    assert_eq!(desktop.remote.synced, None, "a desktop never finds itself");
+
+    let mut phone = device(Vec::new(), 2_000);
+    enable(&mut phone, &mut server, 1, 2);
+    let found = phone.remote.computer().unwrap();
+    assert_eq!(found.address, "192.168.100.86:18765".parse().unwrap());
+    assert_eq!(found.key, desktop_key(9));
+    assert_eq!(phone.remote.peer, None, "nothing was paired by hand");
+
+    listening(&mut desktop, &mut server, 9, "192.168.100.90:18765");
+    act(&mut phone, &mut server, Action::SyncNow);
+    assert_eq!(
+        phone.remote.computer().unwrap().address,
+        "192.168.100.90:18765".parse().unwrap(),
+        "a new address reaches the phone"
+    );
+
+    act(&mut desktop, &mut server, Action::SetRemoteHost(None));
+    let later = desktop.now_ms + MINUTE;
+    act(&mut desktop, &mut server, Action::Tick(later));
+    act(&mut desktop, &mut server, Action::SyncNow);
+    act(&mut phone, &mut server, Action::SyncNow);
+    assert_eq!(phone.remote.computer(), None, "turned off on the desktop");
+}
+
+#[test]
+fn a_computer_paired_by_hand_wins_over_the_synced_one() {
+    let mut server = FakeServer::default();
+    let mut desktop = device(Vec::new(), 1_000);
+    enable(&mut desktop, &mut server, 1, 1);
+    listening(&mut desktop, &mut server, 9, "192.168.100.86:18765");
+    let mut phone = device(Vec::new(), 2_000);
+    enable(&mut phone, &mut server, 1, 2);
+    let by_hand = cineo_core::remote::Peer {
+        address: "10.0.0.5:18765".parse().unwrap(),
+        key: desktop_key(3),
+    };
+    update(&mut phone, Action::SetRemotePeer(Some(by_hand)));
+    assert_eq!(phone.remote.computer(), Some(by_hand));
+    update(&mut phone, Action::SetRemotePeer(None));
+    assert_eq!(
+        phone.remote.computer().map(|p| p.key),
+        Some(desktop_key(9)),
+        "forgetting it falls back to the synced one"
+    );
+    act(
+        &mut phone,
+        &mut server,
+        Action::LeaveSync {
+            delete_server_data: false,
+        },
+    );
+    assert_eq!(phone.remote.computer(), None, "nothing without sync");
+}

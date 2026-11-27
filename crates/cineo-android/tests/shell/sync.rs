@@ -6,7 +6,7 @@ use tokio::net::TcpListener;
 
 use super::*;
 
-async fn sync_server() -> String {
+pub(super) async fn sync_server() -> String {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
     let address = listener.local_addr().unwrap();
     let db = Arc::new(SqliteDb::open_in_memory().unwrap());

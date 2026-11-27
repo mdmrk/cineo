@@ -83,7 +83,7 @@ fn pair(ui: &mut Ui, address: SocketAddr, key: RemoteKey) {
         ui,
         &t!("Pair your phone"),
         &t!(
-            "In Cineo on your phone, open Settings → Remote control and scan this QR code, or enter the address and code. Anyone with the code on this network can control playback."
+            "Phones that share this computer's sync find it by themselves. Otherwise, in Cineo on your phone, open Settings → Remote control and scan this QR code, or enter the address and code. Anyone with the code on this network can control playback."
         ),
         |ui| {
             ui.vertical(|ui| {

@@ -85,6 +85,18 @@ Option 1.
 - **Phone side.** `cineo_net::remote::RemoteClient` sends through an
   `AddonClient` whose policy allows private addresses, with short
   timeouts. It is only ever given the paired LAN address.
+- **Finding the computer through sync** (owner, 2026-11-27: "that it
+  finds it automatically, without pairing"). When sync is on, the desktop
+  writes a sync record `computer/<device id>` holding its LAN address and
+  its remote key, and replaces it with a deletion when the remote control
+  is turned off. A phone in the same sync space uses the most recent
+  record from another device when it has no computer paired by hand; a
+  computer paired by hand wins. The record is sealed like every other sync
+  record (ADR-0043), so the sync server never sees the address or the key,
+  and older versions keep it as an unknown record. Whoever holds the sync
+  code can therefore also control the computer. mDNS was rejected for now:
+  the owner's phone and computer are on different subnets, which
+  multicast does not cross.
 - **State.** The desktop key and the phone's paired computer are core
   state (`State::remote`), stored by `cineo-store` in tables that sync
   never reads, and restored at start.
@@ -96,8 +108,9 @@ Option 1.
   Windows and macOS may ask to allow it through the firewall; a Linux
   firewall may need a rule. `docs/SECURITY.md` lists the port and its
   defenses.
-- If the computer's address or port changes, the phone must scan again
-  (`docs/TECHNICAL_DEBT.md`). Discovery with mDNS can come later.
+- If the computer's address or port changes, a phone in the same sync
+  space learns it at its next pull; a phone without sync must scan again
+  (`docs/TECHNICAL_DEBT.md`).
 - The computer's clock and the phone's must agree within 2 minutes.
 - `cineo-net` now also holds a small server. It is the only listener on
   the LAN; the torrent stream stays on loopback.

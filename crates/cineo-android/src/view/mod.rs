@@ -302,7 +302,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
             page_url: release_page(version),
         }),
         sync: None,
-        remote: state.remote.peer.as_ref().map(remote::peer),
+        remote: remote::peer(&state.remote),
     };
     if view.playback.is_none() && view.connecting.is_none() {
         fill_browsing(&mut view, state, filter);

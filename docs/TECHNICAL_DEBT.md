@@ -22,17 +22,29 @@ Format:
 
 ## Entries
 
-### Remote control: a new address or port needs a new scan
+### Remote control: without sync, a new address or port needs a new scan
 - Where: [remote.rs](../crates/cineo-desktop/src/app/remote.rs),
   [server.rs](../crates/cineo-net/src/remote/server.rs)
-- Gap: the phone keeps the address and port it paired with. When the
-  computer gets another address from the router, or port 18765 is taken
-  and another one is used, the phone cannot find it.
-- Why: there is no discovery on the local network.
-- Instead: the remote screen says the computer cannot be reached; scanning
-  the QR code again fixes it.
-- Exit: announce the computer with mDNS (`_cineo._tcp`) and look it up by
-  a name derived from the key.
+- Gap: a phone paired by QR code keeps the address and port it paired
+  with. When the computer gets another address from the router, or port
+  18765 is taken and another one is used, the phone cannot find it. With
+  sync, the new address arrives only at the phone's next pull (when the
+  app comes to the foreground, or every 10 minutes).
+- Why: the only discovery is through sync; mDNS would not cross the
+  owner's two subnets.
+- Instead: the remote screen says the computer cannot be reached;
+  scanning the QR code again, or "Sync now", fixes it.
+- Exit: announce the computer with mDNS (`_cineo._tcp`) as well, for
+  phones on the same subnet without sync.
+
+### Remote control: one computer through sync
+- Where: [replica.rs](../crates/cineo-core/src/sync/replica.rs)
+  (`Replica::computer`)
+- Gap: with several desktops in one sync space, the phone controls the one
+  that announced last and offers no choice.
+- Why: the first version has one paired computer.
+- Instead: pairing by QR code picks a computer and wins over sync.
+- Exit: list every synced computer on the phone with its name.
 
 ### Remote control: firewalls are left to the user
 - Where: [server.rs](../crates/cineo-net/src/remote/server.rs)

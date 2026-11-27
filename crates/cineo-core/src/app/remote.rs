@@ -1,10 +1,31 @@
+use std::net::SocketAddr;
+
 use super::state::{Effect, State};
 use crate::remote::{Peer, RemoteKey};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct RemoteState {
     pub host: Option<RemoteKey>,
+    pub address: Option<SocketAddr>,
     pub peer: Option<Peer>,
+    pub synced: Option<Peer>,
+}
+
+impl RemoteState {
+    pub fn announced(&self) -> Option<Peer> {
+        self.host
+            .zip(self.address)
+            .map(|(key, address)| Peer { address, key })
+    }
+
+    pub fn computer(&self) -> Option<Peer> {
+        self.peer.or(self.synced)
+    }
+}
+
+pub(crate) fn listening(state: &mut State, address: Option<SocketAddr>) -> Vec<Effect> {
+    state.remote.address = address;
+    Vec::new()
 }
 
 pub(crate) fn restore(
@@ -12,7 +33,11 @@ pub(crate) fn restore(
     host: Option<RemoteKey>,
     peer: Option<Peer>,
 ) -> Vec<Effect> {
-    state.remote = RemoteState { host, peer };
+    state.remote = RemoteState {
+        host,
+        peer,
+        ..state.remote
+    };
     host.map(|key| Effect::ServeRemote(Some(key)))
         .into_iter()
         .collect()

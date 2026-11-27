@@ -265,6 +265,7 @@ impl Shell {
     }
 
     fn publish(&mut self) {
+        super::set_remote(&self.remote, self.state.remote.computer());
         let (playing, finished) = {
             let mut screen = lock(&self.screen);
             screen.pause_on_leave = self.state.settings.on_leave == OnLeave::Pause;
@@ -346,6 +347,7 @@ mod tests {
             filter: StreamFilterView::default(),
             filtered: None,
             shown: None,
+            remote: Arc::default(),
         };
         shell.dispatch(Action::RestoreSettings(Settings {
             check_for_updates: true,

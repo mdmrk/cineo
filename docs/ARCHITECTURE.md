@@ -290,7 +290,12 @@ sequenceDiagram
   and `Status` JSON; `Replays`, which refuses a request far from the clock
   or seen before. `State::remote` holds the desktop's key (`host`) and the
   phone's paired computer (`peer`); `SetRemoteHost` saves the key and asks
-  for `Effect::ServeRemote`, `SetRemotePeer` saves the peer. Tests:
+  for `Effect::ServeRemote`, `SetRemotePeer` saves the peer. The desktop
+  reports its LAN address with `RemoteListening`; while sync is on,
+  `sync::after` writes key and address as the `computer/<device id>`
+  record (`Replica::announce`) and reads the newest one from another
+  device into `remote.synced` (`Replica::computer`). A phone uses `peer`,
+  else `synced` (`RemoteState::computer`). Tests:
   `crates/cineo-core/tests/remote.rs`,
   `crates/cineo-core/tests/app_state/remote.rs`.
 - `cineo_net::remote` (built): `RemoteKeys` (HKDF-SHA256 to a
@@ -310,8 +315,9 @@ sequenceDiagram
   code. Tests: unit tests in `app/remote.rs`,
   `crates/cineo-desktop/tests/ui/remote.rs`.
 - `cineo-android` (built): `Cineo::remote_pair`, `remote_forget` and the
-  async `remote_send`, which runs on the shell's runtime; `AppView::remote`
-  names the paired computer; `remote_link` reads scanned codes. Compose
+  async `remote_send`, which runs on the shell's runtime; after each batch
+  the shell points the client at `RemoteState::computer`; `AppView::remote`
+  names that computer and says whether it came through sync; `remote_link` reads scanned codes. Compose
   draws `RemoteSettings` and `RemoteScreen`. Tests:
   `crates/cineo-android/tests/shell/remote.rs`, against the real listener.
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Cineo\n"
 "Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
-"POT-Creation-Date: 2026-11-27 19:53+0100\n"
+"POT-Creation-Date: 2026-11-27 22:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: crates/cineo-desktop/src/app/mod.rs:651
+#: crates/cineo-desktop/src/app/mod.rs:648
 #, rust-format
 msgid ""
 "On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
@@ -29,20 +29,20 @@ msgid ""
 "Open its Microsoft Store page?"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:655
+#: crates/cineo-desktop/src/app/mod.rs:652
 msgid ""
 "Install your graphics card's driver, from its maker or from Windows Update, "
 "then open Cineo again. Remote Desktop and virtual machines need 3D "
 "acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:659
+#: crates/cineo-desktop/src/app/mod.rs:656
 msgid ""
 "Install your graphics card's driver or Mesa, then open Cineo again. Remote "
 "sessions and virtual machines need 3D acceleration turned on."
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:662
+#: crates/cineo-desktop/src/app/mod.rs:659
 #, rust-format
 msgid ""
 "Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
@@ -53,15 +53,15 @@ msgid ""
 "Details: {details}"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:665
+#: crates/cineo-desktop/src/app/mod.rs:662
 msgid "Cineo cannot open its window"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:667
+#: crates/cineo-desktop/src/app/mod.rs:664
 msgid "Open Microsoft Store"
 msgstr ""
 
-#: crates/cineo-desktop/src/app/mod.rs:668
+#: crates/cineo-desktop/src/app/mod.rs:665
 msgid "Close"
 msgstr ""
 
@@ -964,9 +964,10 @@ msgstr ""
 
 #: crates/cineo-desktop/src/settings/remote.rs:86
 msgid ""
-"In Cineo on your phone, open Settings → Remote control and scan this QR "
-"code, or enter the address and code. Anyone with the code on this network "
-"can control playback."
+"Phones that share this computer's sync find it by themselves. Otherwise, in "
+"Cineo on your phone, open Settings → Remote control and scan this QR code, "
+"or enter the address and code. Anyone with the code on this network can "
+"control playback."
 msgstr ""
 
 #: crates/cineo-desktop/src/settings/remote.rs:90

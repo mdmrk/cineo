@@ -329,9 +329,10 @@
     <string name="section_remote">Пульт</string>
     <string name="remote_pair_title">Связать с компьютером</string>
     <string name="remote_pair_other">Связать с другим компьютером</string>
-    <string name="remote_pair_help">На компьютере откройте Настройки → Пульт, включите его и отсканируйте QR-код или введите показанные адрес и код.</string>
+    <string name="remote_pair_help">Компьютеры из той же синхронизации появляются здесь сами. Для другого компьютера откройте на нём Настройки → Пульт и отсканируйте QR-код или введите показанные адрес и код.</string>
     <string name="remote_paired">Связан с %1$s</string>
     <string name="remote_paired_help">Управляйте тем, что воспроизводится в Cineo на этом компьютере. Телефон должен быть в той же сети.</string>
+    <string name="remote_found_help">Найден через синхронизацию. Управляйте тем, что воспроизводится в Cineo на этом компьютере; телефон должен быть в той же сети.</string>
     <string name="remote_open">Открыть пульт</string>
     <string name="remote_forget">Забыть этот компьютер</string>
     <string name="remote_forget_help">Телефон перестанет им управлять, пока вы не свяжете их снова.</string>
