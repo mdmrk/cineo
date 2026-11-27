@@ -3,12 +3,15 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use cineo_core::addon::TransportUrl;
 use cineo_core::app::{
-    Action, Effect, Language, Notice, Resolution, SeekStep, Setting, Settings, State, StreamSort,
-    SubtitleGroup, TorrentStorage, WatchedAt,
+    Action, Effect, Language, Notice, Resolution, Route, SeekStep, Setting, Settings, State,
+    StreamSort, SubtitleGroup, TorrentStorage, WatchedAt, parse_link,
 };
+use cineo_core::sync::{Pairing, SyncKey};
+use cineo_net::sync::{CodeError, new_key, parse_code, parse_server};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::plain_text;
@@ -20,7 +23,7 @@ use tracing::{error, warn};
 use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
-use crate::view::{AppView, ArtView, StreamFilterView};
+use crate::view::{AppView, ArtView, StreamFilterView, SyncLinkView};
 
 mod worker;
 
@@ -47,6 +50,54 @@ pub enum ImageError {
     InvalidUrl { reason: String },
     #[error("image request failed: {reason}")]
     Fetch { reason: String },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error, uniffi::Error)]
+pub enum SyncInputError {
+    #[error("a sync code has 32 letters and digits")]
+    CodeLength,
+    #[error("the sync code has a typo")]
+    CodeTypo,
+    #[error("this is not a sync code")]
+    NotACode,
+    #[error("the sync server must use https")]
+    Server,
+    #[error("no random sync key")]
+    Random,
+}
+
+impl From<CodeError> for SyncInputError {
+    fn from(err: CodeError) -> Self {
+        match err {
+            CodeError::Length => Self::CodeLength,
+            CodeError::Typo => Self::CodeTypo,
+            _ => Self::NotACode,
+        }
+    }
+}
+
+const SYNC_WAKE: Duration = Duration::from_secs(15);
+
+fn wall_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+}
+
+#[uniffi::export]
+pub fn default_sync_server() -> String {
+    cineo_core::sync::DEFAULT_SERVER.to_owned()
+}
+
+#[uniffi::export]
+pub fn sync_link(link: &str) -> Option<SyncLinkView> {
+    match parse_link(link) {
+        Ok(Route::Sync { code, server }) => Some(SyncLinkView {
+            code,
+            server: server.map_or_else(String::new, |s| s.to_string()),
+        }),
+        _ => None,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -235,6 +286,9 @@ enum Msg {
     NetworkUsable {
         renew: bool,
     },
+    Pair(Pairing),
+    NewSyncKey(SyncKey),
+    Tick,
     Shutdown,
 }
 
@@ -340,7 +394,38 @@ impl Cineo {
         self.filter(FilterChange::Sort(sort));
     }
 
+    pub fn sync_turn_on(&self, server: &str) -> Result<(), SyncInputError> {
+        let server = parse_server(server).ok_or(SyncInputError::Server)?;
+        let key = new_key().map_err(|_| SyncInputError::Random)?;
+        self.post(Msg::Pair(Pairing { key, server }));
+        Ok(())
+    }
+
+    pub fn sync_pair(&self, code: &str, server: &str) -> Result<(), SyncInputError> {
+        let key = parse_code(code)?;
+        let server = parse_server(server).ok_or(SyncInputError::Server)?;
+        self.post(Msg::Pair(Pairing { key, server }));
+        Ok(())
+    }
+
+    pub fn sync_change_key(&self) -> Result<(), SyncInputError> {
+        let key = new_key().map_err(|_| SyncInputError::Random)?;
+        self.post(Msg::NewSyncKey(key));
+        Ok(())
+    }
+
+    pub fn sync_now(&self) {
+        self.send(Action::SyncNow);
+    }
+
+    pub fn sync_turn_off(&self, delete_server_data: bool) {
+        self.send(Action::LeaveSync { delete_server_data });
+    }
+
     pub fn app_visible(&self, visible: bool) {
+        if visible {
+            self.send(Action::SyncNow);
+        }
         let mut screen = lock(&self.screen);
         screen.away = !visible;
         if screen.away
@@ -592,6 +677,7 @@ impl Cineo {
             library: store.library().map_err(store_error)?,
         };
         let settings = store.settings_over(phone_settings()).map_err(store_error)?;
+        let sync = store.sync(phone_settings()).map_err(store_error)?;
         let client = AddonClient::new(NetPolicy {
             allow_private_networks: settings.allow_private_network,
             ..NetPolicy::default()
@@ -635,7 +721,23 @@ impl Cineo {
             filtered: None,
             shown: None,
         };
-        let restore = [restore, Action::RestoreSettings(settings)];
+        let mut restore = vec![restore, Action::RestoreSettings(settings)];
+        if let Some((pairing, replica)) = sync {
+            restore.push(Action::RestoreSync {
+                pairing,
+                replica: Box::new(replica),
+            });
+        }
+        let wake = tx.clone();
+        runtime.spawn(async move {
+            let mut every = tokio::time::interval(SYNC_WAKE);
+            loop {
+                every.tick().await;
+                if wake.send(Msg::Tick).is_err() {
+                    return;
+                }
+            }
+        });
         let shell = std::thread::Builder::new()
             .name("shell".into())
             .spawn(move || {

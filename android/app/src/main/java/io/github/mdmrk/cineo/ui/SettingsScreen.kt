@@ -34,6 +34,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,8 @@ import io.github.mdmrk.cineo.rust.RangeView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
 import io.github.mdmrk.cineo.rust.SubtitlePreviewView
+import io.github.mdmrk.cineo.rust.SyncLinkView
+import io.github.mdmrk.cineo.rust.SyncView
 import io.github.mdmrk.cineo.rust.UpdateView
 import io.github.mdmrk.cineo.rust.ToggleView
 import io.github.mdmrk.cineo.rust.version
@@ -70,9 +73,18 @@ import java.text.Collator
 import kotlin.math.roundToInt
 
 private val GroupShape = RoundedCornerShape(10.dp)
+private const val DATA_ITEM = 5
 
 @Composable
-fun SettingsScreen(settings: SettingsView, update: UpdateView?, cineo: Cineo, padding: PaddingValues) {
+fun SettingsScreen(
+    settings: SettingsView,
+    update: UpdateView?,
+    sync: SyncView?,
+    syncLink: SyncLinkView?,
+    onSyncLinkUsed: () -> Unit,
+    cineo: Cineo,
+    padding: PaddingValues,
+) {
     val change = cineo::changeSetting
     val locale = LocalConfiguration.current.locales[0]
     val collator = remember(locale) { Collator.getInstance(locale) }
@@ -81,7 +93,12 @@ fun SettingsScreen(settings: SettingsView, update: UpdateView?, cineo: Cineo, pa
     val languages = listOf<String?>(null) + settings.languages.sortedWith(compareBy(collator) { languageNames.getValue(it) })
     val languageLabel = @Composable { code: String? -> code?.let { languageNames[it] ?: it } ?: none }
     val set = { key: String, value: String -> change(SettingChange.Value(key, value)) }
+    val list = rememberLazyListState()
+    LaunchedEffect(syncLink) {
+        if (syncLink != null) list.scrollToItem(DATA_ITEM)
+    }
     LazyColumn(
+        state = list,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 16.dp,
@@ -285,6 +302,8 @@ fun SettingsScreen(settings: SettingsView, update: UpdateView?, cineo: Cineo, pa
         }
         item(key = "data") {
             Group(stringResource(R.string.section_data)) {
+                SyncSettings(sync, syncLink, onSyncLinkUsed, cineo)
+                Divider()
                 Toggle(
                     stringResource(R.string.private_network),
                     stringResource(R.string.private_network_help),
@@ -450,18 +469,18 @@ private fun SubtitlePreview(preview: SubtitlePreviewView) {
 }
 
 @Composable
-private fun Divider() {
+internal fun Divider() {
     HorizontalDivider(color = Brand.Rule, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
-private val rowColors @Composable get() = ListItemDefaults.colors(
+internal val rowColors @Composable get() = ListItemDefaults.colors(
     containerColor = Brand.Panel,
     headlineColor = Brand.TextBright,
     supportingColor = Brand.TextDim,
 )
 
 @Composable
-private fun SettingRow(
+internal fun SettingRow(
     title: String,
     help: String,
     modifier: Modifier = Modifier,

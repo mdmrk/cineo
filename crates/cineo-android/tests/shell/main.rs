@@ -40,6 +40,7 @@ struct Views(Mutex<Sender<AppView>>);
 mod browse;
 mod playback;
 mod settings;
+mod sync;
 mod torrent;
 
 impl StateListener for Views {

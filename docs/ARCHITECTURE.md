@@ -70,7 +70,7 @@ flowchart TB
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
 | `cineo-stream` | Local streaming engine: torrent sources → loopback HTTP URL (ADR-0010); `Torrents` runs the start, stop, status and lookahead steps for both shells |
 | `cineo-android` | Rust half of the Android shell (ADR-0028): holds the core `State`, runs effects through the IO crates, and hands Kotlin `AppView` snapshots through UniFFI; the TLS verifier's JNI entry point |
-| `cineo-sync-server` | The sync server (ADR-0043): request handling over SQL shared by SQLite and D1, and a native host for self-hosting. It depends only on `cineo-core`; the app does not depend on it |
+| `cineo-sync-server` | The sync server (ADR-0043): request handling over SQL shared by SQLite and D1, and a native host for self-hosting. It depends only on `cineo-core`; the app uses it only in `cineo-android`'s tests |
 | `cineo-uniffi-bindgen` | Only UniFFI's `uniffi-bindgen` binary, which Gradle runs to write the Kotlin bindings, so the Android build does not compile the app's Rust for the host too (ADR-0038) |
 
 **When to add a crate:** only when the new code has a different dependency
@@ -138,8 +138,7 @@ The API is blocking; async shells call it off the runtime's worker threads.
 ### Sync boundary (ADR-0043, partly built)
 
 Sync is optional and off by default. Everything below exists. The desktop
-turns it on in Settings → Data; Android has no sync UI yet (ADR-0043,
-step 7).
+and Android turn it on in Settings → Data (ADR-0043).
 
 - `cineo_core::app` (built): `State::sync` holds the pairing, the replica
   and the round. `update` runs the reducer, then passes its persistence
@@ -156,6 +155,15 @@ step 7).
   `SyncRequest` into `EnableSync` or `RotateSyncKey`. The
   `cineo:///sync/<code>` link (`Route::Sync`) only fills the code. Tests:
   `crates/cineo-desktop/tests/ui/sync.rs`.
+- `cineo-android` (built): `Cineo::sync_turn_on`, `sync_pair`,
+  `sync_change_key`, `sync_now` and `sync_turn_off` check the code and
+  server (`parse_code`, `parse_server`) and make keys before posting to the
+  shell thread; `AppView::sync` carries the status, the code and the QR
+  modules, which Compose draws. The shell restores the pairing at start,
+  sends `Action::Tick` before every action and every 15 seconds, and
+  syncs when the app comes to the foreground. Kotlin hands `cineo:` links
+  from an intent filter to `sync_link`. Tests:
+  `crates/cineo-android/tests/shell/sync.rs`, against the native server.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the

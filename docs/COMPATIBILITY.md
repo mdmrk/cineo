@@ -90,7 +90,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
 | Casting | Unsupported | |
-| Account / cloud sync | Partial | Desktop only: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); not on Android yet. Stremio account sync stays out of scope. [Details](#cloud-sync) |
+| Account / cloud sync | Partial | Desktop and Android: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); not yet seen on a phone. Stremio account sync stays out of scope. [Details](#cloud-sync) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
 | Portable mode | Supported | Desktop: `--portable`, or a `portable.txt` file in the working directory, keeps the database, log and cache in the working directory; `--data-dir` and `--cache-dir` still win (`the_flag_or_a_marker_file_in_the_folder_makes_it_portable`; both ways run by hand on Linux, 2026-11-13) |
 
@@ -497,7 +497,7 @@ The full evidence for the rows above whose notes do not fit in the table.
 
 ### Cloud sync
 
-Desktop only; Android has no sync UI yet (ADR-0043, step 7).
+On the desktop and on Android (ADR-0043).
 
 - **What syncs.** The library with progress and favourites, the installed
   addons and their order, and the settings except the device-local ones,
@@ -531,15 +531,28 @@ Desktop only; Android has no sync UI yet (ADR-0043, step 7).
   `turning_sync_off_forgets_it_and_can_delete_the_server_data`). After a
   key change, the other devices stop with a message until they are paired
   again (`a_deleted_space_pauses_sync_until_it_is_paired_again`).
+- **Android.** The same controls in Settings → Data. Two phones share
+  their library and settings through a sync server, a phone pulls when it
+  comes to the foreground, and the pairing survives a restart
+  (`two_phones_share_their_library_and_settings_through_the_sync_server`);
+  deleting the server data stops the other phone until it pairs with a new
+  key (`turning_off_and_deleting_stops_the_other_phone_until_it_pairs_again`);
+  a mistyped code or an `http` server turns nothing on
+  (`a_bad_code_or_an_insecure_server_turns_nothing_on`). A `cineo:///sync/`
+  link fills the code and opens Settings
+  (`a_sync_link_gives_its_code_and_server`). These tests drive the Rust
+  half against the native server; the Compose screen has no test.
 - **Server.** The client against the native host in tests, and the same
   test by hand against the deployed Worker
   (`a_running_server_syncs_recovers_and_deletes`, 2026-11-27). A server
   that lost data or went back to a backup gets it again
   (`the_daily_check_pushes_what_the_server_lost`,
   `a_server_that_went_back_makes_the_replica_start_over`).
-- **Not checked.** The desktop app has not been run against the deployed
-  Worker by hand, and the QR code has not been scanned by a phone. The app
-  cannot scan a QR code; on the desktop, the code is typed or pasted.
+- **Not checked.** Neither app has been run against the deployed Worker
+  by hand, the Android sync screen has not been seen on a phone, and no QR
+  code has been scanned. Whether a phone's camera app opens a `cineo:` link
+  is UNKNOWN. Cineo cannot scan a QR code itself; the code can always be
+  typed or pasted.
 
 ### Update notice
 

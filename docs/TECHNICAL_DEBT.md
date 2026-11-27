@@ -22,14 +22,14 @@ Format:
 
 ## Entries
 
-### Sync: no sync UI on Android
-- Where: [crates/cineo-android](../crates/cineo-android)
-- Gap: Android cannot turn sync on, pair or show the code. The shell
-  already carries out the sync effects.
-- Why: the Android screen and the `cineo:///sync` intent filter are step 7
-  of ADR-0043 and not built yet.
-- Instead: sync works only between desktops.
-- Exit: build step 7 of ADR-0043.
+### Sync: no QR scanner in the app
+- Where: [SyncSettings.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/SyncSettings.kt)
+- Gap: Cineo shows the sync QR code but cannot read one.
+- Why: ADR-0043 leaves an in-app scanner (zxing-cpp) for later.
+- Instead: a phone's camera app may open the `cineo:///sync/` link in the
+  QR code (UNKNOWN for most camera apps); otherwise the code is typed or
+  pasted.
+- Exit: an in-app scanner on Android.
 
 ### Sync: no push on exit
 - Where: [app/sync.rs](../crates/cineo-core/src/app/sync.rs) (`after`)

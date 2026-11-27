@@ -16,6 +16,7 @@ cineo-net.workspace = true
 cineo-player.workspace = true
 cineo-store.workspace = true
 cineo-stream.workspace = true
+qrcode.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -30,6 +31,7 @@ tracing = { workspace = true, features = ["log"] }
 rustls-platform-verifier.workspace = true
 
 [dev-dependencies]
+cineo-sync-server.workspace = true
 librqbit.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

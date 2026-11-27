@@ -9,6 +9,7 @@ use cineo_core::app::{
 
 mod detail;
 mod settings;
+mod sync;
 
 use detail::detail;
 pub use detail::{
@@ -17,6 +18,7 @@ pub use detail::{
 };
 use settings::settings;
 pub use settings::{ChoiceView, RangeView, SettingsView, SubtitlePreviewView, ToggleView};
+pub use sync::{QrView, SyncFailureView, SyncLinkView, SyncStatusView, SyncView};
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct AppView {
@@ -39,6 +41,7 @@ pub struct AppView {
     pub settings: SettingsView,
     pub notice: Option<NoticeView>,
     pub update: Option<UpdateView>,
+    pub sync: Option<SyncView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -292,6 +295,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
             version: version.to_string(),
             page_url: release_page(version),
         }),
+        sync: None,
     };
     if view.playback.is_none() && view.connecting.is_none() {
         fill_browsing(&mut view, state, filter);
@@ -300,6 +304,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
 }
 
 fn fill_browsing(view: &mut AppView, state: &State, filter: &StreamFilterView) {
+    view.sync = state.sync.as_ref().map(|s| sync::sync(state.now_ms, s));
     view.addons = state.addons.iter().map(addon).collect();
     view.addons_loading = u32::try_from(state.addons_loading.len()).unwrap_or(u32::MAX);
     view.unavailable_addons = state

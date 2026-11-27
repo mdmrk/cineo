@@ -7,14 +7,16 @@ mod view;
 pub use player::{Playback, Players, Started};
 pub use shell::{
     AddonSubtitleView, CachedSpanView, Cineo, DecoderView, ImageError, PlayerStatsView,
-    PlayerStatusView, SettingChange, StartError, StateListener, TrackView, VideoSizeView,
+    PlayerStatusView, SettingChange, StartError, StateListener, SyncInputError, TrackView,
+    VideoSizeView, default_sync_server, sync_link,
 };
 pub use view::{
     AddonListItems, AddonListView, AddonView, AppView, ArtView, ChoiceView, DetailView,
     InstallView, LibraryItemView, ListedAddonView, MetaStatus, NoticeView, PlaybackFailureView,
-    PlaybackView, PosterView, ProblemView, QualityView, RangeView, RowItems, RowView, SettingsView,
-    StreamFilterView, StreamGroupView, StreamItems, StreamView, SubtitlePreviewView, ToggleView,
-    TorrentView, UpdateView, VideoView,
+    PlaybackView, PosterView, ProblemView, QrView, QualityView, RangeView, RowItems, RowView,
+    SettingsView, StreamFilterView, StreamGroupView, StreamItems, StreamView, SubtitlePreviewView,
+    SyncFailureView, SyncLinkView, SyncStatusView, SyncView, ToggleView, TorrentView, UpdateView,
+    VideoView,
 };
 
 #[uniffi::export]

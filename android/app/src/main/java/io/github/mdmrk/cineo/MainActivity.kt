@@ -2,6 +2,7 @@ package io.github.mdmrk.cineo
 
 import android.Manifest
 import android.app.PictureInPictureParams
+import android.content.Intent
 import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Build
@@ -23,6 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.mdmrk.cineo.rust.PosterView
+import io.github.mdmrk.cineo.rust.SyncLinkView
+import io.github.mdmrk.cineo.rust.syncLink
 import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.SearchScreen
@@ -72,6 +75,15 @@ class MainActivity : ComponentActivity() {
     private val cineo get() = (application as CineoApplication).cineo
 
     private var inPip by mutableStateOf(false)
+    private var pendingSync by mutableStateOf<SyncLinkView?>(null)
+
+    private fun syncLinkOf(intent: Intent?): SyncLinkView? =
+        intent?.takeIf { it.action == Intent.ACTION_VIEW }?.dataString?.let(::syncLink)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        syncLinkOf(intent)?.let { pendingSync = it }
+    }
     private var pipOnLeave: PictureInPictureParams? = null
 
     override fun onStart() {
@@ -113,6 +125,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         val app = application as CineoApplication
+        syncLinkOf(intent)?.let { pendingSync = it }
         setContent {
             CineoTheme {
                 when (val started = app.started) {
@@ -126,6 +139,12 @@ class MainActivity : ComponentActivity() {
                         val current = view
                         val playback = current?.playback
                         val detail = current?.detail
+                        LaunchedEffect(pendingSync) {
+                            if (pendingSync != null) {
+                                page = Page.SETTINGS
+                                cineo.closeDetail()
+                            }
+                        }
                         val connecting = current?.connecting
                         PlaybackForeground(playback != null || connecting != null || current?.torrent != null)
                         LaunchedEffect(inPip, playback == null && connecting == null) {
@@ -192,7 +211,17 @@ class MainActivity : ComponentActivity() {
                                             Page.SEARCH -> SearchScreen(current, images, cineo::search, open, padding)
                                             Page.LIBRARY -> LibraryScreen(current, images, library, padding)
                                             Page.ADDONS -> AddonsScreen(current, images, cineo, padding)
-                                            Page.SETTINGS -> current?.let { SettingsScreen(it.settings, it.update, cineo, padding) }
+                                            Page.SETTINGS -> current?.let {
+                                                SettingsScreen(
+                                                    it.settings,
+                                                    it.update,
+                                                    it.sync,
+                                                    pendingSync,
+                                                    { pendingSync = null },
+                                                    cineo,
+                                                    padding,
+                                                )
+                                            }
                                         }
                                     }
                                 }

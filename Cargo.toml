@@ -19,6 +19,7 @@ cineo-net = { path = "crates/cineo-net" }
 cineo-player = { path = "crates/cineo-player" }
 cineo-store = { path = "crates/cineo-store" }
 cineo-stream = { path = "crates/cineo-stream" }
+cineo-sync-server = { path = "crates/cineo-sync-server" }
 
 android_logger = { version = "0.15.1", default-features = false }
 anyhow = "1.0.105"

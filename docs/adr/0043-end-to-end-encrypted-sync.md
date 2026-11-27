@@ -493,7 +493,11 @@ database.
    takes a click); **6c** status and debt docs (done: "Account / cloud
    sync" is Partial, desktop only).
 7. Android: the same screen, the intent filter for `cineo:///sync`, and
-   pull on foreground.
+   pull on foreground. (Done 2026-11-27: the controls in Settings → Data,
+   an intent filter for the `cineo` scheme whose sync links fill the code,
+   and a sync round on every return to the foreground. The shell ticks
+   before each action and every 15 seconds instead of every second, so the
+   view is not rebuilt each second.)
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named
    tests.
 

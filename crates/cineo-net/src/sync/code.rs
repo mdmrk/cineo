@@ -1,6 +1,9 @@
 use aws_lc_rs::digest::{SHA256, digest};
 use cineo_core::sync::{DEFAULT_SERVER, Pairing, SyncKey};
 use data_encoding::BASE32_NOPAD;
+use url::Url;
+
+use super::client::server_allowed;
 
 const CHECK_LEN: usize = 4;
 const CODE_LEN: usize = 32;
@@ -69,4 +72,14 @@ pub fn pairing_link(pairing: &Pairing) -> String {
         ));
     }
     link
+}
+
+pub fn parse_server(text: &str) -> Option<Url> {
+    let text = text.trim();
+    let text = if text.is_empty() {
+        DEFAULT_SERVER
+    } else {
+        text
+    };
+    Url::parse(text).ok().filter(server_allowed)
 }

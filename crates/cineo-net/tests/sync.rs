@@ -456,6 +456,28 @@ async fn deleting_the_space_tolerates_one_already_gone() {
 }
 
 #[test]
+fn a_typed_server_defaults_to_cineos_and_must_be_secure() {
+    for (typed, server) in [
+        ("", Some(cineo_core::sync::DEFAULT_SERVER)),
+        (
+            "  https://sync.example/cineo/ ",
+            Some("https://sync.example/cineo/"),
+        ),
+        ("http://127.0.0.1:8787", Some("http://127.0.0.1:8787/")),
+        ("http://sync.example/", None),
+        ("sync.example", None),
+    ] {
+        assert_eq!(
+            cineo_net::sync::parse_server(typed)
+                .as_ref()
+                .map(url::Url::as_str),
+            server,
+            "{typed:?}"
+        );
+    }
+}
+
+#[test]
 fn the_pairing_link_carries_the_code_and_a_server_other_than_the_default() {
     let default = pairing(cineo_core::sync::DEFAULT_SERVER);
     assert_eq!(

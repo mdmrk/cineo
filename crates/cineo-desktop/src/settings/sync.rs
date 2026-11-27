@@ -1,6 +1,6 @@
 use cineo_core::app::{Action, State, SyncFailure, SyncProblem, SyncState};
 use cineo_core::sync::DEFAULT_SERVER;
-use cineo_net::sync::{CodeError, format_code, pairing_link, parse_code, server_allowed};
+use cineo_net::sync::{CodeError, format_code, pairing_link, parse_code, parse_server};
 use eframe::egui::{
     self, Align, Button, Color32, CornerRadius, Label, Layout, RichText, Role, Sense, TextEdit, Ui,
     WidgetInfo, vec2,
@@ -25,13 +25,7 @@ pub(super) fn sync(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
 }
 
 fn server(view: &mut ViewState) -> Option<Url> {
-    let typed = view.sync_server.trim();
-    let text = if typed.is_empty() {
-        DEFAULT_SERVER
-    } else {
-        typed
-    };
-    let server = Url::parse(text).ok().filter(server_allowed);
+    let server = parse_server(&view.sync_server);
     if server.is_none() {
         view.sync_error = Some(SyncInputError::Server);
     }

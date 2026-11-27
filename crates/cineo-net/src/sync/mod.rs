@@ -7,5 +7,5 @@ pub use cineo_core::sync::protocol::{
     RECORD_KEY_LEN,
 };
 pub use client::{Pulled, PushOutcome, Pushed, SyncClient, SyncError, SyncReport, server_allowed};
-pub use code::{CodeError, format_code, pairing_link, parse_code};
+pub use code::{CodeError, format_code, pairing_link, parse_code, parse_server};
 pub use keys::{BLOB_FORMAT, Sealed, SpaceKeys, new_device, new_key};

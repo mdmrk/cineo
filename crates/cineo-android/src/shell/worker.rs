@@ -14,12 +14,12 @@ use url::Url;
 
 use crate::view::{ArtView, StreamFilterView, view};
 
-use super::{FilterChange, Msg, Shell, Subtitles, lock};
+use super::{FilterChange, Msg, Shell, Subtitles, lock, wall_ms};
 
 const ENGINE_SHUTDOWN: Duration = Duration::from_secs(2);
 
 impl Shell {
-    pub(super) fn run(mut self, rx: &Receiver<Msg>, restore: [Action; 2]) {
+    pub(super) fn run(mut self, rx: &Receiver<Msg>, restore: Vec<Action>) {
         for action in restore {
             self.dispatch(action);
         }
@@ -56,6 +56,9 @@ impl Shell {
                 }
                 self.dispatch(Action::RetryFailed);
             }
+            Msg::Pair(pairing) => self.pair(pairing),
+            Msg::NewSyncKey(key) => self.dispatch(Action::RotateSyncKey(key)),
+            Msg::Tick => self.tick(),
             Msg::Shutdown => return false,
         }
         true
@@ -90,7 +93,30 @@ impl Shell {
         });
     }
 
+    fn pair(&mut self, pairing: cineo_core::sync::Pairing) {
+        let device = match cineo_net::sync::new_device() {
+            Ok(device) => device,
+            Err(err) => {
+                warn!(%err, "no sync device id");
+                return;
+            }
+        };
+        if self.state.sync.is_some() {
+            self.dispatch(Action::LeaveSync {
+                delete_server_data: false,
+            });
+        }
+        self.dispatch(Action::EnableSync { pairing, device });
+    }
+
+    fn tick(&mut self) {
+        for effect in update(&mut self.state, Action::Tick(wall_ms())) {
+            self.run_effect(effect);
+        }
+    }
+
     fn dispatch(&mut self, action: Action) {
+        self.tick();
         for effect in update(&mut self.state, action) {
             self.run_effect(effect);
         }
