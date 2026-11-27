@@ -134,6 +134,21 @@ an fsync, and a power loss can drop the last commits but not corrupt the
 file.
 The API is blocking; async shells call it off the runtime's worker threads.
 
+### Sync boundary (ADR-0043, not built yet)
+
+Sync is optional and off by default. The decided split:
+
+- `cineo_core::sync`: stamps (a hybrid logical clock), last-writer-wins
+  merge per record with tombstones, the list of device-local settings, and
+  when to push and pull. Time and the device id are inputs; the core emits
+  sync effects with plaintext records.
+- `cineo-store`: the sync key, server URL, device id, clock and per-record
+  sync state.
+- `cineo_net::sync`: the sync code, key derivation, encryption and the
+  HTTP calls, through `AddonClient` and `NetPolicy`.
+- `server/sync/`: a TypeScript Cloudflare Worker with D1 that stores
+  encrypted, opaque records. It never sees plaintext.
+
 ### UI boundary (ADR-0011)
 
 The UI renders **state snapshots** and sends **actions**. It holds no business

@@ -1,7 +1,8 @@
 # 0010. Stremio behavioral parity; own local streaming engine
 
 - Status: Accepted (goal and approach); engine library settled by 0012;
-  the bounded cache superseded by 0015
+  the bounded cache superseded by 0015; the cloud sync exclusion superseded
+  by 0043
 - Date: 2026-10-06
 
 ## Context

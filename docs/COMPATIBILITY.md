@@ -16,7 +16,7 @@ Out of scope:
 - Stremio's private account API (`api.strem.io`), its streaming server, its
   branding and its UI. Cineo matches behavior, not look.
 - The legacy (`/stremio/v1`) and IPFS addon transports (ADR-0007).
-- Cloud or account sync, analytics and telemetry.
+- Stremio account sync, analytics and telemetry.
 - Hosting, indexing or recommending content sources. Cineo is a client.
 - Platforms other than Linux x86_64, Windows x86_64 and Android (ADR-0028).
 
@@ -90,7 +90,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
 | Casting | Unsupported | |
-| Account / cloud sync | Unsupported | Out of scope (owner decision 2026-10-06) |
+| Account / cloud sync | Unsupported | Not built yet. Our own end-to-end encrypted sync, off by default, no accounts (ADR-0043). Stremio account sync stays out of scope |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
 | Portable mode | Supported | Desktop: `--portable`, or a `portable.txt` file in the working directory, keeps the database, log and cache in the working directory; `--data-dir` and `--cache-dir` still win (`the_flag_or_a_marker_file_in_the_folder_makes_it_portable`; both ways run by hand on Linux, 2026-11-13) |
 

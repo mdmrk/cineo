@@ -22,10 +22,10 @@ old one *Superseded by NNNN*.
 | [0004](0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Superseded by 0014 |
 | [0005](0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
 | [0006](0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
-| [0007](0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted |
+| [0007](0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted (sync: amended by 0043) |
 | [0008](0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Superseded by 0013 |
 | [0009](0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Superseded by 0025 |
-| [0010](0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012; cache: superseded by 0015) |
+| [0010](0010-stremio-parity-and-streaming-engine.md) | Stremio behavioral parity; own local streaming engine | Accepted (engine library: 0012; cache: superseded by 0015; cloud sync exclusion: superseded by 0043) |
 | [0011](0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 | [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015; incoming connections and peer proxy: amended by 0026) |
 | [0013](0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
@@ -58,6 +58,7 @@ old one *Superseded by NNNN*.
 | [0040](0040-windows-in-app-update.md) | In-app update on Windows | Accepted |
 | [0041](0041-linux-in-app-update.md) | In-app update on Linux | Accepted |
 | [0042](0042-egui-0-37-with-fastframe-main.md) | egui 0.37 with fastframe from its main branch | Accepted |
+| [0043](0043-end-to-end-encrypted-sync.md) | End-to-end encrypted sync through our own server | Accepted |
 
 ## What we took from the reference projects
 
@@ -75,7 +76,7 @@ old one *Superseded by NNNN*.
 | Manifest filtering semantics | **Keep exactly** | Compatibility (ADDON_PROTOCOL.md) |
 | Legacy / IPFS transports | **Reject** | ADR-0007 |
 | Analytics module | **Reject** | No telemetry |
-| Private account API + library sync | **Reject** | Not public; cloud sync not planned for now (owner decision 2026-10-06) |
+| Private account API + library sync | **Reject** | Not public; sync is our own end-to-end encrypted design instead (ADR-0043) |
 | 25-step storage migrations | **Modify** | SQLite with versioned migrations from v1, each tested |
 | Watched bitfield encoding | **Defer** | Revisit with series progress |
 | MSRV CI job | **Reject** | We are an application built with one pinned stable Rust (ADR-0036) |
