@@ -22,6 +22,50 @@ Format:
 
 ## Entries
 
+### Remote control: a new address or port needs a new scan
+- Where: [remote.rs](../crates/cineo-desktop/src/app/remote.rs),
+  [server.rs](../crates/cineo-net/src/remote/server.rs)
+- Gap: the phone keeps the address and port it paired with. When the
+  computer gets another address from the router, or port 18765 is taken
+  and another one is used, the phone cannot find it.
+- Why: there is no discovery on the local network.
+- Instead: the remote screen says the computer cannot be reached; scanning
+  the QR code again fixes it.
+- Exit: announce the computer with mDNS (`_cineo._tcp`) and look it up by
+  a name derived from the key.
+
+### Remote control: firewalls are left to the user
+- Where: [server.rs](../crates/cineo-net/src/remote/server.rs)
+- Gap: a firewall on the computer (Windows Defender Firewall, macOS's
+  application firewall, `ufw` or `firewalld` on Linux) can drop the
+  phone's requests. On the owner's Linux desktop `ufw` did, 2026-11-27.
+- Why: changing firewall rules needs administrator rights.
+- Instead: the desktop's Settings says to allow Cineo through the
+  firewall and names the port; the phone says the computer cannot be
+  reached. On Linux with `ufw`: `sudo ufw allow 18765/tcp`.
+- Exit: detect a blocked port with a request to the computer's own LAN
+  address and say so on the desktop.
+
+### Remote control: the desktop answers with the status before the command
+- Where: [remote.rs](../crates/cineo-desktop/src/app/remote.rs)
+- Gap: the answer to a command is the status from before the UI thread
+  applied it.
+- Why: commands run on the UI thread; the listener answers at once from
+  the last published status instead of waiting for a frame.
+- Instead: the phone asks again 0.4 s after each command, and keeps a
+  dragged position or volume until then.
+- Exit: let the listener wait briefly for the next published status.
+
+### Remote control: commands need a frame on the desktop
+- Where: [remote.rs](../crates/cineo-desktop/src/app/remote.rs)
+- Gap: a command runs only when egui draws the next frame. A hidden or
+  minimized window on some compositors draws no frames.
+- Why: the player belongs to the UI thread, as for media keys.
+- Instead: the command waits until the window draws again (not seen on a
+  real desktop).
+- Exit: run player commands from the listener when the window is not
+  drawing.
+
 ### Android: Android 17 network rules not seen on a device
 - Where: [AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml),
   [LocalNetwork.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/LocalNetwork.kt)

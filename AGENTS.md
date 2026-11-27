@@ -18,7 +18,9 @@ arm64 port in progress and released as an APK (ADR-0028, ADR-0029). Scope and cu
   `docs/ADDON_PROTOCOL.md`.
 - All HTTP goes through `cineo-net` and its `NetPolicy` (ADR-0006). The one
   exception is BitTorrent traffic inside `cineo-stream` (ADR-0012). The
-  player only receives typed commands (ADR-0014).
+  player only receives typed commands (ADR-0014), including those from the
+  phone's remote control, whose LAN listener also lives in `cineo-net`
+  (ADR-0044).
 - The goal is Stremio-equivalent behavior. Cloud sync goes only through our
   own end-to-end encrypted server, `crates/cineo-sync-server` (ADR-0043);
   the server never sees plaintext, and the app's sync client uses

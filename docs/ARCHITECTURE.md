@@ -37,7 +37,7 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
 | Crate | Responsibility |
 |-------|---------------|
 | `cineo-core` | Protocol model (wire → domain), validation, filtering, URL building, aggregation, library/progress model, reducers |
-| `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy |
+| `cineo-net` | `AddonClient`: fetch with timeouts, size caps, SSRF-safe resolver and redirect policy; both ends of the remote control (ADR-0044) |
 | `cineo-player` | Load libmpv at runtime, draw video into the window; typed commands, status and events (ADR-0014) |
 | `cineo-store` | Persistence (installed addons, library, progress, settings) with migrations |
 | `cineo-desktop` | GUI shell: eframe/egui, custom theme, images via `cineo-net` |
@@ -264,6 +264,53 @@ synced.
   Trigger; `scripts/check.sh` runs clippy on it for wasm32. Tests: unit
   tests in `src/handler/tests.rs` and `src/limit.rs`, and the client
   against the native host in `tests/end_to_end.rs`.
+
+### Remote control boundary (ADR-0044)
+
+The phone controls playback on a desktop on the same LAN. Off by default.
+
+```mermaid
+sequenceDiagram
+  participant Kotlin as Android UI
+  participant Phone as cineo-android (RemoteClient)
+  participant Listener as cineo-net (serve, on the desktop)
+  participant Desktop as cineo-desktop (UI thread)
+  Kotlin->>Phone: remoteSend(command or nothing), every second
+  Phone->>Listener: POST /v1/remote (sealed request)
+  Listener->>Desktop: Msg::Remote(command), repaint
+  Listener-->>Phone: sealed status (last published)
+  Desktop->>Desktop: PlayerCommands, publish status each frame
+```
+
+- `cineo_core::remote` (built): `RemoteKey`, `Peer`, `is_lan` and
+  `parse_address`; the closed `Command` set with checked ranges; `Request`
+  and `Status` JSON; `Replays`, which refuses a request far from the clock
+  or seen before. `State::remote` holds the desktop's key (`host`) and the
+  phone's paired computer (`peer`); `SetRemoteHost` saves the key and asks
+  for `Effect::ServeRemote`, `SetRemotePeer` saves the peer. Tests:
+  `crates/cineo-core/tests/remote.rs`,
+  `crates/cineo-core/tests/app_state/remote.rs`.
+- `cineo_net::remote` (built): `RemoteKeys` (HKDF-SHA256 to a
+  ChaCha20-Poly1305 key; requests and answers sealed with different
+  associated data, the answer bound to the request's nonce); `serve`, a
+  hyper HTTP/1 listener whose connections all close when the
+  `RemoteServer` is dropped; `RemoteClient`, which posts through an
+  `AddonClient` with private addresses allowed; the code and the
+  `cineo:///remote/<code>?at=<address>` link; `lan_ip`. Tests:
+  `crates/cineo-net/tests/remote.rs`.
+- `cineo-store` (built): `remote_host` and `remote_peer`, one row each.
+- `cineo-desktop` (built): `app/remote.rs` starts and stops the listener
+  on `ServeRemote`, publishes what plays each frame, and turns each
+  `Command` into `PlayerCommand`s on the UI thread, like media keys;
+  speed and subtitle delay go through `Controls` so the desktop's menus
+  agree. `settings/remote.rs` shows the switch, address, code and QR
+  code. Tests: unit tests in `app/remote.rs`,
+  `crates/cineo-desktop/tests/ui/remote.rs`.
+- `cineo-android` (built): `Cineo::remote_pair`, `remote_forget` and the
+  async `remote_send`, which runs on the shell's runtime; `AppView::remote`
+  names the paired computer; `remote_link` reads scanned codes. Compose
+  draws `RemoteSettings` and `RemoteScreen`. Tests:
+  `crates/cineo-android/tests/shell/remote.rs`, against the real listener.
 
 ### UI boundary (ADR-0011)
 

@@ -264,6 +264,51 @@ Sync is off by default.
   New spaces ask the limiter only when a push would create one
   (`only_new_spaces_ask_for_permission`).
 
+### Remote control (ADR-0044)
+
+- **Off by default.** Only "Turn on remote control" in the desktop's
+  Settings opens a port: TCP 18765 on every IPv4 interface, or a port the
+  system picks. "Turn off" closes the listener and its open connections
+  and forgets the key (`stopping_the_listener_closes_the_port`).
+- **Key.** 16 random bytes, shown as a 32-character code and a QR code.
+  Whoever has the code and reaches the port can control playback and see
+  what plays; nothing else is exposed. "New code" replaces it. The key is
+  stored in `remote_host` and the phone's copy in `remote_peer`; sync never
+  reads either table.
+- **Sealing.** Each request and answer is sealed with ChaCha20-Poly1305
+  under a key derived from the code with HKDF-SHA256; the answer is bound
+  to its request's nonce. A request with another key gets 401 and runs
+  nothing (`a_phone_with_another_key_is_refused_and_nothing_runs`), and an
+  answer cannot be moved to another request
+  (`a_captured_request_cannot_be_replayed`).
+- **Replays.** A request more than 2 minutes from the desktop's clock, or
+  with a nonce already seen in that window, gets 403
+  (`a_request_far_from_the_desktops_clock_is_refused`,
+  `a_captured_request_cannot_be_replayed`,
+  `a_request_is_admitted_once_and_only_near_the_desktops_time`). At most
+  4,096 nonces are remembered; past that, 503
+  (`old_nonces_are_forgotten_and_the_memory_is_bounded`). Commands are
+  absolute, so one that ran twice has the same effect.
+- **Limits.** One route (`POST /v1/remote`), bodies of at most 4 KiB, 16
+  connections, headers within 10 s, a connection within 15 s, no
+  keep-alive (`the_desktop_answers_nothing_else`).
+- **Commands.** A closed set with checked ranges
+  (`commands_out_of_range_or_unknown_are_refused`), turned into typed
+  player commands on the UI thread; nothing from the phone reaches mpv as
+  text. The answer's title and track names are cut to 200 and 60
+  characters without control characters
+  (`a_status_is_read_leniently_and_kept_small`).
+- **Phone side.** The phone only pairs with private, loopback or
+  link-local addresses, so a link cannot send it to the internet
+  (`only_local_network_addresses_can_be_paired`,
+  `the_phone_only_talks_to_the_local_network`). Its requests go through
+  `cineo-net` with private addresses allowed, no redirects and a 5 s
+  timeout. On Android 17 the remote screen asks for `ACCESS_LOCAL_NETWORK`
+  (no automated test).
+- **Not protected.** Anyone on the network sees that the port is open and
+  the size and timing of requests. A firewall may block the port; Cineo
+  does not change firewall rules.
+
 ### Process execution
 
 No shell is ever invoked with addon-controlled input. Opening `externalUrl`
@@ -392,6 +437,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Request timeout / connect timeout | 20 s / 10 s                                                                                                                                         |
 | Max redirects                     | 5, no https→http                                                                                                                                    |
 | Sync                              | Off; turned on in Settings → Data (ADR-0043)                                                                                                        |
+| Remote control                    | Off; turned on in Settings → Remote control; TCP 18765 on the LAN while on (ADR-0044)                                                               |
 | mpv                               | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; forward cache at most 120 s and 512 MiB (ADR-0024) |
 
 ## Unsafe code

@@ -89,6 +89,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` addon install links | Supported | Mapped to `https://` only; installs after confirmation (`an_install_link_installs_nothing_until_accepted`) |
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
+| Remote control from the phone | Partial | Cineo-only: the phone controls what plays in Cineo on a computer on the same network (ADR-0044); starting a title from the phone is not offered. [Details](#remote-control) |
 | Casting | Unsupported | |
 | Account / cloud sync | Verified | Desktop and Android: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); a desktop and a phone paired by QR code through the deployed server, 2026-11-27. Stremio account sync stays out of scope. [Details](#cloud-sync) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
@@ -578,6 +579,45 @@ On the desktop and on Android (ADR-0043).
   opens a `cineo:` link is UNKNOWN. Known limitations are in
   [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) (no push on exit, whole-item
   conflicts, a server that withholds records, approximate rate limits).
+
+### Remote control
+
+A phone running Cineo controls playback in Cineo on a computer on the same
+local network (ADR-0044). Off by default.
+
+- **Desktop, Settings → Remote control.** "Turn on remote control" makes a
+  key and starts listening on TCP port 18765 (another port when it is
+  taken); the page shows the address, the code and a QR code; "New code"
+  unpairs every phone; "Turn off" forgets the key
+  (`crates/cineo-desktop/tests/ui/remote.rs`;
+  `turning_the_remote_on_off_or_to_a_new_key_saves_and_restarts_it`). The
+  key survives a restart (`a_restored_remote_key_starts_the_listener`,
+  `remote_pairings_survive_a_reopen_and_can_be_forgotten`).
+- **What the phone can do.** Play and pause, seek by 10 s or to a
+  position, volume and mute, audio and subtitle tracks, subtitle delay,
+  speed and stop (`phone_commands_become_player_commands`,
+  `speed_and_subtitle_delay_from_the_phone_show_on_the_desktop_too`). It
+  sees the title, position, length, volume and tracks, asking once a
+  second while the remote screen is open
+  (`the_phone_sees_what_plays_with_its_tracks`). While a torrent connects,
+  only Stop works.
+- **Android, Settings → Remote control.** Pair by scanning the QR code, by
+  a `cineo:///remote/<code>?at=<address>` link, or by typing the address
+  and code; "Open remote" shows the controls; "Forget" unpairs. A paired
+  phone controls the computer and stays paired after a restart
+  (`a_paired_phone_controls_the_desktop_and_stays_paired_after_a_restart`);
+  public addresses and mistyped codes are refused
+  (`pairing_needs_a_local_address_and_a_good_code`). The Compose screens
+  have no test.
+- **On real devices.** On 2026-11-27 a debug build on the Redmi 9
+  (Android 13) opened a remote link from `adb`, paired, and showed
+  "Nothing is playing on the computer." from the desktop build on Linux,
+  through `adb reverse` to loopback. Over the LAN it showed "Cannot reach
+  the computer" because the computer's `ufw` firewall dropped port 18765.
+  Controlling a playing video from a real phone has not been tried.
+- **Not offered.** Starting a title from the phone, finding the computer
+  without the QR code (mDNS), more than one paired computer. Known
+  limitations are in [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
 
 ### Update notice
 
