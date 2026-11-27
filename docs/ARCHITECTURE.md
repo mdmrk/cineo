@@ -134,20 +134,24 @@ an fsync, and a power loss can drop the last commits but not corrupt the
 file.
 The API is blocking; async shells call it off the runtime's worker threads.
 
-### Sync boundary (ADR-0043, not built yet)
+### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. The decided split:
+Sync is optional and off by default. Only the core part exists; nothing
+calls it yet.
 
-- `cineo_core::sync`: stamps (a hybrid logical clock), last-writer-wins
-  merge per record with tombstones, the list of device-local settings, and
-  when to push and pull. Time and the device id are inputs; the core emits
-  sync effects with plaintext records.
-- `cineo-store`: the sync key, server URL, device id, clock and per-record
-  sync state.
-- `cineo_net::sync`: the sync code, key derivation, encryption and the
-  HTTP calls, through `AddonClient` and `NetPolicy`.
-- `server/sync/`: a TypeScript Cloudflare Worker with D1 that stores
-  encrypted, opaque records. It never sees plaintext.
+- `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
+  clock), `Record` and its plaintext JSON, and `Replica`, which turns the
+  persistence effects into records, merges remote records last writer wins
+  per record (tombstones, a `library-cleared` marker, the union of addon
+  lists when joining) and decides when to push and pull. Time and the
+  device id are inputs. Settings in `DEVICE_LOCAL_SETTINGS` are never
+  pushed or applied. Tests: `crates/cineo-core/tests/sync.rs`.
+- `cineo-store` (not built): the sync key, server URL, device id, clock
+  and per-record sync state.
+- `cineo_net::sync` (not built): the sync code, key derivation, encryption
+  and the HTTP calls, through `AddonClient` and `NetPolicy`.
+- `server/sync/` (not built): a TypeScript Cloudflare Worker with D1 that
+  stores encrypted, opaque records. It never sees plaintext.
 
 ### UI boundary (ADR-0011)
 

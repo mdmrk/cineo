@@ -21,11 +21,11 @@ pub use release::{
     parse_release, release_page,
 };
 pub use settings::{
-    AudioOutput, DownloadLimit, HideControls, InterfaceScale, NextVideoNotice, OnLeave, PeerLimit,
-    Percent, Ranged, SeekStep, Setting, SettingError, Settings, ShortSeekStep, StartPage,
-    SubtitleBackground, SubtitleColor, SubtitleFont, SubtitleOpacity, SubtitleOutline,
-    SubtitlePosition, SubtitleSize, TorrentPort, TorrentStorage, UiLanguage, UploadLimit,
-    WatchedAt,
+    AudioOutput, DEVICE_LOCAL_SETTINGS, DownloadLimit, HideControls, InterfaceScale,
+    NextVideoNotice, OnLeave, PeerLimit, Percent, Ranged, SeekStep, Setting, SettingError,
+    Settings, ShortSeekStep, StartPage, SubtitleBackground, SubtitleColor, SubtitleFont,
+    SubtitleOpacity, SubtitleOutline, SubtitlePosition, SubtitleSize, TorrentPort, TorrentStorage,
+    UiLanguage, UploadLimit, WatchedAt,
 };
 pub use state::{
     Action, AddonList, Detail, Discover, Effect, InstalledAddon, Loadable, ManifestOrigin,

@@ -472,6 +472,38 @@ settings! {
     check_for_updates: bool = true => CheckForUpdates("check_for_updates"),
 }
 
+pub const DEVICE_LOCAL_SETTINGS: &[&str] = &[
+    "allow_private_network",
+    "p2p_enabled",
+    "p2p_acknowledged",
+    "torrent_upload",
+    "torrent_storage",
+    "download_limit",
+    "upload_limit",
+    "peer_limit",
+    "torrent_dht",
+    "torrent_port",
+    "hardware_decoding",
+    "audio_output",
+    "audio_passthrough",
+    "volume",
+    "remember_volume",
+    "interface_scale",
+    "start_page",
+    "on_leave",
+    "pause_on_minimize",
+    "escape_leaves_fullscreen",
+    "subtitle_size",
+    "subtitle_position",
+    "check_for_updates",
+];
+
+impl Setting {
+    pub fn is_device_local(self) -> bool {
+        DEVICE_LOCAL_SETTINGS.contains(&self.key())
+    }
+}
+
 impl Settings {
     pub fn subtitle_languages(&self) -> impl Iterator<Item = Language> {
         self.subtitle_language
