@@ -44,6 +44,7 @@ flate2.workspace = true
 iconflow.workspace = true
 image.workspace = true
 minisign-verify.workspace = true
+qrcode.workspace = true
 raw-window-handle.workspace = true
 semver.workspace = true
 tokio.workspace = true

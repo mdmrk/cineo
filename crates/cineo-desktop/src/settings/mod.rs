@@ -18,6 +18,7 @@ use crate::view::{
 
 mod keyboard;
 mod subtitles;
+mod sync;
 mod widgets;
 
 use keyboard::keyboard;
@@ -85,6 +86,9 @@ impl Section {
 pub enum Confirm {
     ResetSettings,
     ClearLibrary,
+    RotateSyncKey,
+    LeaveSync,
+    LeaveSyncAndDelete,
 }
 
 const NAV_WIDTH: f32 = 168.0;
@@ -413,6 +417,8 @@ fn body(
                     }
                 },
             );
+            ui.add_space(theme::SECTION_GAP);
+            sync::sync(ui, state, view, out);
         }
         Section::Keyboard => keyboard(ui),
         Section::About => {
@@ -718,18 +724,49 @@ fn confirm(ui: &Ui, view: &mut ViewState, out: &mut Vec<Action>) {
             t!("Reset all settings?"),
             t!("Every setting goes back to its default. Your addons and library are kept."),
             t!("Reset"),
-            Action::ResetSettings,
+            Some(Action::ResetSettings),
         ),
         Confirm::ClearLibrary => (
             t!("Clear watch history?"),
             t!("Every item and its progress leaves the Library. This cannot be undone."),
             pt!("clear", "Clear"),
-            Action::ClearLibrary,
+            Some(Action::ClearLibrary),
+        ),
+        Confirm::RotateSyncKey => (
+            t!("Change the sync key?"),
+            t!(
+                "Cineo makes a new code, moves your data to it and deletes the data under the old code. Your other devices stop syncing until you pair them with the new code."
+            ),
+            t!("Change key"),
+            None,
+        ),
+        Confirm::LeaveSync => (
+            t!("Turn off sync?"),
+            t!(
+                "This device stops syncing and keeps its library. The data on the server stays for your other devices."
+            ),
+            t!("Turn off"),
+            Some(Action::LeaveSync {
+                delete_server_data: false,
+            }),
+        ),
+        Confirm::LeaveSyncAndDelete => (
+            t!("Turn off sync and delete the server data?"),
+            t!(
+                "This device stops syncing and the data on the server is deleted. Your other devices keep their own copies but stop syncing."
+            ),
+            t!("Delete"),
+            Some(Action::LeaveSync {
+                delete_server_data: true,
+            }),
         ),
     };
     if let Some(accepted) = dialog(ui, "settings_confirm", &title, &text, None, &button) {
         if accepted {
-            out.push(action);
+            match action {
+                Some(action) => out.push(action),
+                None => view.sync_request = Some(crate::view::SyncRequest::NewKey),
+            }
         }
         view.confirm = None;
     }

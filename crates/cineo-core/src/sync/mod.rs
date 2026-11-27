@@ -4,6 +4,8 @@ pub mod protocol;
 mod record;
 mod replica;
 
+pub const DEFAULT_SERVER: &str = "https://cineo-sync.cineo-sync-server.workers.dev/";
+
 pub use clock::{Clock, DeviceId, Stamp};
 pub use pairing::{Pairing, SyncKey};
 pub use record::{FORMAT, Record, RecordName, Value};

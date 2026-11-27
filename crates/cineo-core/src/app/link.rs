@@ -15,6 +15,10 @@ pub enum Route {
         id: String,
         video_id: Option<String>,
     },
+    Sync {
+        code: String,
+        server: Option<Url>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -81,6 +85,10 @@ pub fn parse_link(link: &str) -> Result<Route, LinkError> {
             content_type: content_type(ty)?,
             id: (*id).to_owned(),
             video_id: video.first().map(|v| (*v).to_owned()),
+        }),
+        ["sync", code] => Ok(Route::Sync {
+            code: (*code).to_owned(),
+            server: query("server").and_then(|s| Url::parse(&s).ok()),
         }),
         _ => Err(LinkError::Unknown),
     }

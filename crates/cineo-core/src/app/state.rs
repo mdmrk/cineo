@@ -818,7 +818,7 @@ fn open_link(state: &mut State, route: Route) -> Vec<Effect> {
     state.detail = None;
     match route {
         Route::Discover(Some(link)) => {
-            let mut effects = update(
+            let mut effects = reduce(
                 state,
                 Action::OpenDiscover {
                     addon: link.addon,

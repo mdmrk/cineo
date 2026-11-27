@@ -100,6 +100,29 @@ pub struct ViewState {
     pub system_locale: Locale,
     pub register_links: bool,
     pub links_registered: Option<Result<(), String>>,
+    pub sync_code: String,
+    pub sync_server: String,
+    pub sync_error: Option<SyncInputError>,
+    pub sync_request: Option<SyncRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SyncRequest {
+    TurnOn {
+        server: url::Url,
+    },
+    Pair {
+        key: cineo_core::sync::SyncKey,
+        server: url::Url,
+    },
+    NewKey,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SyncInputError {
+    Code(cineo_net::sync::CodeError),
+    Server,
+    Random,
 }
 
 impl ViewState {
@@ -389,7 +412,7 @@ fn notice_bar(ui: &mut Ui, notice: &Notice, out: &mut Vec<Action>) {
         });
 }
 
-pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> Vec<Action> {
+pub fn follow_link(route: Route, state: &State, view: &mut ViewState) -> Vec<Action> {
     let mut out = Vec::new();
     let page = match &route {
         Route::InstallAddon(_) => Some(Page::Addons),
@@ -402,6 +425,15 @@ pub(crate) fn follow_link(route: Route, state: &State, view: &mut ViewState) -> 
             Some(Page::Search)
         }
         Route::Detail { .. } => None,
+        Route::Sync { code, server } => {
+            view.sync_code.clone_from(code);
+            view.sync_server = server
+                .as_ref()
+                .map_or_else(String::new, ToString::to_string);
+            view.sync_error = None;
+            view.settings_jump = Some(crate::settings::Section::Data);
+            Some(Page::Settings)
+        }
     };
     match page {
         Some(page) => go(page, state, view, &mut out),

@@ -8,6 +8,7 @@ use cineo_core::app::{
     Action, Effect, Language, Notice, Settings, State, TorrentRequest, UpdateFailure,
     UpdateRequest, parse_link, update,
 };
+use cineo_core::sync::Pairing;
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::embedded::{Display, Player, PlayerCommand, ProcAddress, Renderer, Status};
 use cineo_store::Store;
@@ -24,7 +25,7 @@ use crate::keep_awake::KeepAwake;
 use crate::media_keys::{MediaKeys, Playing, Remote};
 use crate::player::Controls;
 use crate::theme;
-use crate::view::{self, Page, ViewState};
+use crate::view::{self, Page, SyncInputError, SyncRequest, ViewState};
 use crate::{instance, register};
 use cineo_player::subtitles::SubtitleFiles;
 
@@ -371,6 +372,37 @@ impl CineoApp {
         }
     }
 
+    fn sync_request(&mut self, request: SyncRequest) {
+        let (key, server) = match request {
+            SyncRequest::NewKey => {
+                match cineo_net::sync::new_key() {
+                    Ok(key) => self.dispatch(Action::RotateSyncKey(key)),
+                    Err(err) => {
+                        warn!(%err, "no new sync key");
+                        self.view.sync_error = Some(SyncInputError::Random);
+                    }
+                }
+                return;
+            }
+            SyncRequest::Pair { key, server } => (Ok(key), server),
+            SyncRequest::TurnOn { server } => (cineo_net::sync::new_key(), server),
+        };
+        let (Ok(key), Ok(device)) = (key, cineo_net::sync::new_device()) else {
+            warn!("no sync key or device id");
+            self.view.sync_error = Some(SyncInputError::Random);
+            return;
+        };
+        if self.state.sync.is_some() {
+            self.dispatch(Action::LeaveSync {
+                delete_server_data: false,
+            });
+        }
+        self.dispatch(Action::EnableSync {
+            pairing: Pairing { key, server },
+            device,
+        });
+    }
+
     fn tick(&mut self, ctx: &egui::Context) {
         if self.ticked.elapsed() >= TICK_EVERY {
             self.ticked = Instant::now();
@@ -553,6 +585,9 @@ impl eframe::App for CineoApp {
         }
         for action in view::show(ui, &self.state, &mut self.view) {
             self.dispatch(action);
+        }
+        if let Some(request) = self.view.sync_request.take() {
+            self.sync_request(request);
         }
         if std::mem::take(&mut self.view.register_links) {
             let post = self.post();

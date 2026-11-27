@@ -27,6 +27,7 @@ mod browse;
 mod detail;
 mod library;
 mod settings;
+mod sync;
 
 fn fixture(rel: &str) -> Vec<u8> {
     let full = format!("{}/../../tests/addons/{rel}", env!("CARGO_MANIFEST_DIR"));

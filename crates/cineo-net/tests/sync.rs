@@ -454,3 +454,21 @@ async fn deleting_the_space_tolerates_one_already_gone() {
         client(&server).delete_space().await.unwrap();
     }
 }
+
+#[test]
+fn the_pairing_link_carries_the_code_and_a_server_other_than_the_default() {
+    let default = pairing(cineo_core::sync::DEFAULT_SERVER);
+    assert_eq!(
+        cineo_net::sync::pairing_link(&default),
+        format!("cineo:///sync/{REFERENCE_CODE}")
+    );
+    let own = pairing("https://sync.example/cineo/");
+    let link = cineo_net::sync::pairing_link(&own);
+    assert_eq!(
+        cineo_core::app::parse_link(&link),
+        Ok(cineo_core::app::Route::Sync {
+            code: REFERENCE_CODE.into(),
+            server: Some(own.server),
+        })
+    );
+}

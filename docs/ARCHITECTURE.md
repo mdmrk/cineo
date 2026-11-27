@@ -137,8 +137,9 @@ The API is blocking; async shells call it off the runtime's worker threads.
 
 ### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. Everything below exists and the
-desktop runs it, but there is no UI to turn it on yet (ADR-0043, step 6b).
+Sync is optional and off by default. Everything below exists. The desktop
+turns it on in Settings → Data; Android has no sync UI yet (ADR-0043,
+step 7).
 
 - `cineo_core::app` (built): `State::sync` holds the pairing, the replica
   and the round. `update` runs the reducer, then passes its persistence
@@ -149,6 +150,12 @@ desktop runs it, but there is no UI to turn it on yet (ADR-0043, step 6b).
   addon effects. The desktop sends `Action::Tick` every second and restores
   the pairing at start. Tests: `crates/cineo-core/tests/app_state/sync.rs`,
   against an in-memory server.
+- `cineo-desktop` (built): `settings/sync.rs` shows the sync controls in
+  Settings → Data, the code and its QR code (`pairing_link`, drawn with
+  `qrcode`). Random keys and device ids come from the shell, which turns a
+  `SyncRequest` into `EnableSync` or `RotateSyncKey`. The
+  `cineo:///sync/<code>` link (`Route::Sync`) only fills the code. Tests:
+  `crates/cineo-desktop/tests/ui/sync.rs`.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the

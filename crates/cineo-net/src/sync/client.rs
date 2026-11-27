@@ -78,13 +78,7 @@ pub struct PushOutcome {
 impl SyncClient {
     pub fn new(http: AddonClient, pairing: &Pairing) -> Result<Self, SyncError> {
         let server = &pairing.server;
-        let loopback = match server.host() {
-            Some(Host::Ipv4(ip)) => ip.is_loopback(),
-            Some(Host::Ipv6(ip)) => ip.is_loopback(),
-            Some(Host::Domain(domain)) => domain == "localhost",
-            None => false,
-        };
-        if !(server.scheme() == "https" || server.scheme() == "http" && loopback) {
+        if !server_allowed(server) {
             return Err(SyncError::InsecureServer);
         }
         let mut base = server.clone();
@@ -312,6 +306,16 @@ impl SyncClient {
         let (status, retry_after_s, body) = self.exchange(op, method, url, body, limit).await?;
         check(status, retry_after_s, body)
     }
+}
+
+pub fn server_allowed(server: &Url) -> bool {
+    let loopback = match server.host() {
+        Some(Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(Host::Ipv6(ip)) => ip.is_loopback(),
+        Some(Host::Domain(domain)) => domain == "localhost",
+        None => false,
+    };
+    server.scheme() == "https" || server.scheme() == "http" && loopback
 }
 
 fn check(

@@ -22,6 +22,7 @@ crates/cineo-desktop/src/self_update.rs
 crates/cineo-desktop/src/settings/keyboard.rs
 crates/cineo-desktop/src/settings/mod.rs
 crates/cineo-desktop/src/settings/subtitles.rs
+crates/cineo-desktop/src/settings/sync.rs
 crates/cineo-desktop/src/settings/widgets.rs
 crates/cineo-desktop/src/theme.rs
 crates/cineo-desktop/src/view/addons.rs

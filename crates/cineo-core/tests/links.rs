@@ -45,6 +45,21 @@ fn links_parse_into_routes_and_anything_else_is_rejected() {
             "stremio:///detail/series/tt0108778/tt0108778:1:1?autoPlay=true",
             Ok(detail("tt0108778", Some("tt0108778:1:1"))),
         ),
+        (
+            "cineo:///sync/AAAQ-EAYE-AUDA-OCAJ-BIFQ-YDIO-B4KA-47NG",
+            Ok(Route::Sync {
+                code: "AAAQ-EAYE-AUDA-OCAJ-BIFQ-YDIO-B4KA-47NG".into(),
+                server: None,
+            }),
+        ),
+        (
+            "cineo:///sync/ABCD?server=https%3A%2F%2Fsync.example%2Fcineo%2F",
+            Ok(Route::Sync {
+                code: "ABCD".into(),
+                server: Some("https://sync.example/cineo/".parse().unwrap()),
+            }),
+        ),
+        ("cineo:///sync", Err(LinkError::Unknown)),
         ("https://example.com/manifest.json", Err(LinkError::Scheme)),
         ("stremio://example.com/addon.json", Err(LinkError::Unknown)),
         (

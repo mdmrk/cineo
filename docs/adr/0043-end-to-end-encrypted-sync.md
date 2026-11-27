@@ -230,10 +230,11 @@ set of records from three devices, including skewed clocks and repeats),
   `1` as `I`. The checksum catches typos before any request is sent.
   (Amended 2026-11-27 in step 4: 4 check bytes instead of 2, so that the
   code splits into equal groups.)
-- **QR code:** the link `cineo://sync/<code>`, plus `?server=<url>` when the
+- **QR code:** the link `cineo:///sync/<code>` (empty host, like the other
+  `cineo:///` links), plus `?server=<url>` when the
   server is not the default. Encoded with `qrcode` (rendering in each
   shell). On Android, the system camera can open the link, which needs a
-  new intent filter for `cineo://sync`. An in-app scanner (zxing-cpp,
+  new intent filter for `cineo:///sync`. An in-app scanner (zxing-cpp,
   Apache-2.0) is left for later (Consequences).
 - **Derivation:** HKDF-SHA256 with the key as IKM and salt
   `"cineo-sync-v1"`, three outputs of 32 bytes:
@@ -482,13 +483,15 @@ database.
      shells will call. Found in step 5a: without it, a restored backup or
      a swept space left paired devices in conflicts.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
-   URL, change key, leave, last sync status). `cineo://sync/` deep link.
+   URL, change key, leave, last sync status). `cineo:///sync/` deep link.
    Amended 2026-11-27 by the owner: the controls go in Settings → Data, and
    nothing is pushed on exit (pending edits go out on the next start). In
    parts: **6a** the core reducer, store and network effects, restore and
-   the tick on the desktop, without UI (done); **6b** the UI; **6c** status
-   and debt docs.
-7. Android: the same screen, the intent filter for `cineo://sync`, and
+   the tick on the desktop, without UI (done); **6b** the UI (done: the
+   controls, the QR code drawn with `qrcode`, and the `cineo:///sync/` link,
+   which fills the code and opens Settings → Data so that pairing still
+   takes a click); **6c** status and debt docs.
+7. Android: the same screen, the intent filter for `cineo:///sync`, and
    pull on foreground.
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named
    tests.

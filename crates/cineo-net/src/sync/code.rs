@@ -1,5 +1,5 @@
 use aws_lc_rs::digest::{SHA256, digest};
-use cineo_core::sync::SyncKey;
+use cineo_core::sync::{DEFAULT_SERVER, Pairing, SyncKey};
 use data_encoding::BASE32_NOPAD;
 
 const CHECK_LEN: usize = 4;
@@ -58,4 +58,15 @@ pub fn parse_code(text: &str) -> Result<SyncKey, CodeError> {
         return Err(CodeError::Typo);
     }
     Ok(SyncKey::from_bytes(key))
+}
+
+pub fn pairing_link(pairing: &Pairing) -> String {
+    let mut link = format!("cineo:///sync/{}", format_code(&pairing.key));
+    if pairing.server.as_str() != DEFAULT_SERVER {
+        link.push_str("?server=");
+        link.extend(url::form_urlencoded::byte_serialize(
+            pairing.server.as_str().as_bytes(),
+        ));
+    }
+    link
 }
