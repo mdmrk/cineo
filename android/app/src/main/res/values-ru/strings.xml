@@ -134,6 +134,8 @@
     <string name="reset">Сбросить</string>
     <string name="private_network">Разрешить адреса локальной сети</string>
     <string name="private_network_help">Позволяет обращаться к аддонам, изображениям и пирам на 127.0.0.1 или в домашней сети, для аддонов на своём сервере. Выключенный вариант безопаснее. Вступает в силу после перезапуска Cineo.</string>
+    <string name="private_network_blocked">Android блокирует доступ Cineo к локальной сети, поэтому эти адреса пока недоступны.</string>
+    <string name="private_network_allow">Разрешить</string>
     <string name="addons_dek">Если два аддона возвращают один и тот же элемент, побеждает тот, что выше в списке.</string>
     <string name="addons_none">Пока ничего не установлено.</string>
     <string name="move_up">Выше</string>

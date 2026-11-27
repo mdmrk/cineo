@@ -143,6 +143,8 @@
     <string name="reset">Reset</string>
     <string name="private_network">Allow local network addresses</string>
     <string name="private_network_help">Lets addons, images and torrent peers on 127.0.0.1 or your home network be reached, for self-hosted addons. Off is safer. Takes effect after restarting Cineo.</string>
+    <string name="private_network_blocked">Android is blocking local network access for Cineo, so these addresses cannot be reached yet.</string>
+    <string name="private_network_allow">Allow</string>
     <string name="addons_dek">When two addons return the same item, the one higher in the list wins.</string>
     <string name="addons_none">Nothing installed yet.</string>
     <string name="move_up">Move up</string>

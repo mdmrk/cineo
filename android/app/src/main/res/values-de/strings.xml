@@ -134,6 +134,8 @@
     <string name="reset">Zurücksetzen</string>
     <string name="private_network">Lokale Netzwerkadressen erlauben</string>
     <string name="private_network_help">Macht Add-ons, Bilder und Torrent-Peers unter 127.0.0.1 oder in deinem Heimnetz erreichbar, für selbst gehostete Add-ons. Aus ist sicherer. Wirkt nach einem Neustart von Cineo.</string>
+    <string name="private_network_blocked">Android blockiert den Zugriff von Cineo auf das lokale Netzwerk, daher sind diese Adressen noch nicht erreichbar.</string>
+    <string name="private_network_allow">Erlauben</string>
     <string name="addons_dek">Liefern zwei Add-ons denselben Eintrag, gewinnt das weiter oben in der Liste.</string>
     <string name="addons_none">Noch nichts installiert.</string>
     <string name="move_up">Nach oben</string>

@@ -140,6 +140,8 @@
     <string name="reset">重置</string>
     <string name="private_network">允许本地网络地址</string>
     <string name="private_network_help">允许访问 127.0.0.1 或家庭网络上的插件、图片和种子节点，用于自建插件。关闭更安全。重启 Cineo 后生效。</string>
+    <string name="private_network_blocked">Android 正在阻止 Cineo 访问本地网络，因此暂时无法访问这些地址。</string>
+    <string name="private_network_allow">允许</string>
     <string name="addons_dek">当两个插件返回相同的条目时，以列表中靠前的插件为准。</string>
     <string name="addons_none">尚未安装任何插件。</string>
     <string name="move_up">上移</string>

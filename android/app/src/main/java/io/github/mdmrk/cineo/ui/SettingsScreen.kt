@@ -282,11 +282,13 @@ fun SettingsScreen(
                 stringResource(R.string.sync_code),
                 stringResource(R.string.sync_server),
             ) { SyncSettings(sync, syncLink, onSyncLinkUsed, cineo) }
-            toggle(
-                stringResource(R.string.private_network),
-                stringResource(R.string.private_network_help),
-                settings.allowPrivateNetwork,
-            ) { change(SettingChange.AllowPrivateNetwork(it)) }
+            val privateTitle = stringResource(R.string.private_network)
+            val privateHelp = stringResource(R.string.private_network_help)
+            add(privateTitle, privateHelp) {
+                PrivateNetwork(privateTitle, privateHelp, settings.allowPrivateNetwork) {
+                    change(SettingChange.AllowPrivateNetwork(it))
+                }
+            }
             confirmed(
                 stringResource(R.string.clear_history),
                 stringResource(R.string.clear_history_help),

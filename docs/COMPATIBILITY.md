@@ -912,7 +912,18 @@ On the desktop and on Android (ADR-0043).
   orientation back to the system on leaving the player
   (`aPortraitPlayerTurnsToLandscape`, `aLandscapePlayerTurnsToPortrait`; on
   the Redmi 9 with auto-rotate off it turned both ways and the orientation
-  was unspecified again after leaving, 2026-11-09).
+  was unspecified again after leaving, 2026-11-09). From Android 16 on
+  screens at least 600 dp wide, where Android ignores an app's orientation,
+  the button is not shown
+  (`largeScreensFromAndroid16OnCannotBeRotatedByTheApp`; no large screen
+  seen).
+- The app targets Android 17 (API 37). There, reaching addresses on the
+  local network needs the `ACCESS_LOCAL_NETWORK` permission: turning on
+  "Allow local network addresses" asks for it, and while the setting is on
+  without it the row says so and offers "Allow", which opens the app's
+  system settings after a refusal (no automated test; not yet seen on an
+  Android 17 device. On the Redmi 9, Android 13, the app installed with
+  target 37 and started, 2026-11-27).
 - Whenever the app is opened or returned to with a network, and whenever a
   usable network appears while it is visible, it asks again for the addons,
   home and search rows, addon lists, detail and streams that failed, without

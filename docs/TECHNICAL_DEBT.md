@@ -22,6 +22,24 @@ Format:
 
 ## Entries
 
+### Android: Android 17 network rules not seen on a device
+- Where: [AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml),
+  [LocalNetwork.kt](../android/app/src/main/java/io/github/mdmrk/cineo/ui/LocalNetwork.kt)
+- Gap: with target API 37, Android requires `ACCESS_LOCAL_NETWORK` for LAN
+  traffic. Google's page does not say whether loopback is local network;
+  the torrent engine hands the stream to mpv through 127.0.0.1
+  ([engine.rs](../crates/cineo-stream/src/engine.rs)). Torrent peers on the
+  LAN are reached only if the permission was granted through the private
+  network setting. Certificate transparency, on by default for target 37,
+  may also apply to rustls-platform-verifier's calls into the platform
+  trust manager (UNKNOWN).
+- Why: no Android 17 device or emulator was available; the Redmi 9 runs
+  Android 13.
+- Instead: on Android 13 nothing changed (seen 2026-11-27); on Android 17
+  torrent playback and HTTPS to addons are expected to work (INFERRED).
+- Exit: play a torrent and an HTTPS addon on an Android 17 device or
+  emulator, with and without the permission.
+
 ### Sync: no push on exit
 - Where: [app/sync.rs](../crates/cineo-core/src/app/sync.rs) (`after`)
 - Gap: an edit made less than a minute before closing Cineo, or progress

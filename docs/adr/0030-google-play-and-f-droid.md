@@ -39,7 +39,7 @@ Google Play:
   (INFERRED from Google's documentation as remembered; to be checked in
   the Play Console when the app is created).
 - From 2026-08-31, new apps and updates must target API 36. The app
-  targets 36 (VERIFIED: `android/app/build.gradle.kts`;
+  targets 37 (VERIFIED: `android/app/build.gradle.kts`;
   <https://developer.android.com/google/play/requirements/target-sdk>).
 - A personal developer account created after 2023-11-13 must run a closed
   test with at least 12 opted-in testers for 14 days before it can apply

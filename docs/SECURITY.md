@@ -228,6 +228,10 @@ Sync is off by default.
   and uses the camera only while the scanner is open; frames are read in
   memory and not stored. Without the permission, or without a camera
   (`android.hardware.camera.any` is optional), the code is typed.
+- **Local network (Android 17).** The app declares
+  `ACCESS_LOCAL_NETWORK` and asks for it only when "Allow local network
+  addresses" is turned on, or from that row's "Allow" button. Without it,
+  Android blocks LAN addresses even with the setting on (no automated test).
 - **Server (`cineo-sync-server`).** It stores SHA-256 of each space's
   public key and only sealed blobs under opaque keys
   (`the_server_stores_nothing_readable`). A request without a valid

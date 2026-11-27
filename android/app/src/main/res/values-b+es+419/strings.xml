@@ -134,6 +134,8 @@
     <string name="reset">Restablecer</string>
     <string name="private_network">Permitir direcciones de la red local</string>
     <string name="private_network_help">Permite acceder a add-ons, imágenes y pares torrent en 127.0.0.1 o en tu red doméstica, para add-ons alojados por ti. Desactivado es más seguro. Se aplica al reiniciar Cineo.</string>
+    <string name="private_network_blocked">Android está bloqueando el acceso de Cineo a la red local, así que todavía no se puede llegar a estas direcciones.</string>
+    <string name="private_network_allow">Permitir</string>
     <string name="addons_dek">Cuando dos add-ons devuelven el mismo elemento, gana el que está más arriba en la lista.</string>
     <string name="addons_none">Aún no hay nada instalado.</string>
     <string name="move_up">Subir</string>

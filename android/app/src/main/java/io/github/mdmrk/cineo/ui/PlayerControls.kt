@@ -61,7 +61,7 @@ internal fun Controls(
     onSeekBy: (Int) -> Unit,
     onNext: (() -> Unit)?,
     onToggleStats: () -> Unit,
-    onRotate: () -> Unit,
+    onRotate: (() -> Unit)?,
     onAudio: (Long) -> Unit,
     onSubtitle: (Long?) -> Unit,
     onAddonSubtitle: (String) -> Unit,
@@ -104,8 +104,10 @@ internal fun Controls(
             IconButton(onClick = onToggleStats, modifier = Modifier.semantics { contentDescription = statsLabel }) {
                 CineoIcon(Icon.ACTIVITY, tint = Color.White)
             }
-            IconButton(onClick = onRotate) {
-                CineoIcon(Icon.DEVICE_MOBILE_ROTATED, tint = Color.White, label = stringResource(R.string.player_rotate))
+            if (onRotate != null) {
+                IconButton(onClick = onRotate) {
+                    CineoIcon(Icon.DEVICE_MOBILE_ROTATED, tint = Color.White, label = stringResource(R.string.player_rotate))
+                }
             }
         }
         Row(

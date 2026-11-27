@@ -1,6 +1,7 @@
 package io.github.mdmrk.cineo.ui
 
 import android.content.pm.ActivityInfo
+import android.os.Build
 import android.os.SystemClock
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,9 +198,11 @@ fun PlayerScreen(
                     touches++
                     stats = !stats
                 },
-                onRotate = {
-                    touches++
-                    onRotate()
+                onRotate = onRotate?.let { rotate ->
+                    {
+                        touches++
+                        rotate()
+                    }
                 },
                 onAudio = { cineo.selectAudio(it) },
                 onSubtitle = { cineo.selectSubtitle(it) },
@@ -266,12 +270,13 @@ private fun FullScreen() {
 }
 
 @Composable
-private fun rememberRotate(): () -> Unit {
+private fun rememberRotate(): (() -> Unit)? {
     val view = LocalView.current
     val activity = LocalActivity.current
     DisposableEffect(activity) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
+    if (!canRotate(Build.VERSION.SDK_INT, LocalConfiguration.current.smallestScreenWidthDp)) return null
     return { activity?.requestedOrientation = rotatedOrientation(view.resources.configuration.orientation) }
 }
 

@@ -134,6 +134,8 @@
     <string name="reset">Réinitialiser</string>
     <string name="private_network">Autoriser les adresses du réseau local</string>
     <string name="private_network_help">Permet d\'atteindre les extensions, images et pairs torrent sur 127.0.0.1 ou sur votre réseau domestique, pour les extensions auto-hébergées. Désactivé est plus sûr. Prend effet après le redémarrage de Cineo.</string>
+    <string name="private_network_blocked">Android bloque l\'accès de Cineo au réseau local : ces adresses ne sont pas encore joignables.</string>
+    <string name="private_network_allow">Autoriser</string>
     <string name="addons_dek">Quand deux extensions renvoient le même élément, celle placée plus haut dans la liste l\'emporte.</string>
     <string name="addons_none">Rien d\'installé pour l\'instant.</string>
     <string name="move_up">Monter</string>

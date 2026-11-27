@@ -145,7 +145,7 @@ android {
     defaultConfig {
         applicationId = "io.github.mdmrk.cineo"
         minSdk = minApi
-        targetSdk = 36
+        targetSdk = 37
         versionName = cargoTomlValue("workspace.package", "version")
         versionCode = versionCode(cargoTomlValue("workspace.package", "version"))
         ndk { abiFilters += "arm64-v8a" }
