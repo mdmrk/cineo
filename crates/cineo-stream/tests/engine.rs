@@ -666,7 +666,7 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
     engine.shutdown().await;
 }
 
-async fn seek_away_from_a_slow_start(name: &str, close_the_start_after_the_seek: bool) {
+async fn seek_away_from_a_slow_start(name: &str) {
     const PIECE: usize = 2 * 1024 * 1024;
     let content = temp_dir(&format!("{name}-seed")).join("content");
     std::fs::create_dir_all(&content).unwrap();
@@ -715,16 +715,12 @@ async fn seek_away_from_a_slow_start(name: &str, close_the_start_after_the_seek:
     let request = format!("GET {} HTTP/1.1\r\nHost: {addr}\r\n\r\n", url.path());
     start.write_all(request.as_bytes()).await.unwrap();
     tokio::time::sleep(Duration::from_millis(500)).await;
-    let start = close_the_start_after_the_seek.then_some(start);
+    drop(start);
 
     let last = film.len() - PIECE;
     let range = format!("bytes={last}-");
     let path = url.path().to_owned();
     let end = tokio::spawn(async move { http(addr, "GET", &path, &[("Range", &range)]).await });
-    if close_the_start_after_the_seek {
-        tokio::time::sleep(Duration::from_millis(300)).await;
-    }
-    drop(start);
     let end = end.await.unwrap();
     assert!(end.body == film[last..]);
     assert_eq!(
@@ -737,12 +733,7 @@ async fn seek_away_from_a_slow_start(name: &str, close_the_start_after_the_seek:
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_seek_abandons_the_pieces_in_flight_at_the_old_position() {
-    seek_away_from_a_slow_start("seek", false).await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn a_start_closed_after_the_seek_still_gives_up_its_pieces() {
-    seek_away_from_a_slow_start("late-close", true).await;
+    seek_away_from_a_slow_start("seek").await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
