@@ -160,6 +160,43 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
   (`playable_streams_survive_saving_and_others_are_not_saved`,
   `an_unreadable_saved_stream_is_dropped_and_the_item_kept`).
 
+### Sync (ADR-0043)
+
+Only the client parts exist; nothing calls them yet, and the server is not
+built. Sync is off by default.
+
+- **Key.** 16 random bytes from `aws_lc_rs::rand`, stored in the private
+  database (`sync_pairing`). It is shown as a 32-character code with a
+  4-byte checksum, so a typo is caught before any request
+  (`a_mistyped_code_is_rejected`). Its `Debug` output hides it
+  (`the_sync_key_is_never_printed`, `the_keys_are_never_printed`).
+- **Derived keys.** HKDF-SHA256 gives a bearer token, an HMAC key for the
+  record names and a ChaCha20-Poly1305 key. The derivation is pinned by
+  vectors computed separately with Python's `hmac` and `hashlib`
+  (`derived_keys_match_the_reference_vectors`).
+- **What the server receives.** The token, 16-byte record keys and sealed
+  blobs. Ids, titles, addon URLs and settings never leave the device in
+  clear (`push_sends_sealed_writes_with_their_base_versions`).
+- **Integrity.** A blob opens only with its key, under its own record key
+  and in a known format; a tampered, moved or foreign blob is skipped
+  (`a_sealed_record_opens_only_with_its_key_in_its_place`,
+  `pull_opens_records_and_skips_unreadable_ones`). Opened records are
+  parsed again leniently (ADR-0003). A server can still withhold, delete
+  or replay old records.
+- **Transport.** The sync server goes through `AddonClient` and
+  `NetPolicy`, so private addresses need the opt-in
+  (`the_sync_server_follows_the_network_policy`). It must be `https`, or
+  `http` to this machine only
+  (`the_server_must_use_https_unless_it_is_this_machine`). reqwest 0.13.5
+  drops the `Authorization` header when a redirect changes host, port or
+  scheme (VERIFIED: its `remove_sensitive_headers`). Pages are capped at
+  2 MiB (`an_oversized_pull_page_is_refused`) and the push answer at 64 KiB.
+- **Device-local settings** such as private-network access are never
+  pushed or applied from another device
+  (`device_local_settings_are_never_pushed_or_applied`).
+- **Who holds the code reads everything synced**, including addon URLs
+  that can carry API keys.
+
 ### Process execution
 
 No shell is ever invoked with addon-controlled input. Opening `externalUrl`
@@ -287,6 +324,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Max decoded body                  | 8 MiB                                                                                                                                               |
 | Request timeout / connect timeout | 20 s / 10 s                                                                                                                                         |
 | Max redirects                     | 5, no https→http                                                                                                                                    |
+| Sync                              | Off; not available in the UI yet (ADR-0043)                                                                                                         |
 | mpv                               | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; forward cache at most 120 s and 512 MiB (ADR-0024) |
 
 ## Unsafe code

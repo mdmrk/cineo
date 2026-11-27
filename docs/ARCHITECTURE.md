@@ -136,8 +136,8 @@ The API is blocking; async shells call it off the runtime's worker threads.
 
 ### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. The core and store parts exist;
-nothing calls them yet.
+Sync is optional and off by default. The core, store and client parts
+exist; nothing calls them yet.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the
@@ -152,8 +152,13 @@ nothing calls them yet.
   `Replica::take_changes` hands over only what changed, so a progress save
   rewrites one row. Changes saved after `forget_sync` are dropped. Tests:
   the `sync` tests in `crates/cineo-store/tests/store.rs`.
-- `cineo_net::sync` (not built): the sync code, key derivation, encryption
-  and the HTTP calls, through `AddonClient` and `NetPolicy`.
+- `cineo_net::sync` (built): the sync code (`format_code`, `parse_code`),
+  `SpaceKeys` (HKDF-SHA256 to a bearer token, an HMAC key for record names
+  and a ChaCha20-Poly1305 key, all with `aws-lc-rs`), and `SyncClient`
+  (`pull`, `push` in batches of at most 100 records and 256 KiB,
+  `delete_space`). HTTP goes through `AddonClient::send`, which applies
+  `NetPolicy` and a body cap and returns the status, so 404, 409, 410 and
+  503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
 - `server/sync/` (not built): a TypeScript Cloudflare Worker with D1 that
   stores encrypted, opaque records. It never sees plaintext.
 

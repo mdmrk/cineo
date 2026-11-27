@@ -203,10 +203,12 @@ set of records from three devices, including skewed clocks and repeats),
 ### 3. Key, encryption and revocation (`cineo_net::sync`)
 - **Sync key:** 16 random bytes (128 bits) from `aws_lc_rs::rand`.
 - **Text code:** RFC 4648 base32 of `key ‖ check`, where `check` is the
-  first 2 bytes of SHA-256(`"cineo-sync-check" ‖ key`). That is 29
-  characters, in groups of 4 separated by `-`. Input is read
-  case-insensitively and ignores spaces and dashes. The checksum catches
-  typos before any request is sent.
+  first 4 bytes of SHA-256(`"cineo-sync-check" ‖ key`). That is 32
+  characters, in 8 groups of 4 separated by `-`. Input is read
+  case-insensitively, ignores spaces and dashes, and reads `0` as `O` and
+  `1` as `I`. The checksum catches typos before any request is sent.
+  (Amended 2026-11-27 in step 4: 4 check bytes instead of 2, so that the
+  code splits into equal groups.)
 - **QR code:** the link `cineo://sync/<code>`, plus `?server=<url>` when the
   server is not the default. Encoded with `qrcode` (rendering in each
   shell). On Android, the system camera can open the link, which needs a
@@ -239,7 +241,7 @@ set of records from three devices, including skewed clocks and repeats),
 - **Rotate** ("Change sync key", for a lost or stolen device): a new key is
   made, all current records are pushed to the new space, the old space is
   deleted with `DELETE /v1/space`, and the new code is shown. Other devices
-  get 404 on the old space and show "Sync key changed: pair again". The
+  get 410 on the old space and show "Sync key changed: pair again". The
   holder of the old key keeps whatever they downloaded before the rotation.
   Nothing can take that back.
 - **Leave** on one device: forgets the key, keeps local data. Optionally
@@ -251,7 +253,9 @@ set of records from three devices, including skewed clocks and repeats),
 
 ### 4. Protocol (`/v1`, JSON, HTTPS only)
 All requests go through `cineo-net`'s `AddonClient` and `NetPolicy`
-(ADR-0006). The client gains POST and DELETE with a body cap. The sync
+(ADR-0006). The server URL must be `https`, except `http` to this machine
+(`localhost`, `127.0.0.1`, `::1`) for a self-hosted or development server,
+which still needs the private-network opt-in. The client gains POST and DELETE with a body cap. The sync
 server is treated like an addon host: a private-network address needs the
 existing opt-in. `Authorization: Bearer <base64url token>` is sent on every
 request except `/v1/info`. The token, code and key never appear in logs or
@@ -260,9 +264,9 @@ errors.
 | Endpoint | Purpose |
 |---|---|
 | `GET /v1/info` | `{ protocol: 1, max_record_bytes, max_batch_bytes, max_batch_records, max_space_records, max_space_bytes }` |
-| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more }`. 404 if the space does not exist |
+| `GET /v1/records?since=<seq>&limit=<n≤500>` | Records with `seq > since`, by `seq`: `{ records: [{ key, seq, blob }], more }`. 404 if nobody has written to the space yet (the client reads it as empty); 410 if it was deleted |
 | `POST /v1/records` | `{ writes: [{ key, base_seq, blob }] }`. Applied **atomically** (one D1 `batch()`). Each `base_seq` must equal the record's current `seq` (0 = new), or the whole batch fails with **409** and the conflicting keys. The space is created on its first write. Response: `{ seqs: [...] }` |
-| `DELETE /v1/space` | Deletes the space and its records |
+| `DELETE /v1/space` | Deletes the records and keeps a marker, so the space answers 410 and refuses writes from then on. An old code can therefore not bring a rotated space back |
 
 - **Concurrency control:** a per-space counter `seq`, raised on every
   write, acts as each record's version (compare-and-set per record). On

@@ -1128,14 +1128,18 @@ dependencies = [
 name = "cineo-net"
 version = "1.10.2"
 dependencies = [
+ "aws-lc-rs",
  "cineo-core",
+ "data-encoding",
  "reqwest",
  "semver",
+ "serde_json",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
  "url",
  "wiremock",
+ "zeroize",
 ]
 
 [[package]]

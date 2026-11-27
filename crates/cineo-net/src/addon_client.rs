@@ -210,10 +210,10 @@ impl AddonClient {
         url: Url,
         limit: usize,
         accept: &str,
-        mut progress: impl FnMut(u64, Option<u64>) + Send,
+        progress: impl FnMut(u64, Option<u64>) + Send,
     ) -> Result<Vec<u8>, FetchError> {
         self.policy.check_url(&url)?;
-        let mut response = self
+        let response = self
             .http()
             .get(url)
             .header(reqwest::header::ACCEPT, accept)
@@ -225,25 +225,69 @@ impl AddonClient {
         if !status.is_success() {
             return Err(FetchError::Status(status));
         }
-        if response
-            .content_length()
-            .is_some_and(|len| len > limit as u64)
-        {
+        read_limited(response, limit, progress).await
+    }
+
+    pub(crate) async fn send(
+        &self,
+        request: SyncRequest<'_>,
+    ) -> Result<(StatusCode, Option<u64>, Vec<u8>), FetchError> {
+        self.policy.check_url(&request.url)?;
+        let mut builder = self
+            .http()
+            .request(request.method, request.url)
+            .header(reqwest::header::ACCEPT, "application/json")
+            .bearer_auth(request.bearer);
+        if let Some(body) = request.body {
+            builder = builder
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .body(body);
+        }
+        let response = builder.send().await.map_err(|err| classify(&err))?;
+        let status = response.status();
+        debug!(%status, "response headers received");
+        let retry_after = response
+            .headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.trim().parse().ok());
+        let body = read_limited(response, request.limit, |_, _| {}).await?;
+        Ok((status, retry_after, body))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct SyncRequest<'a> {
+    pub method: reqwest::Method,
+    pub url: Url,
+    pub bearer: &'a str,
+    pub body: Option<Vec<u8>>,
+    pub limit: usize,
+}
+
+async fn read_limited(
+    mut response: reqwest::Response,
+    limit: usize,
+    mut progress: impl FnMut(u64, Option<u64>) + Send,
+) -> Result<Vec<u8>, FetchError> {
+    if response
+        .content_length()
+        .is_some_and(|len| len > limit as u64)
+    {
+        return Err(FetchError::TooLarge { limit });
+    }
+    let total = response.content_length();
+    let capacity = total.map_or(0, |len| usize::try_from(len).unwrap_or(limit));
+    let mut body = Vec::with_capacity(capacity);
+    while let Some(chunk) = response.chunk().await.map_err(|err| classify(&err))? {
+        if body.len() + chunk.len() > limit {
             return Err(FetchError::TooLarge { limit });
         }
-        let total = response.content_length();
-        let capacity = total.map_or(0, |len| usize::try_from(len).unwrap_or(limit));
-        let mut body = Vec::with_capacity(capacity);
-        while let Some(chunk) = response.chunk().await.map_err(|err| classify(&err))? {
-            if body.len() + chunk.len() > limit {
-                return Err(FetchError::TooLarge { limit });
-            }
-            body.extend_from_slice(&chunk);
-            progress(body.len() as u64, total);
-        }
-        debug!(bytes = body.len(), "response body received");
-        Ok(body)
+        body.extend_from_slice(&chunk);
+        progress(body.len() as u64, total);
     }
+    debug!(bytes = body.len(), "response body received");
+    Ok(body)
 }
 
 fn build_http(policy: &Arc<NetPolicy>) -> Result<reqwest::Client, FetchError> {
@@ -335,11 +379,11 @@ fn error_chain(err: &reqwest::Error) -> String {
     out
 }
 
-fn origin(url: &Url) -> String {
+pub(crate) fn origin(url: &Url) -> String {
     url.origin().ascii_serialization()
 }
 
-fn next_request_id() -> u64 {
+pub(crate) fn next_request_id() -> u64 {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     NEXT.fetch_add(1, Ordering::Relaxed)
 }
