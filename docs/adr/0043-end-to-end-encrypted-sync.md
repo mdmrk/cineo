@@ -517,7 +517,8 @@ database.
    view is not rebuilt each second.)
    **7b.** The in-app QR scanner (§3, amended 2026-11-27).
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named
-   tests.
+   tests. (Done 2026-11-27: Verified, after a desktop and the Redmi 9
+   paired by QR code through the deployed Worker.)
 
 ## Consequences
 - Cineo gains a network service that we run. Its availability, quotas and

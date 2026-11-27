@@ -90,7 +90,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
 | Casting | Unsupported | |
-| Account / cloud sync | Partial | Desktop and Android: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); not yet seen on a phone. Stremio account sync stays out of scope. [Details](#cloud-sync) |
+| Account / cloud sync | Verified | Desktop and Android: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); a desktop and a phone paired by QR code through the deployed server, 2026-11-27. Stremio account sync stays out of scope. [Details](#cloud-sync) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
 | Portable mode | Supported | Desktop: `--portable`, or a `portable.txt` file in the working directory, keeps the database, log and cache in the working directory; `--data-dir` and `--cache-dir` still win (`the_flag_or_a_marker_file_in_the_folder_makes_it_portable`; both ways run by hand on Linux, 2026-11-13) |
 
@@ -555,10 +555,17 @@ On the desktop and on Android (ADR-0043).
   that lost data or went back to a backup gets it again
   (`the_daily_check_pushes_what_the_server_lost`,
   `a_server_that_went_back_makes_the_replica_start_over`).
-- **Not checked.** Neither app has been run against the deployed Worker
-  by hand, and no QR code has been scanned with a camera yet, in Cineo or
-  in a phone's camera app (whether those open a `cineo:` link is
-  UNKNOWN). The code can always be typed or pasted.
+- **On real devices.** On 2026-11-27 the owner turned sync on on the
+  desktop, scanned its QR code with Cineo's scanner on the Redmi 9
+  (Android 13, debug build), paired, and the phone synced through the
+  deployed Worker: its pairing names
+  `https://cineo-sync.cineo-sync-server.workers.dev/` and holds records
+  pulled from it (read from the phone's database with `run-as`).
+- **Not checked by hand.** Changing the key, turning off with deletion,
+  and edits on both sides before a sync; whether a phone's own camera app
+  opens a `cineo:` link is UNKNOWN. Known limitations are in
+  [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) (no push on exit, whole-item
+  conflicts, a server that withholds records, approximate rate limits).
 
 ### Update notice
 
