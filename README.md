@@ -9,7 +9,7 @@
 A fast, native media center for Linux, Windows, macOS and Android phones.
 It works with Stremio addons. No account, no cloud.
 
-[Install](#install) · [Uninstall](#uninstall) · [Build](#build) · [License](#license)
+[Install](#install) · [Uninstall](#uninstall) · [Build](#build) · [Architecture](#architecture) · [License](#license)
 
 <table>
   <tr>
@@ -106,6 +106,12 @@ cargo run --release
 ```
 
 Needs Rust and libmpv. See [Development](docs/DEVELOPMENT.md).
+
+## Architecture
+
+![Cineo architecture: shells, IO crates and cineo-core](docs/images/architecture.svg)
+
+See [Architecture](docs/ARCHITECTURE.md).
 
 ## License
 

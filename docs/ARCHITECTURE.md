@@ -19,35 +19,7 @@ Cineo follows a **functional core, imperative shell** design (ADR-0001):
 - **Shells** wire everything together and present state: the desktop GUI
   and the Android shell.
 
-```mermaid
-flowchart TB
-  subgraph Shells
-    GUI[cineo-desktop<br/>egui]
-    AND[cineo-android<br/>UniFFI]
-    KT[android/<br/>Kotlin + Compose]
-  end
-  subgraph IO
-    NET[cineo-net<br/>HTTP + net policy]
-    PLAYER[cineo-player<br/>libmpv, in-window]
-    STORE[cineo-store<br/>SQLite]
-    STREAM[cineo-stream<br/>torrents → loopback HTTP]
-  end
-  CORE[cineo-core<br/>pure domain + protocol]
-  GUI --> CORE
-  GUI --> NET & PLAYER & STORE & STREAM
-  KT --> AND
-  AND --> CORE
-  AND --> NET & PLAYER & STORE & STREAM
-  NET --> CORE
-  PLAYER --> CORE
-  STORE --> CORE
-  STREAM --> CORE
-  NET -. HTTPS .-> ADDONS[(Addons)]
-  NET -. HTTPS, sealed records .-> SYNC[(Sync server<br/>cineo-sync-server)]
-  PLAYER -. loaded at runtime .-> MPV[[libmpv]]
-  STREAM -. BitTorrent .-> PEERS[(Peers, trackers, DHT)]
-  MPV -. loopback HTTP .-> STREAM
-```
+![Cineo architecture: shells, IO crates and cineo-core](images/architecture.svg)
 
 ## Dependency direction
 
