@@ -191,7 +191,8 @@ key needs a decision.
   round itself, one effect at a time (`SyncPull`, `SyncPush`,
   `DeleteSyncSpace`, `SavePairing`, `SaveSync`, `ForgetSync`), so an edit
   made while a request is in flight is merged into the live replica and
-  never lost; `SyncClient::sync` stays as a helper for the server's tests.
+  never lost. The server's end-to-end tests drive replicas with their own
+  round helper; `cineo-net` has no round loop of its own.
   `update` runs the old reducer, then hands its persistence effects to the
   replica. Values that were never synced, with a seed stamp of 0, give way
   to the space's values whatever the device ids, and addon lists join. A
@@ -497,7 +498,8 @@ database.
      Measured there: §6. Rate limits added afterwards (§4).
    - **5c.** Recovery from a server that went back (§4), and
      `SyncClient::sync`, one full round of pull, push and retry that the
-     shells will call. Found in step 5a: without it, a restored backup or
+     shells will call (later replaced by the core's own rounds in 6a and
+     moved into the server's end-to-end tests). Found in step 5a: without it, a restored backup or
      a swept space left paired devices in conflicts.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
    URL, change key, leave, last sync status). `cineo:///sync/` deep link.

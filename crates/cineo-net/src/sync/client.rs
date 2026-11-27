@@ -2,7 +2,7 @@ use cineo_core::sync::protocol::{
     MAX_BATCH_BYTES, MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_PULL_BYTES, PULL_PAGE_RECORDS,
     PullPage, PushRequest, PushResponse, Write, parse_conflicts,
 };
-use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Replica, Stamp};
+use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Stamp};
 use reqwest::{Method, StatusCode};
 use tracing::{Instrument, info_span, warn};
 use url::{Host, Url};
@@ -13,7 +13,6 @@ use crate::{AddonClient, FetchError};
 
 const MAX_PUSH_RESPONSE_BYTES: usize = 64 * 1024;
 const REQUEST_OVERHEAD_BYTES: usize = 32;
-const PUSH_ATTEMPTS: usize = 3;
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -50,15 +49,6 @@ pub struct Pulled {
     pub more: bool,
     pub space_seq: u64,
     pub born: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct SyncReport {
-    pub pulled: usize,
-    pub pushed: usize,
-    pub unreadable: usize,
-    pub oversized: Vec<RecordName>,
-    pub started_over: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -214,63 +204,6 @@ impl SyncClient {
 
     fn url(&self, path: &str) -> Result<Url, SyncError> {
         self.base.join(path).map_err(|_| SyncError::Malformed)
-    }
-
-    pub async fn sync(&self, replica: &mut Replica, now_ms: u64) -> Result<SyncReport, SyncError> {
-        let mut report = SyncReport::default();
-        if replica.verify_due(now_ms) {
-            replica.verify(now_ms);
-        }
-        for attempt in 1..=PUSH_ATTEMPTS {
-            self.pull_all(replica, now_ms, &mut report).await?;
-            let outgoing = replica.outgoing();
-            if outgoing.is_empty() {
-                break;
-            }
-            let outcome = self.push(&outgoing).await;
-            for pushed in &outcome.pushed {
-                replica.pushed(&pushed.name, pushed.stamp, pushed.seq);
-            }
-            report.pushed += outcome.pushed.len();
-            report.oversized = outcome.oversized;
-            match outcome.error {
-                None => break,
-                Some(SyncError::Conflict(server)) if attempt < PUSH_ATTEMPTS => {
-                    report.started_over |= replica.conflicted(&server);
-                }
-                Some(err) => return Err(err),
-            }
-        }
-        replica.pulled(now_ms);
-        Ok(report)
-    }
-
-    async fn pull_all(
-        &self,
-        replica: &mut Replica,
-        now_ms: u64,
-        report: &mut SyncReport,
-    ) -> Result<(), SyncError> {
-        let mut started_over = false;
-        loop {
-            let pulled = self.pull(replica.since()).await?;
-            if replica.observe_space(pulled.born, pulled.space_seq) {
-                if started_over {
-                    return Err(SyncError::Malformed);
-                }
-                started_over = true;
-                report.started_over = true;
-                continue;
-            }
-            report.pulled += pulled.records.len();
-            report.unreadable += pulled.unreadable;
-            for (record, seq) in pulled.records {
-                replica.merge(record, seq, now_ms);
-            }
-            if !pulled.more {
-                return Ok(());
-            }
-        }
     }
 
     async fn exchange(

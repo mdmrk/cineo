@@ -235,7 +235,7 @@ impl Store {
         let clock = Stamp {
             physical_ms: from_sql_int(clock_ms),
             counter: u32::try_from(clock_counter).unwrap_or(0),
-            device: DeviceId(u64::from_le_bytes(device.to_le_bytes())),
+            device: DeviceId(device.cast_unsigned()),
         };
         let mut stmt = self
             .conn
@@ -266,7 +266,7 @@ impl Store {
             defaults,
             clock,
             from_sql_int(since),
-            u64::from_le_bytes(born.to_le_bytes()),
+            born.cast_unsigned(),
             entries,
         );
         Ok(Some((pairing, replica)))
@@ -282,7 +282,7 @@ impl Store {
             params![
                 pairing.key.as_bytes().as_slice(),
                 pairing.server.as_str(),
-                i64::from_le_bytes(device.0.to_le_bytes()),
+                device.0.cast_signed(),
             ],
         )?;
         tx.commit()?;
@@ -298,7 +298,7 @@ impl Store {
                 to_sql_int(changes.clock.physical_ms),
                 changes.clock.counter,
                 to_sql_int(changes.since),
-                i64::from_le_bytes(changes.born.to_le_bytes()),
+                changes.born.cast_signed(),
             ],
         )?;
         if paired == 0 {

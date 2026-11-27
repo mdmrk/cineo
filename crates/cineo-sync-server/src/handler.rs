@@ -47,11 +47,11 @@ impl Response {
         }
     }
 
-    fn error(status: u16, reason: &str) -> Self {
+    pub(crate) fn error(status: u16, reason: &str) -> Self {
         Self::json(status, error_json(reason))
     }
 
-    fn retry(status: u16, reason: &str, after_s: u64) -> Self {
+    pub(crate) fn retry(status: u16, reason: &str, after_s: u64) -> Self {
         Self {
             retry_after_s: Some(after_s),
             ..Self::error(status, reason)
@@ -98,7 +98,7 @@ enum Route {
     Space,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 struct Space {
     seq: u64,
     records: u64,
@@ -181,10 +181,10 @@ async fn space(db: &impl Db, id: &[u8]) -> Result<Option<Space>, DbError> {
             records: row.get(1)?.int()?,
             bytes: row.get(2)?.int()?,
             deleted: row.get(3)?.int()? != 0,
-            born: row.get(4).and_then(|v| match v {
-                SqlValue::Int(n) => Some(u64::from_le_bytes(n.to_le_bytes())),
-                _ => None,
-            })?,
+            born: match row.get(4)? {
+                SqlValue::Int(n) => n.cast_unsigned(),
+                _ => return None,
+            },
         })
     }))
 }
@@ -279,13 +279,7 @@ async fn push(
     if !conflicts.is_empty() {
         return Ok(Response::json(409, conflict_json(&conflicts)).into());
     }
-    let base = existing.unwrap_or(Space {
-        seq: 0,
-        records: 0,
-        bytes: 0,
-        deleted: false,
-        born: 0,
-    });
+    let base = existing.unwrap_or_default();
     let added = request
         .writes
         .iter()

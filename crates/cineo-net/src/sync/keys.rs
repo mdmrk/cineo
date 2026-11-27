@@ -12,16 +12,18 @@ pub const BLOB_FORMAT: u8 = 1;
 const SALT: &[u8] = b"cineo-sync-v1";
 const TAG_LEN: usize = 16;
 
-pub fn new_key() -> Result<SyncKey, SyncError> {
-    let mut bytes = [0; 16];
+fn random<const N: usize>() -> Result<[u8; N], SyncError> {
+    let mut bytes = [0; N];
     rand::fill(&mut bytes).map_err(|_| SyncError::Crypto)?;
-    Ok(SyncKey::from_bytes(bytes))
+    Ok(bytes)
+}
+
+pub fn new_key() -> Result<SyncKey, SyncError> {
+    random().map(SyncKey::from_bytes)
 }
 
 pub fn new_device() -> Result<DeviceId, SyncError> {
-    let mut bytes = [0; 8];
-    rand::fill(&mut bytes).map_err(|_| SyncError::Crypto)?;
-    Ok(DeviceId(u64::from_le_bytes(bytes)))
+    random().map(|bytes| DeviceId(u64::from_le_bytes(bytes)))
 }
 
 struct Len32;
@@ -86,8 +88,7 @@ impl SpaceKeys {
 
     pub fn seal(&self, record: &Record) -> Result<Sealed, SyncError> {
         let key = self.record_key(&record.name);
-        let mut nonce = [0; NONCE_LEN];
-        rand::fill(&mut nonce).map_err(|_| SyncError::Crypto)?;
+        let nonce: [u8; NONCE_LEN] = random()?;
         let mut sealed = record.to_json().into_bytes();
         self.seal
             .seal_in_place_append_tag(

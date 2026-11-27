@@ -1,7 +1,11 @@
+use std::collections::BTreeMap;
+
 use super::library::LibraryItem;
 use super::state::{Effect, ManifestOrigin, State};
 use crate::addon::TransportUrl;
-use crate::sync::{DeviceId, Outgoing, Pairing, Record, RecordName, Replica, Stamp, SyncKey};
+use crate::sync::{
+    DeviceId, Merged, Outgoing, Pairing, Record, RecordName, Replica, Stamp, SyncKey,
+};
 
 pub const PUSH_ATTEMPTS: u32 = 3;
 pub const RETRY_AFTER_FAILURE_MS: u64 = 60_000;
@@ -74,6 +78,10 @@ impl SyncState {
         self.round != Round::Idle
     }
 
+    pub fn can_sync_now(&self) -> bool {
+        !self.is_running() && !self.paused()
+    }
+
     fn paused(&self) -> bool {
         self.problem == Some(SyncProblem::SpaceGone)
     }
@@ -130,31 +138,23 @@ pub(super) fn tick(state: &mut State, now_ms: u64) -> Vec<Effect> {
 }
 
 pub(super) fn sync_now(state: &mut State) -> Vec<Effect> {
-    if let Some(sync) = state.sync.as_mut() {
-        if sync.problem == Some(SyncProblem::SpaceGone) {
-            return Vec::new();
-        }
-        sync.not_before_ms = 0;
-        sync.replica.flush();
-        if let Some(pull) = start_round(sync, state.now_ms, true) {
-            return vec![pull];
-        }
-    }
-    Vec::new()
+    let Some(sync) = state.sync.as_mut().filter(|s| !s.paused()) else {
+        return Vec::new();
+    };
+    sync.not_before_ms = 0;
+    sync.replica.flush();
+    start_round(sync, state.now_ms, true).into_iter().collect()
 }
 
 fn start_round(sync: &mut SyncState, now_ms: u64, forced: bool) -> Option<Effect> {
     if sync.is_running() || sync.paused() || now_ms < sync.not_before_ms {
         return None;
     }
-    let due = forced
-        || sync.replica.pull_due(now_ms)
-        || sync.replica.push_due(now_ms)
-        || sync.replica.verify_due(now_ms);
-    if !due {
+    let verify = sync.replica.verify_due(now_ms);
+    if !(forced || verify || sync.replica.pull_due(now_ms) || sync.replica.push_due(now_ms)) {
         return None;
     }
-    if sync.replica.verify_due(now_ms) {
+    if verify {
         sync.replica.verify(now_ms);
     }
     sync.round = Round::Pulling {
@@ -241,10 +241,15 @@ pub(super) fn pulled(
         };
         return vec![pull(sync)];
     }
+    let mut taken = false;
     for (record, seq) in page.records {
-        sync.replica.merge(record, seq, now_ms);
+        taken |= sync.replica.merge(record, seq, now_ms) == Merged::Taken;
     }
-    let mut effects = apply_remote(state);
+    let mut effects = if taken {
+        apply_remote(state)
+    } else {
+        Vec::new()
+    };
     let Some(sync) = state.sync.as_mut() else {
         return effects;
     };
@@ -313,26 +318,29 @@ fn apply_remote(state: &mut State) -> Vec<Effect> {
 }
 
 fn apply_library(state: &mut State, library: Vec<LibraryItem>) -> Vec<Effect> {
+    let mut remote: BTreeMap<String, LibraryItem> = library
+        .into_iter()
+        .map(|item| (item.id.clone(), item))
+        .collect();
     let mut effects = Vec::new();
-    state.library.retain(|item| {
-        let keep = library.iter().any(|i| i.id == item.id);
-        if !keep {
-            effects.push(Effect::DeleteLibraryItem(item.id.clone()));
-        }
-        keep
-    });
-    for item in library {
-        match state.library.iter_mut().find(|i| i.id == item.id) {
-            Some(existing) if *existing == item => {}
-            Some(existing) => {
-                *existing = item.clone();
-                effects.push(Effect::SaveLibraryItem(item));
-            }
+    state
+        .library
+        .retain_mut(|item| match remote.remove(&item.id) {
             None => {
-                state.library.push(item.clone());
-                effects.push(Effect::SaveLibraryItem(item));
+                effects.push(Effect::DeleteLibraryItem(item.id.clone()));
+                false
             }
-        }
+            Some(new) => {
+                if *item != new {
+                    *item = new.clone();
+                    effects.push(Effect::SaveLibraryItem(new));
+                }
+                true
+            }
+        });
+    for item in remote.into_values() {
+        state.library.push(item.clone());
+        effects.push(Effect::SaveLibraryItem(item));
     }
     effects
 }
@@ -369,10 +377,7 @@ pub(super) fn after(state: &mut State, effects: &[Effect], flush: bool) -> Vec<E
     if flush {
         sync.replica.flush();
     }
-    let mut more = Vec::new();
-    more.extend(start_round(sync, now_ms, false));
-    if let Some(changes) = sync.replica.take_changes() {
-        more.push(Effect::SaveSync(changes));
-    }
-    more
+    let round = start_round(sync, now_ms, false);
+    let changes = sync.replica.take_changes().map(Effect::SaveSync);
+    round.into_iter().chain(changes).collect()
 }

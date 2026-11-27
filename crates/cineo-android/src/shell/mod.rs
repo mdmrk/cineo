@@ -11,7 +11,7 @@ use cineo_core::app::{
     StreamSort, SubtitleGroup, TorrentStorage, WatchedAt, parse_link,
 };
 use cineo_core::sync::{Pairing, SyncKey};
-use cineo_net::sync::{CodeError, new_key, parse_code, parse_server};
+use cineo_net::sync::{CodeError, new_device, new_key, parse_code, parse_server};
 use cineo_net::{AddonClient, MAX_IMAGE_BYTES, NetPolicy};
 use cineo_player::embedded::{PlayerCommand, Status, TrackKind};
 use cineo_player::plain_text;
@@ -82,6 +82,10 @@ fn wall_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+}
+
+fn random_key() -> Result<SyncKey, SyncInputError> {
+    new_key().map_err(|_| SyncInputError::Random)
 }
 
 #[uniffi::export]
@@ -286,8 +290,6 @@ enum Msg {
     NetworkUsable {
         renew: bool,
     },
-    Pair(Pairing),
-    NewSyncKey(SyncKey),
     Tick,
     Shutdown,
 }
@@ -396,21 +398,17 @@ impl Cineo {
 
     pub fn sync_turn_on(&self, server: &str) -> Result<(), SyncInputError> {
         let server = parse_server(server).ok_or(SyncInputError::Server)?;
-        let key = new_key().map_err(|_| SyncInputError::Random)?;
-        self.post(Msg::Pair(Pairing { key, server }));
-        Ok(())
+        self.enable_sync(random_key()?, server)
     }
 
     pub fn sync_pair(&self, code: &str, server: &str) -> Result<(), SyncInputError> {
         let key = parse_code(code)?;
         let server = parse_server(server).ok_or(SyncInputError::Server)?;
-        self.post(Msg::Pair(Pairing { key, server }));
-        Ok(())
+        self.enable_sync(key, server)
     }
 
     pub fn sync_change_key(&self) -> Result<(), SyncInputError> {
-        let key = new_key().map_err(|_| SyncInputError::Random)?;
-        self.post(Msg::NewSyncKey(key));
+        self.send(Action::RotateSyncKey(random_key()?));
         Ok(())
     }
 
@@ -764,6 +762,15 @@ impl Cineo {
 
     fn send(&self, action: Action) {
         self.post(Msg::Action(action));
+    }
+
+    fn enable_sync(&self, key: SyncKey, server: Url) -> Result<(), SyncInputError> {
+        let device = new_device().map_err(|_| SyncInputError::Random)?;
+        self.send(Action::EnableSync {
+            pairing: Pairing { key, server },
+            device,
+        });
+        Ok(())
     }
 
     fn filter(&self, change: FilterChange) {

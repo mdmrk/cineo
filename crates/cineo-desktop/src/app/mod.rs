@@ -9,6 +9,7 @@ use cineo_core::app::{
     UpdateRequest, parse_link, update,
 };
 use cineo_core::sync::Pairing;
+use cineo_net::sync::{new_device, new_key};
 use cineo_net::{AddonClient, NetPolicy};
 use cineo_player::embedded::{Display, Player, PlayerCommand, ProcAddress, Renderer, Status};
 use cineo_store::Store;
@@ -373,34 +374,24 @@ impl CineoApp {
     }
 
     fn sync_request(&mut self, request: SyncRequest) {
-        let (key, server) = match request {
-            SyncRequest::NewKey => {
-                match cineo_net::sync::new_key() {
-                    Ok(key) => self.dispatch(Action::RotateSyncKey(key)),
-                    Err(err) => {
-                        warn!(%err, "no new sync key");
-                        self.view.sync_error = Some(SyncInputError::Random);
-                    }
-                }
-                return;
+        let enable = |key, server| {
+            new_device().map(|device| Action::EnableSync {
+                pairing: Pairing { key, server },
+                device,
+            })
+        };
+        let action = match request {
+            SyncRequest::NewKey => new_key().map(Action::RotateSyncKey),
+            SyncRequest::Pair { key, server } => enable(key, server),
+            SyncRequest::TurnOn { server } => new_key().and_then(|key| enable(key, server)),
+        };
+        match action {
+            Ok(action) => self.dispatch(action),
+            Err(err) => {
+                warn!(%err, "no random sync key or device id");
+                self.view.sync_error = Some(SyncInputError::Random);
             }
-            SyncRequest::Pair { key, server } => (Ok(key), server),
-            SyncRequest::TurnOn { server } => (cineo_net::sync::new_key(), server),
-        };
-        let (Ok(key), Ok(device)) = (key, cineo_net::sync::new_device()) else {
-            warn!("no sync key or device id");
-            self.view.sync_error = Some(SyncInputError::Random);
-            return;
-        };
-        if self.state.sync.is_some() {
-            self.dispatch(Action::LeaveSync {
-                delete_server_data: false,
-            });
         }
-        self.dispatch(Action::EnableSync {
-            pairing: Pairing { key, server },
-            device,
-        });
     }
 
     fn tick(&mut self, ctx: &egui::Context) {

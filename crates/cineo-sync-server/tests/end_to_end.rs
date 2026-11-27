@@ -81,14 +81,64 @@ async fn push(replica: &mut Replica, client: &SyncClient) -> Result<(), SyncErro
     outcome.error.map_or(Ok(()), Err)
 }
 
-async fn pull(replica: &mut Replica, client: &SyncClient, now_ms: u64) -> Result<(), SyncError> {
+const ATTEMPTS: usize = 3;
+
+#[derive(Debug, Default)]
+struct Report {
+    pushed: usize,
+    started_over: bool,
+}
+
+trait Rounds {
+    async fn sync(&self, replica: &mut Replica, now_ms: u64) -> Result<Report, SyncError>;
+}
+
+impl Rounds for SyncClient {
+    async fn sync(&self, replica: &mut Replica, now_ms: u64) -> Result<Report, SyncError> {
+        let mut report = Report::default();
+        if replica.verify_due(now_ms) {
+            replica.verify(now_ms);
+        }
+        for attempt in 1..=ATTEMPTS {
+            report.started_over |= pull(replica, self, now_ms).await?;
+            let outgoing = replica.outgoing();
+            if outgoing.is_empty() {
+                break;
+            }
+            let outcome = self.push(&outgoing).await;
+            for pushed in &outcome.pushed {
+                replica.pushed(&pushed.name, pushed.stamp, pushed.seq);
+            }
+            report.pushed += outcome.pushed.len();
+            match outcome.error {
+                None => break,
+                Some(SyncError::Conflict(server)) if attempt < ATTEMPTS => {
+                    report.started_over |= replica.conflicted(&server);
+                }
+                Some(err) => return Err(err),
+            }
+        }
+        replica.pulled(now_ms);
+        Ok(report)
+    }
+}
+
+async fn pull(replica: &mut Replica, client: &SyncClient, now_ms: u64) -> Result<bool, SyncError> {
+    let mut started_over = false;
     loop {
         let pulled = client.pull(replica.since()).await?;
+        if replica.observe_space(pulled.born, pulled.space_seq) {
+            if started_over {
+                return Err(SyncError::Malformed);
+            }
+            started_over = true;
+            continue;
+        }
         for (record, seq) in pulled.records {
             replica.merge(record, seq, now_ms);
         }
         if !pulled.more {
-            return Ok(());
+            return Ok(started_over);
         }
     }
 }

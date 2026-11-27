@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
-use cineo_core::sync::protocol::{MAX_BATCH_BYTES, error_json};
+use cineo_core::sync::protocol::MAX_BATCH_BYTES;
 use http_body_util::{BodyExt as _, Full, Limited};
 use hyper::body::Incoming;
 use hyper::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderValue, RETRY_AFTER};
@@ -203,17 +203,9 @@ async fn respond(
         .unwrap_or_else(PoisonError::into_inner)
         .request(ip, now);
     if let Err(after_s) = limited {
-        return to_http(&Response {
-            status: 429,
-            body: error_json("too many requests"),
-            retry_after_s: Some(after_s),
-        });
+        return to_http(&Response::retry(429, "too many requests", after_s));
     }
-    let too_large = Response {
-        status: 413,
-        body: error_json("request too large"),
-        retry_after_s: None,
-    };
+    let too_large = Response::error(413, "request too large");
     let declared = req
         .headers()
         .get(CONTENT_LENGTH)

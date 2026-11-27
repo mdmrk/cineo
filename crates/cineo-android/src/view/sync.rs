@@ -90,7 +90,7 @@ pub(super) fn sync(now_ms: u64, sync: &SyncState) -> SyncView {
         code: format_code(&sync.pairing.key),
         qr: qr(&pairing_link(&sync.pairing)),
         status: status(now_ms, sync),
-        can_sync_now: !sync.is_running() && sync.problem != Some(SyncProblem::SpaceGone),
+        can_sync_now: sync.can_sync_now(),
         server: sync.pairing.server.to_string(),
         own_server: sync.pairing.server.as_str() != DEFAULT_SERVER,
     }

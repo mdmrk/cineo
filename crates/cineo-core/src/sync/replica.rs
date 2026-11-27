@@ -312,7 +312,7 @@ impl Replica {
 
     pub fn conflicted(&mut self, server: &[(RecordName, u64)]) -> bool {
         let missed = server.iter().any(|(name, server_seq)| {
-            let known = self.entries.get(name).map_or(0, |entry| entry.seq);
+            let known = self.seq(name);
             *server_seq < known || *server_seq != known && *server_seq <= self.since
         });
         if missed {
@@ -340,16 +340,13 @@ impl Replica {
 
     fn start_over(&mut self) {
         self.since = 0;
-        let names: Vec<RecordName> = self.entries.keys().cloned().collect();
-        for name in &names {
-            if let Some(entry) = self.entries.get_mut(name) {
-                entry.seq = 0;
-                entry.dirty = true;
-            }
-            self.touch(name);
+        for (name, entry) in &mut self.entries {
+            entry.seq = 0;
+            entry.dirty = true;
+            self.changed.insert(name.clone());
         }
         self.touched = true;
-        if !names.is_empty() {
+        if !self.entries.is_empty() {
             self.dirty_since.get_or_insert(0);
             self.last_change.get_or_insert(0);
             self.flush = true;
@@ -361,12 +358,13 @@ impl Replica {
     }
 
     fn is_visible(&self, id: &str) -> bool {
-        let cleared = self.get(&RecordName::LibraryCleared).map(|r| r.stamp);
+        let cleared = self.cleared();
         self.get(&RecordName::Item(id.to_owned()))
-            .is_some_and(|record| {
-                matches!(record.value, Value::Item(_))
-                    && cleared.is_none_or(|stamp| record.stamp > stamp)
-            })
+            .is_some_and(|record| visible_item(record, cleared).is_some())
+    }
+
+    fn cleared(&self) -> Option<Stamp> {
+        self.get(&RecordName::LibraryCleared).map(|r| r.stamp)
     }
 
     pub fn seq(&self, name: &RecordName) -> u64 {
@@ -413,14 +411,10 @@ impl Replica {
     }
 
     pub fn library(&self) -> Vec<LibraryItem> {
-        let cleared = self.get(&RecordName::LibraryCleared).map(|r| r.stamp);
+        let cleared = self.cleared();
         self.entries
             .values()
-            .filter(|entry| cleared.is_none_or(|stamp| entry.record.stamp > stamp))
-            .filter_map(|entry| match &entry.record.value {
-                Value::Item(item) => Some(LibraryItem::clone(item)),
-                _ => None,
-            })
+            .filter_map(|entry| visible_item(&entry.record, cleared).cloned())
             .collect()
     }
 
@@ -442,5 +436,12 @@ impl Replica {
             }
         }
         local
+    }
+}
+
+fn visible_item(record: &Record, cleared: Option<Stamp>) -> Option<&LibraryItem> {
+    match &record.value {
+        Value::Item(item) if cleared.is_none_or(|stamp| record.stamp > stamp) => Some(item),
+        _ => None,
     }
 }

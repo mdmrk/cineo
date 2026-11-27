@@ -56,8 +56,6 @@ impl Shell {
                 }
                 self.dispatch(Action::RetryFailed);
             }
-            Msg::Pair(pairing) => self.pair(pairing),
-            Msg::NewSyncKey(key) => self.dispatch(Action::RotateSyncKey(key)),
             Msg::Tick => self.tick(),
             Msg::Shutdown => return false,
         }
@@ -91,22 +89,6 @@ impl Shell {
             id,
             preview,
         });
-    }
-
-    fn pair(&mut self, pairing: cineo_core::sync::Pairing) {
-        let device = match cineo_net::sync::new_device() {
-            Ok(device) => device,
-            Err(err) => {
-                warn!(%err, "no sync device id");
-                return;
-            }
-        };
-        if self.state.sync.is_some() {
-            self.dispatch(Action::LeaveSync {
-                delete_server_data: false,
-            });
-        }
-        self.dispatch(Action::EnableSync { pairing, device });
     }
 
     fn tick(&mut self) {

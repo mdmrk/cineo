@@ -399,15 +399,12 @@ fn a_deleted_space_pauses_sync_until_it_is_paired_again() {
     );
     assert_eq!(pulls(&update(&mut a, Action::Tick(1_000 + 60 * MINUTE))), 0);
     assert_eq!(pulls(&update(&mut a, Action::SyncNow)), 0);
-    act(
-        &mut a,
-        &mut server,
-        Action::LeaveSync {
-            delete_server_data: false,
-        },
-    );
-    enable(&mut a, &mut server, 2, 1);
-    assert!(a.sync.as_ref().unwrap().problem.is_none());
+    assert!(!a.sync.as_ref().unwrap().can_sync_now());
+    let effects = enable(&mut a, &mut server, 2, 1);
+    assert!(matches!(effects[0], Effect::SavePairing { .. }));
+    let sync = a.sync.as_ref().unwrap();
+    assert_eq!(sync.pairing, pairing(2));
+    assert!(sync.problem.is_none() && sync.can_sync_now());
 }
 
 #[test]

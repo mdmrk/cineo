@@ -156,9 +156,8 @@ fn status(now_ms: u64, sync: &SyncState) -> Text {
 fn on(ui: &mut Ui, now_ms: u64, sync: &SyncState, view: &mut ViewState, out: &mut Vec<Action>) {
     row(ui, &t!("Sync is on"), &status(now_ms, sync), |ui| {
         right(ui, |ui| {
-            let can_sync = !sync.is_running() && sync.problem != Some(SyncProblem::SpaceGone);
             if ui
-                .add_enabled(can_sync, Button::new(t!("Sync now")))
+                .add_enabled(sync.can_sync_now(), Button::new(t!("Sync now")))
                 .clicked()
             {
                 out.push(Action::SyncNow);

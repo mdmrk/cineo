@@ -1,4 +1,4 @@
-use cineo_core::sync::protocol::{MAX_BATCH_BYTES, error_json};
+use cineo_core::sync::protocol::MAX_BATCH_BYTES;
 use worker::js_sys::{Array, Math, Uint8Array};
 use worker::wasm_bindgen::JsValue;
 use worker::{
@@ -128,11 +128,7 @@ async fn fetch(
     env: Env,
     _ctx: worker::Context,
 ) -> worker::Result<worker::Response> {
-    let too_large = Response {
-        status: 413,
-        body: error_json("request too large"),
-        retry_after_s: None,
-    };
+    let too_large = Response::error(413, "request too large");
     let declared = req
         .headers()
         .get("content-length")?
@@ -154,11 +150,7 @@ async fn fetch(
     if let Some(id) = handler::space_id(bearer.as_deref()) {
         let key: String = id.iter().take(16).map(|b| format!("{b:02x}")).collect();
         if !allowed(&env, REQUESTS, key).await {
-            return to_worker(&Response {
-                status: 429,
-                body: error_json("too many requests"),
-                retry_after_s: Some(LIMIT_RETRY_S),
-            });
+            return to_worker(&Response::retry(429, "too many requests", LIMIT_RETRY_S));
         }
     }
     let ip = req.headers().get("cf-connecting-ip")?.unwrap_or_default();
