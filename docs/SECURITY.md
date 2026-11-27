@@ -207,6 +207,11 @@ Sync is off by default.
   `a_sync_link_gives_its_code_and_server`), and the copied code is marked
   sensitive on Android 13 and later (`EXTRA_IS_SENSITIVE`, no test), so the
   system does not preview it.
+- **Camera (Android).** The app declares the `CAMERA` permission only for
+  the sync QR scanner, asks for it the first time "Scan QR code" is tapped,
+  and uses the camera only while the scanner is open; frames are read in
+  memory and not stored. Without the permission, or without a camera
+  (`android.hardware.camera.any` is optional), the code is typed.
 - **Server (`cineo-sync-server`).** It stores SHA-256 of the token, never
   the token, and only sealed blobs under opaque keys
   (`the_server_stores_nothing_readable`). A request without a valid

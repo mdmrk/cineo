@@ -315,4 +315,7 @@
     <string name="sync_delete_title">Turn off sync and delete the server data?</string>
     <string name="sync_delete_text">This device stops syncing and the data on the server is deleted. Your other devices keep their own copies but stop syncing.</string>
     <string name="sync_delete_confirm">Delete</string>
+    <string name="sync_scan">Scan QR code</string>
+    <string name="sync_scan_hint">Point the camera at the sync QR code on your other device.</string>
+    <string name="sync_scan_denied">Cineo needs the camera to scan the code. You can type it instead.</string>
 </resources>

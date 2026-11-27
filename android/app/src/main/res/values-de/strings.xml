@@ -314,4 +314,7 @@
     <string name="sync_delete_title">Synchronisierung ausschalten und Serverdaten löschen?</string>
     <string name="sync_delete_text">Dieses Gerät synchronisiert nicht mehr und die Daten auf dem Server werden gelöscht. Deine anderen Geräte behalten ihre eigenen Kopien, synchronisieren aber nicht mehr.</string>
     <string name="sync_delete_confirm">Löschen</string>
+    <string name="sync_scan">QR-Code scannen</string>
+    <string name="sync_scan_hint">Richte die Kamera auf den QR-Code zur Synchronisierung auf deinem anderen Gerät.</string>
+    <string name="sync_scan_denied">Cineo braucht die Kamera, um den Code zu scannen. Du kannst ihn auch eintippen.</string>
 </resources>

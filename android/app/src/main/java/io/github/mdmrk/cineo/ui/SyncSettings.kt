@@ -2,10 +2,14 @@ package io.github.mdmrk.cineo.ui
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.Manifest
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PersistableBundle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +46,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.QrView
@@ -61,6 +66,14 @@ internal fun SyncSettings(sync: SyncView?, link: SyncLinkView?, onLinkUsed: () -
     var code by rememberSaveable { mutableStateOf("") }
     var server by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<SyncInputException?>(null) }
+    var scanning by remember { mutableStateOf(false) }
+    var cameraDenied by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val hasCamera = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
+    val askCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        cameraDenied = !granted
+        scanning = granted
+    }
     LaunchedEffect(link) {
         if (link != null) {
             if (sync == null) {
@@ -98,10 +111,33 @@ internal fun SyncSettings(sync: SyncView?, link: SyncLinkView?, onLinkUsed: () -
                 ),
             )
             error?.let { Text(inputError(it), color = Brand.Warning, style = MaterialTheme.typography.bodySmall) }
-            OutlinedButton(
-                onClick = { attempt { cineo.syncPair(code, server); code = "" } },
-                modifier = Modifier.align(Alignment.End),
-            ) { Text(stringResource(R.string.sync_pair), color = Brand.Accent) }
+            if (cameraDenied) {
+                Text(stringResource(R.string.sync_scan_denied), color = Brand.Warning, style = MaterialTheme.typography.bodySmall)
+            }
+            Row(Modifier.align(Alignment.End), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (hasCamera) {
+                    OutlinedButton(onClick = {
+                        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                            PackageManager.PERMISSION_GRANTED
+                        if (granted) scanning = true else askCamera.launch(Manifest.permission.CAMERA)
+                    }) { Text(stringResource(R.string.sync_scan), color = Brand.Accent) }
+                }
+                OutlinedButton(
+                    onClick = { attempt { cineo.syncPair(code, server); code = "" } },
+                ) { Text(stringResource(R.string.sync_pair), color = Brand.Accent) }
+            }
+        }
+        if (scanning) {
+            QrScanner(
+                onFound = { link ->
+                    code = link.code
+                    server = link.server
+                    error = null
+                    cameraDenied = false
+                    scanning = false
+                },
+                onClose = { scanning = false },
+            )
         }
         Divider()
         Field(stringResource(R.string.sync_server), stringResource(R.string.sync_server_help)) {

@@ -540,8 +540,15 @@ On the desktop and on Android (ADR-0043).
   a mistyped code or an `http` server turns nothing on
   (`a_bad_code_or_an_insecure_server_turns_nothing_on`). A `cineo:///sync/`
   link fills the code and opens Settings
-  (`a_sync_link_gives_its_code_and_server`). These tests drive the Rust
-  half against the native server; the Compose screen has no test.
+  (`a_sync_link_gives_its_code_and_server`; on the Redmi 9 a link sent
+  with `adb` opened Settings → Data with the code filled in, 2026-11-27).
+  "Scan QR code" opens the camera, asking for the permission the first
+  time, and a sync QR code fills the code and server the same way; other
+  QR codes are ignored. The QR code is read from the camera's luminance
+  plane with its row padding (`aQrCodeIsReadFromTheLuminancePlaneWithItsRowPadding`,
+  `aFrameWithoutAQrCodeReadsNothing`). These tests drive the Rust half
+  against the native server and the decoder on the JVM; the Compose
+  screens and the camera have no test.
 - **Server.** The client against the native host in tests, and the same
   test by hand against the deployed Worker
   (`a_running_server_syncs_recovers_and_deletes`, 2026-11-27). A server
@@ -549,10 +556,9 @@ On the desktop and on Android (ADR-0043).
   (`the_daily_check_pushes_what_the_server_lost`,
   `a_server_that_went_back_makes_the_replica_start_over`).
 - **Not checked.** Neither app has been run against the deployed Worker
-  by hand, the Android sync screen has not been seen on a phone, and no QR
-  code has been scanned. Whether a phone's camera app opens a `cineo:` link
-  is UNKNOWN. Cineo cannot scan a QR code itself; the code can always be
-  typed or pasted.
+  by hand, and no QR code has been scanned with a camera yet, in Cineo or
+  in a phone's camera app (whether those open a `cineo:` link is
+  UNKNOWN). The code can always be typed or pasted.
 
 ### Update notice
 

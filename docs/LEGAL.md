@@ -79,6 +79,14 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
 - AndroidX Compose (BOM 2026.11.01), `activity-compose` 1.13.0 and
   `lifecycle-runtime-compose` 2.11.1: Apache-2.0.
 - `kotlinx-coroutines-android` 1.11.0: Apache-2.0.
+- The sync QR scanner (ADR-0043, VERIFIED: their POMs on Maven Central and
+  Google Maven, 2026-11-27): CameraX 1.6.2 (`camera-camera2`,
+  `camera-lifecycle`, `camera-view`) and the AndroidX and Media3 libraries
+  it pulls in, `com.google.zxing:core` 3.5.4, Dagger 2.59, Guava
+  33.3.1-android with `failureaccess`, `jsr305` 3.0.2,
+  `j2objc-annotations` 3.0.0, `auto-value-annotations` 1.6.3,
+  `javax.inject` 1, `jakarta.inject-api` 2.0.1 and `atomicfu` 0.28.0:
+  Apache-2.0. `checker-qual` 3.43.0: MIT.
 - JNA 5.19.1, needed by the UniFFI Kotlin code: Apache-2.0 or
   LGPL-2.1-or-later, used under Apache-2.0.
 - The Kotlin half of `rustls-platform-verifier`, copied unchanged into

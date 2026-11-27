@@ -316,4 +316,7 @@
     <string name="sync_delete_title">Disattivare la sincronizzazione ed eliminare i dati sul server?</string>
     <string name="sync_delete_text">Questo dispositivo smette di sincronizzarsi e i dati sul server vengono eliminati. Gli altri dispositivi mantengono la propria copia ma smettono di sincronizzarsi.</string>
     <string name="sync_delete_confirm">Elimina</string>
+    <string name="sync_scan">Scansiona codice QR</string>
+    <string name="sync_scan_hint">Inquadra con la fotocamera il codice QR di sincronizzazione sull\'altro dispositivo.</string>
+    <string name="sync_scan_denied">Cineo ha bisogno della fotocamera per scansionare il codice. Puoi anche digitarlo.</string>
 </resources>

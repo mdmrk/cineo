@@ -234,8 +234,25 @@ set of records from three devices, including skewed clocks and repeats),
   `cineo:///` links), plus `?server=<url>` when the
   server is not the default. Encoded with `qrcode` (rendering in each
   shell). On Android, the system camera can open the link, which needs a
-  new intent filter for `cineo:///sync`. An in-app scanner (zxing-cpp,
-  Apache-2.0) is left for later (Consequences).
+  new intent filter for `cineo:///sync`. (Amended 2026-11-27 by the owner:
+  Android also gets an in-app scanner, step 7b.)
+- **In-app scanner (Android, step 7b):** a "Scan" button under "Pair with a
+  code" opens the camera full screen. CameraX 1.6.2 (Apache-2.0,
+  2026-08-26; 1.7.0 is from 2026-11-18, too new) shows the preview and
+  hands frames to `com.google.zxing:core` 3.5.4 (Apache-2.0, pure Java,
+  2025-11-11), which reads QR codes from the luminance plane. Only a
+  `cineo:///sync/` link is taken: it fills the code and server like the
+  link does, and pairing still waits for "Pair"; any other QR code is
+  ignored and the camera stays open. The `CAMERA` permission is asked the
+  first time "Scan" is tapped and only used while the scanner is open;
+  without it, or on a device without a camera, the code is typed or
+  pasted. zxing-cpp's Android package was not chosen because it ships
+  prebuilt native libraries, which is harder for F-Droid's build from
+  source (VERIFIED: the 2.3.0 AAR holds `jni/*/libzxingcpp_android.so`
+  for four ABIs, while the core 3.5.4 jar holds no native code); ML Kit
+  needs Play Services. Measured: the scanner adds 643 KB to the release
+  APK (9.64 to 10.28 MB without libmpv; the dex grows from 3.11 to
+  3.94 MB), mostly CameraX and what it pulls in (VERIFIED, 2026-11-27).
 - **Derivation:** HKDF-SHA256 with the key as IKM and salt
   `"cineo-sync-v1"`, three outputs of 32 bytes:
   - `info = "token"` → **bearer token**. The server addresses the space by
@@ -498,6 +515,7 @@ database.
    and a sync round on every return to the foreground. The shell ticks
    before each action and every 15 seconds instead of every second, so the
    view is not rebuilt each second.)
+   **7b.** The in-app QR scanner (§3, amended 2026-11-27).
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named
    tests.
 
@@ -523,9 +541,9 @@ database.
     (harmless for order, odd in diagnostics).
   - The sync key is stored in `cineo.db`, not in the OS keychain.
   - A malicious server can replay old records to a newly paired device.
-  - No in-app QR scanner on Android: the system camera hands the link
-    over, and the code may stay in the camera app's history (UNKNOWN per
-    camera app).
+  - The Android app asks for the `CAMERA` permission for the scanner. A
+    phone's own camera app can still open the link, and then the code may
+    stay in that app's history (UNKNOWN per camera app).
 - Docs in the same change as this ADR:
   - `docs/COMPATIBILITY.md`: remove "Cloud or account sync" from the
     exclusions; the "Account / cloud sync" row stays Unsupported with
@@ -573,5 +591,8 @@ database.
   ChaCha20-Poly1305 is fast without AES instructions on older arm64 phones,
   and random 96-bit nonces stay within bounds at our volume (INFERRED).
 - **In-app QR scanner with ML Kit:** Play Services, not acceptable on
-  F-Droid. zxing-cpp is possible later, at the cost of the `CAMERA`
-  permission and a new Android dependency.
+  F-Droid. zxing-cpp: prebuilt native libraries in its Android package.
+  Decoding in Rust (`rqrr`): one less Java dependency, but untested
+  against blurry or dim camera frames (INFERRED: less mature than ZXing).
+  An external scanner app through an intent: no permission, but only for
+  users who already have one.

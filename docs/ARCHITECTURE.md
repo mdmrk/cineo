@@ -162,7 +162,9 @@ and Android turn it on in Settings → Data (ADR-0043).
   modules, which Compose draws. The shell restores the pairing at start,
   sends `Action::Tick` before every action and every 15 seconds, and
   syncs when the app comes to the foreground. Kotlin hands `cineo:` links
-  from an intent filter to `sync_link`. Tests:
+  from an intent filter to `sync_link`; the in-app scanner reads QR codes
+  from CameraX frames with ZXing (`QrFrames`) and hands the text to the
+  same `sync_link`. Tests:
   `crates/cineo-android/tests/shell/sync.rs`, against the native server.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical

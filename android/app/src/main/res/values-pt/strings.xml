@@ -316,4 +316,7 @@
     <string name="sync_delete_title">Desativar a sincronização e apagar os dados do servidor?</string>
     <string name="sync_delete_text">Este dispositivo para de sincronizar e os dados no servidor são apagados. Seus outros dispositivos mantêm as próprias cópias, mas param de sincronizar.</string>
     <string name="sync_delete_confirm">Apagar</string>
+    <string name="sync_scan">Escanear código QR</string>
+    <string name="sync_scan_hint">Aponte a câmera para o código QR de sincronização do seu outro dispositivo.</string>
+    <string name="sync_scan_denied">O Cineo precisa da câmera para escanear o código. Você também pode digitá-lo.</string>
 </resources>
