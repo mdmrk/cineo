@@ -603,11 +603,11 @@ fn unreadable_sync_records_are_skipped() {
 }
 
 #[test]
-fn remote_pairings_survive_a_reopen_and_can_be_forgotten() {
-    use cineo_core::remote::{Peer, RemoteKey};
+fn remote_pairings_survive_a_reopen_and_turning_off_is_remembered() {
+    use cineo_core::remote::{Hosting, Peer, RemoteKey};
     let dir = temp_dir("remote");
     let mut store = Store::open_in(&dir).unwrap();
-    assert_eq!(store.remote().unwrap(), (None, None));
+    assert_eq!(store.remote().unwrap(), (Hosting::Unchosen, None));
     let host = RemoteKey::from_bytes([3; 16]);
     let peer = Peer {
         address: "192.168.1.20:18765".parse().unwrap(),
@@ -617,10 +617,16 @@ fn remote_pairings_survive_a_reopen_and_can_be_forgotten() {
     assert!(store.apply(&Effect::SaveRemotePeer(Some(peer))).unwrap());
     drop(store);
     let mut store = Store::open_in(&dir).unwrap();
-    assert_eq!(store.remote().unwrap(), (Some(host), Some(peer)));
+    assert_eq!(store.remote().unwrap(), (Hosting::On(host), Some(peer)));
     store.apply(&Effect::SaveRemoteHost(None)).unwrap();
     store.apply(&Effect::SaveRemotePeer(None)).unwrap();
-    assert_eq!(store.remote().unwrap(), (None, None));
+    drop(store);
+    let store = Store::open_in(&dir).unwrap();
+    assert_eq!(
+        store.remote().unwrap(),
+        (Hosting::Off, None),
+        "turning it off is remembered"
+    );
 }
 
 #[test]
@@ -635,5 +641,6 @@ fn a_remote_pairing_to_a_public_address_is_ignored() {
     )
     .unwrap();
     drop(conn);
-    assert_eq!(Store::open(&path).unwrap().remote().unwrap(), (None, None));
+    let (_, peer) = Store::open(&path).unwrap().remote().unwrap();
+    assert_eq!(peer, None);
 }

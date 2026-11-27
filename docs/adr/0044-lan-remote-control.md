@@ -50,10 +50,11 @@ phone is left for later (owner, same day).
 ## Decision
 Option 1.
 
-- **Off by default.** Settings → Remote control on the desktop turns it
-  on. Turning it on makes a random 16-byte key and starts the listener;
-  turning it off forgets the key and stops it. "New code" replaces the
-  key, which unpairs every phone.
+- **On by default** (owner, 2026-11-27). The first start of the desktop
+  makes a random 16-byte key and starts the listener. Settings → Remote
+  control turns it off, which forgets the key, stops the listener and is
+  remembered across restarts; turning it on again makes a new key. "New
+  code" replaces the key, which unpairs every phone.
 - **Listener.** `cineo_net::remote::serve`, hyper HTTP/1 on
   `0.0.0.0:18765`, or a port the system picks when that one is taken.
   One route, `POST /v1/remote`; bodies of at most 4 KiB; at most 16
@@ -89,7 +90,9 @@ Option 1.
   never reads, and restored at start.
 
 ## Consequences
-- The desktop opens a TCP port on the LAN while the feature is on.
+- The desktop opens a TCP port on the LAN from its first start, until the
+  user turns the feature off. Without the code the port runs nothing, but
+  anyone on the network can see it is open.
   Windows and macOS may ask to allow it through the firewall; a Linux
   firewall may need a rule. `docs/SECURITY.md` lists the port and its
   defenses.

@@ -266,10 +266,13 @@ Sync is off by default.
 
 ### Remote control (ADR-0044)
 
-- **Off by default.** Only "Turn on remote control" in the desktop's
-  Settings opens a port: TCP 18765 on every IPv4 interface, or a port the
-  system picks. "Turn off" closes the listener and its open connections
-  and forgets the key (`stopping_the_listener_closes_the_port`).
+- **On by default** (owner's decision, 2026-11-27). The desktop's first
+  start makes a key and listens on TCP 18765 on every IPv4 interface, or a
+  port the system picks. "Turn off" in Settings → Remote control closes
+  the listener and its open connections, forgets the key, and is
+  remembered across restarts (`stopping_the_listener_closes_the_port`,
+  `the_remote_control_is_on_unless_it_was_turned_off`,
+  `remote_pairings_survive_a_reopen_and_turning_off_is_remembered`).
 - **Key.** 16 random bytes, shown as a 32-character code and a QR code.
   Whoever has the code and reaches the port can control playback and see
   what plays; nothing else is exposed. "New code" replaces it. The key is
@@ -437,7 +440,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Request timeout / connect timeout | 20 s / 10 s                                                                                                                                         |
 | Max redirects                     | 5, no https→http                                                                                                                                    |
 | Sync                              | Off; turned on in Settings → Data (ADR-0043)                                                                                                        |
-| Remote control                    | Off; turned on in Settings → Remote control; TCP 18765 on the LAN while on (ADR-0044)                                                               |
+| Remote control                    | On (desktop): TCP 18765 on the LAN from the first start, sealed with a random key; off in Settings → Remote control (ADR-0044)                       |
 | mpv                               | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; forward cache at most 120 s and 512 MiB (ADR-0024) |
 
 ## Unsafe code

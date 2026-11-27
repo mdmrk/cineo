@@ -43,7 +43,7 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     "ALTER TABLE sync_pairing ADD COLUMN born INTEGER NOT NULL DEFAULT 0;",
     "CREATE TABLE remote_host (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        key BLOB NOT NULL
+        key BLOB
     ) STRICT;
     CREATE TABLE remote_peer (
         id INTEGER PRIMARY KEY CHECK (id = 1),

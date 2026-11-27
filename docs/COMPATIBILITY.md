@@ -583,16 +583,18 @@ On the desktop and on Android (ADR-0043).
 ### Remote control
 
 A phone running Cineo controls playback in Cineo on a computer on the same
-local network (ADR-0044). Off by default.
+local network (ADR-0044). On by default on the desktop.
 
-- **Desktop, Settings → Remote control.** "Turn on remote control" makes a
-  key and starts listening on TCP port 18765 (another port when it is
-  taken); the page shows the address, the code and a QR code; "New code"
-  unpairs every phone; "Turn off" forgets the key
+- **Desktop, Settings → Remote control.** The first start makes a key and
+  listens on TCP port 18765 (another port when it is taken)
+  (`the_remote_control_is_on_unless_it_was_turned_off`); the page shows
+  the address, the code and a QR code; "New code" unpairs every phone;
+  "Turn off" forgets the key and stays off after a restart, and "Turn on
+  remote control" makes a new one
   (`crates/cineo-desktop/tests/ui/remote.rs`;
   `turning_the_remote_on_off_or_to_a_new_key_saves_and_restarts_it`). The
   key survives a restart (`a_restored_remote_key_starts_the_listener`,
-  `remote_pairings_survive_a_reopen_and_can_be_forgotten`).
+  `remote_pairings_survive_a_reopen_and_turning_off_is_remembered`).
 - **What the phone can do.** Play and pause, seek by 10 s or to a
   position, volume and mute, audio and subtitle tracks, subtitle delay,
   speed and stop (`phone_commands_become_player_commands`,

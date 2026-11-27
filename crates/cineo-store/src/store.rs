@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
-use cineo_core::remote::{Peer, RemoteKey};
+use cineo_core::remote::{Hosting, Peer, RemoteKey};
 use cineo_core::sync::{Changes, DeviceId, Entry, Pairing, Record, Replica, Stamp, SyncKey};
 use rusqlite::{Connection, ErrorCode, OptionalExtension, Row, params};
 use tracing::warn;
@@ -337,15 +337,24 @@ impl Store {
         Ok(())
     }
 
-    pub fn remote(&self) -> Result<(Option<RemoteKey>, Option<Peer>), StoreError> {
-        let host = self
+    pub fn remote(&self) -> Result<(Hosting, Option<Peer>), StoreError> {
+        let host = match self
             .conn
             .query_row("SELECT key FROM remote_host WHERE id = 1", [], |row| {
-                row.get::<_, Vec<u8>>(0)
+                row.get::<_, Option<Vec<u8>>>(0)
             })
             .optional()?
-            .and_then(|key| <[u8; 16]>::try_from(key).ok())
-            .map(RemoteKey::from_bytes);
+        {
+            None => Hosting::Unchosen,
+            Some(None) => Hosting::Off,
+            Some(Some(key)) => match <[u8; 16]>::try_from(key) {
+                Ok(key) => Hosting::On(RemoteKey::from_bytes(key)),
+                Err(_) => {
+                    warn!("ignoring an unreadable remote control key");
+                    Hosting::Off
+                }
+            },
+        };
         let peer = self
             .conn
             .query_row(
@@ -370,13 +379,10 @@ impl Store {
     }
 
     pub fn save_remote_host(&self, host: Option<&RemoteKey>) -> Result<(), StoreError> {
-        match host {
-            Some(key) => self.conn.execute(
-                "INSERT OR REPLACE INTO remote_host (id, key) VALUES (1, ?1)",
-                params![key.as_bytes().as_slice()],
-            )?,
-            None => self.conn.execute("DELETE FROM remote_host", [])?,
-        };
+        self.conn.execute(
+            "INSERT OR REPLACE INTO remote_host (id, key) VALUES (1, ?1)",
+            params![host.map(|key| key.as_bytes().as_slice())],
+        )?;
         Ok(())
     }
 

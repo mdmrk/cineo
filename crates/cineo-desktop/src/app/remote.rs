@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use cineo_core::app::Action;
-use cineo_core::remote::{Command, DEFAULT_PORT, NowPlaying, RemoteKey, Status, Track};
-use cineo_net::remote::{Handler, RemoteServer, bind, lan_ip, new_remote_key, serve};
+use cineo_core::remote::{Command, DEFAULT_PORT, Hosting, NowPlaying, RemoteKey, Status, Track};
+use cineo_net::remote::{Handler, RemoteError, RemoteServer, bind, lan_ip, new_remote_key, serve};
 use cineo_player::embedded::{PlayerCommand, Status as PlayerStatus, TrackKind};
 use tracing::warn;
 
@@ -123,6 +123,24 @@ impl CineoApp {
             player::leave_fullscreen(&self.ctx);
             self.dispatch(Action::PlaybackStopped);
         }
+    }
+}
+
+pub(super) fn at_start(
+    hosting: Hosting,
+    new_key: impl FnOnce() -> Result<RemoteKey, RemoteError>,
+) -> Vec<Action> {
+    let restore = |host| Action::RestoreRemote { host, peer: None };
+    match hosting {
+        Hosting::On(key) => vec![restore(Some(key))],
+        Hosting::Off => vec![restore(None)],
+        Hosting::Unchosen => match new_key() {
+            Ok(key) => vec![restore(None), Action::SetRemoteHost(Some(key))],
+            Err(err) => {
+                warn!(%err, "no random remote key; the remote control stays off");
+                vec![restore(None)]
+            }
+        },
     }
 }
 
@@ -294,6 +312,28 @@ mod tests {
             }]
         );
         assert!(now_playing("Dune", &PlayerStatus::default(), &controls).loading);
+    }
+
+    #[test]
+    fn the_remote_control_is_on_unless_it_was_turned_off() {
+        let key = RemoteKey::from_bytes([1; 16]);
+        let restore = |host| Action::RestoreRemote { host, peer: None };
+        assert_eq!(
+            at_start(Hosting::Unchosen, || Ok(key)),
+            [restore(None), Action::SetRemoteHost(Some(key))]
+        );
+        assert_eq!(
+            at_start(Hosting::Off, || panic!("no key is made")),
+            [restore(None)]
+        );
+        assert_eq!(
+            at_start(Hosting::On(key), || panic!("no key is made")),
+            [restore(Some(key))]
+        );
+        assert_eq!(
+            at_start(Hosting::Unchosen, || Err(RemoteError::Crypto)),
+            [restore(None)]
+        );
     }
 
     #[test]

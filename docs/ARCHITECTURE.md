@@ -267,7 +267,10 @@ synced.
 
 ### Remote control boundary (ADR-0044)
 
-The phone controls playback on a desktop on the same LAN. Off by default.
+The phone controls playback on a desktop on the same LAN. On by default
+on the desktop: with nothing stored, `app::remote::at_start` makes a key
+and dispatches `SetRemoteHost`; a turned-off listener is stored as a
+`remote_host` row without a key and stays off.
 
 ```mermaid
 sequenceDiagram

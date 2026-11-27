@@ -37,6 +37,13 @@ impl fmt::Debug for RemoteKey {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Hosting {
+    Unchosen,
+    Off,
+    On(RemoteKey),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Peer {
     pub address: SocketAddr,
     pub key: RemoteKey,

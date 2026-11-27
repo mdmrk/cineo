@@ -54,7 +54,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
     let saved = store.settings()?;
     let sync = store.sync(Settings::default())?;
-    let (remote_host, _) = store.remote()?;
+    let (hosting, _) = store.remote()?;
     let ui_language = saved.ui_language;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
     let client = AddonClient::new(NetPolicy {
@@ -72,10 +72,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             replica: Box::new(replica),
         });
     }
-    restore.push(Action::RestoreRemote {
-        host: remote_host,
-        peer: None,
-    });
+    restore.extend(remote::at_start(hosting, cineo_net::remote::new_remote_key));
     let image_disk = ImageDisk::new(&options.cache_dir);
     {
         let image_disk = image_disk.clone();
