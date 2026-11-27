@@ -21,7 +21,7 @@ old one *Superseded by NNNN*.
 | [0003](0003-lenient-wire-strict-domain.md) | Lenient wire parsing, strict domain types | Accepted |
 | [0004](0004-mpv-external-process-player.md) | mpv as an external process over JSON IPC | Superseded by 0014 |
 | [0005](0005-desktop-ui-tauri.md) | Desktop UI: Tauri 2 + web frontend | Superseded by 0011 |
-| [0006](0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted |
+| [0006](0006-network-safety-policy.md) | Network safety policy (SSRF, limits) | Accepted (the paired remote address: amended by 0044) |
 | [0007](0007-protocol-scope.md) | Protocol scope: HTTP transport only; no private Stremio APIs | Accepted (sync: amended by 0043) |
 | [0008](0008-agent-instruction-system.md) | AGENTS.md canonical; layered Claude rules and skills | Superseded by 0013 |
 | [0009](0009-toolchain-and-msrv.md) | Pinned stable toolchain; MSRV equals the pin | Superseded by 0025 |
@@ -29,7 +29,7 @@ old one *Superseded by NNNN*.
 | [0011](0011-desktop-ui-egui.md) | Desktop UI: egui (eframe, glow) with a custom theme | Accepted |
 | [0012](0012-torrent-engine-librqbit.md) | Torrent engine: librqbit; BitTorrent traffic outside `cineo-net` | Accepted (cache and unpatched librqbit: superseded by 0015; incoming connections and peer proxy: amended by 0026) |
 | [0013](0013-local-agent-tooling.md) | Agent tool configuration is local; the repo keeps AGENTS.md and docs | Accepted |
-| [0014](0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted (Windows bundling: superseded by 0022, restored by 0027) |
+| [0014](0014-embedded-libmpv-player.md) | Embedded playback with libmpv, loaded at runtime | Accepted (Windows bundling: superseded by 0022, restored by 0027; commands from the phone: amended by 0044) |
 | [0015](0015-no-torrent-cache-and-patched-librqbit.md) | No torrent cache; a vendored, patched librqbit | Accepted (vendoring: superseded by 0016; in-memory option: 0019; disk layout: superseded by 0020) |
 | [0016](0016-librqbit-from-a-fork.md) | librqbit from the owner's fork instead of a vendored copy | Accepted |
 | [0017](0017-localization-with-fluent.md) | Localization: Fluent catalogs in the desktop shell; core reports typed messages | Accepted (Fluent: superseded by 0021) |
@@ -59,6 +59,7 @@ old one *Superseded by NNNN*.
 | [0041](0041-linux-in-app-update.md) | In-app update on Linux | Accepted |
 | [0042](0042-egui-0-37-with-fastframe-main.md) | egui 0.37 with fastframe from its main branch | Accepted |
 | [0043](0043-end-to-end-encrypted-sync.md) | End-to-end encrypted sync through our own server | Accepted |
+| [0044](0044-lan-remote-control.md) | Remote control from the phone over the local network | Accepted |
 
 ## What we took from the reference projects
 
