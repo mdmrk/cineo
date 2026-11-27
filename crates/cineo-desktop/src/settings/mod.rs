@@ -4,19 +4,20 @@ use cineo_core::app::{
     UiLanguage, UploadLimit, WatchedAt,
 };
 use eframe::egui::{
-    self, Align, CornerRadius, Label, Layout, Rect, Response, RichText, Role, ScrollArea, Sense,
-    TextFormat, Ui, UiBuilder, WidgetInfo, pos2, text::LayoutJob, vec2,
+    self, Align, CornerRadius, Label, Layout, Margin, Rect, Response, RichText, Role, ScrollArea,
+    Sense, TextEdit, TextFormat, Ui, UiBuilder, WidgetInfo, pos2, text::LayoutJob, vec2,
 };
 
 use crate::brand;
 use crate::i18n::{Locale, Text, pt, t};
 use crate::theme;
 use crate::view::{
-    Icon, Page, ViewState, append_icon, compact, dialog, dim, page_title, paint_loading,
-    paint_nav_label, section,
+    Icon, Page, ViewState, append_icon, clear_button, compact, dialog, dim, page_title, paint_icon,
+    paint_loading, paint_nav_label, section,
 };
 
 mod keyboard;
+mod search;
 mod subtitles;
 mod sync;
 mod widgets;
@@ -95,6 +96,9 @@ const NAV_WIDTH: f32 = 168.0;
 
 pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut Vec<Action>) {
     let jump = view.settings_jump.take();
+    if jump.is_some() {
+        view.settings_query.clear();
+    }
     let full = ui.available_rect_before_wrap();
     let margin = theme::PAGE_MARGIN;
     let show_nav = !compact(ui.ctx());
@@ -127,12 +131,21 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                     |ui| {
                         ui.set_width(width);
                         page_title(ui, &t!("Settings"), None);
+                        search_field(ui, &mut view.settings_query);
+                        let words = search::words(&view.settings_query);
+                        let mut found = false;
                         let mut last_top = 0.0;
                         for part in Section::ALL {
                             let top = ui.cursor().min.y;
                             last_top = top;
-                            section(ui, &part.label(), |_| {});
-                            ui.add_space(theme::GAP / 2.0);
+                            let label = part.label();
+                            let filtered = !search::matches(&words, &[&label]);
+                            if filtered {
+                                search::begin(ui, words.clone(), &label);
+                            } else {
+                                section(ui, &label, |_| {});
+                                ui.add_space(theme::GAP / 2.0);
+                            }
                             if jump == Some(part) {
                                 ui.scroll_to_rect(
                                     Rect::from_min_size(
@@ -146,7 +159,13 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
                                 current = part;
                             }
                             body(ui, part, full.center().x, state, view, out);
-                            ui.add_space(theme::SECTION_GAP);
+                            if !filtered || search::end(ui) {
+                                found = true;
+                                ui.add_space(theme::SECTION_GAP);
+                            }
+                        }
+                        if !found {
+                            ui.label(dim(&t!("No setting matches your search.")));
                         }
                         let tail = ui.cursor().min.y - last_top;
                         ui.add_space((visible_height - tail - margin).max(0.0));
@@ -166,6 +185,32 @@ pub(crate) fn page(ui: &mut Ui, state: &State, view: &mut ViewState, out: &mut V
         });
     }
     confirm(ui, view, out);
+}
+
+fn search_field(ui: &mut Ui, query: &mut String) {
+    let label = t!("Search settings");
+    let field = ui.add(
+        TextEdit::singleline(query)
+            .id_salt("settings-search")
+            .hint_text(label.as_ref())
+            .margin(Margin {
+                left: 30,
+                right: 30,
+                top: 6,
+                bottom: 6,
+            })
+            .desired_width(ui.available_width().min(360.0)),
+    );
+    field.widget_info(|| WidgetInfo::labeled(Role::TextInput, ui.is_enabled(), &label));
+    clear_button(ui, &field, query);
+    paint_icon(
+        ui.painter(),
+        Icon::Search,
+        pos2(field.rect.min.x + 15.0, field.rect.center().y),
+        14.0,
+        theme::TEXT_DIM,
+    );
+    ui.add_space(theme::SECTION_GAP);
 }
 
 fn body(
@@ -417,16 +462,21 @@ fn body(
                     }
                 },
             );
-            ui.add_space(theme::SECTION_GAP);
+            if !search::filtering(ui) {
+                ui.add_space(theme::SECTION_GAP);
+            }
             sync::sync(ui, state, view, out);
         }
         Section::Keyboard => keyboard(ui),
         Section::About => {
-            ui.label(dim(&t!(
-                "Cineo v{version}",
-                version = env!("CARGO_PKG_VERSION")
-            )));
-            ui.add_space(theme::GAP);
+            let filtering = search::filtering(ui);
+            if !filtering {
+                ui.label(dim(&t!(
+                    "Cineo v{version}",
+                    version = env!("CARGO_PKG_VERSION")
+                )));
+                ui.add_space(theme::GAP);
+            }
             switch(
                 ui,
                 out,
@@ -435,6 +485,9 @@ fn body(
                 s.check_for_updates,
                 Setting::CheckForUpdates,
             );
+            if filtering {
+                return;
+            }
             ui.add_space(theme::GAP);
             let mut job = LayoutJob::default();
             append_icon(&mut job, Icon::Named("brand-github"), 18.0, theme::ACCENT);

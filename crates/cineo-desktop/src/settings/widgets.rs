@@ -157,6 +157,9 @@ pub(super) fn port_field(ui: &mut Ui, label: &str, port: TorrentPort) -> Option<
 }
 
 pub(crate) fn row(ui: &mut Ui, title: &str, help: &str, control: impl FnOnce(&mut Ui)) {
+    if !super::search::shows(ui, title, help) {
+        return;
+    }
     let width = ui.available_width();
     let control_width = CONTROL_WIDTH.min(width * 0.45);
     let text_width = (width - control_width - 24.0).max(0.0);

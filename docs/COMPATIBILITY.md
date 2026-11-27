@@ -390,6 +390,18 @@ The full evidence for the rows above whose notes do not fit in the table.
   `subtitle_style_becomes_mpv_options_only_when_changed`,
   `seek_steps_come_from_settings`, `torrent_settings_shape_the_next_engine`,
   `the_download_limit_slows_the_torrent_down`).
+- A search field at the top of Settings keeps the settings whose name or
+  description contains every typed word, ignoring case and accents, under
+  their section; a word naming a section keeps the whole section. Desktop
+  (`searching_settings_shows_only_matching_rows_under_their_section`,
+  `a_search_naming_a_section_shows_the_whole_section`,
+  `a_search_without_matches_says_so`; a sync link clears the search,
+  `a_sync_link_clears_a_settings_search_that_would_hide_pairing`) and
+  Android
+  (`everyWordMustAppearInARowIgnoringCaseAndAccents`,
+  `aWordNamingAGroupKeepsTheWholeGroup`,
+  `rowsWithoutTextOnlyShowWithoutASearch`; the Android screen itself not
+  yet seen on a device).
 - Not offered: streaming-server URL (ADR-0010), external player (ADR-0014),
   mobile/TV-only options, crash reports, Discord, frame-rate matching.
 

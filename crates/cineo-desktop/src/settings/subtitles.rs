@@ -12,8 +12,10 @@ use crate::theme;
 use super::widgets::{number, pick, switch};
 
 pub(super) fn subtitle_style(ui: &mut Ui, s: &Settings, out: &mut Vec<Action>) {
-    preview(ui, s);
-    ui.add_space(theme::GAP);
+    if !super::search::filtering(ui) {
+        preview(ui, s);
+        ui.add_space(theme::GAP);
+    }
     subtitle_controls(ui, s, out);
 }
 

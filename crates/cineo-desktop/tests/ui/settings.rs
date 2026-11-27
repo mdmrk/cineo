@@ -335,3 +335,55 @@ fn update_checks_can_be_turned_off_in_about() {
         vec![Action::ChangeSetting(Setting::CheckForUpdates(false))]
     );
 }
+
+#[test]
+fn searching_settings_shows_only_matching_rows_under_their_section() {
+    let mut harness = harness(State::default(), settings_page());
+    harness.get_by_label("Seek step");
+    harness
+        .get_by_role_and_label(Role::TextInput, "Search settings")
+        .focus();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::TextInput, "Search settings")
+        .type_text("PEER");
+    settle(&mut harness);
+    harness.get_by_role_and_label(Role::Label, "Torrents");
+    harness.get_by_label("Upload to other peers");
+    harness.get_by_label("Peers per torrent");
+    assert!(harness.query_by_label("Seek step").is_none());
+    assert!(harness.query_by_label("Download limit").is_none());
+    assert!(
+        harness
+            .query_by_role_and_label(Role::Label, "Player")
+            .is_none()
+    );
+}
+
+#[test]
+fn a_search_naming_a_section_shows_the_whole_section() {
+    let view = ViewState {
+        settings_query: "audio".into(),
+        ..settings_page()
+    };
+    let harness = harness(State::default(), view);
+    harness.get_by_label("Audio output");
+    harness.get_by_label("Passthrough");
+    harness.get_by_label("Audio language");
+    assert!(harness.query_by_label("Subtitle language").is_none());
+}
+
+#[test]
+fn a_search_without_matches_says_so() {
+    let view = ViewState {
+        settings_query: "zzz".into(),
+        ..settings_page()
+    };
+    let harness = harness(State::default(), view);
+    harness.get_by_label("No setting matches your search.");
+    assert!(
+        harness
+            .query_by_role_and_label(Role::Label, "Interface")
+            .is_none()
+    );
+}

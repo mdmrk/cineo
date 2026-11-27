@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +24,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -36,15 +38,18 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -52,7 +57,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -73,7 +80,21 @@ import java.text.Collator
 import kotlin.math.roundToInt
 
 private val GroupShape = RoundedCornerShape(10.dp)
-private const val DATA_ITEM = 5
+private const val DATA_ITEM = 6
+
+private typealias Content = @Composable () -> Unit
+
+private class GroupScope {
+    val entries = mutableListOf<SettingEntry<Content>>()
+
+    fun add(vararg texts: String, divided: Boolean = true, content: Content) {
+        entries += SettingEntry(texts.toList(), content, divided)
+    }
+}
+
+@Composable
+private fun group(key: String, title: String, build: @Composable GroupScope.() -> Unit): SettingsGroup<Content> =
+    SettingsGroup(key, title, GroupScope().apply { build() }.entries)
 
 @Composable
 fun SettingsScreen(
@@ -93,9 +114,225 @@ fun SettingsScreen(
     val languages = listOf<String?>(null) + settings.languages.sortedWith(compareBy(collator) { languageNames.getValue(it) })
     val languageLabel = @Composable { code: String? -> code?.let { languageNames[it] ?: it } ?: none }
     val set = { key: String, value: String -> change(SettingChange.Value(key, value)) }
+    val uri = LocalUriHandler.current
+    val groups = listOf(
+        group("player", stringResource(R.string.section_player)) {
+            toggle(
+                stringResource(R.string.hardware_decoding),
+                stringResource(R.string.hardware_decoding_help),
+                settings.hardwareDecoding,
+            ) { change(SettingChange.HardwareDecoding(it)) }
+            picker(
+                stringResource(R.string.seek_step),
+                stringResource(R.string.seek_step_help),
+                settings.seekStepsS,
+                settings.seekStepS,
+                { stringResource(R.string.seconds, it.toInt()) },
+            ) { change(SettingChange.SeekStep(it)) }
+            picker(
+                stringResource(R.string.watched_at),
+                stringResource(R.string.watched_at_help),
+                settings.watchedAtChoices,
+                settings.watchedAtPercent,
+                { stringResource(R.string.watched_percent, it.toInt()) },
+            ) { change(SettingChange.WatchedAt(it)) }
+            choice(
+                stringResource(R.string.hide_controls),
+                stringResource(R.string.hide_controls_help),
+                settings.hideControls,
+                { stringResource(R.string.seconds_decimal, it) },
+                set,
+            )
+            switch(
+                stringResource(R.string.binge_watching),
+                stringResource(R.string.binge_watching_help),
+                settings.bingeWatching,
+                set,
+            )
+            choice(
+                stringResource(R.string.on_leave),
+                stringResource(R.string.on_leave_help),
+                settings.onLeave,
+                {
+                    stringResource(
+                        when (it) {
+                            "pause" -> R.string.on_leave_pause
+                            "play" -> R.string.on_leave_play
+                            else -> R.string.on_leave_pip
+                        },
+                    )
+                },
+                set,
+            )
+            choice(
+                stringResource(R.string.next_notice),
+                stringResource(R.string.next_notice_help),
+                settings.nextVideoNotice,
+                {
+                    if (it == "0") stringResource(R.string.next_notice_off)
+                    else stringResource(R.string.seconds, it.toInt())
+                },
+                set,
+            )
+        },
+        group("languages", stringResource(R.string.section_languages)) {
+            picker(
+                stringResource(R.string.audio_language),
+                stringResource(R.string.audio_language_help),
+                languages,
+                settings.audioLanguage,
+                languageLabel,
+            ) { change(SettingChange.AudioLanguage(it)) }
+            picker(
+                stringResource(R.string.audio_language_second),
+                stringResource(R.string.audio_language_second_help),
+                languages,
+                settings.secondaryAudioLanguage,
+                languageLabel,
+            ) { change(SettingChange.SecondaryAudioLanguage(it)) }
+            picker(
+                stringResource(R.string.subtitle_language),
+                stringResource(R.string.subtitle_language_help),
+                languages,
+                settings.subtitleLanguage,
+                languageLabel,
+            ) { change(SettingChange.SubtitleLanguage(it)) }
+            picker(
+                stringResource(R.string.subtitle_language_second),
+                stringResource(R.string.subtitle_language_second_help),
+                languages,
+                settings.secondarySubtitleLanguage,
+                languageLabel,
+            ) { change(SettingChange.SecondarySubtitleLanguage(it)) }
+        },
+        group("subtitles", stringResource(R.string.section_subtitles)) {
+            val style = stringResource(R.string.subtitle_style_help)
+            add(divided = false) { SubtitlePreview(settings.subtitlePreview) }
+            range(stringResource(R.string.subtitle_size), style, settings.subtitleSize, 5, set)
+            choice(stringResource(R.string.subtitle_font), style, settings.subtitleFont, { fontName(it) }, set)
+            switch(stringResource(R.string.subtitle_bold), style, settings.subtitleBold, set)
+            choice(stringResource(R.string.subtitle_color), style, settings.subtitleColor, { colorName(it) }, set)
+            range(stringResource(R.string.subtitle_opacity), style, settings.subtitleOpacity, 5, set)
+            choice(
+                stringResource(R.string.subtitle_outline),
+                stringResource(R.string.subtitle_outline_help),
+                settings.subtitleOutline,
+                { outlineName(it) },
+                set,
+            )
+            choice(
+                stringResource(R.string.subtitle_background),
+                style,
+                settings.subtitleBackground,
+                { backgroundName(it) },
+                set,
+            )
+            range(
+                stringResource(R.string.subtitle_raise),
+                stringResource(R.string.subtitle_raise_help),
+                settings.subtitlePosition,
+                1,
+                set,
+            )
+            switch(
+                stringResource(R.string.subtitle_keep_styles),
+                stringResource(R.string.subtitle_keep_styles_help),
+                settings.keepSubtitleStyles,
+                set,
+            )
+        },
+        group("torrents", stringResource(R.string.section_torrents)) {
+            val next = stringResource(R.string.next_torrent)
+            toggle(
+                stringResource(R.string.p2p_enabled),
+                stringResource(R.string.p2p_help),
+                settings.p2pEnabled,
+            ) { change(SettingChange.P2pEnabled(it)) }
+            switch(
+                stringResource(R.string.torrent_upload),
+                stringResource(R.string.torrent_upload_help),
+                settings.torrentUpload,
+                set,
+            )
+            choice(
+                stringResource(R.string.torrent_storage),
+                stringResource(R.string.torrent_storage_help),
+                settings.torrentStorage,
+                { storageName(it) },
+                set,
+            )
+            choice(stringResource(R.string.download_limit), next, settings.downloadLimit, { rateName(it) }, set)
+            choice(stringResource(R.string.upload_limit), next, settings.uploadLimit, { rateName(it) }, set)
+            choice(
+                stringResource(R.string.peer_limit),
+                stringResource(R.string.peer_limit_help),
+                settings.peerLimit,
+                { it },
+                set,
+            )
+            switch(stringResource(R.string.dht), stringResource(R.string.dht_help), settings.torrentDht, set)
+            port(stringResource(R.string.torrent_port), stringResource(R.string.torrent_port_help), settings.torrentPort, set)
+        },
+        group("data", stringResource(R.string.section_data)) {
+            add(
+                stringResource(R.string.sync),
+                stringResource(R.string.sync_help),
+                stringResource(R.string.sync_pair_title),
+                stringResource(R.string.sync_code),
+                stringResource(R.string.sync_server),
+            ) { SyncSettings(sync, syncLink, onSyncLinkUsed, cineo) }
+            toggle(
+                stringResource(R.string.private_network),
+                stringResource(R.string.private_network_help),
+                settings.allowPrivateNetwork,
+            ) { change(SettingChange.AllowPrivateNetwork(it)) }
+            confirmed(
+                stringResource(R.string.clear_history),
+                stringResource(R.string.clear_history_help),
+                stringResource(R.string.clear_confirm_title),
+                stringResource(R.string.clear_confirm_text),
+                stringResource(R.string.clear),
+                cineo::clearLibrary,
+            )
+            confirmed(
+                stringResource(R.string.reset_settings),
+                stringResource(R.string.reset_settings_help),
+                stringResource(R.string.reset_confirm_title),
+                stringResource(R.string.reset_confirm_text),
+                stringResource(R.string.reset),
+                cineo::resetSettings,
+            )
+        },
+        group("about", stringResource(R.string.section_about)) {
+            val version = stringResource(R.string.app_version, version())
+            add(version) { ListItem(colors = rowColors, headlineContent = { Text(version) }) }
+            if (update != null) {
+                val title = stringResource(R.string.update_available, update.version)
+                val help = stringResource(R.string.update_available_help)
+                add(title, help) {
+                    SettingRow(title, help, Modifier.clickable { uri.openUri(update.pageUrl) }) {
+                        CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.Accent, size = 20.sp)
+                    }
+                }
+            }
+            switch(
+                stringResource(R.string.check_updates),
+                stringResource(R.string.check_updates_help),
+                settings.checkForUpdates,
+                set,
+            )
+            add(stringResource(R.string.licenses), stringResource(R.string.licenses_help)) { Licenses() }
+        },
+    )
+    var query by rememberSaveable { mutableStateOf("") }
+    val focus = LocalFocusManager.current
+    val shown = if (syncLink != null) groups else groups.search(query)
     val list = rememberLazyListState()
     LaunchedEffect(syncLink) {
-        if (syncLink != null) list.scrollToItem(DATA_ITEM)
+        if (syncLink != null) {
+            query = ""
+            list.scrollToItem(DATA_ITEM)
+        }
     }
     LazyColumn(
         state = list,
@@ -111,254 +348,87 @@ fun SettingsScreen(
         item(key = "title") {
             Text(stringResource(R.string.page_settings), style = MaterialTheme.typography.headlineMedium, color = Brand.TextBright)
         }
-        item(key = "player") {
-            Group(stringResource(R.string.section_player)) {
-                Toggle(
-                    stringResource(R.string.hardware_decoding),
-                    stringResource(R.string.hardware_decoding_help),
-                    settings.hardwareDecoding,
-                ) { change(SettingChange.HardwareDecoding(it)) }
-                Divider()
-                Picker(
-                    stringResource(R.string.seek_step),
-                    stringResource(R.string.seek_step_help),
-                    settings.seekStepsS,
-                    settings.seekStepS,
-                    { stringResource(R.string.seconds, it.toInt()) },
-                ) { change(SettingChange.SeekStep(it)) }
-                Divider()
-                Picker(
-                    stringResource(R.string.watched_at),
-                    stringResource(R.string.watched_at_help),
-                    settings.watchedAtChoices,
-                    settings.watchedAtPercent,
-                    { stringResource(R.string.watched_percent, it.toInt()) },
-                ) { change(SettingChange.WatchedAt(it)) }
-                Divider()
-                Choice(
-                    stringResource(R.string.hide_controls),
-                    stringResource(R.string.hide_controls_help),
-                    settings.hideControls,
-                    { stringResource(R.string.seconds_decimal, it) },
-                    set,
-                )
-                Divider()
-                Switch(
-                    stringResource(R.string.binge_watching),
-                    stringResource(R.string.binge_watching_help),
-                    settings.bingeWatching,
-                    set,
-                )
-                Divider()
-                Choice(
-                    stringResource(R.string.on_leave),
-                    stringResource(R.string.on_leave_help),
-                    settings.onLeave,
+        item(key = "search") {
+            CineoField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = stringResource(R.string.settings_search),
+                modifier = Modifier.fillMaxWidth(),
+                leading = Icon.SEARCH,
+                trailing = if (query.isEmpty()) null else {
                     {
-                        stringResource(
-                            when (it) {
-                                "pause" -> R.string.on_leave_pause
-                                "play" -> R.string.on_leave_play
-                                else -> R.string.on_leave_pip
-                            },
-                        )
-                    },
-                    set,
-                )
-                Divider()
-                Choice(
-                    stringResource(R.string.next_notice),
-                    stringResource(R.string.next_notice_help),
-                    settings.nextVideoNotice,
-                    {
-                        if (it == "0") stringResource(R.string.next_notice_off)
-                        else stringResource(R.string.seconds, it.toInt())
-                    },
-                    set,
-                )
-            }
-        }
-        item(key = "languages") {
-            Group(stringResource(R.string.section_languages)) {
-                Picker(
-                    stringResource(R.string.audio_language),
-                    stringResource(R.string.audio_language_help),
-                    languages,
-                    settings.audioLanguage,
-                    languageLabel,
-                ) { change(SettingChange.AudioLanguage(it)) }
-                Divider()
-                Picker(
-                    stringResource(R.string.audio_language_second),
-                    stringResource(R.string.audio_language_second_help),
-                    languages,
-                    settings.secondaryAudioLanguage,
-                    languageLabel,
-                ) { change(SettingChange.SecondaryAudioLanguage(it)) }
-                Divider()
-                Picker(
-                    stringResource(R.string.subtitle_language),
-                    stringResource(R.string.subtitle_language_help),
-                    languages,
-                    settings.subtitleLanguage,
-                    languageLabel,
-                ) { change(SettingChange.SubtitleLanguage(it)) }
-                Divider()
-                Picker(
-                    stringResource(R.string.subtitle_language_second),
-                    stringResource(R.string.subtitle_language_second_help),
-                    languages,
-                    settings.secondarySubtitleLanguage,
-                    languageLabel,
-                ) { change(SettingChange.SecondarySubtitleLanguage(it)) }
-            }
-        }
-        item(key = "subtitles") {
-            val style = stringResource(R.string.subtitle_style_help)
-            Group(stringResource(R.string.section_subtitles)) {
-                SubtitlePreview(settings.subtitlePreview)
-                Range(stringResource(R.string.subtitle_size), style, settings.subtitleSize, 5, set)
-                Divider()
-                Choice(stringResource(R.string.subtitle_font), style, settings.subtitleFont, { fontName(it) }, set)
-                Divider()
-                Switch(stringResource(R.string.subtitle_bold), style, settings.subtitleBold, set)
-                Divider()
-                Choice(stringResource(R.string.subtitle_color), style, settings.subtitleColor, { colorName(it) }, set)
-                Divider()
-                Range(stringResource(R.string.subtitle_opacity), style, settings.subtitleOpacity, 5, set)
-                Divider()
-                Choice(
-                    stringResource(R.string.subtitle_outline),
-                    stringResource(R.string.subtitle_outline_help),
-                    settings.subtitleOutline,
-                    { outlineName(it) },
-                    set,
-                )
-                Divider()
-                Choice(
-                    stringResource(R.string.subtitle_background),
-                    style,
-                    settings.subtitleBackground,
-                    { backgroundName(it) },
-                    set,
-                )
-                Divider()
-                Range(
-                    stringResource(R.string.subtitle_raise),
-                    stringResource(R.string.subtitle_raise_help),
-                    settings.subtitlePosition,
-                    1,
-                    set,
-                )
-                Divider()
-                Switch(
-                    stringResource(R.string.subtitle_keep_styles),
-                    stringResource(R.string.subtitle_keep_styles_help),
-                    settings.keepSubtitleStyles,
-                    set,
-                )
-            }
-        }
-        item(key = "torrents") {
-            val next = stringResource(R.string.next_torrent)
-            Group(stringResource(R.string.section_torrents)) {
-                Toggle(
-                    stringResource(R.string.p2p_enabled),
-                    stringResource(R.string.p2p_help),
-                    settings.p2pEnabled,
-                ) { change(SettingChange.P2pEnabled(it)) }
-                Divider()
-                Switch(
-                    stringResource(R.string.torrent_upload),
-                    stringResource(R.string.torrent_upload_help),
-                    settings.torrentUpload,
-                    set,
-                )
-                Divider()
-                Choice(
-                    stringResource(R.string.torrent_storage),
-                    stringResource(R.string.torrent_storage_help),
-                    settings.torrentStorage,
-                    { storageName(it) },
-                    set,
-                )
-                Divider()
-                Choice(stringResource(R.string.download_limit), next, settings.downloadLimit, { rateName(it) }, set)
-                Divider()
-                Choice(stringResource(R.string.upload_limit), next, settings.uploadLimit, { rateName(it) }, set)
-                Divider()
-                Choice(
-                    stringResource(R.string.peer_limit),
-                    stringResource(R.string.peer_limit_help),
-                    settings.peerLimit,
-                    { it },
-                    set,
-                )
-                Divider()
-                Switch(stringResource(R.string.dht), stringResource(R.string.dht_help), settings.torrentDht, set)
-                Divider()
-                Port(stringResource(R.string.torrent_port), stringResource(R.string.torrent_port_help), settings.torrentPort, set)
-            }
-        }
-        item(key = "data") {
-            Group(stringResource(R.string.section_data)) {
-                SyncSettings(sync, syncLink, onSyncLinkUsed, cineo)
-                Divider()
-                Toggle(
-                    stringResource(R.string.private_network),
-                    stringResource(R.string.private_network_help),
-                    settings.allowPrivateNetwork,
-                ) { change(SettingChange.AllowPrivateNetwork(it)) }
-                Divider()
-                Confirmed(
-                    stringResource(R.string.clear_history),
-                    stringResource(R.string.clear_history_help),
-                    stringResource(R.string.clear_confirm_title),
-                    stringResource(R.string.clear_confirm_text),
-                    stringResource(R.string.clear),
-                    cineo::clearLibrary,
-                )
-                Divider()
-                Confirmed(
-                    stringResource(R.string.reset_settings),
-                    stringResource(R.string.reset_settings_help),
-                    stringResource(R.string.reset_confirm_title),
-                    stringResource(R.string.reset_confirm_text),
-                    stringResource(R.string.reset),
-                    cineo::resetSettings,
-                )
-            }
-        }
-        item(key = "about") {
-            Group(stringResource(R.string.section_about)) {
-                ListItem(
-                    colors = rowColors,
-                    headlineContent = { Text(stringResource(R.string.app_version, version())) },
-                )
-                Divider()
-                if (update != null) {
-                    val uri = LocalUriHandler.current
-                    SettingRow(
-                        stringResource(R.string.update_available, update.version),
-                        stringResource(R.string.update_available_help),
-                        Modifier.clickable { uri.openUri(update.pageUrl) },
-                    ) {
-                        CineoIcon(Icon.CHEVRON_RIGHT, tint = Brand.Accent, size = 20.sp)
+                        IconButton(onClick = { query = "" }) {
+                            CineoIcon(Icon.X, tint = Brand.TextDim, label = stringResource(R.string.clear))
+                        }
                     }
-                    Divider()
-                }
-                Switch(
-                    stringResource(R.string.check_updates),
-                    stringResource(R.string.check_updates_help),
-                    settings.checkForUpdates,
-                    set,
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+            )
+        }
+        items(shown, key = { it.key }) { Group(it) }
+        if (shown.isEmpty()) {
+            item(key = "empty") {
+                Text(
+                    stringResource(R.string.settings_search_empty),
+                    color = Brand.TextDim,
+                    modifier = Modifier.padding(top = 16.dp),
                 )
-                Divider()
-                Licenses()
             }
         }
     }
 }
+
+@Composable
+private fun Group(group: SettingsGroup<Content>) {
+    Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(group.title, style = MaterialTheme.typography.labelLarge, color = Brand.Accent)
+        Column(Modifier.fillMaxWidth().clip(GroupShape).background(Brand.Panel)) {
+            group.entries.forEachIndexed { index, entry ->
+                if (index > 0 && group.entries[index - 1].divided) Divider()
+                key(entry.texts.joinToString("\n")) { entry.content() }
+            }
+        }
+    }
+}
+
+private fun GroupScope.toggle(title: String, help: String, on: Boolean, onChange: (Boolean) -> Unit) =
+    add(title, help) { Toggle(title, help, on, onChange) }
+
+private fun GroupScope.switch(title: String, help: String, view: ToggleView, set: (String, String) -> Unit) =
+    add(title, help) { Switch(title, help, view, set) }
+
+private fun GroupScope.choice(
+    title: String,
+    help: String,
+    view: ChoiceView,
+    label: @Composable (String) -> String,
+    set: (String, String) -> Unit,
+) = add(title, help) { Choice(title, help, view, label, set) }
+
+private fun <T> GroupScope.picker(
+    title: String,
+    help: String,
+    options: List<T>,
+    current: T,
+    label: @Composable (T) -> String,
+    onPick: (T) -> Unit,
+) = add(title, help) { Picker(title, help, options, current, label, onPick) }
+
+private fun GroupScope.range(title: String, help: String, view: RangeView, step: Int, set: (String, String) -> Unit) =
+    add(title, help) { Range(title, help, view, step, set) }
+
+private fun GroupScope.port(title: String, help: String, view: RangeView, set: (String, String) -> Unit) =
+    add(title, help) { Port(title, help, view, set) }
+
+private fun GroupScope.confirmed(
+    title: String,
+    help: String,
+    confirmTitle: String,
+    confirmText: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+) = add(title, help) { Confirmed(title, help, confirmTitle, confirmText, confirmLabel, onConfirm) }
 
 private const val LICENSES = "licenses"
 
@@ -413,14 +483,6 @@ private fun Licenses() {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun Group(title: String, content: @Composable () -> Unit) {
-    Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.labelLarge, color = Brand.Accent)
-        Column(Modifier.fillMaxWidth().clip(GroupShape).background(Brand.Panel)) { content() }
     }
 }
 

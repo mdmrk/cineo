@@ -26,7 +26,7 @@ mod widgets;
 pub(crate) use self::cards::{IMAGE_FILTER, paint_cover};
 pub(crate) use self::icons::{Icon, append_icon, paint_icon, paint_nav_label};
 pub(crate) use self::widgets::{
-    compact, dialog, dim, gradient, lerp_color, page_title, paint_loading, section,
+    clear_button, compact, dialog, dim, gradient, lerp_color, page_title, paint_loading, section,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -93,6 +93,7 @@ pub struct ViewState {
     pub search_edited_at: Option<f64>,
     pub focus_search: bool,
     pub settings_jump: Option<Section>,
+    pub settings_query: String,
     pub addon_list: Option<(TransportUrl, ResourcePath)>,
     pub confirm: Option<Confirm>,
     pub streams: StreamFilter,

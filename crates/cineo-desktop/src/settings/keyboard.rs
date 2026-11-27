@@ -112,6 +112,9 @@ pub(super) fn keyboard(ui: &mut Ui) {
         .map(|((parts, _), laid)| keys_width(parts, laid))
         .fold(0.0, f32::max);
     for ((parts, what), laid) in rows.iter().zip(laid) {
+        if !super::search::shows(ui, what, "") {
+            continue;
+        }
         let (rect, response) =
             ui.allocate_exact_size(vec2(ui.available_width(), ROW_HEIGHT), Sense::hover());
         response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &**what));

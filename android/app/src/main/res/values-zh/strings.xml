@@ -57,6 +57,8 @@
     <string name="remove_library">从媒体库中移除</string>
     <string name="more_actions">更多操作</string>
     <string name="page_settings">设置</string>
+    <string name="settings_search">搜索设置</string>
+    <string name="settings_search_empty">没有符合搜索的设置。</string>
     <string name="page_addons">插件</string>
     <string name="section_player">播放器</string>
     <string name="section_languages">语言</string>

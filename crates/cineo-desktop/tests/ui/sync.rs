@@ -165,3 +165,24 @@ fn a_sync_link_fills_the_code_and_opens_data_settings() {
     assert_eq!(view.sync_request, None);
     assert!(actions.contains(&Action::OpenLink(route)));
 }
+
+#[test]
+fn a_sync_link_clears_a_settings_search_that_would_hide_pairing() {
+    let mut view = ViewState {
+        settings_query: "zzz".into(),
+        ..ViewState::default()
+    };
+    let route = Route::Sync {
+        code: format_code(&KEY),
+        server: None,
+    };
+    follow_link(route, &State::default(), &mut view);
+    let mut harness = harness(State::default(), view);
+    harness.run_steps(30);
+    harness.get_by_role_and_label(Role::TextInput, "Sync code");
+    assert!(
+        harness
+            .query_by_label("No setting matches your search.")
+            .is_none()
+    );
+}

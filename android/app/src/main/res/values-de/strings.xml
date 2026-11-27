@@ -51,6 +51,8 @@
     <string name="remove_library">Aus der Mediathek entfernen</string>
     <string name="more_actions">Weitere Aktionen</string>
     <string name="page_settings">Einstellungen</string>
+    <string name="settings_search">Einstellungen durchsuchen</string>
+    <string name="settings_search_empty">Keine Einstellung passt zu deiner Suche.</string>
     <string name="page_addons">Add-ons</string>
     <string name="section_player">Player</string>
     <string name="section_languages">Sprachen</string>

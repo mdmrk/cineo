@@ -51,6 +51,8 @@
     <string name="remove_library">Quitar de la biblioteca</string>
     <string name="more_actions">Más acciones</string>
     <string name="page_settings">Configuración</string>
+    <string name="settings_search">Buscar en la configuración</string>
+    <string name="settings_search_empty">Ninguna opción coincide con tu búsqueda.</string>
     <string name="page_addons">Add-ons</string>
     <string name="section_player">Reproductor</string>
     <string name="section_languages">Idiomas</string>

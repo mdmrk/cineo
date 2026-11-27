@@ -51,6 +51,8 @@
     <string name="remove_library">Удалить из библиотеки</string>
     <string name="more_actions">Другие действия</string>
     <string name="page_settings">Настройки</string>
+    <string name="settings_search">Поиск по настройкам</string>
+    <string name="settings_search_empty">Нет настроек по вашему запросу.</string>
     <string name="page_addons">Аддоны</string>
     <string name="section_player">Плеер</string>
     <string name="section_languages">Языки</string>

@@ -110,7 +110,7 @@ pub(super) fn rule(ui: &mut Ui) {
     );
 }
 
-pub(super) fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool {
+pub(crate) fn clear_button(ui: &Ui, field: &Response, text: &mut String) -> bool {
     if text.is_empty() {
         return false;
     }
