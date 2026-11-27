@@ -20,8 +20,9 @@ arm64 port in progress and released as an APK (ADR-0028, ADR-0029). Scope and cu
   exception is BitTorrent traffic inside `cineo-stream` (ADR-0012). The
   player only receives typed commands (ADR-0014).
 - The goal is Stremio-equivalent behavior. Cloud sync goes only through our
-  own end-to-end encrypted server in `server/sync/` (ADR-0043); the server
-  never sees plaintext, and the app's sync client uses `cineo-net`.
+  own end-to-end encrypted server, `crates/cineo-sync-server` (ADR-0043);
+  the server never sees plaintext, and the app's sync client uses
+  `cineo-net`.
   Non-URL stream sources go through our own `cineo-stream` engine, never
   Stremio's server (ADR-0010).
 - Changing any of these requires a new or updated ADR **before** the code.

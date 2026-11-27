@@ -159,8 +159,11 @@ exist; nothing calls them yet.
   `delete_space`). HTTP goes through `AddonClient::send`, which applies
   `NetPolicy` and a body cap and returns the status, so 404, 409, 410 and
   503 become typed `SyncError`s. Tests: `crates/cineo-net/tests/sync.rs`.
-- `server/sync/` (not built): a TypeScript Cloudflare Worker with D1 that
-  stores encrypted, opaque records. It never sees plaintext.
+- `crates/cineo-sync-server` (not built): pure request handling over a
+  storage trait, shared SQL, a native host (hyper and rusqlite) for
+  self-hosting and a Worker host (workers-rs with D1) for Cloudflare. It
+  stores encrypted, opaque records and never sees plaintext. The protocol
+  types will live in `cineo_core::sync::protocol`, shared with the client.
 
 ### UI boundary (ADR-0011)
 

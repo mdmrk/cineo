@@ -113,11 +113,21 @@ Android has no `cineo://` intent filter today (VERIFIED:
 Server language:
 - **a. TypeScript Worker.** No runtime dependencies, the first-class D1
   binding, tests with Cloudflare's Vitest pool.
-- **b. workers-rs (`worker` 0.9.0).** Same language as the app, but a Wasm
-  bundle under a 10 ms CPU limit, and the crate is still 0.x.
+- **b. workers-rs (`worker` 0.9.0) only.** Same language as the app, but
+  it runs only on Cloudflare or workerd, and its tests still need wrangler.
+- **c. A Rust server crate with two hosts.** Pure request handling over a
+  storage trait, SQL shared by D1 and SQLite (D1 is SQLite), a Worker host
+  for Cloudflare and a native binary for self-hosting. The protocol types
+  are shared with the client, and end-to-end tests run in `cargo test`.
+  (Added 2026-11-27 on the owner's question "why not Rust?"; see Rejected
+  alternatives.)
+
+`worker` 0.9.0 and `worker-build` 0.9.0 were published on 2026-11-11.
+`worker` has a `d1` feature and needs Rust 1.91 (VERIFIED: crates.io API,
+2026-11-27).
 
 ## Decision
-Option 2, with server option a.
+Option 2, with server option c (amended 2026-11-27; it was option a).
 
 ### 1. What is synced
 | Record name | Content | Source effect |
@@ -305,11 +315,27 @@ errors.
   new crate. It is the same IO boundary (HTTP through `NetPolicy`), and the
   crypto library is already in that crate's graph (ADR-0002: a crate is a new
   dependency or IO boundary, and this is neither).
-- **Server:** `server/sync/`, a TypeScript Worker with no runtime
-  dependencies (dev only: wrangler, TypeScript, Vitest with
-  `@cloudflare/vitest-pool-workers`, versions researched in step 5). It is
-  MIT like the rest of the repo, with its own CI job and a self-hosting
-  guide.
+- **Protocol:** module `cineo_core::sync::protocol`, with the limits and
+  the request and response bodies as pure data with lenient parsing. Both
+  `cineo-net` and the server use it, so they cannot drift apart.
+- **Server:** crate `crates/cineo-sync-server` (MIT, like the rest of the
+  repo). It is a new crate because it is a new IO boundary: it serves
+  HTTP and owns the server database (ADR-0002). It depends only on
+  `cineo-core`.
+  - **Handling:** pure functions that check the token, sizes, quotas and
+    per-record versions and decide the answer, over a `Storage` trait.
+  - **SQL:** one set of statements (§4 schema), run by D1 and by SQLite.
+  - **Native host** (binary `cineo-sync-server`): hyper and rusqlite, which
+    are already in the workspace. It serves plain HTTP on a configured
+    address behind a TLS reverse proxy, and keeps an in-memory rate limit
+    per IP and an hourly sweep of idle spaces. This is the self-hosted
+    server, and it is what F-Droid's `TetheredNet` exception asks for.
+  - **Worker host** (`cfg(target_arch = "wasm32")`, `worker` with `d1`,
+    built by `worker-build`): the default instance on Cloudflare. Rate
+    limits use the Rate Limiting binding or a WAF rule, and idle spaces a
+    Cron Trigger (free-plan availability UNKNOWN, checked in step 5b).
+  - **Tests:** end-to-end, `SyncClient` against the native host on
+    loopback, in `cargo test`.
 - **QR rendering:** `qrcode` in `cineo-desktop` and `cineo-android` (the
   latter hands Kotlin the module matrix).
 
@@ -367,10 +393,14 @@ database.
    endpoints, tested against a wiremock server (409 → pull, merge, retry;
    size caps; a tampered or moved blob is rejected; a typo in the code is
    rejected).
-5. `server/sync/`: Worker, D1 schema, limits and tests; CI job;
-   measurements of rows written, UPSERT counting and CPU per request;
-   self-hosting guide tried outside Cloudflare; deploy of the default
-   instance.
+5. Server, in two parts:
+   - **5a.** `cineo_core::sync::protocol` (the client moves to it), the
+     `cineo-sync-server` crate with its handling, the SQLite storage and
+     the native binary; end-to-end tests with `SyncClient`; a self-hosting
+     guide.
+   - **5b.** The Worker host with D1, a CI job that builds it for wasm32,
+     measurements of rows written, UPSERT counting and CPU per request,
+     and the deploy of the default instance.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
    URL, change key, leave, last sync status). `cineo://sync/` deep link.
 7. Android: the same screen, the intent filter for `cineo://sync`, and
@@ -382,9 +412,11 @@ database.
 - Cineo gains a network service that we run. Its availability, quotas and
   abuse handling are ours to maintain. The app keeps working fully offline
   and without sync.
-- A non-Rust toolchain enters the repo (Node, for `server/sync/`).
-  `cargo-deny` does not cover it, so its lockfile and `npm audit` get their
-  own CI step.
+- The server is Rust, so `cargo-deny`, clippy and `cargo test` cover it.
+  Node is needed only for wrangler, to run the Worker locally and to deploy
+  it (step 5b); building and testing the server do not need it.
+- The Worker host is built for `wasm32-unknown-unknown`, which needs its own
+  CI job: the native workspace build compiles it out.
 - Known limitations to record in `docs/TECHNICAL_DEBT.md` when they ship:
   - Item-level last-writer-wins: favouriting on one device while the other
     saves progress for the same item, both before syncing, loses one of
@@ -424,10 +456,16 @@ database.
   naturally "latest value per item".
 - **Cloudflare KV:** 1,000 writes a day on the free plan and 1 write/s per
   key (VERIFIED). Too few even for one heavy user.
-- **workers-rs (b):** the server does no crypto and shares no domain
-  types with the app (it stores opaque blobs), so Rust buys nothing there.
-  A Wasm bundle under a 10 ms CPU limit and a 0.x SDK are risks without
-  a benefit (INFERRED).
+- **TypeScript Worker (a)** (the first decision, replaced on 2026-11-27):
+  it duplicates the protocol in a second language, tests it outside
+  `cargo test`, adds npm dependencies that `cargo-deny` does not see, and
+  runs only on Cloudflare or workerd. It is quicker to write, but Node is
+  needed for wrangler either way, so it saves no toolchain.
+- **workers-rs only (b):** it shares the protocol but runs only on
+  Cloudflare or workerd, and its tests need wrangler. Self-hosting would
+  mean running workerd, and whether that counts for F-Droid is UNKNOWN.
+- Still UNKNOWN for the Worker host: Wasm under the free plan's 10 ms of
+  CPU per request, measured in step 5b.
 - **Google Drive appData:** OAuth app verification, Google users only, an
   F-Droid anti-feature (owner decision).
 - **Exported file or folder:** works today by copying `cineo.db`
