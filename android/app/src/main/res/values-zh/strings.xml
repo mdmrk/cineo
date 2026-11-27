@@ -349,4 +349,8 @@
     <string name="remote_stop">停止</string>
     <string name="remote_speed_normal">正常</string>
     <string name="remote_subtitle_delay">字幕延迟</string>
+    <string name="remote_play_on_computer">在电脑上播放</string>
+    <string name="remote_bar_playing">正在电脑上播放</string>
+    <string name="remote_bar_loading">正在电脑上加载…</string>
+    <string name="remote_sent">已发送到电脑。</string>
 </resources>

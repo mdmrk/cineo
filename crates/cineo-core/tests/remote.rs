@@ -70,7 +70,7 @@ fn every_command_survives_the_wire() {
     for command in commands {
         let request = Request {
             time_ms: 1_700_000_000_000,
-            command: Some(command),
+            command: Some(command.clone()),
         };
         assert_eq!(
             Request::parse(request.to_json().as_bytes()),
@@ -230,4 +230,38 @@ fn old_nonces_are_forgotten_and_the_memory_is_bounded() {
     );
     let later = start + MAX_CLOCK_SKEW_MS + 1;
     assert_eq!(replays.admit(later, later, nonce(MAX_REMEMBERED)), Ok(()));
+}
+
+#[test]
+fn a_play_command_needs_a_playable_stream_and_ids() {
+    let stream = json!({
+        "addon": "https://addon.example/manifest.json",
+        "title": "Dune",
+        "stream": { "url": "https://cdn.example/dune.mp4" },
+    });
+    let play = |content: serde_json::Value| {
+        let body = json!({ "v": 1, "time": 1, "command": { "play": content } }).to_string();
+        Request::parse(body.as_bytes())
+    };
+    let good = json!({
+        "type": "movie", "id": "tt1", "video": "tt1", "name": "Dune", "stream": stream,
+    });
+    let Some(Request {
+        command: Some(Command::Play(sent)),
+        ..
+    }) = play(good.clone())
+    else {
+        panic!("a good play command is refused");
+    };
+    assert_eq!(sent.meta_id, "tt1");
+    assert_eq!(sent.saved.title, "Dune");
+    let mut no_id = good.clone();
+    no_id["id"] = json!("");
+    assert_eq!(play(no_id), None);
+    let mut ftp = good.clone();
+    ftp["stream"]["stream"]["url"] = json!("ftp://cdn.example/dune.mp4");
+    assert_eq!(play(ftp), None, "a source the player cannot open");
+    let mut file = good;
+    file["stream"]["stream"]["url"] = json!("file:///etc/passwd");
+    assert_eq!(play(file), None);
 }

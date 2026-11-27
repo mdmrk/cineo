@@ -353,4 +353,8 @@
     <string name="remote_stop">Parar</string>
     <string name="remote_speed_normal">Normal</string>
     <string name="remote_subtitle_delay">Atraso das legendas</string>
+    <string name="remote_play_on_computer">Reproduzir no computador</string>
+    <string name="remote_bar_playing">Tocando no seu computador</string>
+    <string name="remote_bar_loading">Carregando no seu computador…</string>
+    <string name="remote_sent">Enviado ao computador.</string>
 </resources>

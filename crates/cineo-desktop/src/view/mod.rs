@@ -237,7 +237,7 @@ pub fn show(ui: &mut Ui, state: &State, view: &mut ViewState) -> Vec<Action> {
     if let Some(notice) = &state.notice {
         notice_bar(ui, notice, &mut out);
     }
-    if state.p2p_prompt.is_some() {
+    if state.p2p_prompt.is_some() || state.p2p_sent.is_some() {
         p2p_prompt(ui, &mut out);
     }
     if let Some(transport) = &state.link_prompt {

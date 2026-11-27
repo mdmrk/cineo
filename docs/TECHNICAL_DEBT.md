@@ -37,6 +37,17 @@ Format:
 - Exit: announce the computer with mDNS (`_cineo._tcp`) as well, for
   phones on the same subnet without sync.
 
+### Remote control: the phone does not see why a sent stream waits
+- Where: [playback.rs](../crates/cineo-core/src/app/playback.rs)
+  (`play_sent`)
+- Gap: a torrent sent to a computer whose user has not accepted the P2P
+  notice, or a stream it refuses, gives the phone no message; the phone
+  says "Sent to the computer." and its bar shows nothing.
+- Why: the answer is the computer's status, which has no field for a
+  waiting prompt or a notice.
+- Instead: the computer shows its P2P notice or the reason.
+- Exit: add the computer's pending prompt and last notice to `Status`.
+
 ### Remote control: one computer through sync
 - Where: [replica.rs](../crates/cineo-core/src/sync/replica.rs)
   (`Replica::computer`)

@@ -28,7 +28,15 @@ import io.github.mdmrk.cineo.rust.RemoteLinkView
 import io.github.mdmrk.cineo.rust.SyncLinkView
 import io.github.mdmrk.cineo.rust.remoteLink
 import io.github.mdmrk.cineo.rust.syncLink
+import io.github.mdmrk.cineo.ui.RemoteBar
 import io.github.mdmrk.cineo.ui.RemoteScreen
+import io.github.mdmrk.cineo.ui.localNetworkAllowed
+import io.github.mdmrk.cineo.ui.remoteFailureText
+import io.github.mdmrk.cineo.rust.Cineo
+import io.github.mdmrk.cineo.rust.RemoteFailure
+import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import io.github.mdmrk.cineo.ui.AddonsScreen
 import io.github.mdmrk.cineo.ui.CineoTheme
 import io.github.mdmrk.cineo.ui.SearchScreen
@@ -95,6 +103,22 @@ class MainActivity : ComponentActivity() {
         takeLinks(intent)
     }
     private var pipOnLeave: PictureInPictureParams? = null
+
+    private fun playOnComputer(cineo: Cineo, group: UInt, stream: UInt) {
+        if (!localNetworkAllowed(this)) {
+            Toast.makeText(this, R.string.remote_local_network, Toast.LENGTH_LONG).show()
+            return
+        }
+        lifecycleScope.launch {
+            val message = try {
+                cineo.playOnComputer(group, stream)
+                getString(R.string.remote_sent)
+            } catch (e: RemoteFailure) {
+                remoteFailureText(this@MainActivity, e)
+            }
+            Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onStart() {
         super.onStart()
@@ -190,6 +214,9 @@ class MainActivity : ComponentActivity() {
                                     onResume = { cineo.resume(detail.id) },
                                     onSelectVideo = cineo::selectVideo,
                                     onPlay = cineo::play,
+                                    onPlayOnComputer = remote?.let {
+                                        { group, stream -> playOnComputer(cineo, group, stream) }
+                                    },
                                     onFavorite = { cineo.setFavorite(detail.id, it) },
                                     filters = remember(cineo) {
                                         StreamFilterActions(
@@ -211,7 +238,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 BackHandler(enabled = page != Page.HOME) { page = Page.HOME }
-                                Pages(page, { page = it }) { padding ->
+                                Pages(page, { page = it }, bar = { RemoteBar(remote, cineo) { remoteOpen = true } }) { padding ->
                                     val open = { poster: PosterView ->
                                         cineo.openDetail(poster.contentType, poster.id)
                                     }

@@ -5,7 +5,9 @@ use super::library::{LibraryItem, SavedStream};
 use super::link::Route;
 use super::message::{Notice, PlaybackFailure, Problem};
 use super::plan::{self, CatalogTarget};
-use super::playback::{check_next, dedup_by_url, play, play_next, playback_ended, resume};
+use super::playback::{
+    SentPlay, check_next, dedup_by_url, play, play_next, play_sent, playback_ended, resume,
+};
 use super::refresh::{
     addons_changed, catalog_loaded, default_genre, discover_page, load_board, loading_rows,
     manifest_loaded, meta_loaded, open_detail, refresh_addon_lists, retry_failed, select_video,
@@ -149,6 +151,7 @@ pub struct State {
     pub settings: Settings,
     pub default_settings: Settings,
     pub p2p_prompt: Option<(usize, usize)>,
+    pub p2p_sent: Option<Box<SentPlay>>,
     pub link_prompt: Option<TransportUrl>,
     pub torrent: Option<TorrentPlayback>,
     pub subtitles: Vec<SubtitleGroup>,
@@ -326,6 +329,7 @@ pub enum Action {
     SetRemoteHost(Option<RemoteKey>),
     SetRemotePeer(Option<Peer>),
     RemoteListening(Option<std::net::SocketAddr>),
+    PlaySent(Box<SentPlay>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -513,6 +517,7 @@ fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
         Action::SelectVideo(video_id) => select_video(state, video_id),
         Action::Resume(meta_id) => resume(state, &meta_id),
         Action::Play { group, stream } => play(state, group, stream),
+        Action::PlaySent(sent) => play_sent(state, *sent),
         Action::PlaybackProgress {
             meta_id,
             video_id,
@@ -554,10 +559,14 @@ fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
             if let Some((group, stream)) = state.p2p_prompt.take() {
                 effects.extend(play(state, group, stream));
             }
+            if let Some(sent) = state.p2p_sent.take() {
+                effects.extend(play_sent(state, *sent));
+            }
             effects
         }
         Action::DeclineP2p => {
             state.p2p_prompt = None;
+            state.p2p_sent = None;
             Vec::new()
         }
         Action::OpenLink(route) => open_link(state, route),
@@ -873,6 +882,7 @@ fn settings_changed(state: &mut State) -> Vec<Effect> {
     let mut effects = vec![Effect::SaveSettings(state.settings)];
     if !state.settings.p2p_enabled {
         state.p2p_prompt = None;
+        state.p2p_sent = None;
         effects.extend(stop_torrent(state));
     }
     effects

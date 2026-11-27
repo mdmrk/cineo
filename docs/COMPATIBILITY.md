@@ -89,7 +89,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` addon install links | Supported | Mapped to `https://` only; installs after confirmation (`an_install_link_installs_nothing_until_accepted`) |
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
-| Remote control from the phone | Partial | Cineo-only: the phone controls what plays in Cineo on a computer on the same network (ADR-0044); starting a title from the phone is not offered. [Details](#remote-control) |
+| Remote control from the phone | Partial | Cineo-only: the phone sends streams to Cineo on a computer on the same network and controls what plays there (ADR-0044). [Details](#remote-control) |
 | Casting | Unsupported | |
 | Account / cloud sync | Verified | Desktop and Android: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); a desktop and a phone paired by QR code through the deployed server, 2026-11-27. Stremio account sync stays out of scope. [Details](#cloud-sync) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
@@ -601,6 +601,23 @@ local network (ADR-0044). On by default on the desktop.
   second while the remote screen is open
   (`the_phone_sees_what_plays_with_its_tracks`). While a torrent connects,
   only Stop works.
+- **Playing on the computer.** With a computer known, each playable
+  stream on the phone's detail page has a computer button; the computer
+  starts that stream as if it had been picked on its own detail page, with
+  its own settings, and joins it to its library
+  (`a_stream_picked_on_the_phone_is_sent_to_the_computer`,
+  `a_stream_sent_from_the_phone_plays_on_the_computer`). A torrent waits
+  for the computer's own P2P notice
+  (`a_torrent_sent_from_the_phone_waits_for_the_computers_p2p_consent`,
+  `a_torrent_sent_from_the_phone_shows_the_p2p_notice_on_the_computer`)
+  and is refused when the computer has torrents off
+  (`a_computer_with_torrents_off_refuses_a_sent_torrent`). Only playable
+  sources with ids cross the wire
+  (`a_play_command_needs_a_playable_stream_and_ids`).
+- **Bar on the phone.** While the computer plays something, a bar above
+  the phone's navigation shows its title, progress and a play/pause
+  button, asking every 2 s while the app is in the foreground; tapping it
+  opens the remote. The bar has no test.
 - **Found through sync.** With sync on, the desktop writes its address
   and remote key into the sealed sync space, and a phone in the same
   space shows "Found through sync" and controls it without pairing; a new
@@ -624,9 +641,9 @@ local network (ADR-0044). On by default on the desktop.
   through `adb reverse` to loopback. Over the LAN it showed "Cannot reach
   the computer" because the computer's `ufw` firewall dropped port 18765.
   Controlling a playing video from a real phone has not been tried.
-- **Not offered.** Starting a title from the phone, finding the computer
-  without sync or the QR code (mDNS), choosing between several
-  computers. Known
+- **Not offered.** Finding the computer without sync or the QR code
+  (mDNS), choosing between several computers, sending a title to the
+  computer from the library or Continue Watching. Known
   limitations are in [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
 
 ### Update notice

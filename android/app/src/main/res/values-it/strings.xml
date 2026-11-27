@@ -353,4 +353,8 @@
     <string name="remote_stop">Interrompi</string>
     <string name="remote_speed_normal">Normale</string>
     <string name="remote_subtitle_delay">Ritardo sottotitoli</string>
+    <string name="remote_play_on_computer">Riproduci sul computer</string>
+    <string name="remote_bar_playing">In riproduzione sul computer</string>
+    <string name="remote_bar_loading">Caricamento sul computer…</string>
+    <string name="remote_sent">Inviato al computer.</string>
 </resources>

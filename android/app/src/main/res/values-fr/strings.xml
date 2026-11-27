@@ -353,4 +353,8 @@
     <string name="remote_stop">Arrêter</string>
     <string name="remote_speed_normal">Normale</string>
     <string name="remote_subtitle_delay">Décalage des sous-titres</string>
+    <string name="remote_play_on_computer">Lire sur l\'ordinateur</string>
+    <string name="remote_bar_playing">En lecture sur votre ordinateur</string>
+    <string name="remote_bar_loading">Chargement sur votre ordinateur…</string>
+    <string name="remote_sent">Envoyé à l\'ordinateur.</string>
 </resources>

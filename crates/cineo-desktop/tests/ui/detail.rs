@@ -120,6 +120,19 @@ fn the_first_torrent_play_shows_the_p2p_notice() {
 }
 
 #[test]
+fn a_torrent_sent_from_the_phone_shows_the_p2p_notice_on_the_computer() {
+    let phone = detail_state();
+    let sent = cineo_core::app::sent_play(&phone, 0, 1).unwrap();
+    let mut computer = State::default();
+    update(&mut computer, Action::PlaySent(Box::new(sent)));
+    let mut harness = harness(computer, ViewState::default());
+    harness.get_by_label("Peer-to-peer streaming");
+    harness.get_by_label("Accept and play").click();
+    harness.run();
+    assert_eq!(harness.state().2, vec![Action::AcceptP2p]);
+}
+
+#[test]
 fn long_stream_lists_lay_out_only_visible_cards_and_still_scroll_to_the_end() {
     let streams: Vec<String> = (0..300)
         .map(|i| {

@@ -80,6 +80,7 @@ fun DetailScreen(
     onResume: () -> Unit,
     onSelectVideo: (String) -> Unit,
     onPlay: (UInt, UInt) -> Unit,
+    onPlayOnComputer: ((UInt, UInt) -> Unit)?,
     onFavorite: (Boolean) -> Unit,
     filters: StreamFilterActions,
 ) {
@@ -156,7 +157,11 @@ fun DetailScreen(
                         }
                         items(items.order, key = { "stream-$groupIndex-$it" }) { index ->
                             Box(Modifier.padding(top = SectionGap)) {
-                                StreamCard(items.streams[index.toInt()], group.addonName) {
+                                StreamCard(
+                                    items.streams[index.toInt()],
+                                    group.addonName,
+                                    onPlayOnComputer?.let { send -> { send(groupIndex.toUInt(), index) } },
+                                ) {
                                     onPlay(groupIndex.toUInt(), index)
                                 }
                             }
@@ -380,7 +385,7 @@ private fun Episode(video: VideoView, selected: Boolean, images: Images, onClick
 }
 
 @Composable
-private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit) {
+private fun StreamCard(stream: StreamView, addonName: String, onPlayOnComputer: (() -> Unit)?, onPlay: () -> Unit) {
     val playable = stream.kind == SourceKind.HTTP || stream.kind == SourceKind.TORRENT
     val icon = if (stream.kind == SourceKind.TORRENT) Icon.MAGNET else Icon.WORLD
     Row(
@@ -422,6 +427,11 @@ private fun StreamCard(stream: StreamView, addonName: String, onPlay: () -> Unit
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+        }
+        if (playable && onPlayOnComputer != null) {
+            IconButton(onClick = onPlayOnComputer, modifier = Modifier.align(Alignment.CenterVertically)) {
+                CineoIcon(Icon.DEVICE_DESKTOP, tint = Brand.Accent, label = stringResource(R.string.remote_play_on_computer))
             }
         }
         if (playable) {

@@ -292,7 +292,13 @@ Sync is off by default.
   4,096 nonces are remembered; past that, 503
   (`old_nonces_are_forgotten_and_the_memory_is_bounded`). Commands are
   absolute, so one that ran twice has the same effect.
-- **Limits.** One route (`POST /v1/remote`), bodies of at most 4 KiB, 16
+- **Playing a sent stream.** `Command::Play` carries a `SavedStream`
+  parsed with the library's rules: playable sources only, http(s) images,
+  ids of at most 512 characters, names cut to 200 characters. The desktop
+  then applies its own checks as for its own detail page (scheme, the P2P
+  switch, the P2P notice). Whoever holds the key can make the computer
+  play any stream an addon could have offered.
+- **Limits.** One route (`POST /v1/remote`), bodies of at most 32 KiB, 16
   connections, headers within 10 s, a connection within 15 s, no
   keep-alive (`the_desktop_answers_nothing_else`).
 - **Commands.** A closed set with checked ranges

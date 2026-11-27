@@ -2,6 +2,7 @@ package io.github.mdmrk.cineo.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
@@ -32,10 +33,17 @@ enum class Page(val label: Int, val icon: Icon) {
 }
 
 @Composable
-fun Pages(page: Page, onPage: (Page) -> Unit, content: @Composable (PaddingValues) -> Unit) {
+fun Pages(
+    page: Page,
+    onPage: (Page) -> Unit,
+    bar: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
     Scaffold(
         containerColor = Brand.Background,
         bottomBar = {
+            Column {
+            bar()
             NavigationBar(containerColor = Brand.Panel) {
                 Page.entries.forEach { entry ->
                     val selected = entry == page
@@ -53,6 +61,7 @@ fun Pages(page: Page, onPage: (Page) -> Unit, content: @Composable (PaddingValue
                         ),
                     )
                 }
+            }
             }
         },
     ) { padding ->

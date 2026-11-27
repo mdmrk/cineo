@@ -57,7 +57,7 @@ Option 1.
   code" replaces the key, which unpairs every phone.
 - **Listener.** `cineo_net::remote::serve`, hyper HTTP/1 on
   `0.0.0.0:18765`, or a port the system picks when that one is taken.
-  One route, `POST /v1/remote`; bodies of at most 4 KiB; at most 16
+  One route, `POST /v1/remote`; bodies of at most 32 KiB; at most 16
   connections; a request must arrive within 10 s.
 - **Pairing.** The desktop shows `cineo:///remote/<code>?at=<ip>:<port>`
   as a QR code and as text. The code is the key in the sync code format.
@@ -85,6 +85,19 @@ Option 1.
 - **Phone side.** `cineo_net::remote::RemoteClient` sends through an
   `AddonClient` whose policy allows private addresses, with short
   timeouts. It is only ever given the paired LAN address.
+- **Playing on the computer** (owner, 2026-11-27, the "second version").
+  The phone sends `Command::Play` with what its detail page knows about
+  the chosen stream: content type, meta id, video id, name, poster and a
+  `SavedStream` (the same JSON the library keeps). The desktop parses it
+  with the library's rules (playable sources only, http(s) images) and
+  starts it through the same `start_stream` as its own detail page, with
+  its own settings: its scheme checks, its P2P switch, its addons for
+  subtitles. A torrent sent before the desktop's user accepted the P2P
+  notice waits behind that notice on the desktop. A request may then be up
+  to 32 KiB. The phone shows what the computer plays in a bar above its
+  navigation, asking every 2 s while the app is in the foreground. Whoever
+  holds the key can make the computer play any stream an addon could
+  have offered; that is the same trust as controlling it.
 - **Finding the computer through sync** (owner, 2026-11-27: "that it
   finds it automatically, without pairing"). When sync is on, the desktop
   writes a sync record `computer/<device id>` holding its LAN address and

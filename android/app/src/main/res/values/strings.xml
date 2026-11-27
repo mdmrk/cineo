@@ -352,4 +352,8 @@
     <string name="remote_stop">Stop</string>
     <string name="remote_speed_normal">Normal</string>
     <string name="remote_subtitle_delay">Subtitle delay</string>
+    <string name="remote_play_on_computer">Play on the computer</string>
+    <string name="remote_bar_playing">Playing on your computer</string>
+    <string name="remote_bar_loading">Loading on your computer…</string>
+    <string name="remote_sent">Sent to the computer.</string>
 </resources>

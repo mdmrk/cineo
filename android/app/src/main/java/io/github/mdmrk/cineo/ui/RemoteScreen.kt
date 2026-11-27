@@ -1,5 +1,6 @@
 package io.github.mdmrk.cineo.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -188,9 +189,11 @@ private fun LocalNetworkNeeded(onAllowed: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun failureText(failure: RemoteFailure): String = when (failure) {
-    is RemoteFailure.Rejected -> stringResource(R.string.remote_failed_rejected, failure.status.toInt())
-    else -> stringResource(
+private fun failureText(failure: RemoteFailure): String = remoteFailureText(LocalContext.current, failure)
+
+internal fun remoteFailureText(context: Context, failure: RemoteFailure): String = when (failure) {
+    is RemoteFailure.Rejected -> context.getString(R.string.remote_failed_rejected, failure.status.toInt())
+    else -> context.getString(
         when (failure) {
             is RemoteFailure.WrongKey -> R.string.remote_failed_key
             is RemoteFailure.Clock -> R.string.remote_failed_clock

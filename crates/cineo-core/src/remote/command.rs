@@ -1,6 +1,12 @@
 use serde_json::{Value as Json, json};
+use url::Url;
 
-use super::PROTOCOL;
+use super::{PROTOCOL, clean_text};
+use crate::addon::ContentType;
+use crate::app::{SavedStream, SentPlay};
+
+const MAX_NAME_CHARS: usize = 200;
+const MAX_ID_CHARS: usize = 512;
 
 pub const MIN_SPEED: f64 = 0.25;
 pub const MAX_SPEED: f64 = 4.0;
@@ -9,7 +15,7 @@ const MAX_VOLUME: f64 = 100.0;
 const MAX_SEEK_S: f64 = 24.0 * 60.0 * 60.0;
 const MAX_POSITION_S: f64 = 10_000_000.0;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Command {
     Pause(bool),
     SeekTo(f64),
@@ -21,6 +27,7 @@ pub enum Command {
     SubtitleDelay(f64),
     Speed(f64),
     Stop,
+    Play(Box<SentPlay>),
 }
 
 impl Command {
@@ -40,7 +47,8 @@ impl Command {
             | Self::Mute(_)
             | Self::Audio(None)
             | Self::Subtitle(None)
-            | Self::Stop => true,
+            | Self::Stop
+            | Self::Play(_) => true,
         }
     }
 
@@ -56,6 +64,19 @@ impl Command {
             Self::SubtitleDelay(seconds) => json!({ "subtitle_delay": seconds }),
             Self::Speed(speed) => json!({ "speed": speed }),
             Self::Stop => json!({ "stop": true }),
+            Self::Play(ref sent) => json!({
+                "play": {
+                    "type": sent.content_type.as_str(),
+                    "id": sent.meta_id,
+                    "video": sent.video_id,
+                    "name": sent.name,
+                    "poster": sent.poster.as_ref().map(Url::as_str),
+                    "stream": sent
+                        .saved
+                        .to_json()
+                        .and_then(|j| serde_json::from_str::<Json>(&j).ok()),
+                },
+            }),
         }
     }
 
@@ -81,13 +102,39 @@ impl Command {
             "subtitle_delay" => Self::SubtitleDelay(value.as_f64()?),
             "speed" => Self::Speed(value.as_f64()?),
             "stop" if value.as_bool() == Some(true) => Self::Stop,
+            "play" => Self::Play(Box::new(parse_play(value)?)),
             _ => return None,
         };
         command.is_valid().then_some(command)
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+fn parse_play(value: &Json) -> Option<SentPlay> {
+    let id = |name: &str| {
+        value
+            .get(name)?
+            .as_str()
+            .filter(|id| !id.is_empty() && id.chars().count() <= MAX_ID_CHARS)
+            .map(str::to_owned)
+    };
+    Some(SentPlay {
+        content_type: ContentType::new(value.get("type")?.as_str()?)?,
+        meta_id: id("id")?,
+        video_id: id("video")?,
+        name: clean_text(value.get("name")?.as_str()?, MAX_NAME_CHARS),
+        poster: value
+            .get("poster")
+            .and_then(Json::as_str)
+            .and_then(|p| Url::parse(p).ok())
+            .filter(|p| matches!(p.scheme(), "http" | "https")),
+        saved: SavedStream::parse(&value.get("stream")?.to_string()).map(|mut saved| {
+            saved.title = clean_text(&saved.title, MAX_NAME_CHARS);
+            saved
+        })?,
+    })
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Request {
     pub time_ms: u64,
     pub command: Option<Command>,

@@ -355,4 +355,8 @@
     <string name="remote_stop">Остановить</string>
     <string name="remote_speed_normal">Обычная</string>
     <string name="remote_subtitle_delay">Задержка субтитров</string>
+    <string name="remote_play_on_computer">Воспроизвести на компьютере</string>
+    <string name="remote_bar_playing">Воспроизводится на компьютере</string>
+    <string name="remote_bar_loading">Загрузка на компьютере…</string>
+    <string name="remote_sent">Отправлено на компьютер.</string>
 </resources>

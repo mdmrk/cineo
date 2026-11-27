@@ -74,3 +74,76 @@ fn pairing_with_a_computer_is_saved_and_can_be_forgotten() {
     );
     assert_eq!(state.remote.peer, None);
 }
+
+fn sent_from_the_phone(stream: usize) -> cineo_core::app::SentPlay {
+    let phone = detail_with_streams();
+    let sent = cineo_core::app::sent_play(&phone, 0, stream).unwrap();
+    let request = cineo_core::remote::Request {
+        time_ms: 1,
+        command: Some(cineo_core::remote::Command::Play(Box::new(sent))),
+    };
+    match cineo_core::remote::Request::parse(request.to_json().as_bytes()) {
+        Some(cineo_core::remote::Request {
+            command: Some(cineo_core::remote::Command::Play(sent)),
+            ..
+        }) => *sent,
+        other => panic!("the play command did not survive the wire: {other:?}"),
+    }
+}
+
+#[test]
+fn a_stream_sent_from_the_phone_plays_on_the_computer() {
+    let sent = sent_from_the_phone(0);
+    assert_eq!(sent.meta_id, "tt0000001");
+    let (mut computer, _) = restored();
+    let effects = update(&mut computer, Action::PlaySent(Box::new(sent.clone())));
+    let play = play_effect(&effects).expect("the computer plays it");
+    assert_eq!(play.meta_id, "tt0000001");
+    assert_eq!(play.title, sent.saved.title);
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::SaveLibraryItem(i) if i.id == "tt0000001")),
+        "it joins the computer's library"
+    );
+    assert_eq!(
+        computer.playing.as_ref().map(|p| p.meta_id.as_str()),
+        Some("tt0000001")
+    );
+}
+
+#[test]
+fn a_torrent_sent_from_the_phone_waits_for_the_computers_p2p_consent() {
+    let sent = sent_from_the_phone(1);
+    let (mut computer, _) = restored();
+    assert!(update(&mut computer, Action::PlaySent(Box::new(sent.clone()))).is_empty());
+    assert!(computer.p2p_sent.is_some());
+    assert!(computer.torrent.is_none(), "nothing starts before consent");
+    let effects = update(&mut computer, Action::AcceptP2p);
+    assert!(
+        effects.iter().any(|e| matches!(e, Effect::StartTorrent(_))),
+        "{effects:?}"
+    );
+    assert!(computer.p2p_sent.is_none());
+
+    let (mut declined, _) = restored();
+    update(&mut declined, Action::PlaySent(Box::new(sent)));
+    assert!(update(&mut declined, Action::DeclineP2p).is_empty());
+    assert!(declined.p2p_sent.is_none());
+}
+
+#[test]
+fn a_computer_with_torrents_off_refuses_a_sent_torrent() {
+    let sent = sent_from_the_phone(1);
+    let (mut computer, _) = restored();
+    update(
+        &mut computer,
+        Action::RestoreSettings(Settings {
+            p2p_enabled: false,
+            ..Settings::default()
+        }),
+    );
+    assert!(update(&mut computer, Action::PlaySent(Box::new(sent))).is_empty());
+    assert_eq!(computer.notice, Some(Notice::TorrentsOff));
+    assert!(computer.playing.is_none());
+}

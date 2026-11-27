@@ -41,7 +41,18 @@ fn resolve(settings: &Settings, stream: &Stream) -> Source {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SentPlay {
+    pub content_type: ContentType,
+    pub meta_id: String,
+    pub video_id: String,
+    pub name: String,
+    pub poster: Option<Url>,
+    pub saved: SavedStream,
+}
+
 struct Start {
+    title: Option<String>,
     content_type: ContentType,
     meta_id: String,
     meta: Option<Meta>,
@@ -82,6 +93,7 @@ pub(super) fn play(state: &mut State, group: usize, stream_index: usize) -> Vec<
         Source::Unusable => return Vec::new(),
     };
     let start = Start {
+        title: None,
         content_type: detail.content_type.clone(),
         meta_id: detail.id.clone(),
         meta: detail.meta.ready().cloned(),
@@ -125,6 +137,7 @@ fn start_stream(
     torrent: Option<TorrentRequest>,
 ) -> Vec<Effect> {
     let Start {
+        title,
         content_type,
         meta_id,
         meta,
@@ -135,7 +148,7 @@ fn start_stream(
         stream,
     } = start;
     let name = preview.as_ref().map_or_default(|p| p.name.clone());
-    let title = video_title(&name, meta.as_ref(), &video_id);
+    let title = title.unwrap_or_else(|| video_title(&name, meta.as_ref(), &video_id));
     let subtitles = subtitle_groups(
         state,
         &content_type,
@@ -221,6 +234,80 @@ fn start_stream(
         subtitles,
     ));
     effects
+}
+
+pub fn sent_play(state: &State, group: usize, stream_index: usize) -> Option<SentPlay> {
+    let detail = state.detail.as_ref()?;
+    let video_id = detail.selected_video.clone()?;
+    let source_group = detail.streams.get(group)?;
+    let stream = source_group.streams.ready()?.get(stream_index)?.clone();
+    let meta = detail.meta.ready();
+    let preview = meta.map(|m| &m.preview).or(detail.preview.as_ref());
+    let name = preview.map_or_default(|p| p.name.clone());
+    Some(SentPlay {
+        content_type: detail.content_type.clone(),
+        meta_id: detail.id.clone(),
+        video_id: video_id.clone(),
+        name: name.clone(),
+        poster: preview.and_then(|p| p.poster.clone()),
+        saved: SavedStream {
+            addon: source_group.addon.clone(),
+            title: video_title(&name, meta, &video_id),
+            logo: preview.and_then(|p| p.logo.clone()),
+            background: preview.and_then(|p| p.background.clone()),
+            stream,
+        },
+    })
+}
+
+pub(super) fn play_sent(state: &mut State, sent: SentPlay) -> Vec<Effect> {
+    let (url, torrent) = match resolve(&state.settings, &sent.saved.stream) {
+        Source::Play(url, torrent) => (url, torrent),
+        Source::NeedsConsent => {
+            state.p2p_sent = Some(Box::new(sent));
+            return Vec::new();
+        }
+        Source::Refused(notice) => {
+            state.notice = Some(notice);
+            return Vec::new();
+        }
+        Source::Unusable => return Vec::new(),
+    };
+    let SentPlay {
+        content_type,
+        meta_id,
+        video_id,
+        name,
+        poster,
+        saved,
+    } = sent;
+    let mut preview = LibraryItem {
+        id: meta_id.clone(),
+        content_type: content_type.clone(),
+        name,
+        poster,
+        video_id: video_id.clone(),
+        time_offset_ms: 0,
+        duration_ms: 0,
+        updated_ms: 0,
+        favorited: None,
+        stream: None,
+    }
+    .preview();
+    preview.logo = saved.logo;
+    preview.background = saved.background;
+    let start = Start {
+        title: Some(saved.title),
+        content_type,
+        meta_id,
+        meta: None,
+        preview: Some(preview),
+        video_id,
+        addon_name: addon_name(&state.addons, &saved.addon),
+        addon: saved.addon,
+        stream: saved.stream,
+    };
+    start_stream(state, start, url, torrent)
 }
 
 pub(super) fn resume(state: &mut State, meta_id: &str) -> Vec<Effect> {
@@ -345,6 +432,7 @@ pub(super) fn play_next(state: &mut State) -> Vec<Effect> {
     match resolve(&state.settings, &stream) {
         Source::Play(url, torrent) => {
             let start = Start {
+                title: None,
                 content_type,
                 meta_id,
                 preview: Some(meta.preview.clone()),

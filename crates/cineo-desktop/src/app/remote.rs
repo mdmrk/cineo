@@ -4,6 +4,7 @@ use cineo_core::app::Action;
 use cineo_core::remote::{Command, DEFAULT_PORT, Hosting, NowPlaying, RemoteKey, Status, Track};
 use cineo_net::remote::{Handler, RemoteError, RemoteServer, bind, lan_ip, new_remote_key, serve};
 use cineo_player::embedded::{PlayerCommand, Status as PlayerStatus, TrackKind};
+use eframe::egui;
 use tracing::warn;
 
 use super::{CineoApp, Msg, remote_commands};
@@ -114,12 +115,19 @@ impl CineoApp {
     }
 
     pub(super) fn remote_command(&mut self, command: Command) {
+        if let Command::Play(sent) = command {
+            self.end_playback();
+            self.connecting_controls = Controls::default();
+            self.ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            self.dispatch(Action::PlaySent(sent));
+            return;
+        }
         if let Some(embedded) = &mut self.playback {
             let status = embedded.player.status();
             if matches!(command, Command::Subtitle(_)) {
                 embedded.auto_subtitle.clear();
             }
-            for command in player_commands(command, &status, &mut embedded.controls) {
+            for command in player_commands(&command, &status, &mut embedded.controls) {
                 embedded.player.send(command);
             }
         } else if command == Command::Stop
@@ -191,11 +199,11 @@ fn now_playing(title: &str, status: &PlayerStatus, controls: &Controls) -> NowPl
 }
 
 fn player_commands(
-    command: Command,
+    command: &Command,
     status: &PlayerStatus,
     controls: &mut Controls,
 ) -> Vec<PlayerCommand> {
-    match command {
+    match *command {
         Command::Pause(true) => remote_commands(Remote::Pause, status),
         Command::Pause(false) => remote_commands(Remote::Play, status),
         Command::SeekTo(seconds) => remote_commands(Remote::SeekTo(seconds), status),
@@ -207,6 +215,7 @@ fn player_commands(
         Command::Subtitle(id) => vec![PlayerCommand::SetSubtitle(id)],
         Command::SubtitleDelay(seconds) => vec![controls.set_subtitle_delay(seconds)],
         Command::Speed(speed) => controls.set_speed(speed).into_iter().collect(),
+        Command::Play(_) => Vec::new(),
     }
 }
 
@@ -261,7 +270,7 @@ mod tests {
     fn phone_commands_become_player_commands() {
         let status = video();
         let mut controls = Controls::default();
-        let mut one = |command| player_commands(command, &status, &mut controls);
+        let mut one = |command| player_commands(&command, &status, &mut controls);
         assert_eq!(one(Command::Pause(true)), [PlayerCommand::SetPause(true)]);
         assert_eq!(one(Command::Pause(false)), [PlayerCommand::SetPause(false)]);
         assert_eq!(one(Command::SeekTo(90.0)), [PlayerCommand::SeekTo(90.0)]);
@@ -285,17 +294,17 @@ mod tests {
         let status = video();
         let mut controls = Controls::default();
         assert_eq!(
-            player_commands(Command::Speed(1.5), &status, &mut controls),
+            player_commands(&Command::Speed(1.5), &status, &mut controls),
             [PlayerCommand::SetSpeed(1.5)]
         );
         assert_eq!(controls.speed(), 1.5);
         assert_eq!(
-            player_commands(Command::Speed(1.5), &status, &mut controls),
+            player_commands(&Command::Speed(1.5), &status, &mut controls),
             [],
             "already at that speed"
         );
         assert_eq!(
-            player_commands(Command::SubtitleDelay(-0.25), &status, &mut controls),
+            player_commands(&Command::SubtitleDelay(-0.25), &status, &mut controls),
             [PlayerCommand::SetSubtitleDelay(-0.25)]
         );
         assert_eq!(controls.subtitle_delay_s(), -0.25);

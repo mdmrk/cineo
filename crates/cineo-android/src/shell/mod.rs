@@ -313,6 +313,11 @@ enum Msg {
     NetworkUsable {
         renew: bool,
     },
+    SentPlay {
+        group: usize,
+        stream: usize,
+        reply: tokio::sync::oneshot::Sender<Option<cineo_core::app::SentPlay>>,
+    },
     Tick,
     Shutdown,
 }
@@ -479,27 +484,25 @@ impl Cineo {
         command: Option<RemoteCommandView>,
     ) -> Result<RemoteStatusView, RemoteFailure> {
         let command = command.map(Command::from);
-        if command.is_some_and(|c| !c.is_valid()) {
+        if command.as_ref().is_some_and(|c| !c.is_valid()) {
             return Err(RemoteFailure::Invalid);
         }
-        let client = self
-            .remote
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .as_ref()
-            .map(|(_, client)| Arc::clone(client))
-            .ok_or(RemoteFailure::NotPaired)?;
-        let runtime = self.runtime.as_ref().ok_or(RemoteFailure::Unreachable)?;
-        let task = runtime
-            .handle()
-            .spawn(async move { client.send(command, wall_ms()).await });
-        let _abort = AbortOnDrop(task.abort_handle());
-        match task.await {
-            Ok(result) => result
-                .map(|status| crate::view::remote::status(&status))
-                .map_err(RemoteFailure::from),
-            Err(_) => Err(RemoteFailure::Unreachable),
-        }
+        self.send_remote(command).await
+    }
+
+    pub async fn play_on_computer(
+        &self,
+        group: u32,
+        stream: u32,
+    ) -> Result<RemoteStatusView, RemoteFailure> {
+        let (reply, sent) = tokio::sync::oneshot::channel();
+        self.post(Msg::SentPlay {
+            group: group as usize,
+            stream: stream as usize,
+            reply,
+        });
+        let sent = sent.await.ok().flatten().ok_or(RemoteFailure::Invalid)?;
+        self.send_remote(Some(Command::Play(Box::new(sent)))).await
     }
 
     pub fn app_visible(&self, visible: bool) {
@@ -735,6 +738,30 @@ impl Cineo {
 }
 
 impl Cineo {
+    async fn send_remote(
+        &self,
+        command: Option<Command>,
+    ) -> Result<RemoteStatusView, RemoteFailure> {
+        let client = self
+            .remote
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+            .map(|(_, client)| Arc::clone(client))
+            .ok_or(RemoteFailure::NotPaired)?;
+        let runtime = self.runtime.as_ref().ok_or(RemoteFailure::Unreachable)?;
+        let task = runtime
+            .handle()
+            .spawn(async move { client.send(command, wall_ms()).await });
+        let _abort = AbortOnDrop(task.abort_handle());
+        match task.await {
+            Ok(result) => result
+                .map(|status| crate::view::remote::status(&status))
+                .map_err(RemoteFailure::from),
+            Err(_) => Err(RemoteFailure::Unreachable),
+        }
+    }
+
     pub fn start(
         data_dir: &str,
         subtitle_dir: PathBuf,

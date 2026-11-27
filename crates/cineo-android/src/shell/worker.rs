@@ -57,6 +57,13 @@ impl Shell {
                 self.dispatch(Action::RetryFailed);
             }
             Msg::Tick => self.tick(),
+            Msg::SentPlay {
+                group,
+                stream,
+                reply,
+            } => {
+                let _ = reply.send(cineo_core::app::sent_play(&self.state, group, stream));
+            }
             Msg::Shutdown => return false,
         }
         true

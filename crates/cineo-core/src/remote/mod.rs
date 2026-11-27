@@ -12,7 +12,7 @@ pub use status::{MAX_TITLE_CHARS, MAX_TRACK_LABEL_CHARS, MAX_TRACKS, NowPlaying,
 pub const PROTOCOL: u64 = 1;
 pub const DEFAULT_PORT: u16 = 18_765;
 pub const PATH: &str = "/v1/remote";
-pub const MAX_REQUEST_BYTES: usize = 4 * 1024;
+pub const MAX_REQUEST_BYTES: usize = 32 * 1024;
 pub const MAX_ANSWER_BYTES: usize = 64 * 1024;
 pub const MAX_CLOCK_SKEW_MS: u64 = 2 * 60 * 1000;
 pub const NONCE_LEN: usize = 12;

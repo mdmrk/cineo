@@ -40,11 +40,12 @@ impl Desktop {
         let received = Arc::new(Mutex::new(Vec::new()));
         let seen = Arc::clone(&received);
         let handler: Handler = Arc::new(move |command| {
+            let paused = command == Some(Command::Pause(true));
             seen.lock().unwrap().push(command);
             Status {
                 playing: Some(NowPlaying {
                     title: "Dune".into(),
-                    paused: command == Some(Command::Pause(true)),
+                    paused,
                     ..NowPlaying::default()
                 }),
             }
