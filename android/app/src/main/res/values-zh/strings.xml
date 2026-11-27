@@ -51,6 +51,7 @@
     <string name="favourites">收藏</string>
     <string name="recently_played">最近播放</string>
     <string name="library_empty">您播放过的内容会显示在这里。</string>
+    <string name="favourites_empty">您加入收藏的内容会显示在这里。</string>
     <string name="favourite_add">加入收藏</string>
     <string name="favourite_remove">取消收藏</string>
     <string name="remove_continue">从继续观看中移除</string>

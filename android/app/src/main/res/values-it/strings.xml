@@ -45,6 +45,7 @@
     <string name="favourites">Preferiti</string>
     <string name="recently_played">Riprodotti di recente</string>
     <string name="library_empty">Tutto ciò che riproduci compare qui.</string>
+    <string name="favourites_empty">I titoli che aggiungi ai preferiti compaiono qui.</string>
     <string name="favourite_add">Aggiungi ai preferiti</string>
     <string name="favourite_remove">Rimuovi dai preferiti</string>
     <string name="remove_continue">Rimuovi da Continua a guardare</string>

@@ -45,6 +45,7 @@
     <string name="favourites">Favoris</string>
     <string name="recently_played">Lus récemment</string>
     <string name="library_empty">Tout ce que vous lisez apparaît ici.</string>
+    <string name="favourites_empty">Les titres que vous ajoutez aux favoris apparaissent ici.</string>
     <string name="favourite_add">Ajouter aux favoris</string>
     <string name="favourite_remove">Retirer des favoris</string>
     <string name="remove_continue">Retirer de Reprendre la lecture</string>

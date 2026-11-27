@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.AppView
 import io.github.mdmrk.cineo.rust.LibraryItemView
@@ -95,7 +96,11 @@ fun LibraryScreen(view: AppView?, images: Images, actions: LibraryActions, paddi
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     CineoIcon(if (tab == 0) Icon.MOVIE else Icon.HEART, tint = Brand.TextFaint, size = 48.sp)
-                    Text(stringResource(R.string.library_empty), color = Brand.TextDim)
+                    Text(
+                        stringResource(if (tab == 0) R.string.library_empty else R.string.favourites_empty),
+                        color = Brand.TextDim,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }

@@ -54,6 +54,7 @@
     <string name="favourites">Favourites</string>
     <string name="recently_played">Recently played</string>
     <string name="library_empty">Anything you play shows up here.</string>
+    <string name="favourites_empty">Titles you add to favourites show up here.</string>
     <string name="favourite_add">Add to favourites</string>
     <string name="favourite_remove">Remove from favourites</string>
     <string name="remove_continue">Remove from continue watching</string>

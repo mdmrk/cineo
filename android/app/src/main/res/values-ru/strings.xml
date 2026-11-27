@@ -45,6 +45,7 @@
     <string name="favourites">Избранное</string>
     <string name="recently_played">Недавно просмотренные</string>
     <string name="library_empty">Здесь появится всё, что вы смотрите.</string>
+    <string name="favourites_empty">Здесь появятся фильмы и сериалы, добавленные в избранное.</string>
     <string name="favourite_add">Добавить в избранное</string>
     <string name="favourite_remove">Удалить из избранного</string>
     <string name="remove_continue">Убрать из «Продолжить просмотр»</string>
