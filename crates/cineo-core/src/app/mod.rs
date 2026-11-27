@@ -6,6 +6,7 @@ mod plan;
 mod playback;
 mod refresh;
 mod release;
+mod remote;
 mod settings;
 mod state;
 mod streams;
@@ -21,6 +22,7 @@ pub use release::{
     LATEST_RELEASE_URL, ReleaseError, UpdateFailure, UpdateProgress, UpdateRequest, UpdateTarget,
     parse_release, release_page,
 };
+pub use remote::RemoteState;
 pub use settings::{
     AudioOutput, DEVICE_LOCAL_SETTINGS, DownloadLimit, HideControls, InterfaceScale,
     NextVideoNotice, OnLeave, PeerLimit, Percent, Ranged, SeekStep, Setting, SettingError,

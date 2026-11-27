@@ -19,6 +19,7 @@ use cineo_core::app::{
 mod addons;
 mod library;
 mod playback;
+mod remote;
 mod settings;
 mod sync;
 mod torrent;

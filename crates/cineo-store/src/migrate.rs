@@ -41,6 +41,15 @@ pub(crate) const MIGRATIONS: &[&str] = &[
         seeded INTEGER NOT NULL
     ) STRICT;",
     "ALTER TABLE sync_pairing ADD COLUMN born INTEGER NOT NULL DEFAULT 0;",
+    "CREATE TABLE remote_host (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        key BLOB NOT NULL
+    ) STRICT;
+    CREATE TABLE remote_peer (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        address TEXT NOT NULL,
+        key BLOB NOT NULL
+    ) STRICT;",
 ];
 
 const FIRST_RUN_ADDONS: &[&str] = &["https://v3-cinemeta.strem.io/manifest.json"];

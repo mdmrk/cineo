@@ -601,3 +601,39 @@ fn unreadable_sync_records_are_skipped() {
     assert_eq!(restored.library(), replica.library());
     assert!(restored.get(&RecordName::Item("tt3".into())).is_none());
 }
+
+#[test]
+fn remote_pairings_survive_a_reopen_and_can_be_forgotten() {
+    use cineo_core::remote::{Peer, RemoteKey};
+    let dir = temp_dir("remote");
+    let mut store = Store::open_in(&dir).unwrap();
+    assert_eq!(store.remote().unwrap(), (None, None));
+    let host = RemoteKey::from_bytes([3; 16]);
+    let peer = Peer {
+        address: "192.168.1.20:18765".parse().unwrap(),
+        key: RemoteKey::from_bytes([4; 16]),
+    };
+    assert!(store.apply(&Effect::SaveRemoteHost(Some(host))).unwrap());
+    assert!(store.apply(&Effect::SaveRemotePeer(Some(peer))).unwrap());
+    drop(store);
+    let mut store = Store::open_in(&dir).unwrap();
+    assert_eq!(store.remote().unwrap(), (Some(host), Some(peer)));
+    store.apply(&Effect::SaveRemoteHost(None)).unwrap();
+    store.apply(&Effect::SaveRemotePeer(None)).unwrap();
+    assert_eq!(store.remote().unwrap(), (None, None));
+}
+
+#[test]
+fn a_remote_pairing_to_a_public_address_is_ignored() {
+    let path = temp_dir("remote-public").join(DB_FILE);
+    let store = Store::open(&path).unwrap();
+    drop(store);
+    let conn = rusqlite::Connection::open(&path).unwrap();
+    conn.execute(
+        "INSERT INTO remote_peer (id, address, key) VALUES (1, '8.8.8.8:18765', ?1)",
+        [[4_u8; 16].as_slice()],
+    )
+    .unwrap();
+    drop(conn);
+    assert_eq!(Store::open(&path).unwrap().remote().unwrap(), (None, None));
+}

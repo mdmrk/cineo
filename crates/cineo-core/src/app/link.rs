@@ -19,6 +19,10 @@ pub enum Route {
         code: String,
         server: Option<Url>,
     },
+    Remote {
+        code: String,
+        address: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,6 +93,10 @@ pub fn parse_link(link: &str) -> Result<Route, LinkError> {
         ["sync", code] => Ok(Route::Sync {
             code: (*code).to_owned(),
             server: query("server").and_then(|s| Url::parse(&s).ok()),
+        }),
+        ["remote", code] => Ok(Route::Remote {
+            code: (*code).to_owned(),
+            address: query("at").unwrap_or_default(),
         }),
         _ => Err(LinkError::Unknown),
     }

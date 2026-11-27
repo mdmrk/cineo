@@ -31,6 +31,7 @@ use crate::{instance, register};
 use cineo_player::subtitles::SubtitleFiles;
 
 mod playback;
+mod remote;
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -53,6 +54,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
     let saved = store.settings()?;
     let sync = store.sync(Settings::default())?;
+    let (remote_host, _) = store.remote()?;
     let ui_language = saved.ui_language;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
     let client = AddonClient::new(NetPolicy {
@@ -70,6 +72,10 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             replica: Box::new(replica),
         });
     }
+    restore.push(Action::RestoreRemote {
+        host: remote_host,
+        peer: None,
+    });
     let image_disk = ImageDisk::new(&options.cache_dir);
     {
         let image_disk = image_disk.clone();
@@ -173,6 +179,7 @@ pub(crate) enum Msg {
     LinksRegistered(Result<(), String>),
     TextRendering(fastframe_text::TextRendering),
     TextScale(f32),
+    Remote(cineo_core::remote::Command),
 }
 
 pub(crate) struct Io {
@@ -269,6 +276,7 @@ pub(crate) struct CineoApp {
     wake_retry: WakeRetry,
     exe: Option<PathBuf>,
     ticked: Instant,
+    remote: remote::Host,
 }
 
 impl CineoApp {
@@ -313,6 +321,7 @@ impl CineoApp {
             wake_retry: WakeRetry::default(),
             exe,
             ticked: Instant::now(),
+            remote: remote::Host::default(),
         };
         for action in restore {
             app.dispatch(action);
@@ -356,7 +365,9 @@ impl CineoApp {
             | Effect::SaveSettings(_)
             | Effect::SavePairing { .. }
             | Effect::SaveSync(_)
-            | Effect::ForgetSync) => {
+            | Effect::ForgetSync
+            | Effect::SaveRemoteHost(_)
+            | Effect::SaveRemotePeer(_)) => {
                 let sent = self
                     .store_tx
                     .as_ref()
@@ -370,6 +381,7 @@ impl CineoApp {
             Effect::StopTorrent => self.stop_torrent(),
             Effect::InstallUpdate(request) => self.install_update(*request),
             Effect::RestartToUpdate => self.restart_to_update(),
+            Effect::ServeRemote(key) => self.serve_remote(key),
         }
     }
 
@@ -398,6 +410,7 @@ impl CineoApp {
         if self.ticked.elapsed() >= TICK_EVERY {
             self.ticked = Instant::now();
             self.dispatch(Action::Tick(wall_ms()));
+            self.refresh_remote_address();
         }
         if self.state.sync.is_some() {
             ctx.request_repaint_after(IDLE_TICK_EVERY);
@@ -544,8 +557,10 @@ impl eframe::App for CineoApp {
                 Msg::LinksRegistered(result) => self.view.links_registered = Some(result),
                 Msg::TextRendering(rendering) => theme::apply_text_rendering(ctx, &rendering),
                 Msg::TextScale(scale) => self.view.desktop_text_scale = Some(scale),
+                Msg::Remote(command) => self.remote_command(command),
             }
         }
+        self.publish_remote();
         if self.state.addons_loading.is_empty()
             && let Some(link) = self.pending_link.take()
         {
@@ -579,6 +594,9 @@ impl eframe::App for CineoApp {
         }
         if let Some(request) = self.view.sync_request.take() {
             self.sync_request(request);
+        }
+        if let Some(request) = self.view.remote_request.take() {
+            self.remote_request(request);
         }
         if std::mem::take(&mut self.view.register_links) {
             let post = self.post();

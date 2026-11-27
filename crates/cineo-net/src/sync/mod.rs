@@ -1,5 +1,5 @@
 mod client;
-mod code;
+pub(crate) mod code;
 mod keys;
 
 pub use cineo_core::sync::protocol::{

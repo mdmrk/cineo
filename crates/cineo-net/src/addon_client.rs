@@ -258,6 +258,26 @@ impl AddonClient {
         let body = read_limited(response, request.limit, |_, _| {}).await?;
         Ok((status, retry_after, body))
     }
+
+    pub(crate) async fn post(
+        &self,
+        url: Url,
+        body: Vec<u8>,
+        limit: usize,
+    ) -> Result<(StatusCode, Vec<u8>), FetchError> {
+        self.policy.check_url(&url)?;
+        let response = self
+            .http()
+            .post(url)
+            .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+            .body(body)
+            .send()
+            .await
+            .map_err(|err| classify(&err))?;
+        let status = response.status();
+        let body = read_limited(response, limit, |_, _| {}).await?;
+        Ok((status, body))
+    }
 }
 
 #[derive(Debug)]

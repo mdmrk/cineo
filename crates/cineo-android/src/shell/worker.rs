@@ -130,7 +130,9 @@ impl Shell {
             | Effect::SaveSettings(_)
             | Effect::SavePairing { .. }
             | Effect::SaveSync(_)
-            | Effect::ForgetSync) => {
+            | Effect::ForgetSync
+            | Effect::SaveRemoteHost(_)
+            | Effect::SaveRemotePeer(_)) => {
                 if self.store_tx.send(effect).is_err() {
                     self.state.notice = Some(Notice::StoreClosed);
                 }
@@ -144,7 +146,7 @@ impl Shell {
                     });
             }
             Effect::StopTorrent => self.torrents.stop(),
-            Effect::InstallUpdate(_) | Effect::RestartToUpdate => {}
+            Effect::InstallUpdate(_) | Effect::RestartToUpdate | Effect::ServeRemote(_) => {}
         }
     }
 

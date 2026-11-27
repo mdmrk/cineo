@@ -11,6 +11,7 @@ use super::refresh::{
     manifest_loaded, meta_loaded, open_detail, refresh_addon_lists, retry_failed, select_video,
 };
 use super::release::{self, UpdateFailure, UpdateProgress, UpdateRequest, UpdateTarget};
+use super::remote::{self, RemoteState};
 use super::settings::{Setting, Settings};
 use super::sync::{self, PulledPage, PushedBatch, SyncFailure, SyncState};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
@@ -18,6 +19,7 @@ use crate::addon::{
     AddonDescriptor, ContentType, Manifest, Meta, MetaPreview, ResourcePath, Stream, Subtitle,
     TransportUrl, Video,
 };
+use crate::remote::{Peer, RemoteKey};
 use crate::sync::{Changes, DeviceId, Outgoing, Pairing, Replica, SyncKey};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,6 +159,7 @@ pub struct State {
     pub update_progress: UpdateProgress,
     pub now_ms: u64,
     pub sync: Option<SyncState>,
+    pub remote: RemoteState,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -316,6 +319,12 @@ pub enum Action {
         batch: PushedBatch,
     },
     SyncSpaceDeleted(Result<(), SyncFailure>),
+    RestoreRemote {
+        host: Option<RemoteKey>,
+        peer: Option<Peer>,
+    },
+    SetRemoteHost(Option<RemoteKey>),
+    SetRemotePeer(Option<Peer>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -378,6 +387,9 @@ pub enum Effect {
     },
     SaveSync(Changes),
     ForgetSync,
+    SaveRemoteHost(Option<RemoteKey>),
+    ServeRemote(Option<RemoteKey>),
+    SaveRemotePeer(Option<Peer>),
 }
 
 pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
@@ -395,6 +407,9 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::SyncPulled { pairing, result } => sync::pulled(state, &pairing, result),
         Action::SyncPushed { pairing, batch } => sync::pushed(state, &pairing, batch),
         Action::SyncSpaceDeleted(_) => Vec::new(),
+        Action::RestoreRemote { host, peer } => remote::restore(state, host, peer),
+        Action::SetRemoteHost(host) => remote::set_host(state, host),
+        Action::SetRemotePeer(peer) => remote::set_peer(state, peer),
         action => reduce(state, action),
     };
     let more = sync::after(state, &effects, flush);
@@ -667,7 +682,10 @@ fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
         | Action::SyncNow
         | Action::SyncPulled { .. }
         | Action::SyncPushed { .. }
-        | Action::SyncSpaceDeleted(_) => Vec::new(),
+        | Action::SyncSpaceDeleted(_)
+        | Action::RestoreRemote { .. }
+        | Action::SetRemoteHost(_)
+        | Action::SetRemotePeer(_) => Vec::new(),
     }
 }
 

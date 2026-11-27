@@ -1,5 +1,6 @@
 crates/cineo-desktop/src/app/mod.rs
 crates/cineo-desktop/src/app/playback.rs
+crates/cineo-desktop/src/app/remote.rs
 crates/cineo-desktop/src/brand.rs
 crates/cineo-desktop/src/dirs.rs
 crates/cineo-desktop/src/i18n.rs
@@ -21,6 +22,7 @@ crates/cineo-desktop/src/register.rs
 crates/cineo-desktop/src/self_update.rs
 crates/cineo-desktop/src/settings/keyboard.rs
 crates/cineo-desktop/src/settings/mod.rs
+crates/cineo-desktop/src/settings/remote.rs
 crates/cineo-desktop/src/settings/search.rs
 crates/cineo-desktop/src/settings/subtitles.rs
 crates/cineo-desktop/src/settings/sync.rs

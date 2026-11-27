@@ -44,6 +44,9 @@ pub fn fetch_task(
         Effect::SavePairing { .. }
         | Effect::SaveSync(_)
         | Effect::ForgetSync
+        | Effect::SaveRemoteHost(_)
+        | Effect::ServeRemote(_)
+        | Effect::SaveRemotePeer(_)
         | Effect::SaveAddons(_)
         | Effect::SaveLibraryItem(_)
         | Effect::DeleteLibraryItem(_)

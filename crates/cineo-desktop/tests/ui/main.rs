@@ -26,6 +26,7 @@ mod addons;
 mod browse;
 mod detail;
 mod library;
+mod remote;
 mod settings;
 mod sync;
 

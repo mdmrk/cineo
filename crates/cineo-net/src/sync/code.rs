@@ -28,7 +28,11 @@ fn check(key: &[u8; 16]) -> [u8; CHECK_LEN] {
 }
 
 pub fn format_code(key: &SyncKey) -> String {
-    let bytes = [key.as_bytes().as_slice(), &check(key.as_bytes())].concat();
+    format_key(key.as_bytes())
+}
+
+pub(crate) fn format_key(key: &[u8; 16]) -> String {
+    let bytes = [key.as_slice(), &check(key)].concat();
     let mut code = String::with_capacity(CODE_LEN + CODE_LEN / GROUP);
     for (index, letter) in BASE32_NOPAD.encode(&bytes).chars().enumerate() {
         if index > 0 && index % GROUP == 0 {
@@ -40,6 +44,10 @@ pub fn format_code(key: &SyncKey) -> String {
 }
 
 pub fn parse_code(text: &str) -> Result<SyncKey, CodeError> {
+    parse_key(text).map(SyncKey::from_bytes)
+}
+
+pub(crate) fn parse_key(text: &str) -> Result<[u8; 16], CodeError> {
     let cleaned: String = text
         .chars()
         .filter(|c| !c.is_whitespace() && *c != '-')
@@ -60,7 +68,7 @@ pub fn parse_code(text: &str) -> Result<SyncKey, CodeError> {
     if check(&key) != sum {
         return Err(CodeError::Typo);
     }
-    Ok(SyncKey::from_bytes(key))
+    Ok(key)
 }
 
 pub fn pairing_link(pairing: &Pairing) -> String {

@@ -17,6 +17,7 @@ use crate::view::{
 };
 
 mod keyboard;
+mod remote;
 mod search;
 mod subtitles;
 mod sync;
@@ -37,12 +38,13 @@ pub enum Section {
     Audio,
     Torrents,
     Data,
+    Remote,
     Keyboard,
     About,
 }
 
 impl Section {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Interface,
         Self::Player,
         Self::Languages,
@@ -50,6 +52,7 @@ impl Section {
         Self::Audio,
         Self::Torrents,
         Self::Data,
+        Self::Remote,
         Self::Keyboard,
         Self::About,
     ];
@@ -63,6 +66,7 @@ impl Section {
             Self::Audio => t!("Audio"),
             Self::Torrents => t!("Torrents"),
             Self::Data => t!("Data"),
+            Self::Remote => t!("Remote control"),
             Self::Keyboard => t!("Keyboard"),
             Self::About => t!("About"),
         }
@@ -77,6 +81,7 @@ impl Section {
             Self::Audio => "volume",
             Self::Torrents => "magnet",
             Self::Data => "database",
+            Self::Remote => "device-mobile",
             Self::Keyboard => "keyboard",
             Self::About => "info-circle",
         })
@@ -467,6 +472,7 @@ fn body(
             }
             sync::sync(ui, state, view, out);
         }
+        Section::Remote => remote::remote(ui, state, view),
         Section::Keyboard => keyboard(ui),
         Section::About => {
             let filtering = search::filtering(ui);

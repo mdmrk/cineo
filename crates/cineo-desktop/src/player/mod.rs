@@ -101,11 +101,25 @@ impl Controls {
         PlayerCommand::SeekBy(delta)
     }
 
-    fn speed(&self) -> f64 {
+    pub(crate) fn speed(&self) -> f64 {
         self.speed.unwrap_or(1.0)
     }
 
-    fn set_speed(&mut self, speed: f64) -> Option<PlayerCommand> {
+    pub(crate) fn subtitle_delay_s(&self) -> f64 {
+        f64::from(self.subtitle_delay_ms) / 1000.0
+    }
+
+    pub(crate) fn set_subtitle_delay(&mut self, seconds: f64) -> PlayerCommand {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "a delay checked to within ±600 s, in milliseconds"
+        )]
+        let ms = (seconds * 1000.0).round() as i32;
+        self.subtitle_delay_ms = ms;
+        PlayerCommand::SetSubtitleDelay(f64::from(ms) / 1000.0)
+    }
+
+    pub(crate) fn set_speed(&mut self, speed: f64) -> Option<PlayerCommand> {
         (speed != self.speed()).then(|| {
             self.speed = Some(speed);
             PlayerCommand::SetSpeed(speed)

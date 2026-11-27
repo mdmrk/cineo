@@ -3,6 +3,7 @@
 mod addon_client;
 mod effects;
 mod policy;
+pub mod remote;
 pub mod sync;
 
 pub use addon_client::{AddonClient, FetchError, MAX_IMAGE_BYTES};

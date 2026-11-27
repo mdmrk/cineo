@@ -1142,8 +1142,12 @@ name = "cineo-net"
 version = "1.11.0"
 dependencies = [
  "aws-lc-rs",
+ "bytes",
  "cineo-core",
  "data-encoding",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "reqwest",
  "semver",
  "serde_json",

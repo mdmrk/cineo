@@ -105,6 +105,26 @@ pub struct ViewState {
     pub sync_server: String,
     pub sync_error: Option<SyncInputError>,
     pub sync_request: Option<SyncRequest>,
+    pub remote_listener: RemoteListener,
+    pub remote_request: Option<RemoteRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum RemoteListener {
+    #[default]
+    Off,
+    On {
+        ip: Option<std::net::IpAddr>,
+        port: u16,
+    },
+    Failed(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemoteRequest {
+    TurnOn,
+    NewCode,
+    TurnOff,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -433,6 +453,10 @@ pub fn follow_link(route: Route, state: &State, view: &mut ViewState) -> Vec<Act
                 .map_or_else(String::new, ToString::to_string);
             view.sync_error = None;
             view.settings_jump = Some(crate::settings::Section::Data);
+            Some(Page::Settings)
+        }
+        Route::Remote { .. } => {
+            view.settings_jump = Some(crate::settings::Section::Remote);
             Some(Page::Settings)
         }
     };

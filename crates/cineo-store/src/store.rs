@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
+use cineo_core::remote::{Peer, RemoteKey};
 use cineo_core::sync::{Changes, DeviceId, Entry, Pairing, Record, Replica, Stamp, SyncKey};
 use rusqlite::{Connection, ErrorCode, OptionalExtension, Row, params};
 use tracing::warn;
@@ -336,6 +337,60 @@ impl Store {
         Ok(())
     }
 
+    pub fn remote(&self) -> Result<(Option<RemoteKey>, Option<Peer>), StoreError> {
+        let host = self
+            .conn
+            .query_row("SELECT key FROM remote_host WHERE id = 1", [], |row| {
+                row.get::<_, Vec<u8>>(0)
+            })
+            .optional()?
+            .and_then(|key| <[u8; 16]>::try_from(key).ok())
+            .map(RemoteKey::from_bytes);
+        let peer = self
+            .conn
+            .query_row(
+                "SELECT address, key FROM remote_peer WHERE id = 1",
+                [],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?)),
+            )
+            .optional()?
+            .and_then(|(address, key)| {
+                let peer = cineo_core::remote::parse_address(&address)
+                    .zip(<[u8; 16]>::try_from(key).ok())
+                    .map(|(address, key)| Peer {
+                        address,
+                        key: RemoteKey::from_bytes(key),
+                    });
+                if peer.is_none() {
+                    warn!("ignoring an unreadable remote pairing");
+                }
+                peer
+            });
+        Ok((host, peer))
+    }
+
+    pub fn save_remote_host(&self, host: Option<&RemoteKey>) -> Result<(), StoreError> {
+        match host {
+            Some(key) => self.conn.execute(
+                "INSERT OR REPLACE INTO remote_host (id, key) VALUES (1, ?1)",
+                params![key.as_bytes().as_slice()],
+            )?,
+            None => self.conn.execute("DELETE FROM remote_host", [])?,
+        };
+        Ok(())
+    }
+
+    pub fn save_remote_peer(&self, peer: Option<&Peer>) -> Result<(), StoreError> {
+        match peer {
+            Some(peer) => self.conn.execute(
+                "INSERT OR REPLACE INTO remote_peer (id, address, key) VALUES (1, ?1, ?2)",
+                params![peer.address.to_string(), peer.key.as_bytes().as_slice()],
+            )?,
+            None => self.conn.execute("DELETE FROM remote_peer", [])?,
+        };
+        Ok(())
+    }
+
     pub fn apply(&mut self, effect: &Effect) -> Result<bool, StoreError> {
         match effect {
             Effect::SaveAddons(addons) => self.save_addons(addons)?,
@@ -346,6 +401,8 @@ impl Store {
             Effect::SavePairing { pairing, device } => self.pair(pairing, *device)?,
             Effect::SaveSync(changes) => self.save_sync_changes(changes)?,
             Effect::ForgetSync => self.forget_sync()?,
+            Effect::SaveRemoteHost(host) => self.save_remote_host(host.as_ref())?,
+            Effect::SaveRemotePeer(peer) => self.save_remote_peer(peer.as_ref())?,
             _ => return Ok(false),
         }
         Ok(true)

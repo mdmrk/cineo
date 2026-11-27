@@ -51,7 +51,7 @@ fn field(ui: &mut Ui, text: &mut String, hint: &str, label: &str) {
     response.widget_info(|| WidgetInfo::labeled(Role::TextInput, ui.is_enabled(), label));
 }
 
-fn right(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
+pub(super) fn right(ui: &mut Ui, add: impl FnOnce(&mut Ui)) {
     let line = vec2(ui.available_width(), ui.spacing().interact_size.y);
     ui.allocate_ui_with_layout(line, Layout::right_to_left(Align::Center), add);
 }
@@ -173,7 +173,7 @@ fn on(ui: &mut Ui, now_ms: u64, sync: &SyncState, view: &mut ViewState, out: &mu
         ),
         |ui| {
             ui.vertical(|ui| {
-                qr(ui, &pairing_link(&sync.pairing));
+                qr(ui, &pairing_link(&sync.pairing), &t!("Sync QR code"));
                 ui.add(
                     Label::new(RichText::new(&code).monospace().color(theme::TEXT_BRIGHT)).wrap(),
                 );
@@ -216,7 +216,7 @@ fn on(ui: &mut Ui, now_ms: u64, sync: &SyncState, view: &mut ViewState, out: &mu
     );
 }
 
-fn qr(ui: &mut Ui, text: &str) {
+pub(super) fn qr(ui: &mut Ui, text: &str, label: &str) {
     let Ok(code) = QrCode::new(text.as_bytes()) else {
         return;
     };
@@ -227,7 +227,7 @@ fn qr(ui: &mut Ui, text: &str) {
         .max(1.0);
     let side = modules * module;
     let (rect, response) = ui.allocate_exact_size(vec2(side, side), Sense::hover());
-    response.widget_info(|| WidgetInfo::labeled(Role::Image, true, t!("Sync QR code").as_ref()));
+    response.widget_info(|| WidgetInfo::labeled(Role::Image, true, label));
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, CornerRadius::same(theme::RADIUS), Color32::WHITE);
     for y in 0..width {

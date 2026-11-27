@@ -60,6 +60,21 @@ fn links_parse_into_routes_and_anything_else_is_rejected() {
             }),
         ),
         ("cineo:///sync", Err(LinkError::Unknown)),
+        (
+            "cineo:///remote/ABCD-EFGH?at=192.168.1.20%3A18765",
+            Ok(Route::Remote {
+                code: "ABCD-EFGH".into(),
+                address: "192.168.1.20:18765".into(),
+            }),
+        ),
+        (
+            "cineo:///remote/ABCD",
+            Ok(Route::Remote {
+                code: "ABCD".into(),
+                address: String::new(),
+            }),
+        ),
+        ("cineo:///remote", Err(LinkError::Unknown)),
         ("https://example.com/manifest.json", Err(LinkError::Scheme)),
         ("stremio://example.com/addon.json", Err(LinkError::Unknown)),
         (

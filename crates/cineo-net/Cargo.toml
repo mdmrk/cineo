@@ -9,8 +9,12 @@ publish.workspace = true
 
 [dependencies]
 aws-lc-rs.workspace = true
+bytes.workspace = true
 cineo-core.workspace = true
 data-encoding.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
 reqwest.workspace = true
 semver.workspace = true
 serde_json.workspace = true
