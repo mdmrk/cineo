@@ -862,7 +862,11 @@ into a
 `fdroiddata` directory that it commits (`fdroid build` takes
 `SOURCE_DATE_EPOCH` from that commit), points `gradle:` at the image's
 `gradlew-fdroid` (the one pip installs has no Gradle 9 checksums) and runs
-`fdroid build --on-server` as `vagrant`. For v1.9.6 it matched, with the
+`fdroid build --on-server` as `vagrant`. `gradlew-fdroid` refuses a Gradle
+version missing from F-Droid's
+[gradle-transparency-log](https://gitlab.com/fdroid/gradle-transparency-log/-/blob/master/checksums.json)
+("No hash for gradle version"), so the wrapper only moves to a version
+listed there (Gradle 9.9.3 was not, VERIFIED 2026-11-27). For v1.9.6 it matched, with the
 recipe that installs Rust through `scripts/install-rust.sh` (VERIFIED
 2026-11-17, about 15 minutes on 12 CPUs). CI runs it after `publish` on
 every push, against the tag's release or the prerelease
