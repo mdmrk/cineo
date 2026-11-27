@@ -55,6 +55,7 @@ class LibraryActions(
     val resume: (LibraryItemView) -> Unit,
     val setFavorite: (LibraryItemView, Boolean) -> Unit,
     val remove: (LibraryItemView) -> Unit,
+    val playOnComputer: ((LibraryItemView) -> Unit)? = null,
 )
 
 @Composable
@@ -207,6 +208,13 @@ private fun ItemSheet(
                 )
             }
             HorizontalDivider(color = Brand.Rule)
+            val onComputer = actions.playOnComputer
+            if (item.resumable && onComputer != null) {
+                SheetAction(Icon.DEVICE_DESKTOP, stringResource(R.string.remote_play_on_computer), tint = Brand.Accent) {
+                    onClose()
+                    onComputer(item)
+                }
+            }
             if (shelf != Shelf.FAVORITES) {
                 SheetAction(Icon.INFO_CIRCLE, stringResource(R.string.details)) {
                     onClose()

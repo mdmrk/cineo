@@ -147,3 +147,78 @@ fn a_computer_with_torrents_off_refuses_a_sent_torrent() {
     assert_eq!(computer.notice, Some(Notice::TorrentsOff));
     assert!(computer.playing.is_none());
 }
+
+fn watched_on_the_phone() -> State {
+    let mut phone = detail_with_streams();
+    update(
+        &mut phone,
+        Action::Play {
+            group: 0,
+            stream: 0,
+        },
+    );
+    update(
+        &mut phone,
+        Action::PlaybackProgress {
+            meta_id: "tt0000001".into(),
+            video_id: "tt0000001".into(),
+            time_ms: 120_000,
+            duration_ms: 600_000,
+            now_ms: 5,
+        },
+    );
+    update(&mut phone, Action::PlaybackStopped);
+    phone
+}
+
+#[test]
+fn continue_watching_sent_to_the_computer_resumes_where_the_phone_stopped() {
+    let phone = watched_on_the_phone();
+    let sent = cineo_core::app::sent_resume(&phone, "tt0000001").unwrap();
+    assert_eq!(sent.offset_ms, 120_000);
+    let request = cineo_core::remote::Request {
+        time_ms: 1,
+        command: Some(cineo_core::remote::Command::Play(Box::new(sent))),
+    };
+    let Some(cineo_core::remote::Request {
+        command: Some(cineo_core::remote::Command::Play(sent)),
+        ..
+    }) = cineo_core::remote::Request::parse(request.to_json().as_bytes())
+    else {
+        panic!("the resume did not survive the wire");
+    };
+    let (mut computer, _) = restored();
+    let effects = update(&mut computer, Action::PlaySent(sent.clone()));
+    assert_eq!(play_effect(&effects).map(|p| p.start_ms), Some(120_000));
+
+    let (mut ahead, _) = restored();
+    update(&mut ahead, Action::PlaySent(sent.clone()));
+    update(
+        &mut ahead,
+        Action::PlaybackProgress {
+            meta_id: "tt0000001".into(),
+            video_id: "tt0000001".into(),
+            time_ms: 300_000,
+            duration_ms: 600_000,
+            now_ms: 9,
+        },
+    );
+    update(&mut ahead, Action::PlaybackStopped);
+    let effects = update(&mut ahead, Action::PlaySent(sent));
+    assert_eq!(
+        play_effect(&effects).map(|p| p.start_ms),
+        Some(300_000),
+        "the computer's own position wins"
+    );
+}
+
+#[test]
+fn only_an_item_with_a_saved_stream_can_be_resumed_on_the_computer() {
+    let phone = watched_on_the_phone();
+    assert!(cineo_core::app::sent_resume(&phone, "tt9999999").is_none());
+    let mut without = phone;
+    for item in &mut without.library {
+        item.stream = None;
+    }
+    assert!(cineo_core::app::sent_resume(&without, "tt0000001").is_none());
+}

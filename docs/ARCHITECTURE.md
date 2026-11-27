@@ -296,8 +296,9 @@ sequenceDiagram
   record (`Replica::announce`) and reads the newest one from another
   device into `remote.synced` (`Replica::computer`). A phone uses `peer`,
   else `synced` (`RemoteState::computer`). `sent_play` builds a
-  `SentPlay` (ids, name, poster and a `SavedStream`) from the phone's
-  detail; on the desktop `Action::PlaySent` resolves it with the
+  `SentPlay` (ids, name, poster, position and a `SavedStream`) from the
+  phone's detail, and `sent_resume` from a library item with a saved
+  stream; on the desktop `Action::PlaySent` resolves it with the
   desktop's settings and starts it through `start_stream`, or parks it
   in `p2p_sent` behind the P2P notice. Tests:
   `crates/cineo-core/tests/remote.rs`,
@@ -322,8 +323,8 @@ sequenceDiagram
   async `remote_send`, which runs on the shell's runtime; after each batch
   the shell points the client at `RemoteState::computer`; `AppView::remote`
   names that computer and says whether it came through sync;
-  `play_on_computer` asks the shell thread for the `SentPlay` and sends
-  it; Compose draws `RemoteBar` above the navigation; `remote_link` reads scanned codes. Compose
+  `play_on_computer` and `resume_on_computer` ask the shell thread for
+  the `SentPlay` and send it; Compose draws `RemoteBar` above the navigation; `remote_link` reads scanned codes. Compose
   draws `RemoteSettings` and `RemoteScreen`. Tests:
   `crates/cineo-android/tests/shell/remote.rs`, against the real listener.
 

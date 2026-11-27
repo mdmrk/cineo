@@ -48,6 +48,8 @@ pub struct SentPlay {
     pub video_id: String,
     pub name: String,
     pub poster: Option<Url>,
+    pub offset_ms: u64,
+    pub duration_ms: u64,
     pub saved: SavedStream,
 }
 
@@ -250,6 +252,8 @@ pub fn sent_play(state: &State, group: usize, stream_index: usize) -> Option<Sen
         video_id: video_id.clone(),
         name: name.clone(),
         poster: preview.and_then(|p| p.poster.clone()),
+        offset_ms: 0,
+        duration_ms: 0,
         saved: SavedStream {
             addon: source_group.addon.clone(),
             title: video_title(&name, meta, &video_id),
@@ -257,6 +261,21 @@ pub fn sent_play(state: &State, group: usize, stream_index: usize) -> Option<Sen
             background: preview.and_then(|p| p.background.clone()),
             stream,
         },
+    })
+}
+
+pub fn sent_resume(state: &State, meta_id: &str) -> Option<SentPlay> {
+    let item = state.library.iter().find(|i| i.id == meta_id)?;
+    let saved = item.stream.as_deref()?.clone();
+    Some(SentPlay {
+        content_type: item.content_type.clone(),
+        meta_id: item.id.clone(),
+        video_id: item.video_id.clone(),
+        name: item.name.clone(),
+        poster: item.poster.clone(),
+        offset_ms: item.time_offset_ms,
+        duration_ms: item.duration_ms,
+        saved,
     })
 }
 
@@ -279,21 +298,26 @@ pub(super) fn play_sent(state: &mut State, sent: SentPlay) -> Vec<Effect> {
         video_id,
         name,
         poster,
+        offset_ms,
+        duration_ms,
         saved,
     } = sent;
-    let mut preview = LibraryItem {
+    let item = LibraryItem {
         id: meta_id.clone(),
         content_type: content_type.clone(),
         name,
         poster,
         video_id: video_id.clone(),
-        time_offset_ms: 0,
-        duration_ms: 0,
+        time_offset_ms: offset_ms.min(duration_ms),
+        duration_ms,
         updated_ms: 0,
         favorited: None,
         stream: None,
+    };
+    let mut preview = item.preview();
+    if offset_ms > 0 && !state.library.iter().any(|i| i.id == meta_id) {
+        state.library.push(item);
     }
-    .preview();
     preview.logo = saved.logo;
     preview.background = saved.background;
     let start = Start {

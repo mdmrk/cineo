@@ -64,6 +64,9 @@ impl Shell {
             } => {
                 let _ = reply.send(cineo_core::app::sent_play(&self.state, group, stream));
             }
+            Msg::SentResume { id, reply } => {
+                let _ = reply.send(cineo_core::app::sent_resume(&self.state, &id));
+            }
             Msg::Shutdown => return false,
         }
         true

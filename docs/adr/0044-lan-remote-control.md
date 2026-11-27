@@ -87,8 +87,10 @@ Option 1.
   timeouts. It is only ever given the paired LAN address.
 - **Playing on the computer** (owner, 2026-11-27, the "second version").
   The phone sends `Command::Play` with what its detail page knows about
-  the chosen stream: content type, meta id, video id, name, poster and a
-  `SavedStream` (the same JSON the library keeps). The desktop parses it
+  the chosen stream, or what its library keeps for a Continue Watching
+  item: content type, meta id, video id, name, poster, position and a
+  `SavedStream` (the same JSON the library keeps). The desktop's own
+  position for that title wins over the phone's. The desktop parses it
   with the library's rules (playable sources only, http(s) images) and
   starts it through the same `start_stream` as its own detail page, with
   its own settings: its scheme checks, its P2P switch, its addons for

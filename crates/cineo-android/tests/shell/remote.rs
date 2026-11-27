@@ -295,3 +295,37 @@ async fn a_stream_picked_on_the_phone_is_sent_to_the_computer() {
         "a stream the detail does not have"
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn continue_watching_on_the_phone_resumes_on_the_computer() {
+    let desktop = Desktop::start();
+    let server = MockServer::start().await;
+    let manifest = movie_addon(&server).await;
+    let dir = local_data_dir();
+    let players = Arc::new(FakePlayers::default());
+    let (cineo, views) = tokio::task::block_in_place(|| start_with(dir.path(), &players));
+    tokio::task::block_in_place(|| {
+        open_movie(&cineo, &views, manifest);
+        cineo.play(0, 0);
+        wait_for(&views, |v| v.playback.is_some());
+        play_a_minute_and_close(&players);
+        wait_for(&views, |v| {
+            v.playback.is_none() && !v.continue_watching.is_empty()
+        });
+    });
+    cineo
+        .remote_pair(&desktop.address(), &format_remote_code(&desktop.key))
+        .unwrap();
+    cineo.resume_on_computer("tt0000001".into()).await.unwrap();
+    let sent = desktop.commands.lock().unwrap().clone();
+    let [Command::Play(sent)] = sent.as_slice() else {
+        panic!("the computer got {sent:?}");
+    };
+    assert_eq!(sent.meta_id, "tt0000001");
+    assert_eq!(sent.offset_ms, 61_000);
+    assert_eq!(sent.saved.title, "First Example Film");
+    assert_eq!(
+        cineo.resume_on_computer("tt404".into()).await.unwrap_err(),
+        RemoteFailure::Invalid
+    );
+}

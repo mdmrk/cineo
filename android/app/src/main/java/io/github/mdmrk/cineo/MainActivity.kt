@@ -32,7 +32,6 @@ import io.github.mdmrk.cineo.ui.RemoteBar
 import io.github.mdmrk.cineo.ui.RemoteScreen
 import io.github.mdmrk.cineo.ui.localNetworkAllowed
 import io.github.mdmrk.cineo.ui.remoteFailureText
-import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.RemoteFailure
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
@@ -104,14 +103,14 @@ class MainActivity : ComponentActivity() {
     }
     private var pipOnLeave: PictureInPictureParams? = null
 
-    private fun playOnComputer(cineo: Cineo, group: UInt, stream: UInt) {
+    private fun sendToComputer(send: suspend () -> Unit) {
         if (!localNetworkAllowed(this)) {
             Toast.makeText(this, R.string.remote_local_network, Toast.LENGTH_LONG).show()
             return
         }
         lifecycleScope.launch {
             val message = try {
-                cineo.playOnComputer(group, stream)
+                send()
                 getString(R.string.remote_sent)
             } catch (e: RemoteFailure) {
                 remoteFailureText(this@MainActivity, e)
@@ -215,7 +214,7 @@ class MainActivity : ComponentActivity() {
                                     onSelectVideo = cineo::selectVideo,
                                     onPlay = cineo::play,
                                     onPlayOnComputer = remote?.let {
-                                        { group, stream -> playOnComputer(cineo, group, stream) }
+                                        { group, stream -> sendToComputer { cineo.playOnComputer(group, stream) } }
                                     },
                                     onFavorite = { cineo.setFavorite(detail.id, it) },
                                     filters = remember(cineo) {
@@ -229,12 +228,17 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             else -> {
-                                val library = remember(cineo) {
+                                val library = remember(cineo, remote != null) {
                                     LibraryActions(
                                         open = { cineo.openDetail(it.contentType, it.id) },
                                         resume = { cineo.resume(it.id) },
                                         setFavorite = { item, favorite -> cineo.setFavorite(item.id, favorite) },
                                         remove = { cineo.removeFromLibrary(it.id) },
+                                        playOnComputer = if (remote != null) {
+                                            { item -> sendToComputer { cineo.resumeOnComputer(item.id) } }
+                                        } else {
+                                            null
+                                        },
                                     )
                                 }
                                 BackHandler(enabled = page != Page.HOME) { page = Page.HOME }

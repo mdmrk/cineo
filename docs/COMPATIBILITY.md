@@ -614,6 +614,13 @@ local network (ADR-0044). On by default on the desktop.
   (`a_computer_with_torrents_off_refuses_a_sent_torrent`). Only playable
   sources with ids cross the wire
   (`a_play_command_needs_a_playable_stream_and_ids`).
+- **Continue Watching on the computer.** An item's menu in Continue
+  Watching or the Library offers "Play on the computer" when it has a
+  saved stream; the computer resumes from its own position for that
+  title, or from the phone's when it has none
+  (`continue_watching_sent_to_the_computer_resumes_where_the_phone_stopped`,
+  `continue_watching_on_the_phone_resumes_on_the_computer`,
+  `only_an_item_with_a_saved_stream_can_be_resumed_on_the_computer`).
 - **Bar on the phone.** While the computer plays something, a bar above
   the phone's navigation shows its title, progress and a play/pause
   button, asking every 2 s while the app is in the foreground; tapping it
@@ -642,8 +649,7 @@ local network (ADR-0044). On by default on the desktop.
   the computer" because the computer's `ufw` firewall dropped port 18765.
   Controlling a playing video from a real phone has not been tried.
 - **Not offered.** Finding the computer without sync or the QR code
-  (mDNS), choosing between several computers, sending a title to the
-  computer from the library or Continue Watching. Known
+  (mDNS), choosing between several computers. Known
   limitations are in [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
 
 ### Update notice

@@ -71,6 +71,8 @@ impl Command {
                     "video": sent.video_id,
                     "name": sent.name,
                     "poster": sent.poster.as_ref().map(Url::as_str),
+                    "offset": sent.offset_ms,
+                    "duration": sent.duration_ms,
                     "stream": sent
                         .saved
                         .to_json()
@@ -127,6 +129,8 @@ fn parse_play(value: &Json) -> Option<SentPlay> {
             .and_then(Json::as_str)
             .and_then(|p| Url::parse(p).ok())
             .filter(|p| matches!(p.scheme(), "http" | "https")),
+        offset_ms: value.get("offset").and_then(Json::as_u64).unwrap_or(0),
+        duration_ms: value.get("duration").and_then(Json::as_u64).unwrap_or(0),
         saved: SavedStream::parse(&value.get("stream")?.to_string()).map(|mut saved| {
             saved.title = clean_text(&saved.title, MAX_NAME_CHARS);
             saved

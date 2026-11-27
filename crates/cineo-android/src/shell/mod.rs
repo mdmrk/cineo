@@ -318,6 +318,10 @@ enum Msg {
         stream: usize,
         reply: tokio::sync::oneshot::Sender<Option<cineo_core::app::SentPlay>>,
     },
+    SentResume {
+        id: String,
+        reply: tokio::sync::oneshot::Sender<Option<cineo_core::app::SentPlay>>,
+    },
     Tick,
     Shutdown,
 }
@@ -501,6 +505,13 @@ impl Cineo {
             stream: stream as usize,
             reply,
         });
+        let sent = sent.await.ok().flatten().ok_or(RemoteFailure::Invalid)?;
+        self.send_remote(Some(Command::Play(Box::new(sent)))).await
+    }
+
+    pub async fn resume_on_computer(&self, id: String) -> Result<RemoteStatusView, RemoteFailure> {
+        let (reply, sent) = tokio::sync::oneshot::channel();
+        self.post(Msg::SentResume { id, reply });
         let sent = sent.await.ok().flatten().ok_or(RemoteFailure::Invalid)?;
         self.send_remote(Some(Command::Play(Box::new(sent)))).await
     }
