@@ -22,6 +22,55 @@ Format:
 
 ## Entries
 
+### Sync: no sync UI on Android
+- Where: [crates/cineo-android](../crates/cineo-android)
+- Gap: Android cannot turn sync on, pair or show the code. The shell
+  already carries out the sync effects.
+- Why: the Android screen and the `cineo:///sync` intent filter are step 7
+  of ADR-0043 and not built yet.
+- Instead: sync works only between desktops.
+- Exit: build step 7 of ADR-0043.
+
+### Sync: no push on exit
+- Where: [app/sync.rs](../crates/cineo-core/src/app/sync.rs) (`after`)
+- Gap: an edit made less than a minute before closing Cineo, or progress
+  less than five minutes old while playing, is not pushed on exit.
+- Why: the owner chose not to delay closing for a network round
+  (ADR-0043, 2026-11-27).
+- Instead: the edit is saved locally and goes out on the next start.
+- Exit: a push on exit with a short timeout, if wanted.
+
+### Sync: whole-item conflicts
+- Where: [replica.rs](../crates/cineo-core/src/sync/replica.rs) (`merge`)
+- Gap: when two devices change the same library item before syncing,
+  the later change wins as a whole; fields are not merged.
+- Why: one record per item keeps the model small (ADR-0043).
+- Instead: for example, a favourite set on one device can be lost if
+  another device saved progress on the same item later.
+- Exit: per-field records or stamps, with a new record format.
+
+### Sync: the server can withhold or replay records
+- Where: [client.rs](../crates/cineo-net/src/sync/client.rs)
+- Gap: records are sealed and authenticated one by one, but nothing
+  proves that the server returned all of them or the newest ones.
+- Why: ADR-0043 accepts it to keep the server and the protocol small.
+- Instead: a dishonest or broken server can hide changes or serve old
+  ones; it cannot read, forge or move them. A stale record loses to a
+  newer local edit but can mislead a newly paired device.
+- Exit: a signed, versioned index of the space checked by every device.
+
+### Sync: approximate rate limits on the Worker
+- Where: [worker_host.rs](../crates/cineo-sync-server/src/worker_host.rs)
+- Gap: the Worker's limits use Cloudflare's Rate Limiting bindings, which
+  count per location and let short bursts through. Whether the free plan
+  stops requests that use more than 10 ms of CPU is UNKNOWN; measured
+  peaks reach 23 ms (ADR-0043, §6).
+- Why: these bindings are the only built-in rate limiter on Workers.
+- Instead: a burst can get more than 120 requests a minute through (500
+  quick requests drew 12 refusals, 2026-11-27); an over-limit request
+  gets 429, and the app shows the server as busy and tries again later.
+- Exit: a Durable Object per space, or the paid plan's CPU limits.
+
 ### Subtitles: no video hash or size from the player
 - Where: [playback.rs](../crates/cineo-core/src/app/playback.rs) (`subtitle_groups`)
 - Gap: the `subtitles` request's `videoHash`, `videoSize` and `filename`

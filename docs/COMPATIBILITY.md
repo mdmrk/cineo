@@ -90,7 +90,7 @@ _Last reviewed: 2026-10-13._
 | `stremio://` page links (board, discover, library, search, detail) | Supported | `autoPlay` ignored (`links_parse_into_routes_and_anything_else_is_rejected`); no UI test of the navigation |
 | Update notice | Supported | Once per start against GitHub's latest release; can be turned off. [Details](#update-notice) |
 | Casting | Unsupported | |
-| Account / cloud sync | Unsupported | Not built yet. Our own end-to-end encrypted sync, off by default, no accounts (ADR-0043). Stremio account sync stays out of scope |
+| Account / cloud sync | Partial | Desktop only: our own end-to-end encrypted sync, off by default, no accounts (ADR-0043); not on Android yet. Stremio account sync stays out of scope. [Details](#cloud-sync) |
 | Data export / import | Unsupported | Close Cineo, then copy `cineo.db` to move between machines |
 | Portable mode | Supported | Desktop: `--portable`, or a `portable.txt` file in the working directory, keeps the database, log and cache in the working directory; `--data-dir` and `--cache-dir` still win (`the_flag_or_a_marker_file_in_the_folder_makes_it_portable`; both ways run by hand on Linux, 2026-11-13) |
 
@@ -494,6 +494,52 @@ The full evidence for the rows above whose notes do not fit in the table.
   without a link raises the running window instead of opening a second one
   (same test; that the compositor grants the focus is not tested); scheme
   registration through `xdg-mime` or `HKCU` has no test.
+
+### Cloud sync
+
+Desktop only; Android has no sync UI yet (ADR-0043, step 7).
+
+- **What syncs.** The library with progress and favourites, the installed
+  addons and their order, and the settings except the device-local ones,
+  such as private-network access
+  (`a_second_device_gets_the_library_settings_and_addons`,
+  `a_device_local_setting_never_travels`). Joining keeps the addons of
+  both devices; a device that never changed a setting takes the synced
+  value (`joining_keeps_the_addons_of_both_devices`,
+  `values_never_synced_give_way_to_the_space_whatever_the_device_ids`).
+- **Conflicts.** The last edit of each item, addon list or setting wins;
+  a deletion and "Clear watch history" win over older edits
+  (`a_tombstone_beats_an_older_edit_and_loses_to_a_newer_one`,
+  `clearing_hides_older_items_but_not_newer_ones`,
+  `two_devices_converge_after_exchanging_changes`). Two edits of the same
+  item on different devices do not merge field by field.
+- **When.** Edits go out a minute after the last change, progress at most
+  every five minutes while playing and at once when playback stops; other
+  devices' changes arrive at least every ten minutes, or with
+  "Sync now"
+  (`an_edit_is_pushed_once_the_changes_stop_for_a_minute`,
+  `progress_pushes_at_most_every_five_minutes_while_playing`,
+  `stopping_playback_syncs_at_once_and_other_edits_wait_a_minute`,
+  `a_quiet_device_still_pulls_every_ten_minutes`). Nothing is pushed on
+  exit: edits still waiting go out on the next start.
+- **Settings → Data.** Turn on, pair with a code or a
+  `cineo:///sync/<code>` link, choose the server, show the code and its QR
+  code, change the key, and turn off with or without deleting the server
+  data (`crates/cineo-desktop/tests/ui/sync.rs`;
+  `turning_sync_on_saves_the_pairing_and_pushes_what_is_here`,
+  `a_new_key_moves_everything_then_deletes_the_old_space`,
+  `turning_sync_off_forgets_it_and_can_delete_the_server_data`). After a
+  key change, the other devices stop with a message until they are paired
+  again (`a_deleted_space_pauses_sync_until_it_is_paired_again`).
+- **Server.** The client against the native host in tests, and the same
+  test by hand against the deployed Worker
+  (`a_running_server_syncs_recovers_and_deletes`, 2026-11-27). A server
+  that lost data or went back to a backup gets it again
+  (`the_daily_check_pushes_what_the_server_lost`,
+  `a_server_that_went_back_makes_the_replica_start_over`).
+- **Not checked.** The desktop app has not been run against the deployed
+  Worker by hand, and the QR code has not been scanned by a phone. The app
+  cannot scan a QR code; on the desktop, the code is typed or pasted.
 
 ### Update notice
 

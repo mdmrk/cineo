@@ -490,7 +490,8 @@ database.
    the tick on the desktop, without UI (done); **6b** the UI (done: the
    controls, the QR code drawn with `qrcode`, and the `cineo:///sync/` link,
    which fills the code and opens Settings → Data so that pairing still
-   takes a click); **6c** status and debt docs.
+   takes a click); **6c** status and debt docs (done: "Account / cloud
+   sync" is Partial, desktop only).
 7. Android: the same screen, the intent filter for `cineo:///sync`, and
    pull on foreground.
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named

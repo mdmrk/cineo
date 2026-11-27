@@ -162,8 +162,9 @@ mpv never sees an addon subtitle URL. When the user picks an addon subtitle:
 
 ### Sync (ADR-0043)
 
-The client and both server hosts exist; the app does not call them yet,
-and the Cloudflare Worker is deployed. Sync is off by default.
+The client and both server hosts exist, the Cloudflare Worker is
+deployed, and the desktop turns sync on in Settings → Data. Sync is off by
+default. Android has no sync UI yet.
 
 - **Key.** 16 random bytes from `aws_lc_rs::rand`, stored in the private
   database (`sync_pairing`). It is shown as a 32-character code with a
@@ -195,7 +196,13 @@ and the Cloudflare Worker is deployed. Sync is off by default.
   pushed or applied from another device
   (`device_local_settings_are_never_pushed_or_applied`).
 - **Who holds the code reads everything synced**, including addon URLs
-  that can carry API keys.
+  that can carry API keys. The desktop says so next to the code and its
+  QR code. A `cineo:///sync/<code>` link only fills the code; pairing
+  waits for a click on "Pair", and a typed server must be `https`
+  (`a_sync_link_fills_the_code_and_opens_data_settings`,
+  `turning_on_needs_an_https_server`). After a lost device, "Change sync
+  key" makes a new key and deletes the data under the old one
+  (`a_new_key_moves_everything_then_deletes_the_old_space`).
 - **Server (`cineo-sync-server`).** It stores SHA-256 of the token, never
   the token, and only sealed blobs under opaque keys
   (`the_server_stores_nothing_readable`). A request without a valid
@@ -350,7 +357,7 @@ in the browser requires a user confirmation and an `http(s)` scheme.
 | Max decoded body                  | 8 MiB                                                                                                                                               |
 | Request timeout / connect timeout | 20 s / 10 s                                                                                                                                         |
 | Max redirects                     | 5, no https→http                                                                                                                                    |
-| Sync                              | Off; not available in the UI yet (ADR-0043)                                                                                                         |
+| Sync                              | Off; turned on in Settings → Data on the desktop (ADR-0043)                                                                                         |
 | mpv                               | libmpv in-window; no user config, scripts or ytdl; argument-array `loadfile` only; http(s) only; forward cache at most 120 s and 512 MiB (ADR-0024) |
 
 ## Unsafe code
