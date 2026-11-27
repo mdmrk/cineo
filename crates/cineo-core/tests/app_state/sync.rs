@@ -525,7 +525,10 @@ fn listening(state: &mut State, server: &mut FakeServer, key: u8, address: &str)
     act(
         state,
         server,
-        Action::RemoteListening(Some(address.parse().unwrap())),
+        Action::RemoteListening {
+            address: Some(address.parse().unwrap()),
+            name: "Study".into(),
+        },
     );
     let later = state.now_ms + MINUTE;
     act(state, server, Action::Tick(later));
@@ -543,19 +546,23 @@ fn a_phone_finds_the_computer_through_sync_without_pairing() {
             .records
             .contains_key(&RecordName::Computer(1))
     );
-    assert_eq!(desktop.remote.synced, None, "a desktop never finds itself");
+    assert!(
+        desktop.remote.synced.is_empty(),
+        "a desktop never finds itself"
+    );
 
     let mut phone = device(Vec::new(), 2_000);
     enable(&mut phone, &mut server, 1, 2);
     let found = phone.remote.computer().unwrap();
-    assert_eq!(found.address, "192.168.100.86:18765".parse().unwrap());
-    assert_eq!(found.key, desktop_key(9));
+    assert_eq!(found.name, "Study");
+    assert_eq!(found.peer.address, "192.168.100.86:18765".parse().unwrap());
+    assert_eq!(found.peer.key, desktop_key(9));
     assert_eq!(phone.remote.peer, None, "nothing was paired by hand");
 
     listening(&mut desktop, &mut server, 9, "192.168.100.90:18765");
     act(&mut phone, &mut server, Action::SyncNow);
     assert_eq!(
-        phone.remote.computer().unwrap().address,
+        phone.remote.computer().unwrap().peer.address,
         "192.168.100.90:18765".parse().unwrap(),
         "a new address reaches the phone"
     );
@@ -576,15 +583,18 @@ fn a_computer_paired_by_hand_wins_over_the_synced_one() {
     listening(&mut desktop, &mut server, 9, "192.168.100.86:18765");
     let mut phone = device(Vec::new(), 2_000);
     enable(&mut phone, &mut server, 1, 2);
-    let by_hand = cineo_core::remote::Peer {
-        address: "10.0.0.5:18765".parse().unwrap(),
-        key: desktop_key(3),
+    let by_hand = cineo_core::remote::Computer {
+        name: String::new(),
+        peer: cineo_core::remote::Peer {
+            address: "10.0.0.5:18765".parse().unwrap(),
+            key: desktop_key(3),
+        },
     };
-    update(&mut phone, Action::SetRemotePeer(Some(by_hand)));
-    assert_eq!(phone.remote.computer(), Some(by_hand));
+    update(&mut phone, Action::SetRemotePeer(Some(by_hand.clone())));
+    assert_eq!(phone.remote.computer(), Some(&by_hand));
     update(&mut phone, Action::SetRemotePeer(None));
     assert_eq!(
-        phone.remote.computer().map(|p| p.key),
+        phone.remote.computer().map(|c| c.peer.key),
         Some(desktop_key(9)),
         "forgetting it falls back to the synced one"
     );

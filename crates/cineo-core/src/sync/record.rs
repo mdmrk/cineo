@@ -7,7 +7,7 @@ use url::Url;
 use super::clock::{DeviceId, Stamp};
 use crate::addon::{ContentType, TransportUrl};
 use crate::app::{LibraryItem, SavedStream};
-use crate::remote::{Peer, RemoteKey, parse_address};
+use crate::remote::{Computer, Peer, RemoteKey, computer_name, parse_address};
 
 pub const FORMAT: u64 = 1;
 
@@ -63,7 +63,7 @@ pub enum Value {
     Cleared,
     Addons(Vec<TransportUrl>),
     Setting(String),
-    Computer(Peer),
+    Computer(Computer),
     Other(Map<String, Json>),
 }
 
@@ -85,10 +85,11 @@ impl Record {
                 "addons": addons.iter().map(|a| a.as_url().as_str()).collect::<Vec<_>>(),
             }),
             Value::Setting(value) => json!({ "value": value }),
-            Value::Computer(peer) => json!({
+            Value::Computer(computer) => json!({
                 "computer": {
-                    "address": peer.address.to_string(),
-                    "key": BASE64URL_NOPAD.encode(peer.key.as_bytes()),
+                    "name": computer.name,
+                    "address": computer.peer.address.to_string(),
+                    "key": BASE64URL_NOPAD.encode(computer.peer.key.as_bytes()),
                 },
             }),
         };
@@ -151,9 +152,17 @@ fn parse_value(name: &RecordName, obj: &Map<String, Json>) -> Option<Value> {
             let key = BASE64URL_NOPAD
                 .decode(computer.get("key")?.as_str()?.as_bytes())
                 .ok()?;
-            Value::Computer(Peer {
-                address: parse_address(computer.get("address")?.as_str()?)?,
-                key: RemoteKey::from_bytes(key.try_into().ok()?),
+            Value::Computer(Computer {
+                name: computer_name(
+                    computer
+                        .get("name")
+                        .and_then(Json::as_str)
+                        .unwrap_or_default(),
+                ),
+                peer: Peer {
+                    address: parse_address(computer.get("address")?.as_str()?)?,
+                    key: RemoteKey::from_bytes(key.try_into().ok()?),
+                },
             })
         }
         RecordName::Other(_) => Value::Other(obj.clone()),

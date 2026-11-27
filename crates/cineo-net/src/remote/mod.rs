@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 
-use cineo_core::remote::{Peer, RemoteKey, is_lan};
+use cineo_core::remote::{Computer, RemoteKey, is_lan};
 
 use crate::FetchError;
 use crate::sync::CodeError;
@@ -43,13 +43,19 @@ pub fn parse_remote_code(text: &str) -> Result<RemoteKey, CodeError> {
     parse_key(text).map(RemoteKey::from_bytes)
 }
 
-pub fn remote_link(peer: &Peer) -> String {
-    let address: String =
-        url::form_urlencoded::byte_serialize(peer.address.to_string().as_bytes()).collect();
-    format!(
-        "cineo:///remote/{}?at={address}",
-        format_remote_code(&peer.key)
-    )
+pub fn remote_link(computer: &Computer) -> String {
+    let encode =
+        |text: &str| -> String { url::form_urlencoded::byte_serialize(text.as_bytes()).collect() };
+    let mut link = format!(
+        "cineo:///remote/{}?at={}",
+        format_remote_code(&computer.peer.key),
+        encode(&computer.peer.address.to_string())
+    );
+    if !computer.name.is_empty() {
+        link.push_str("&name=");
+        link.push_str(&encode(&computer.name));
+    }
+    link
 }
 
 pub fn lan_ip() -> Option<IpAddr> {

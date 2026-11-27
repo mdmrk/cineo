@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use cineo_core::app::State;
-use cineo_core::remote::{Peer, RemoteKey};
+use cineo_core::remote::{Computer, Peer, RemoteKey};
 use cineo_net::remote::{format_remote_code, remote_link};
 use eframe::egui::{Label, RichText, Ui};
 
@@ -42,7 +42,7 @@ pub(super) fn remote(ui: &mut Ui, state: &State, view: &mut ViewState) {
         },
     );
     if let RemoteListener::On { ip: Some(ip), port } = view.remote_listener {
-        pair(ui, SocketAddr::new(ip, port), key);
+        pair(ui, &state.remote.name, SocketAddr::new(ip, port), key);
     }
     row(
         ui,
@@ -77,8 +77,11 @@ fn status(listener: &RemoteListener) -> Text {
     }
 }
 
-fn pair(ui: &mut Ui, address: SocketAddr, key: RemoteKey) {
-    let link = remote_link(&Peer { address, key });
+fn pair(ui: &mut Ui, name: &str, address: SocketAddr, key: RemoteKey) {
+    let link = remote_link(&Computer {
+        name: name.to_owned(),
+        peer: Peer { address, key },
+    });
     row(
         ui,
         &t!("Pair your phone"),
@@ -89,6 +92,7 @@ fn pair(ui: &mut Ui, address: SocketAddr, key: RemoteKey) {
             ui.vertical(|ui| {
                 qr(ui, &link, &t!("Remote control QR code"));
                 for (label, value) in [
+                    (t!("Name"), name.to_owned()),
                     (t!("Address"), address.to_string()),
                     (t!("Code"), format_remote_code(&key)),
                 ] {

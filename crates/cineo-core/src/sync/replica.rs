@@ -4,7 +4,7 @@ use super::clock::{Clock, DeviceId, Stamp};
 use super::record::{Record, RecordName, Value};
 use crate::addon::TransportUrl;
 use crate::app::{Effect, LibraryItem, Setting, Settings};
-use crate::remote::Peer;
+use crate::remote::Computer;
 
 pub const PUSH_AFTER_QUIET_MS: u64 = 60_000;
 pub const PUSH_AT_MOST_MS: u64 = 300_000;
@@ -194,10 +194,10 @@ impl Replica {
         }
     }
 
-    pub fn announce(&mut self, computer: Option<Peer>, now_ms: u64) {
+    pub fn announce(&mut self, computer: Option<Computer>, now_ms: u64) {
         let name = RecordName::Computer(self.clock.device().0);
         match computer {
-            Some(peer) => self.set(name, Value::Computer(peer), now_ms),
+            Some(computer) => self.set(name, Value::Computer(computer), now_ms),
             None if self
                 .entries
                 .get(&name)
@@ -209,17 +209,20 @@ impl Replica {
         }
     }
 
-    pub fn computer(&self) -> Option<Peer> {
+    pub fn computers(&self) -> Vec<(u64, Computer)> {
         let own = self.clock.device().0;
-        self.entries
+        let mut computers: Vec<(u64, Computer)> = self
+            .entries
             .range(RecordName::Computer(0)..=RecordName::Computer(u64::MAX))
-            .filter(|(name, _)| **name != RecordName::Computer(own))
-            .filter_map(|(_, entry)| match &entry.record.value {
-                Value::Computer(peer) => Some((entry.record.stamp, *peer)),
+            .filter_map(|(name, entry)| match (name, &entry.record.value) {
+                (RecordName::Computer(device), Value::Computer(computer)) if *device != own => {
+                    Some((*device, computer.clone()))
+                }
                 _ => None,
             })
-            .max_by_key(|(stamp, _)| *stamp)
-            .map(|(_, peer)| peer)
+            .collect();
+        computers.sort_by_cached_key(|(device, computer)| (computer.name.to_lowercase(), *device));
+        computers
     }
 
     fn set(&mut self, name: RecordName, value: Value, now_ms: u64) {

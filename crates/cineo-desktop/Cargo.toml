@@ -41,6 +41,7 @@ fastframe-power.workspace = true
 fastframe-scroll.workspace = true
 fastframe-text.workspace = true
 flate2.workspace = true
+gethostname.workspace = true
 iconflow.workspace = true
 image.workspace = true
 minisign-verify.workspace = true

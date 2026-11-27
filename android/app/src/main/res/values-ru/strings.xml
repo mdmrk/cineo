@@ -330,11 +330,6 @@
     <string name="remote_pair_title">Связать с компьютером</string>
     <string name="remote_pair_other">Связать с другим компьютером</string>
     <string name="remote_pair_help">Компьютеры из той же синхронизации появляются здесь сами. Для другого компьютера откройте на нём Настройки → Пульт и отсканируйте QR-код или введите показанные адрес и код.</string>
-    <string name="remote_paired">Связан с %1$s</string>
-    <string name="remote_paired_help">Управляйте тем, что воспроизводится в Cineo на этом компьютере. Телефон должен быть в той же сети.</string>
-    <string name="remote_found_help">Найден через синхронизацию. Управляйте тем, что воспроизводится в Cineo на этом компьютере; телефон должен быть в той же сети.</string>
-    <string name="remote_forget">Забыть этот компьютер</string>
-    <string name="remote_forget_help">Телефон перестанет им управлять, пока вы не свяжете их снова.</string>
     <string name="remote_forget_button">Забыть</string>
     <string name="remote_scan_hint">Наведите камеру на QR-код в настройках пульта Cineo на компьютере.</string>
     <string name="remote_error_address">Введите адрес компьютера в локальной сети, например 192.168.1.20:18765.</string>
@@ -355,7 +350,10 @@
     <string name="remote_speed_normal">Обычная</string>
     <string name="remote_subtitle_delay">Задержка субтитров</string>
     <string name="remote_play_on_computer">Воспроизвести на компьютере</string>
-    <string name="remote_bar_playing">Воспроизводится на компьютере</string>
-    <string name="remote_bar_loading">Загрузка на компьютере…</string>
+    <string name="remote_bar_playing">Воспроизводится на %1$s</string>
+    <string name="remote_bar_loading">Загрузка на %1$s…</string>
     <string name="remote_sent">Отправлено на компьютер.</string>
+    <string name="remote_computers_help">Cineo управляет одним компьютером за раз. Нажмите на компьютер, чтобы выбрать его.</string>
+    <string name="remote_found">найден через синхронизацию</string>
+    <string name="remote_paired_code">связан по коду</string>
 </resources>

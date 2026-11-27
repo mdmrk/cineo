@@ -21,7 +21,7 @@ use crate::addon::{
     AddonDescriptor, ContentType, Manifest, Meta, MetaPreview, ResourcePath, Stream, Subtitle,
     TransportUrl, Video,
 };
-use crate::remote::{Peer, RemoteKey};
+use crate::remote::{Choice, Computer, RemoteKey};
 use crate::sync::{Changes, DeviceId, Outgoing, Pairing, Replica, SyncKey};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -324,11 +324,16 @@ pub enum Action {
     SyncSpaceDeleted(Result<(), SyncFailure>),
     RestoreRemote {
         host: Option<RemoteKey>,
-        peer: Option<Peer>,
+        peer: Option<Computer>,
+        choice: Option<Choice>,
     },
     SetRemoteHost(Option<RemoteKey>),
-    SetRemotePeer(Option<Peer>),
-    RemoteListening(Option<std::net::SocketAddr>),
+    SetRemotePeer(Option<Computer>),
+    ChooseComputer(Choice),
+    RemoteListening {
+        address: Option<std::net::SocketAddr>,
+        name: String,
+    },
     PlaySent(Box<SentPlay>),
 }
 
@@ -394,7 +399,8 @@ pub enum Effect {
     ForgetSync,
     SaveRemoteHost(Option<RemoteKey>),
     ServeRemote(Option<RemoteKey>),
-    SaveRemotePeer(Option<Peer>),
+    SaveRemotePeer(Option<Computer>),
+    SaveRemoteChoice(Option<Choice>),
 }
 
 pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
@@ -412,10 +418,11 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         Action::SyncPulled { pairing, result } => sync::pulled(state, &pairing, result),
         Action::SyncPushed { pairing, batch } => sync::pushed(state, &pairing, batch),
         Action::SyncSpaceDeleted(_) => Vec::new(),
-        Action::RestoreRemote { host, peer } => remote::restore(state, host, peer),
+        Action::RestoreRemote { host, peer, choice } => remote::restore(state, host, peer, choice),
         Action::SetRemoteHost(host) => remote::set_host(state, host),
         Action::SetRemotePeer(peer) => remote::set_peer(state, peer),
-        Action::RemoteListening(address) => remote::listening(state, address),
+        Action::ChooseComputer(choice) => remote::choose(state, choice),
+        Action::RemoteListening { address, name } => remote::listening(state, address, name),
         action => reduce(state, action),
     };
     let more = sync::after(state, &effects, flush);
@@ -697,7 +704,8 @@ fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
         | Action::RestoreRemote { .. }
         | Action::SetRemoteHost(_)
         | Action::SetRemotePeer(_)
-        | Action::RemoteListening(_) => Vec::new(),
+        | Action::ChooseComputer(_)
+        | Action::RemoteListening { .. } => Vec::new(),
     }
 }
 

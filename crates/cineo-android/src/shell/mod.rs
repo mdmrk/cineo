@@ -10,7 +10,7 @@ use cineo_core::app::{
     Action, Effect, Language, Notice, Resolution, Route, SeekStep, Setting, Settings, State,
     StreamSort, SubtitleGroup, TorrentStorage, WatchedAt, parse_link,
 };
-use cineo_core::remote::{Command, Peer, parse_address};
+use cineo_core::remote::{Command, Computer, Peer, computer_name, parse_address};
 use cineo_core::sync::{Pairing, SyncKey};
 use cineo_net::remote::{RemoteClient, parse_remote_code};
 use cineo_net::sync::{CodeError, new_device, new_key, parse_code, parse_server};
@@ -26,8 +26,8 @@ use url::Url;
 
 use crate::player::{Mpv, Playback, Players};
 use crate::view::{
-    AppView, ArtView, RemoteCommandView, RemoteFailure, RemoteInputError, RemoteLinkView,
-    RemoteStatusView, StreamFilterView, SyncLinkView,
+    AppView, ArtView, ComputerChoiceView, RemoteCommandView, RemoteFailure, RemoteInputError,
+    RemoteLinkView, RemoteStatusView, StreamFilterView, SyncLinkView,
 };
 
 mod worker;
@@ -112,7 +112,15 @@ pub fn sync_link(link: &str) -> Option<SyncLinkView> {
 #[uniffi::export]
 pub fn remote_link(link: &str) -> Option<RemoteLinkView> {
     match parse_link(link) {
-        Ok(Route::Remote { code, address }) => Some(RemoteLinkView { code, address }),
+        Ok(Route::Remote {
+            code,
+            address,
+            name,
+        }) => Some(RemoteLinkView {
+            code,
+            address,
+            name,
+        }),
         _ => None,
     }
 }
@@ -468,14 +476,26 @@ impl Cineo {
         self.send(Action::LeaveSync { delete_server_data });
     }
 
-    pub fn remote_pair(&self, address: &str, code: &str) -> Result<(), RemoteInputError> {
+    pub fn remote_pair(
+        &self,
+        address: &str,
+        code: &str,
+        name: &str,
+    ) -> Result<(), RemoteInputError> {
         let address = parse_address(address).ok_or(RemoteInputError::Address)?;
         let key = parse_remote_code(code)?;
         let peer = Peer { address, key };
         RemoteClient::new(&peer).map_err(|_| RemoteInputError::Address)?;
         set_remote(&self.remote, Some(peer));
-        self.send(Action::SetRemotePeer(Some(peer)));
+        self.send(Action::SetRemotePeer(Some(Computer {
+            name: computer_name(name),
+            peer,
+        })));
         Ok(())
+    }
+
+    pub fn remote_choose(&self, choice: ComputerChoiceView) {
+        self.send(Action::ChooseComputer(choice.into()));
     }
 
     pub fn remote_forget(&self) {
@@ -796,7 +816,7 @@ impl Cineo {
         };
         let settings = store.settings_over(phone_settings()).map_err(store_error)?;
         let sync = store.sync(phone_settings()).map_err(store_error)?;
-        let (_, remote_peer) = store.remote().map_err(store_error)?;
+        let stored_remote = store.remote().map_err(store_error)?;
         let remote: Remote = Arc::default();
         let client = AddonClient::new(NetPolicy {
             allow_private_networks: settings.allow_private_network,
@@ -847,7 +867,8 @@ impl Cineo {
             Action::RestoreSettings(settings),
             Action::RestoreRemote {
                 host: None,
-                peer: remote_peer,
+                peer: stored_remote.peer,
+                choice: stored_remote.choice,
             },
         ];
         if let Some((pairing, replica)) = sync {

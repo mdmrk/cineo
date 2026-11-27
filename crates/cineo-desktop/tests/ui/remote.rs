@@ -96,6 +96,7 @@ fn a_remote_link_opens_the_remote_settings() {
     let route = Route::Remote {
         code: format_remote_code(&KEY),
         address: "192.168.1.20:18765".into(),
+        name: "Salon PC".into(),
     };
     follow_link(route, &State::default(), &mut view);
     assert_eq!(view.page, Page::Settings);

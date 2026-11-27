@@ -43,6 +43,7 @@ fastframe-scroll = { git = "https://github.com/crmne/fastframe", rev = "a7dc9bdb
 fastframe-text = { git = "https://github.com/crmne/fastframe", rev = "a7dc9bdb12319515c2bbb194054974b304deb36d", features = ["watch"] }
 flate2 = "1.1.11"
 futures-util = { version = "0.3.34", default-features = false }
+gethostname = "1.1.0"
 getrandom = "0.4.3"
 http-body-util = "0.1.5"
 hyper = { version = "1.13.0", features = ["server", "http1"] }

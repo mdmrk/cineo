@@ -324,11 +324,6 @@
     <string name="remote_pair_title">与电脑配对</string>
     <string name="remote_pair_other">与另一台电脑配对</string>
     <string name="remote_pair_help">同一同步中的电脑会自动显示在这里。对于其他电脑，请在其上打开 设置 → 遥控 并扫描二维码，或输入它显示的地址和代码。</string>
-    <string name="remote_paired">已与 %1$s 配对</string>
-    <string name="remote_paired_help">控制那台电脑上 Cineo 正在播放的内容。手机必须在同一网络中。</string>
-    <string name="remote_found_help">通过同步找到。控制那台电脑上 Cineo 正在播放的内容；手机必须在同一网络中。</string>
-    <string name="remote_forget">忘记这台电脑</string>
-    <string name="remote_forget_help">在重新配对之前，这部手机将不再控制它。</string>
     <string name="remote_forget_button">忘记</string>
     <string name="remote_scan_hint">将相机对准电脑上 Cineo 遥控设置中的二维码。</string>
     <string name="remote_error_address">请输入电脑在本地网络中的地址，例如 192.168.1.20:18765。</string>
@@ -349,7 +344,10 @@
     <string name="remote_speed_normal">正常</string>
     <string name="remote_subtitle_delay">字幕延迟</string>
     <string name="remote_play_on_computer">在电脑上播放</string>
-    <string name="remote_bar_playing">正在电脑上播放</string>
-    <string name="remote_bar_loading">正在电脑上加载…</string>
+    <string name="remote_bar_playing">正在 %1$s 上播放</string>
+    <string name="remote_bar_loading">正在 %1$s 上加载…</string>
     <string name="remote_sent">已发送到电脑。</string>
+    <string name="remote_computers_help">Cineo 一次控制一台电脑。点按一台即可使用。</string>
+    <string name="remote_found">通过同步找到</string>
+    <string name="remote_paired_code">通过代码配对</string>
 </resources>

@@ -370,14 +370,17 @@ pub(super) fn after(state: &mut State, effects: &[Effect], flush: bool) -> Vec<E
     let now_ms = state.now_ms;
     let announced = state.remote.announced();
     let Some(sync) = state.sync.as_mut() else {
-        state.remote.synced = None;
+        state.remote.synced.clear();
         return Vec::new();
     };
     for effect in effects {
         sync.replica.record_effect(effect, now_ms);
     }
     sync.replica.announce(announced, now_ms);
-    state.remote.synced = sync.replica.computer();
+    let computers = sync.replica.computers();
+    if computers != state.remote.synced {
+        state.remote.synced = computers;
+    }
     if flush {
         sync.replica.flush();
     }

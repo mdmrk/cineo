@@ -18,8 +18,8 @@ pub use detail::{
     StreamView, VideoView,
 };
 pub use remote::{
-    NowPlayingView, RemoteCommandView, RemoteFailure, RemoteInputError, RemoteLinkView,
-    RemotePeerView, RemoteStatusView, RemoteTrackView,
+    ComputerChoiceView, ComputerView, NowPlayingView, RemoteCommandView, RemoteFailure,
+    RemoteInputError, RemoteLinkView, RemotePeerView, RemoteStatusView, RemoteTrackView,
 };
 use settings::settings;
 pub use settings::{ChoiceView, RangeView, SettingsView, SubtitlePreviewView, ToggleView};
@@ -48,6 +48,7 @@ pub struct AppView {
     pub update: Option<UpdateView>,
     pub sync: Option<SyncView>,
     pub remote: Option<RemotePeerView>,
+    pub computers: Vec<ComputerView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -303,6 +304,7 @@ pub(crate) fn view(state: &State, playing: Option<&ArtView>, filter: &StreamFilt
         }),
         sync: None,
         remote: remote::peer(&state.remote),
+        computers: remote::computers(&state.remote),
     };
     if view.playback.is_none() && view.connecting.is_none() {
         fill_browsing(&mut view, state, filter);

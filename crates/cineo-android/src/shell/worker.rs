@@ -142,7 +142,8 @@ impl Shell {
             | Effect::SaveSync(_)
             | Effect::ForgetSync
             | Effect::SaveRemoteHost(_)
-            | Effect::SaveRemotePeer(_)) => {
+            | Effect::SaveRemotePeer(_)
+            | Effect::SaveRemoteChoice(_)) => {
                 if self.store_tx.send(effect).is_err() {
                     self.state.notice = Some(Notice::StoreClosed);
                 }
@@ -275,7 +276,7 @@ impl Shell {
     }
 
     fn publish(&mut self) {
-        super::set_remote(&self.remote, self.state.remote.computer());
+        super::set_remote(&self.remote, self.state.remote.computer().map(|c| c.peer));
         let (playing, finished) = {
             let mut screen = lock(&self.screen);
             screen.pause_on_leave = self.state.settings.on_leave == OnLeave::Pause;

@@ -632,8 +632,19 @@ local network (ADR-0044). On by default on the desktop.
   on the desktop removes it (`a_phone_finds_the_computer_through_sync_without_pairing`,
   `a_phone_in_the_same_sync_space_finds_and_controls_the_computer`, against
   the native sync server and the real listener). A computer paired by
-  hand wins (`a_computer_paired_by_hand_wins_over_the_synced_one`). With
-  several computers, the one that announced last is used.
+  hand wins (`a_computer_paired_by_hand_wins_over_the_synced_one`).
+- **Several computers.** Each desktop announces its host name with its
+  address, in sync and in its QR link
+  (`the_desktop_announces_its_name_with_its_address`,
+  `the_pairing_link_carries_the_code_the_address_and_the_name`). The
+  phone lists every synced computer by name plus the one paired by code
+  (`every_other_devices_computer_is_listed_by_name`) and controls one at
+  a time: the one chosen in Settings → Remote control, else the one
+  paired by code, else the first by name; the choice survives a restart
+  (`one_computer_at_a_time_the_chosen_one_else_the_paired_else_the_first`,
+  `remote_pairings_survive_a_reopen_and_turning_off_is_remembered`,
+  `a_phone_in_the_same_sync_space_finds_and_controls_the_computer`). The
+  bar and the remote screen name the computer.
 - **Android, Settings → Remote control.** Pair by scanning the QR code, by
   a `cineo:///remote/<code>?at=<address>` link, or by typing the address
   and code; the bar above the navigation opens the controls; "Forget" unpairs. A paired
@@ -649,7 +660,7 @@ local network (ADR-0044). On by default on the desktop.
   the computer" because the computer's `ufw` firewall dropped port 18765.
   Controlling a playing video from a real phone has not been tried.
 - **Not offered.** Finding the computer without sync or the QR code
-  (mDNS), choosing between several computers. Known
+  (mDNS); more than one computer paired by code. Known
   limitations are in [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md).
 
 ### Update notice

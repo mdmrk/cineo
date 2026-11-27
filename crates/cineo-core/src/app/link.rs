@@ -22,6 +22,7 @@ pub enum Route {
     Remote {
         code: String,
         address: String,
+        name: String,
     },
 }
 
@@ -97,6 +98,7 @@ pub fn parse_link(link: &str) -> Result<Route, LinkError> {
         ["remote", code] => Ok(Route::Remote {
             code: (*code).to_owned(),
             address: query("at").unwrap_or_default(),
+            name: crate::remote::computer_name(&query("name").unwrap_or_default()),
         }),
         _ => Err(LinkError::Unknown),
     }

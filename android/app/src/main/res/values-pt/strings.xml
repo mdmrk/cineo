@@ -328,11 +328,6 @@
     <string name="remote_pair_title">Parear com um computador</string>
     <string name="remote_pair_other">Parear com outro computador</string>
     <string name="remote_pair_help">Computadores da mesma sincronização aparecem aqui sozinhos. Para outro computador, abra nele Configurações → Controle remoto e leia o código QR, ou digite o endereço e o código que ele mostra.</string>
-    <string name="remote_paired">Pareado com %1$s</string>
-    <string name="remote_paired_help">Controle o que toca no Cineo nesse computador. O celular precisa estar na mesma rede.</string>
-    <string name="remote_found_help">Encontrado pela sincronização. Controle o que toca no Cineo nesse computador; o celular precisa estar na mesma rede.</string>
-    <string name="remote_forget">Esquecer este computador</string>
-    <string name="remote_forget_help">Este celular deixa de controlá-lo até você parear de novo.</string>
     <string name="remote_forget_button">Esquecer</string>
     <string name="remote_scan_hint">Aponte a câmera para o código QR nas configurações de controle remoto do Cineo no seu computador.</string>
     <string name="remote_error_address">Digite o endereço do computador na sua rede local, por exemplo 192.168.1.20:18765.</string>
@@ -353,7 +348,10 @@
     <string name="remote_speed_normal">Normal</string>
     <string name="remote_subtitle_delay">Atraso das legendas</string>
     <string name="remote_play_on_computer">Reproduzir no computador</string>
-    <string name="remote_bar_playing">Tocando no seu computador</string>
-    <string name="remote_bar_loading">Carregando no seu computador…</string>
+    <string name="remote_bar_playing">Tocando em %1$s</string>
+    <string name="remote_bar_loading">Carregando em %1$s…</string>
     <string name="remote_sent">Enviado ao computador.</string>
+    <string name="remote_computers_help">O Cineo controla um computador por vez. Toque em um para usá-lo.</string>
+    <string name="remote_found">encontrado pela sincronização</string>
+    <string name="remote_paired_code">pareado com código</string>
 </resources>

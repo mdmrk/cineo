@@ -227,16 +227,25 @@ fn the_phone_only_talks_to_the_local_network() {
 }
 
 #[test]
-fn the_pairing_link_carries_the_code_and_the_address() {
-    let peer = Peer {
-        address: "192.168.1.20:18765".parse().unwrap(),
-        key: RemoteKey::from_bytes([9; 16]),
+fn the_pairing_link_carries_the_code_the_address_and_the_name() {
+    let computer = cineo_core::remote::Computer {
+        name: "Salón & PC".into(),
+        peer: Peer {
+            address: "192.168.1.20:18765".parse().unwrap(),
+            key: RemoteKey::from_bytes([9; 16]),
+        },
     };
-    let link = remote_link(&peer);
-    let Ok(Route::Remote { code, address }) = parse_link(&link) else {
+    let link = remote_link(&computer);
+    let Ok(Route::Remote {
+        code,
+        address,
+        name,
+    }) = parse_link(&link)
+    else {
         panic!("{link} is not a remote link");
     };
-    assert_eq!(code, format_remote_code(&peer.key));
-    assert_eq!(parse_remote_code(&code).unwrap(), peer.key);
+    assert_eq!(code, format_remote_code(&computer.peer.key));
+    assert_eq!(parse_remote_code(&code).unwrap(), computer.peer.key);
     assert_eq!(address, "192.168.1.20:18765");
+    assert_eq!(name, "Salón & PC");
 }

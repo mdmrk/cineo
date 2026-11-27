@@ -48,14 +48,13 @@ Format:
 - Instead: the computer shows its P2P notice or the reason.
 - Exit: add the computer's pending prompt and last notice to `Status`.
 
-### Remote control: one computer through sync
-- Where: [replica.rs](../crates/cineo-core/src/sync/replica.rs)
-  (`Replica::computer`)
-- Gap: with several desktops in one sync space, the phone controls the one
-  that announced last and offers no choice.
-- Why: the first version has one paired computer.
-- Instead: pairing by QR code picks a computer and wins over sync.
-- Exit: list every synced computer on the phone with its name.
+### Remote control: one computer paired by code
+- Where: [store.rs](../crates/cineo-store/src/store.rs) (`remote_peer`)
+- Gap: the phone keeps one computer paired by code; pairing another
+  replaces it. Computers found through sync are not limited.
+- Why: the store holds one row for the paired computer.
+- Instead: computers in the same sync space appear by themselves.
+- Exit: keep a list of paired computers.
 
 ### Remote control: firewalls are left to the user
 - Where: [server.rs](../crates/cineo-net/src/remote/server.rs)

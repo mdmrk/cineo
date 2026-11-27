@@ -1,11 +1,14 @@
-use cineo_core::remote::{Peer, RemoteKey};
+use cineo_core::remote::{Choice, Computer, Peer, RemoteKey};
 
 use super::*;
 
-fn peer() -> Peer {
-    Peer {
-        address: "192.168.1.20:18765".parse().unwrap(),
-        key: RemoteKey::from_bytes([7; 16]),
+fn peer() -> Computer {
+    Computer {
+        name: "Study".into(),
+        peer: Peer {
+            address: "192.168.1.20:18765".parse().unwrap(),
+            key: RemoteKey::from_bytes([7; 16]),
+        },
     }
 }
 
@@ -18,16 +21,19 @@ fn a_restored_remote_key_starts_the_listener() {
         Action::RestoreRemote {
             host: Some(key),
             peer: Some(peer()),
+            choice: Some(Choice::Synced(4)),
         },
     );
     assert_eq!(effects, [Effect::ServeRemote(Some(key))]);
     assert_eq!(state.remote.host, Some(key));
     assert_eq!(state.remote.peer, Some(peer()));
+    assert_eq!(state.remote.choice, Some(Choice::Synced(4)));
     let none = update(
         &mut State::default(),
         Action::RestoreRemote {
             host: None,
             peer: None,
+            choice: None,
         },
     );
     assert_eq!(none, []);
@@ -61,18 +67,87 @@ fn turning_the_remote_on_off_or_to_a_new_key_saves_and_restarts_it() {
 }
 
 #[test]
-fn pairing_with_a_computer_is_saved_and_can_be_forgotten() {
+fn pairing_with_a_computer_chooses_it_and_forgetting_it_drops_the_choice() {
     let mut state = State::default();
     assert_eq!(
         update(&mut state, Action::SetRemotePeer(Some(peer()))),
-        [Effect::SaveRemotePeer(Some(peer()))]
+        [
+            Effect::SaveRemotePeer(Some(peer())),
+            Effect::SaveRemoteChoice(Some(Choice::Paired))
+        ]
     );
-    assert_eq!(state.remote.peer, Some(peer()));
+    assert_eq!(state.remote.computer(), Some(&peer()));
     assert_eq!(
         update(&mut state, Action::SetRemotePeer(None)),
-        [Effect::SaveRemotePeer(None)]
+        [Effect::SaveRemotePeer(None), Effect::SaveRemoteChoice(None)]
     );
-    assert_eq!(state.remote.peer, None);
+    assert_eq!(state.remote.computer(), None);
+}
+
+fn synced(byte: u8, name: &str) -> Computer {
+    Computer {
+        name: name.into(),
+        peer: Peer {
+            address: format!("192.168.1.{byte}:18765").parse().unwrap(),
+            key: RemoteKey::from_bytes([byte; 16]),
+        },
+    }
+}
+
+#[test]
+fn one_computer_at_a_time_the_chosen_one_else_the_paired_else_the_first() {
+    let mut remote = cineo_core::app::RemoteState {
+        synced: vec![(2, synced(2, "Living room")), (3, synced(3, "Study"))],
+        ..cineo_core::app::RemoteState::default()
+    };
+    assert_eq!(remote.active(), Some(Choice::Synced(2)), "the first");
+    remote.choice = Some(Choice::Synced(3));
+    assert_eq!(remote.computer(), Some(&synced(3, "Study")));
+    remote.peer = Some(peer());
+    remote.choice = Some(Choice::Paired);
+    assert_eq!(remote.computer(), Some(&peer()));
+    remote.choice = Some(Choice::Synced(2));
+    assert_eq!(remote.computer(), Some(&synced(2, "Living room")));
+    remote.synced.remove(0);
+    assert_eq!(
+        remote.active(),
+        Some(Choice::Paired),
+        "a chosen computer that is gone falls back to the paired one"
+    );
+    remote.peer = None;
+    assert_eq!(remote.active(), Some(Choice::Synced(3)));
+}
+
+#[test]
+fn choosing_a_computer_is_saved() {
+    let mut state = State::default();
+    assert_eq!(
+        update(&mut state, Action::ChooseComputer(Choice::Synced(3))),
+        [Effect::SaveRemoteChoice(Some(Choice::Synced(3)))]
+    );
+    assert_eq!(
+        update(&mut state, Action::ChooseComputer(Choice::Synced(3))),
+        []
+    );
+}
+
+#[test]
+fn the_desktop_announces_its_name_with_its_address() {
+    let mut state = State::default();
+    update(
+        &mut state,
+        Action::SetRemoteHost(Some(RemoteKey::from_bytes([1; 16]))),
+    );
+    update(
+        &mut state,
+        Action::RemoteListening {
+            address: Some("192.168.1.9:18765".parse().unwrap()),
+            name: "Study".into(),
+        },
+    );
+    let announced = state.remote.announced().unwrap();
+    assert_eq!(announced.name, "Study");
+    assert_eq!(announced.peer.address, "192.168.1.9:18765".parse().unwrap());
 }
 
 fn sent_from_the_phone(stream: usize) -> cineo_core::app::SentPlay {

@@ -1121,6 +1121,7 @@ dependencies = [
  "fastframe-scroll",
  "fastframe-text",
  "flate2",
+ "gethostname",
  "iconflow",
  "image",
  "keepawake",

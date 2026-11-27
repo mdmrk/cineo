@@ -1,7 +1,9 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use cineo_core::app::Action;
-use cineo_core::remote::{Command, DEFAULT_PORT, Hosting, NowPlaying, RemoteKey, Status, Track};
+use cineo_core::remote::{
+    Command, DEFAULT_PORT, Hosting, NowPlaying, RemoteKey, Status, Track, computer_name,
+};
 use cineo_net::remote::{Handler, RemoteError, RemoteServer, bind, lan_ip, new_remote_key, serve};
 use cineo_player::embedded::{PlayerCommand, Status as PlayerStatus, TrackKind};
 use eframe::egui;
@@ -63,8 +65,9 @@ impl CineoApp {
 
     fn announce_address(&mut self) {
         let address = listening_address(&self.view.remote_listener);
-        if address != self.state.remote.address {
-            self.dispatch(Action::RemoteListening(address));
+        if address != self.state.remote.address || self.state.remote.name.is_empty() {
+            let name = computer_name(&gethostname::gethostname().to_string_lossy());
+            self.dispatch(Action::RemoteListening { address, name });
         }
     }
 
@@ -148,7 +151,11 @@ pub(super) fn at_start(
     hosting: Hosting,
     new_key: impl FnOnce() -> Result<RemoteKey, RemoteError>,
 ) -> Vec<Action> {
-    let restore = |host| Action::RestoreRemote { host, peer: None };
+    let restore = |host| Action::RestoreRemote {
+        host,
+        peer: None,
+        choice: None,
+    };
     match hosting {
         Hosting::On(key) => vec![restore(Some(key))],
         Hosting::Off => vec![restore(None)],
@@ -343,7 +350,11 @@ mod tests {
     #[test]
     fn the_remote_control_is_on_unless_it_was_turned_off() {
         let key = RemoteKey::from_bytes([1; 16]);
-        let restore = |host| Action::RestoreRemote { host, peer: None };
+        let restore = |host| Action::RestoreRemote {
+            host,
+            peer: None,
+            choice: None,
+        };
         assert_eq!(
             at_start(Hosting::Unchosen, || Ok(key)),
             [restore(None), Action::SetRemoteHost(Some(key))]

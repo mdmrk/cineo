@@ -47,6 +47,7 @@ pub fn fetch_task(
         | Effect::SaveRemoteHost(_)
         | Effect::ServeRemote(_)
         | Effect::SaveRemotePeer(_)
+        | Effect::SaveRemoteChoice(_)
         | Effect::SaveAddons(_)
         | Effect::SaveLibraryItem(_)
         | Effect::DeleteLibraryItem(_)

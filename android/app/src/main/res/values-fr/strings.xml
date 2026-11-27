@@ -328,11 +328,6 @@
     <string name="remote_pair_title">Associer un ordinateur</string>
     <string name="remote_pair_other">Associer un autre ordinateur</string>
     <string name="remote_pair_help">Les ordinateurs de la même synchronisation apparaissent ici d\'eux-mêmes. Pour un autre ordinateur, ouvrez-y Réglages → Télécommande et scannez son code QR, ou saisissez l\'adresse et le code affichés.</string>
-    <string name="remote_paired">Associé à %1$s</string>
-    <string name="remote_paired_help">Contrôlez ce qui est lu dans Cineo sur cet ordinateur. Le téléphone doit être sur le même réseau.</string>
-    <string name="remote_found_help">Trouvé grâce à la synchronisation. Contrôlez ce qui est lu dans Cineo sur cet ordinateur ; le téléphone doit être sur le même réseau.</string>
-    <string name="remote_forget">Oublier cet ordinateur</string>
-    <string name="remote_forget_help">Ce téléphone ne le contrôle plus tant que vous ne l\'associez pas à nouveau.</string>
     <string name="remote_forget_button">Oublier</string>
     <string name="remote_scan_hint">Pointez la caméra vers le code QR des réglages de télécommande de Cineo sur votre ordinateur.</string>
     <string name="remote_error_address">Saisissez l\'adresse de l\'ordinateur sur votre réseau local, par exemple 192.168.1.20:18765.</string>
@@ -353,7 +348,10 @@
     <string name="remote_speed_normal">Normale</string>
     <string name="remote_subtitle_delay">Décalage des sous-titres</string>
     <string name="remote_play_on_computer">Lire sur l\'ordinateur</string>
-    <string name="remote_bar_playing">En lecture sur votre ordinateur</string>
-    <string name="remote_bar_loading">Chargement sur votre ordinateur…</string>
+    <string name="remote_bar_playing">Lecture sur %1$s</string>
+    <string name="remote_bar_loading">Chargement sur %1$s…</string>
     <string name="remote_sent">Envoyé à l\'ordinateur.</string>
+    <string name="remote_computers_help">Cineo contrôle un ordinateur à la fois. Touchez-en un pour l\'utiliser.</string>
+    <string name="remote_found">trouvé par la synchronisation</string>
+    <string name="remote_paired_code">associé par code</string>
 </resources>

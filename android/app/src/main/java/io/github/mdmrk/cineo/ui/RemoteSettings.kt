@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,7 +37,7 @@ import io.github.mdmrk.cineo.R
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.RemoteInputException
 import io.github.mdmrk.cineo.rust.RemoteLinkView
-import io.github.mdmrk.cineo.rust.RemotePeerView
+import io.github.mdmrk.cineo.rust.ComputerView
 import io.github.mdmrk.cineo.rust.remoteLink
 
 private const val ADDRESS_HINT = "192.168.1.20:18765"
@@ -42,7 +45,7 @@ private const val CODE_HINT = "XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
 
 @Composable
 internal fun RemoteSettings(
-    peer: RemotePeerView?,
+    computers: List<ComputerView>,
     link: RemoteLinkView?,
     onLinkUsed: () -> Unit,
     onOpen: () -> Unit,
@@ -50,6 +53,8 @@ internal fun RemoteSettings(
 ) {
     var address by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    val peer = computers.firstOrNull()
     var error by remember { mutableStateOf<RemoteInputException?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var another by rememberSaveable { mutableStateOf(false) }
@@ -62,7 +67,8 @@ internal fun RemoteSettings(
     }
     val pair = { newAddress: String, newCode: String ->
         error = try {
-            cineo.remotePair(newAddress, newCode)
+            cineo.remotePair(newAddress, newCode, name)
+            name = ""
             address = ""
             code = ""
             another = false
@@ -78,16 +84,22 @@ internal fun RemoteSettings(
         if (link != null) {
             address = link.address
             code = link.code
+            name = link.name
             error = null
             another = true
             onLinkUsed()
         }
     }
-    if (peer != null) {
-        SettingRow(
-            stringResource(R.string.remote_paired, peer.address),
-            stringResource(if (peer.throughSync) R.string.remote_found_help else R.string.remote_paired_help),
-        ) {}
+    if (computers.isNotEmpty()) {
+        Text(
+            stringResource(R.string.remote_computers_help),
+            color = Brand.TextDim,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        computers.forEach { computer ->
+            ComputerRow(computer, onChoose = { cineo.remoteChoose(computer.choice) }, onForget = cineo::remoteForget)
+        }
         Divider()
     }
     if (peer != null && !another) {
@@ -147,12 +159,33 @@ internal fun RemoteSettings(
             onClose = { scanning = false },
         )
     }
-    if (peer != null && !peer.throughSync) {
-        Divider()
-        SettingRow(stringResource(R.string.remote_forget), stringResource(R.string.remote_forget_help)) {
-            OutlinedButton(onClick = cineo::remoteForget) { Text(stringResource(R.string.remote_forget_button), color = Brand.Danger) }
-        }
-    }
+}
+
+@Composable
+private fun ComputerRow(computer: ComputerView, onChoose: () -> Unit, onForget: () -> Unit) {
+    ListItem(
+        colors = rowColors,
+        modifier = Modifier.clickable(onClick = onChoose),
+        leadingContent = {
+            RadioButton(
+                selected = computer.active,
+                onClick = onChoose,
+                colors = RadioButtonDefaults.colors(selectedColor = Brand.Accent),
+            )
+        },
+        supportingContent = {
+            Text(
+                computer.address + " · " +
+                    stringResource(if (computer.throughSync) R.string.remote_found else R.string.remote_paired_code),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        },
+        trailingContent = if (computer.throughSync) {
+            null
+        } else {
+            { TextButton(onClick = onForget) { Text(stringResource(R.string.remote_forget_button), color = Brand.Danger) } }
+        },
+    ) { Text(computer.name) }
 }
 
 @Composable

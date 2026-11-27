@@ -293,9 +293,11 @@ sequenceDiagram
   for `Effect::ServeRemote`, `SetRemotePeer` saves the peer. The desktop
   reports its LAN address with `RemoteListening`; while sync is on,
   `sync::after` writes key and address as the `computer/<device id>`
-  record (`Replica::announce`) and reads the newest one from another
-  device into `remote.synced` (`Replica::computer`). A phone uses `peer`,
-  else `synced` (`RemoteState::computer`). `sent_play` builds a
+  record with its host name (`Replica::announce`), and every other
+  device's record lands in `remote.synced` (`Replica::computers`). A
+  phone talks to one `Computer` at a time (`RemoteState::computer`): the
+  `Choice` saved by `ChooseComputer`, else the paired one, else the first
+  synced one. `sent_play` builds a
   `SentPlay` (ids, name, poster, position and a `SavedStream`) from the
   phone's detail, and `sent_resume` from a library item with a saved
   stream; on the desktop `Action::PlaySent` resolves it with the

@@ -61,10 +61,11 @@ fn links_parse_into_routes_and_anything_else_is_rejected() {
         ),
         ("cineo:///sync", Err(LinkError::Unknown)),
         (
-            "cineo:///remote/ABCD-EFGH?at=192.168.1.20%3A18765",
+            "cineo:///remote/ABCD-EFGH?at=192.168.1.20%3A18765&name=Salon%20PC",
             Ok(Route::Remote {
                 code: "ABCD-EFGH".into(),
                 address: "192.168.1.20:18765".into(),
+                name: "Salon PC".into(),
             }),
         ),
         (
@@ -72,6 +73,7 @@ fn links_parse_into_routes_and_anything_else_is_rejected() {
             Ok(Route::Remote {
                 code: "ABCD".into(),
                 address: String::new(),
+                name: String::new(),
             }),
         ),
         ("cineo:///remote", Err(LinkError::Unknown)),

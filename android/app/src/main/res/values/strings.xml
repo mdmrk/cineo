@@ -327,11 +327,6 @@
     <string name="remote_pair_title">Pair with a computer</string>
     <string name="remote_pair_other">Pair with another computer</string>
     <string name="remote_pair_help">Computers in the same sync appear here by themselves. For another computer, open Settings → Remote control on it and scan its QR code, or enter the address and code it shows.</string>
-    <string name="remote_paired">Paired with %1$s</string>
-    <string name="remote_paired_help">Control what plays in Cineo on that computer. The phone must be on the same network.</string>
-    <string name="remote_found_help">Found through sync. Control what plays in Cineo on that computer; the phone must be on the same network.</string>
-    <string name="remote_forget">Forget this computer</string>
-    <string name="remote_forget_help">This phone stops controlling it until you pair again.</string>
     <string name="remote_forget_button">Forget</string>
     <string name="remote_scan_hint">Point the camera at the QR code in Cineo\'s remote control settings on your computer.</string>
     <string name="remote_error_address">Enter the computer\'s address on your local network, such as 192.168.1.20:18765.</string>
@@ -352,7 +347,10 @@
     <string name="remote_speed_normal">Normal</string>
     <string name="remote_subtitle_delay">Subtitle delay</string>
     <string name="remote_play_on_computer">Play on the computer</string>
-    <string name="remote_bar_playing">Playing on your computer</string>
-    <string name="remote_bar_loading">Loading on your computer…</string>
+    <string name="remote_bar_playing">Playing on %1$s</string>
+    <string name="remote_bar_loading">Loading on %1$s…</string>
     <string name="remote_sent">Sent to the computer.</string>
+    <string name="remote_computers_help">Cineo controls one computer at a time. Tap one to use it.</string>
+    <string name="remote_found">found through sync</string>
+    <string name="remote_paired_code">paired with a code</string>
 </resources>

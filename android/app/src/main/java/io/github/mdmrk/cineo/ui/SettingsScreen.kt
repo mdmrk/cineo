@@ -70,7 +70,7 @@ import io.github.mdmrk.cineo.rust.ChoiceView
 import io.github.mdmrk.cineo.rust.Cineo
 import io.github.mdmrk.cineo.rust.RangeView
 import io.github.mdmrk.cineo.rust.RemoteLinkView
-import io.github.mdmrk.cineo.rust.RemotePeerView
+import io.github.mdmrk.cineo.rust.ComputerView
 import io.github.mdmrk.cineo.rust.SettingChange
 import io.github.mdmrk.cineo.rust.SettingsView
 import io.github.mdmrk.cineo.rust.SubtitlePreviewView
@@ -107,7 +107,7 @@ fun SettingsScreen(
     sync: SyncView?,
     syncLink: SyncLinkView?,
     onSyncLinkUsed: () -> Unit,
-    remote: RemotePeerView?,
+    computers: List<ComputerView>,
     remoteLink: RemoteLinkView?,
     onRemoteLinkUsed: () -> Unit,
     onOpenRemote: () -> Unit,
@@ -318,7 +318,7 @@ fun SettingsScreen(
                 stringResource(R.string.section_remote),
                 stringResource(R.string.remote_pair_title),
                 stringResource(R.string.remote_pair_help),
-            ) { RemoteSettings(remote, remoteLink, onRemoteLinkUsed, onOpenRemote, cineo) }
+            ) { RemoteSettings(computers, remoteLink, onRemoteLinkUsed, onOpenRemote, cineo) }
         },
         group("about", stringResource(R.string.section_about)) {
             val version = stringResource(R.string.app_version, version())

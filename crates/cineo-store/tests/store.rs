@@ -604,27 +604,60 @@ fn unreadable_sync_records_are_skipped() {
 
 #[test]
 fn remote_pairings_survive_a_reopen_and_turning_off_is_remembered() {
-    use cineo_core::remote::{Hosting, Peer, RemoteKey};
+    use cineo_core::remote::{Choice, Computer, Hosting, Peer, RemoteKey};
+    use cineo_store::Remote;
     let dir = temp_dir("remote");
     let mut store = Store::open_in(&dir).unwrap();
-    assert_eq!(store.remote().unwrap(), (Hosting::Unchosen, None));
+    let nothing = Remote {
+        host: Hosting::Unchosen,
+        peer: None,
+        choice: None,
+    };
+    assert_eq!(store.remote().unwrap(), nothing);
     let host = RemoteKey::from_bytes([3; 16]);
-    let peer = Peer {
-        address: "192.168.1.20:18765".parse().unwrap(),
-        key: RemoteKey::from_bytes([4; 16]),
+    let peer = Computer {
+        name: "Salon PC".into(),
+        peer: Peer {
+            address: "192.168.1.20:18765".parse().unwrap(),
+            key: RemoteKey::from_bytes([4; 16]),
+        },
     };
     assert!(store.apply(&Effect::SaveRemoteHost(Some(host))).unwrap());
-    assert!(store.apply(&Effect::SaveRemotePeer(Some(peer))).unwrap());
+    assert!(
+        store
+            .apply(&Effect::SaveRemotePeer(Some(peer.clone())))
+            .unwrap()
+    );
+    assert!(
+        store
+            .apply(&Effect::SaveRemoteChoice(Some(Choice::Synced(u64::MAX))))
+            .unwrap()
+    );
     drop(store);
     let mut store = Store::open_in(&dir).unwrap();
-    assert_eq!(store.remote().unwrap(), (Hosting::On(host), Some(peer)));
+    assert_eq!(
+        store.remote().unwrap(),
+        Remote {
+            host: Hosting::On(host),
+            peer: Some(peer),
+            choice: Some(Choice::Synced(u64::MAX)),
+        }
+    );
+    store
+        .apply(&Effect::SaveRemoteChoice(Some(Choice::Paired)))
+        .unwrap();
+    assert_eq!(store.remote().unwrap().choice, Some(Choice::Paired));
     store.apply(&Effect::SaveRemoteHost(None)).unwrap();
     store.apply(&Effect::SaveRemotePeer(None)).unwrap();
+    store.apply(&Effect::SaveRemoteChoice(None)).unwrap();
     drop(store);
     let store = Store::open_in(&dir).unwrap();
     assert_eq!(
         store.remote().unwrap(),
-        (Hosting::Off, None),
+        Remote {
+            host: Hosting::Off,
+            ..nothing
+        },
         "turning it off is remembered"
     );
 }
@@ -636,11 +669,10 @@ fn a_remote_pairing_to_a_public_address_is_ignored() {
     drop(store);
     let conn = rusqlite::Connection::open(&path).unwrap();
     conn.execute(
-        "INSERT INTO remote_peer (id, address, key) VALUES (1, '8.8.8.8:18765', ?1)",
+        "INSERT INTO remote_peer (id, address, key, name) VALUES (1, '8.8.8.8:18765', ?1, 'x')",
         [[4_u8; 16].as_slice()],
     )
     .unwrap();
     drop(conn);
-    let (_, peer) = Store::open(&path).unwrap().remote().unwrap();
-    assert_eq!(peer, None);
+    assert_eq!(Store::open(&path).unwrap().remote().unwrap().peer, None);
 }

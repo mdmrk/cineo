@@ -69,7 +69,7 @@ async fn a_paired_phone_controls_the_desktop_and_stays_paired_after_a_restart() 
         cineo.remote_send(None).await.unwrap_err(),
         RemoteFailure::NotPaired
     );
-    cineo.remote_pair(&desktop.address(), &code).unwrap();
+    cineo.remote_pair(&desktop.address(), &code, "").unwrap();
     let paired = tokio::task::block_in_place(|| wait_for(&views, |v| v.remote.is_some()));
     assert_eq!(paired.remote.unwrap().address, desktop.address());
 
@@ -112,7 +112,7 @@ async fn a_new_code_on_the_desktop_unpairs_the_phone() {
     let dir = local_data_dir();
     let (cineo, _views) = tokio::task::block_in_place(|| start(dir.path()));
     let old = format_remote_code(&new_remote_key().unwrap());
-    cineo.remote_pair(&desktop.address(), &old).unwrap();
+    cineo.remote_pair(&desktop.address(), &old, "").unwrap();
     assert_eq!(
         cineo.remote_send(None).await.unwrap_err(),
         RemoteFailure::WrongKey
@@ -128,7 +128,7 @@ async fn an_unreachable_computer_and_a_bad_command_are_reported() {
     let address = format!("127.0.0.1:{}", free.local_addr().unwrap().port());
     drop(free);
     let code = format_remote_code(&new_remote_key().unwrap());
-    cineo.remote_pair(&address, &code).unwrap();
+    cineo.remote_pair(&address, &code, "").unwrap();
     assert_eq!(
         cineo.remote_send(None).await.unwrap_err(),
         RemoteFailure::Unreachable
@@ -148,34 +148,39 @@ fn pairing_needs_a_local_address_and_a_good_code() {
     let (cineo, _views) = start(dir.path());
     let code = format_remote_code(&RemoteKey::from_bytes([3; 16]));
     assert_eq!(
-        cineo.remote_pair("8.8.8.8:18765", &code),
+        cineo.remote_pair("8.8.8.8:18765", &code, ""),
         Err(RemoteInputError::Address)
     );
     assert_eq!(
-        cineo.remote_pair("not an address", &code),
+        cineo.remote_pair("not an address", &code, ""),
         Err(RemoteInputError::Address)
     );
     assert_eq!(
-        cineo.remote_pair("192.168.1.20", "ABCD"),
+        cineo.remote_pair("192.168.1.20", "ABCD", ""),
         Err(RemoteInputError::CodeLength)
     );
     let typo = code.replacen(&code[..1], if &code[..1] == "A" { "B" } else { "A" }, 1);
     assert_eq!(
-        cineo.remote_pair("192.168.1.20", &typo),
+        cineo.remote_pair("192.168.1.20", &typo, ""),
         Err(RemoteInputError::CodeTypo)
     );
-    assert_eq!(cineo.remote_pair("192.168.1.20", &code), Ok(()));
+    assert_eq!(cineo.remote_pair("192.168.1.20", &code, ""), Ok(()));
 }
 
 #[test]
-fn a_scanned_desktop_link_gives_the_code_and_address() {
+fn a_scanned_desktop_link_gives_the_code_address_and_name() {
     let peer = Peer {
         address: "192.168.1.20:18765".parse().unwrap(),
         key: RemoteKey::from_bytes([3; 16]),
     };
-    let link = remote_link(&link_for(&peer)).unwrap();
+    let link = remote_link(&link_for(&cineo_core::remote::Computer {
+        name: "Study".into(),
+        peer,
+    }))
+    .unwrap();
     assert_eq!(link.address, "192.168.1.20:18765");
     assert_eq!(link.code, format_remote_code(&peer.key));
+    assert_eq!(link.name, "Study");
     assert!(remote_link("cineo:///sync/ABCD").is_none());
 }
 
@@ -228,7 +233,10 @@ async fn a_phone_in_the_same_sync_space_finds_and_controls_the_computer() {
     drive(
         &mut computer,
         &client,
-        Action::RemoteListening(Some(desktop.address().parse().unwrap())),
+        Action::RemoteListening {
+            address: Some(desktop.address().parse().unwrap()),
+            name: "Study".into(),
+        },
     )
     .await;
     drive(
@@ -253,13 +261,56 @@ async fn a_phone_in_the_same_sync_space_finds_and_controls_the_computer() {
             v.remote.as_ref().is_some_and(|r| r.through_sync)
         })
     });
-    assert_eq!(found.remote.unwrap().address, desktop.address());
+    let shown = found.remote.unwrap();
+    assert_eq!(shown.address, desktop.address());
+    assert_eq!(shown.name, "Study");
+    assert_eq!(found.computers.len(), 1);
+    assert!(found.computers[0].active);
     let status = phone
         .remote_send(Some(RemoteCommandView::Pause { paused: true }))
         .await
         .unwrap();
     assert!(status.playing.unwrap().paused);
     assert_eq!(*desktop.commands.lock().unwrap(), [Command::Pause(true)]);
+
+    let other = Desktop::start();
+    phone
+        .remote_pair(&other.address(), &format_remote_code(&other.key), "Study")
+        .unwrap();
+    let both = tokio::task::block_in_place(|| {
+        wait_for(&views, |v| {
+            v.computers.len() == 2 && v.remote.as_ref().is_some_and(|r| !r.through_sync)
+        })
+    });
+    assert_eq!(both.remote.unwrap().name, "Study", "pairing chooses it");
+    phone
+        .remote_send(Some(RemoteCommandView::Stop))
+        .await
+        .unwrap();
+    assert_eq!(*other.commands.lock().unwrap(), [Command::Stop]);
+
+    let synced = both
+        .computers
+        .iter()
+        .find(|c| c.through_sync)
+        .unwrap()
+        .choice;
+    phone.remote_choose(synced);
+    tokio::task::block_in_place(|| {
+        wait_for(&views, |v| {
+            v.remote.as_ref().is_some_and(|r| r.through_sync)
+        })
+    });
+    phone
+        .remote_send(Some(RemoteCommandView::Mute { muted: true }))
+        .await
+        .unwrap();
+    assert_eq!(
+        desktop.commands.lock().unwrap().last(),
+        Some(&Command::Mute(true)),
+        "one computer at a time, the chosen one"
+    );
+    assert_eq!(other.commands.lock().unwrap().len(), 1);
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -276,7 +327,7 @@ async fn a_stream_picked_on_the_phone_is_sent_to_the_computer() {
         RemoteFailure::NotPaired
     );
     cineo
-        .remote_pair(&desktop.address(), &format_remote_code(&desktop.key))
+        .remote_pair(&desktop.address(), &format_remote_code(&desktop.key), "")
         .unwrap();
     cineo.play_on_computer(0, 0).await.unwrap();
     let sent = desktop.commands.lock().unwrap().clone();
@@ -314,7 +365,7 @@ async fn continue_watching_on_the_phone_resumes_on_the_computer() {
         });
     });
     cineo
-        .remote_pair(&desktop.address(), &format_remote_code(&desktop.key))
+        .remote_pair(&desktop.address(), &format_remote_code(&desktop.key), "")
         .unwrap();
     cineo.resume_on_computer("tt0000001".into()).await.unwrap();
     let sent = desktop.commands.lock().unwrap().clone();

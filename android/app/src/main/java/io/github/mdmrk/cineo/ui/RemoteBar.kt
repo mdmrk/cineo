@@ -90,7 +90,7 @@ fun RemoteBar(peer: RemotePeerView?, cineo: Cineo, onOpen: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    stringResource(if (now.loading) R.string.remote_bar_loading else R.string.remote_bar_playing),
+                    stringResource(if (now.loading) R.string.remote_bar_loading else R.string.remote_bar_playing, peer.name),
                     color = Brand.TextDim,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,

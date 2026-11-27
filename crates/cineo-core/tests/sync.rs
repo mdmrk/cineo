@@ -758,19 +758,25 @@ fn values_never_synced_give_way_to_the_space_whatever_the_device_ids() {
     );
 }
 
+fn computer(byte: u8, name: &str) -> cineo_core::remote::Computer {
+    use cineo_core::remote::{Computer, Peer, RemoteKey};
+    Computer {
+        name: name.to_owned(),
+        peer: Peer {
+            address: format!("192.168.1.{byte}:18765").parse().unwrap(),
+            key: RemoteKey::from_bytes([byte; 16]),
+        },
+    }
+}
+
 #[test]
 fn a_computer_record_survives_its_json_and_bad_ones_are_unreadable() {
-    use cineo_core::remote::{Peer, RemoteKey};
-    let peer = Peer {
-        address: "192.168.1.20:18765".parse().unwrap(),
-        key: RemoteKey::from_bytes([7; 16]),
-    };
-    let computer = record(
+    let named = record(
         RecordName::Computer(42),
         stamp(5, 0, A),
-        Value::Computer(peer),
+        Value::Computer(computer(20, "Salon PC")),
     );
-    assert_eq!(Record::parse(&computer.to_json()), Some(computer));
+    assert_eq!(Record::parse(&named.to_json()), Some(named));
     let off = record(RecordName::Computer(42), stamp(6, 0, A), Value::Deleted);
     assert_eq!(Record::parse(&off.to_json()), Some(off));
     assert_eq!(
@@ -781,37 +787,49 @@ fn a_computer_record_survives_its_json_and_bad_ones_are_unreadable() {
         RecordName::parse("computer/042"),
         Some(RecordName::Other("computer/042".into()))
     );
-    let public = computer_json("8.8.8.8:18765", "BwcHBwcHBwcHBwcHBwcHBw");
+    let public = computer_json("8.8.8.8:18765", "BwcHBwcHBwcHBwcHBwcHBw", "x");
     assert_eq!(Record::parse(&public), None, "a public address");
-    let short_key = computer_json("192.168.1.20:18765", "Bwc");
+    let short_key = computer_json("192.168.1.20:18765", "Bwc", "x");
     assert_eq!(Record::parse(&short_key), None);
+    let long_name = computer_json(
+        "192.168.1.20:18765",
+        "BwcHBwcHBwcHBwcHBwcHBw",
+        &format!("A\u{7}{}", "b".repeat(500)),
+    );
+    let Some(Record {
+        value: Value::Computer(parsed),
+        ..
+    }) = Record::parse(&long_name)
+    else {
+        panic!("a long name makes the record unreadable");
+    };
+    assert_eq!(
+        parsed.name.chars().count(),
+        cineo_core::remote::MAX_NAME_CHARS
+    );
+    assert!(!parsed.name.chars().any(char::is_control));
 }
 
-fn computer_json(address: &str, key: &str) -> String {
+fn computer_json(address: &str, key: &str, name: &str) -> String {
     serde_json::json!({
         "v": 1,
         "name": "computer/42",
         "stamp": { "t": 5, "c": 0, "d": 1 },
-        "computer": { "address": address, "key": key },
+        "computer": { "address": address, "key": key, "name": name },
     })
     .to_string()
 }
 
 #[test]
-fn a_computer_is_found_from_other_devices_only_the_newest_wins() {
-    use cineo_core::remote::{Peer, RemoteKey};
-    let peer = |byte: u8| Peer {
-        address: format!("192.168.1.{byte}:18765").parse().unwrap(),
-        key: RemoteKey::from_bytes([byte; 16]),
-    };
+fn every_other_devices_computer_is_listed_by_name() {
     let mut phone = replica(A);
-    phone.announce(Some(peer(1)), 10);
-    assert_eq!(phone.computer(), None, "its own announcement");
+    phone.announce(Some(computer(1, "Phone itself")), 10);
+    assert!(phone.computers().is_empty(), "its own announcement");
     phone.merge(
         record(
             RecordName::Computer(2),
             stamp(20, 0, B),
-            Value::Computer(peer(2)),
+            Value::Computer(computer(2, "study")),
         ),
         1,
         30,
@@ -820,18 +838,25 @@ fn a_computer_is_found_from_other_devices_only_the_newest_wins() {
         record(
             RecordName::Computer(3),
             stamp(25, 0, C),
-            Value::Computer(peer(3)),
+            Value::Computer(computer(3, "Living room")),
         ),
         2,
         30,
     );
-    assert_eq!(phone.computer(), Some(peer(3)));
+    assert_eq!(
+        phone.computers(),
+        [(3, computer(3, "Living room")), (2, computer(2, "study"))]
+    );
     phone.merge(
         record(RecordName::Computer(3), stamp(40, 0, C), Value::Deleted),
         3,
         50,
     );
-    assert_eq!(phone.computer(), Some(peer(2)), "C turned it off");
+    assert_eq!(
+        phone.computers(),
+        [(2, computer(2, "study"))],
+        "C turned it off"
+    );
 }
 
 #[test]

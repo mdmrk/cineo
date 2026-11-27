@@ -1,17 +1,43 @@
 use cineo_core::app::RemoteState;
-use cineo_core::remote::{Command, NowPlaying, Status, Track};
+use cineo_core::remote::{Choice, Command, NowPlaying, Status, Track};
 use cineo_net::remote::RemoteError;
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct RemotePeerView {
+    pub name: String,
     pub address: String,
     pub through_sync: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ComputerChoiceView {
+    Paired,
+    Synced { device: u64 },
+}
+
+impl From<ComputerChoiceView> for Choice {
+    fn from(choice: ComputerChoiceView) -> Self {
+        match choice {
+            ComputerChoiceView::Paired => Self::Paired,
+            ComputerChoiceView::Synced { device } => Self::Synced(device),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ComputerView {
+    pub name: String,
+    pub address: String,
+    pub through_sync: bool,
+    pub active: bool,
+    pub choice: ComputerChoiceView,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct RemoteLinkView {
     pub code: String,
     pub address: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, uniffi::Enum)]
@@ -115,11 +141,39 @@ pub enum RemoteInputError {
     NotACode,
 }
 
+fn shown_name(computer: &cineo_core::remote::Computer) -> String {
+    if computer.name.is_empty() {
+        computer.peer.address.ip().to_string()
+    } else {
+        computer.name.clone()
+    }
+}
+
 pub(crate) fn peer(remote: &RemoteState) -> Option<RemotePeerView> {
-    remote.computer().map(|peer| RemotePeerView {
-        address: peer.address.to_string(),
-        through_sync: remote.peer.is_none(),
+    remote.computer().map(|computer| RemotePeerView {
+        name: shown_name(computer),
+        address: computer.peer.address.to_string(),
+        through_sync: remote.active() != Some(Choice::Paired),
     })
+}
+
+pub(crate) fn computers(remote: &RemoteState) -> Vec<ComputerView> {
+    let active = remote.active();
+    let view = |computer: &cineo_core::remote::Computer, choice: ComputerChoiceView| ComputerView {
+        name: shown_name(computer),
+        address: computer.peer.address.to_string(),
+        through_sync: choice != ComputerChoiceView::Paired,
+        active: active == Some(choice.into()),
+        choice,
+    };
+    remote
+        .peer
+        .iter()
+        .map(|computer| view(computer, ComputerChoiceView::Paired))
+        .chain(remote.synced.iter().map(|(device, computer)| {
+            view(computer, ComputerChoiceView::Synced { device: *device })
+        }))
+        .collect()
 }
 
 fn tracks(tracks: &[Track]) -> Vec<RemoteTrackView> {

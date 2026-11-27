@@ -112,6 +112,14 @@ Option 1.
   code can therefore also control the computer. mDNS was rejected for now:
   the owner's phone and computer are on different subnets, which
   multicast does not cross.
+- **Several computers** (owner, 2026-11-27: "one connection at a time,
+  changed from Settings, and show the computer's name"). Each desktop
+  announces its host name (`gethostname`, cut to 64 characters) with its
+  address and key, in its sync record and in its QR link. The phone lists
+  every computer from sync plus the one paired by code, and talks to one
+  at a time: the one chosen in Settings → Remote control, kept in
+  `remote_choice`, else the one paired by code, else the first synced one
+  by name.
 - **State.** The desktop key and the phone's paired computer are core
   state (`State::remote`), stored by `cineo-store` in tables that sync
   never reads, and restored at start.

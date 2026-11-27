@@ -266,7 +266,7 @@ class MainActivity : ComponentActivity() {
                                                     it.sync,
                                                     pendingSync,
                                                     { pendingSync = null },
-                                                    it.remote,
+                                                    it.computers,
                                                     pendingRemote,
                                                     { pendingRemote = null },
                                                     { remoteOpen = true },

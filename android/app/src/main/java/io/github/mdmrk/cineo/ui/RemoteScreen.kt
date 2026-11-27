@@ -119,7 +119,7 @@ fun RemoteScreen(peer: RemotePeerView, cineo: Cineo, onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) { CineoIcon(Icon.ARROW_LEFT, tint = Brand.TextBright, label = stringResource(R.string.back)) }
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.section_remote), color = Brand.TextBright, style = MaterialTheme.typography.titleMedium)
+                Text(peer.name, color = Brand.TextBright, style = MaterialTheme.typography.titleMedium)
                 Text(peer.address, color = Brand.TextDim, style = MaterialTheme.typography.bodySmall)
             }
         }

@@ -54,7 +54,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
     };
     let saved = store.settings()?;
     let sync = store.sync(Settings::default())?;
-    let (hosting, _) = store.remote()?;
+    let hosting = store.remote()?.host;
     let ui_language = saved.ui_language;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
     let client = AddonClient::new(NetPolicy {
@@ -364,7 +364,8 @@ impl CineoApp {
             | Effect::SaveSync(_)
             | Effect::ForgetSync
             | Effect::SaveRemoteHost(_)
-            | Effect::SaveRemotePeer(_)) => {
+            | Effect::SaveRemotePeer(_)
+            | Effect::SaveRemoteChoice(_)) => {
                 let sent = self
                     .store_tx
                     .as_ref()

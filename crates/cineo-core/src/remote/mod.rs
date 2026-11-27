@@ -16,6 +16,7 @@ pub const MAX_REQUEST_BYTES: usize = 32 * 1024;
 pub const MAX_ANSWER_BYTES: usize = 64 * 1024;
 pub const MAX_CLOCK_SKEW_MS: u64 = 2 * 60 * 1000;
 pub const NONCE_LEN: usize = 12;
+pub const MAX_NAME_CHARS: usize = 64;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct RemoteKey([u8; 16]);
@@ -47,6 +48,22 @@ pub enum Hosting {
 pub struct Peer {
     pub address: SocketAddr,
     pub key: RemoteKey,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Computer {
+    pub name: String,
+    pub peer: Peer,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Choice {
+    Paired,
+    Synced(u64),
+}
+
+pub fn computer_name(text: &str) -> String {
+    clean_text(text, MAX_NAME_CHARS)
 }
 
 pub fn is_lan(ip: IpAddr) -> bool {

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use cineo_core::addon::{ContentType, TransportUrl};
 use cineo_core::app::{Effect, LibraryItem, SavedStream, Setting, SettingError, Settings};
-use cineo_core::remote::{Hosting, Peer, RemoteKey};
+use cineo_core::remote::{Choice, Computer, Hosting, Peer, RemoteKey};
 use cineo_core::sync::{Changes, DeviceId, Entry, Pairing, Record, Replica, Stamp, SyncKey};
 use rusqlite::{Connection, ErrorCode, OptionalExtension, Row, params};
 use tracing::warn;
@@ -46,6 +46,13 @@ impl From<rusqlite::Error> for StoreError {
             _ => Self::Sqlite(err),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Remote {
+    pub host: Hosting,
+    pub peer: Option<Computer>,
+    pub choice: Option<Choice>,
 }
 
 #[derive(Debug)]
@@ -337,7 +344,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn remote(&self) -> Result<(Hosting, Option<Peer>), StoreError> {
+    pub fn remote(&self) -> Result<Remote, StoreError> {
         let host = match self
             .conn
             .query_row("SELECT key FROM remote_host WHERE id = 1", [], |row| {
@@ -358,24 +365,54 @@ impl Store {
         let peer = self
             .conn
             .query_row(
-                "SELECT address, key FROM remote_peer WHERE id = 1",
+                "SELECT address, key, name FROM remote_peer WHERE id = 1",
                 [],
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?)),
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Vec<u8>>(1)?,
+                        row.get::<_, String>(2)?,
+                    ))
+                },
             )
             .optional()?
-            .and_then(|(address, key)| {
+            .and_then(|(address, key, name)| {
                 let peer = cineo_core::remote::parse_address(&address)
                     .zip(<[u8; 16]>::try_from(key).ok())
-                    .map(|(address, key)| Peer {
-                        address,
-                        key: RemoteKey::from_bytes(key),
+                    .map(|(address, key)| Computer {
+                        name: cineo_core::remote::computer_name(&name),
+                        peer: Peer {
+                            address,
+                            key: RemoteKey::from_bytes(key),
+                        },
                     });
                 if peer.is_none() {
                     warn!("ignoring an unreadable remote pairing");
                 }
                 peer
             });
-        Ok((host, peer))
+        let choice = self
+            .conn
+            .query_row("SELECT device FROM remote_choice WHERE id = 1", [], |row| {
+                row.get::<_, Option<i64>>(0)
+            })
+            .optional()?
+            .map(|device| device.map_or(Choice::Paired, |d| Choice::Synced(d.cast_unsigned())));
+        Ok(Remote { host, peer, choice })
+    }
+
+    pub fn save_remote_choice(&self, choice: Option<Choice>) -> Result<(), StoreError> {
+        match choice {
+            Some(choice) => self.conn.execute(
+                "INSERT OR REPLACE INTO remote_choice (id, device) VALUES (1, ?1)",
+                params![match choice {
+                    Choice::Paired => None,
+                    Choice::Synced(device) => Some(device.cast_signed()),
+                }],
+            )?,
+            None => self.conn.execute("DELETE FROM remote_choice", [])?,
+        };
+        Ok(())
     }
 
     pub fn save_remote_host(&self, host: Option<&RemoteKey>) -> Result<(), StoreError> {
@@ -386,11 +423,15 @@ impl Store {
         Ok(())
     }
 
-    pub fn save_remote_peer(&self, peer: Option<&Peer>) -> Result<(), StoreError> {
+    pub fn save_remote_peer(&self, peer: Option<&Computer>) -> Result<(), StoreError> {
         match peer {
-            Some(peer) => self.conn.execute(
-                "INSERT OR REPLACE INTO remote_peer (id, address, key) VALUES (1, ?1, ?2)",
-                params![peer.address.to_string(), peer.key.as_bytes().as_slice()],
+            Some(computer) => self.conn.execute(
+                "INSERT OR REPLACE INTO remote_peer (id, address, key, name) VALUES (1, ?1, ?2, ?3)",
+                params![
+                    computer.peer.address.to_string(),
+                    computer.peer.key.as_bytes().as_slice(),
+                    computer.name,
+                ],
             )?,
             None => self.conn.execute("DELETE FROM remote_peer", [])?,
         };
@@ -409,6 +450,7 @@ impl Store {
             Effect::ForgetSync => self.forget_sync()?,
             Effect::SaveRemoteHost(host) => self.save_remote_host(host.as_ref())?,
             Effect::SaveRemotePeer(peer) => self.save_remote_peer(peer.as_ref())?,
+            Effect::SaveRemoteChoice(choice) => self.save_remote_choice(*choice)?,
             _ => return Ok(false),
         }
         Ok(true)

@@ -48,7 +48,12 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE TABLE remote_peer (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         address TEXT NOT NULL,
-        key BLOB NOT NULL
+        key BLOB NOT NULL,
+        name TEXT NOT NULL
+    ) STRICT;
+    CREATE TABLE remote_choice (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        device INTEGER
     ) STRICT;",
 ];
 
