@@ -666,9 +666,10 @@ async fn a_slow_peer_does_not_hold_back_the_start() {
     engine.shutdown().await;
 }
 
-async fn seek_away_from_a_slow_start(name: &str) {
+#[tokio::test(flavor = "multi_thread")]
+async fn a_seek_abandons_the_pieces_in_flight_at_the_old_position() {
     const PIECE: usize = 2 * 1024 * 1024;
-    let content = temp_dir(&format!("{name}-seed")).join("content");
+    let content = temp_dir("seek-seed").join("content");
     std::fs::create_dir_all(&content).unwrap();
     let film: Vec<u8> = (0..8 * PIECE as u32)
         .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
@@ -696,7 +697,7 @@ async fn seek_away_from_a_slow_start(name: &str) {
         trackers: Vec::new(),
         window: std::num::NonZeroU64::new(8 * PIECE as u64),
         in_memory: true,
-        ..EngineOptions::new(temp_dir(&format!("{name}-cache")))
+        ..EngineOptions::new(temp_dir("seek-cache"))
     })
     .await
     .unwrap();
@@ -729,11 +730,6 @@ async fn seek_away_from_a_slow_start(name: &str) {
         "the first piece was given up for the one the seek needs"
     );
     engine.shutdown().await;
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn a_seek_abandons_the_pieces_in_flight_at_the_old_position() {
-    seek_away_from_a_slow_start("seek").await;
 }
 
 #[tokio::test(flavor = "multi_thread")]

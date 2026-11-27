@@ -357,8 +357,7 @@ mod tests {
         out.into_inner()
     }
 
-    #[test]
-    fn decoded_images_are_dropped_once_uploaded() {
+    fn offline_loader() -> (tokio::runtime::Runtime, tempfile::TempDir, NetImageLoader) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap();
@@ -366,6 +365,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let loader =
             NetImageLoader::new(client, runtime.handle().clone(), ImageDisk::new(dir.path()));
+        (runtime, dir, loader)
+    }
+
+    #[test]
+    fn decoded_images_are_dropped_once_uploaded() {
+        let (_runtime, _dir, loader) = offline_loader();
         let cache = Arc::clone(&loader.cache);
         let uri = "https://img.example/poster.png";
         let image = ColorImage::filled([2, 2], egui::Color32::WHITE);
@@ -408,13 +413,7 @@ mod tests {
 
     #[test]
     fn an_evicted_image_loses_its_texture_and_loads_again() {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap();
-        let client = AddonClient::new(cineo_net::NetPolicy::default()).unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let loader =
-            NetImageLoader::new(client, runtime.handle().clone(), ImageDisk::new(dir.path()));
+        let (_runtime, _dir, loader) = offline_loader();
         let (cache, textures) = (Arc::clone(&loader.cache), Arc::clone(&loader.textures));
         let uri = "https://img.example/poster.png";
         let image = ColorImage::filled([2, 2], egui::Color32::WHITE);
