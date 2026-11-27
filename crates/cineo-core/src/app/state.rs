@@ -12,11 +12,13 @@ use super::refresh::{
 };
 use super::release::{self, UpdateFailure, UpdateProgress, UpdateRequest, UpdateTarget};
 use super::settings::{Setting, Settings};
+use super::sync::{self, PulledPage, PushedBatch, SyncFailure, SyncState};
 use super::torrent::{TorrentPlayback, TorrentRequest, TorrentStatus, is_engine_url};
 use crate::addon::{
     AddonDescriptor, ContentType, Manifest, Meta, MetaPreview, ResourcePath, Stream, Subtitle,
     TransportUrl, Video,
 };
+use crate::sync::{Changes, DeviceId, Outgoing, Pairing, Replica, SyncKey};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstalledAddon {
@@ -153,6 +155,8 @@ pub struct State {
     pub update_checked: bool,
     pub self_update: Option<UpdateTarget>,
     pub update_progress: UpdateProgress,
+    pub now_ms: u64,
+    pub sync: Option<SyncState>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -289,6 +293,29 @@ pub enum Action {
         info_hash: String,
         reason: String,
     },
+    Tick(u64),
+    RestoreSync {
+        pairing: Pairing,
+        replica: Box<Replica>,
+    },
+    EnableSync {
+        pairing: Pairing,
+        device: DeviceId,
+    },
+    RotateSyncKey(SyncKey),
+    LeaveSync {
+        delete_server_data: bool,
+    },
+    SyncNow,
+    SyncPulled {
+        pairing: Pairing,
+        result: Result<PulledPage, SyncFailure>,
+    },
+    SyncPushed {
+        pairing: Pairing,
+        batch: PushedBatch,
+    },
+    SyncSpaceDeleted(Result<(), SyncFailure>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -336,9 +363,46 @@ pub enum Effect {
     CheckForUpdate(Url),
     InstallUpdate(Box<UpdateRequest>),
     RestartToUpdate,
+    SyncPull {
+        pairing: Pairing,
+        since: u64,
+    },
+    SyncPush {
+        pairing: Pairing,
+        outgoing: Vec<Outgoing>,
+    },
+    DeleteSyncSpace(Pairing),
+    SavePairing {
+        pairing: Pairing,
+        device: DeviceId,
+    },
+    SaveSync(Changes),
+    ForgetSync,
 }
 
 pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
+    let flush = matches!(
+        action,
+        Action::PlaybackStopped | Action::PlaybackEnded | Action::PlaybackFailed(_)
+    );
+    let mut effects = match action {
+        Action::Tick(now_ms) => sync::tick(state, now_ms),
+        Action::RestoreSync { pairing, replica } => sync::restore(state, pairing, *replica),
+        Action::EnableSync { pairing, device } => sync::enable(state, pairing, device),
+        Action::RotateSyncKey(key) => sync::rotate(state, key),
+        Action::LeaveSync { delete_server_data } => sync::leave(state, delete_server_data),
+        Action::SyncNow => sync::sync_now(state),
+        Action::SyncPulled { pairing, result } => sync::pulled(state, &pairing, result),
+        Action::SyncPushed { pairing, batch } => sync::pushed(state, &pairing, batch),
+        Action::SyncSpaceDeleted(_) => Vec::new(),
+        action => reduce(state, action),
+    };
+    let more = sync::after(state, &effects, flush);
+    effects.extend(more);
+    effects
+}
+
+fn reduce(state: &mut State, action: Action) -> Vec<Effect> {
     match action {
         Action::Restore { addons, library } => {
             state.library = library;
@@ -481,7 +545,7 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
         }
         Action::OpenLink(route) => open_link(state, route),
         Action::AcceptLink => match state.link_prompt.take() {
-            Some(transport) => update(state, Action::InstallAddon(transport.to_string())),
+            Some(transport) => reduce(state, Action::InstallAddon(transport.to_string())),
             None => Vec::new(),
         },
         Action::DeclineLink => {
@@ -595,6 +659,15 @@ pub fn update(state: &mut State, action: Action) -> Vec<Effect> {
                 Vec::new()
             }
         }
+        Action::Tick(_)
+        | Action::RestoreSync { .. }
+        | Action::EnableSync { .. }
+        | Action::RotateSyncKey(_)
+        | Action::LeaveSync { .. }
+        | Action::SyncNow
+        | Action::SyncPulled { .. }
+        | Action::SyncPushed { .. }
+        | Action::SyncSpaceDeleted(_) => Vec::new(),
     }
 }
 
@@ -759,7 +832,7 @@ fn open_link(state: &mut State, route: Route) -> Vec<Effect> {
             }
             effects
         }
-        Route::Search(query) => update(state, Action::Search(query)),
+        Route::Search(query) => reduce(state, Action::Search(query)),
         Route::Detail {
             content_type,
             id,

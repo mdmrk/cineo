@@ -249,6 +249,7 @@ fn two_devices_converge_after_exchanging_changes() {
     a.record_effect(&Effect::SaveLibraryItem(item("tt1", 100)), 50_000);
     a.record_effect(&Effect::SaveLibraryItem(item("tt2", 100)), 50_001);
     b.record_effect(&Effect::SaveLibraryItem(item("tt1", 900)), 10_000);
+    b.record_effect(&Effect::SaveLibraryItem(item("tt2", 5)), 10_000);
     b.record_effect(&Effect::DeleteLibraryItem("tt2".into()), 60_000);
     let mut settings = Settings::default();
     settings.set(Setting::SeekStep(SeekStep::S30));
@@ -463,7 +464,7 @@ fn an_unchanged_value_is_not_pushed_again() {
 #[test]
 fn an_edit_is_pushed_once_the_changes_stop_for_a_minute() {
     let mut local = replica(A);
-    local.record_effect(&Effect::DeleteLibraryItem("tt1".into()), 1_000);
+    local.record_effect(&Effect::ClearLibrary, 1_000);
     assert!(!local.push_due(1_000 + PUSH_AFTER_QUIET_MS - 1));
     assert!(local.push_due(1_000 + PUSH_AFTER_QUIET_MS));
 }
@@ -705,4 +706,54 @@ fn the_daily_check_pushes_what_the_server_lost() {
         .map(|o| o.record.name.to_string())
         .collect();
     assert_eq!(names, ["library/tt2"]);
+}
+
+#[test]
+fn deleting_an_item_that_is_already_gone_records_nothing() {
+    let mut local = replica(A);
+    local.record_effect(&Effect::DeleteLibraryItem("never".into()), 1_000);
+    local.merge(item_record("old", 1, stamp(500, 0, B)), 1, 1_000);
+    local.merge(
+        record(RecordName::LibraryCleared, stamp(600, 0, B), Value::Cleared),
+        2,
+        1_000,
+    );
+    local.record_effect(&Effect::DeleteLibraryItem("old".into()), 1_000);
+    assert!(
+        local.outgoing().is_empty(),
+        "a remote clear does not echo back as tombstones"
+    );
+}
+
+#[test]
+fn values_never_synced_give_way_to_the_space_whatever_the_device_ids() {
+    let addon = |host: &str| {
+        cineo_core::addon::TransportUrl::parse(&format!("https://{host}/manifest.json")).unwrap()
+    };
+    let mut settings = Settings::default();
+    settings.set(Setting::SeekStep(SeekStep::S30));
+    let mut joining = replica(C);
+    joining.seed(&[], &[addon("mine.example")], &settings, 1_000);
+    let seed = |name, value| record(name, stamp(0, 0, A), value);
+    joining.merge(
+        seed(
+            RecordName::Setting("seek_step".into()),
+            Value::Setting("5".into()),
+        ),
+        1,
+        1_000,
+    );
+    joining.merge(
+        seed(
+            RecordName::Addons,
+            Value::Addons(vec![addon("theirs.example")]),
+        ),
+        2,
+        1_000,
+    );
+    assert_eq!(joining.settings_over(settings).seek_step, SeekStep::S5);
+    assert_eq!(
+        joining.addons(),
+        Some(&[addon("theirs.example"), addon("mine.example")][..])
+    );
 }

@@ -137,8 +137,18 @@ The API is blocking; async shells call it off the runtime's worker threads.
 
 ### Sync boundary (ADR-0043, partly built)
 
-Sync is optional and off by default. The core, store, client and native
-server parts exist; the app does not call them yet.
+Sync is optional and off by default. Everything below exists and the
+desktop runs it, but there is no UI to turn it on yet (ADR-0043, step 6b).
+
+- `cineo_core::app` (built): `State::sync` holds the pairing, the replica
+  and the round. `update` runs the reducer, then passes its persistence
+  effects to the replica, starts a round when one is due, and saves the
+  replica's changes (`Effect::SaveSync`). A round is a chain of
+  `SyncPull` and `SyncPush` effects whose answers are merged into the live
+  replica; what changed comes back as the usual library, settings and
+  addon effects. The desktop sends `Action::Tick` every second and restores
+  the pairing at start. Tests: `crates/cineo-core/tests/app_state/sync.rs`,
+  against an in-memory server.
 
 - `cineo_core::sync` (built): `Stamp` and `Clock` (a hybrid logical
   clock), `Record` and its plaintext JSON, and `Replica`, which turns the

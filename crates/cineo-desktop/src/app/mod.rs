@@ -50,13 +50,24 @@ pub fn run(options: Options) -> anyhow::Result<()> {
         library: store.library()?,
     };
     let saved = store.settings()?;
+    let sync = store.sync(Settings::default())?;
     let ui_language = saved.ui_language;
     let allow_private_network = private_networks_allowed(options.allow_private_network, &saved);
     let client = AddonClient::new(NetPolicy {
         allow_private_networks: allow_private_network,
         ..NetPolicy::default()
     })?;
-    let settings = Action::RestoreSettings(saved);
+    let mut restore = vec![
+        Action::Tick(wall_ms()),
+        restore,
+        Action::RestoreSettings(saved),
+    ];
+    if let Some((pairing, replica)) = sync {
+        restore.push(Action::RestoreSync {
+            pairing,
+            replica: Box::new(replica),
+        });
+    }
     let image_disk = ImageDisk::new(&options.cache_dir);
     {
         let image_disk = image_disk.clone();
@@ -123,7 +134,7 @@ pub fn run(options: Options) -> anyhow::Result<()> {
             let mut app = CineoApp::new(
                 cc.egui_ctx.clone(),
                 io,
-                [restore, settings],
+                restore,
                 store_tx,
                 (results_tx, results_rx),
             );
@@ -255,13 +266,14 @@ pub(crate) struct CineoApp {
     power: fastframe_power::Power,
     wake_retry: WakeRetry,
     exe: Option<PathBuf>,
+    ticked: Instant,
 }
 
 impl CineoApp {
     pub(crate) fn new(
         ctx: egui::Context,
         io: Io,
-        restore: [Action; 2],
+        restore: Vec<Action>,
         store_tx: Sender<Effect>,
         (results_tx, results_rx): (Sender<Msg>, Receiver<Msg>),
     ) -> Self {
@@ -298,6 +310,7 @@ impl CineoApp {
             power,
             wake_retry: WakeRetry::default(),
             exe,
+            ticked: Instant::now(),
         };
         for action in restore {
             app.dispatch(action);
@@ -326,7 +339,10 @@ impl CineoApp {
             | Effect::FetchMeta { .. }
             | Effect::FetchStreams { .. }
             | Effect::FetchSubtitles { .. }
-            | Effect::CheckForUpdate(_)) => {
+            | Effect::CheckForUpdate(_)
+            | Effect::SyncPull { .. }
+            | Effect::SyncPush { .. }
+            | Effect::DeleteSyncSpace(_)) => {
                 if let Some(task) = cineo_net::fetch_task(&self.io.client, effect) {
                     self.spawn(task);
                 }
@@ -335,7 +351,10 @@ impl CineoApp {
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)
             | Effect::ClearLibrary
-            | Effect::SaveSettings(_)) => {
+            | Effect::SaveSettings(_)
+            | Effect::SavePairing { .. }
+            | Effect::SaveSync(_)
+            | Effect::ForgetSync) => {
                 let sent = self
                     .store_tx
                     .as_ref()
@@ -349,6 +368,16 @@ impl CineoApp {
             Effect::StopTorrent => self.stop_torrent(),
             Effect::InstallUpdate(request) => self.install_update(*request),
             Effect::RestartToUpdate => self.restart_to_update(),
+        }
+    }
+
+    fn tick(&mut self, ctx: &egui::Context) {
+        if self.ticked.elapsed() >= TICK_EVERY {
+            self.ticked = Instant::now();
+            self.dispatch(Action::Tick(wall_ms()));
+        }
+        if self.state.sync.is_some() {
+            ctx.request_repaint_after(IDLE_TICK_EVERY);
         }
     }
 
@@ -459,6 +488,7 @@ impl eframe::App for CineoApp {
             self.wake_retry.woke(Instant::now());
         }
         self.retry_after_waking(ctx);
+        self.tick(ctx);
         images::evict(ctx);
         let status = self.playback.as_ref().map(|e| e.player.status());
         self.keep_awake
@@ -539,6 +569,15 @@ impl eframe::App for CineoApp {
         self.store_tx = None;
         self.torrents.shutdown(Duration::from_secs(2));
     }
+}
+
+const TICK_EVERY: Duration = Duration::from_secs(1);
+const IDLE_TICK_EVERY: Duration = Duration::from_secs(30);
+
+fn wall_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
 fn private_networks_allowed(command_line: bool, settings: &Settings) -> bool {

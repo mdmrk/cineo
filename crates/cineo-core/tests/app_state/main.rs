@@ -20,6 +20,7 @@ mod addons;
 mod library;
 mod playback;
 mod settings;
+mod sync;
 mod torrent;
 mod updates;
 

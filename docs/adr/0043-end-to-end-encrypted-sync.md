@@ -186,6 +186,17 @@ key needs a decision.
   does. The core decides when to push and emits effects: `SyncPull { since }`,
   `SyncPush(Vec<SyncRecord>)` (plaintext) and `SaveSyncState`. Results come
   back as `SyncPulled` and `SyncPushed` actions.
+  (As built in step 6a: the shell sends `Action::Tick(now_ms)` every second,
+  and every other action is stamped with the last tick. The core runs each
+  round itself, one effect at a time (`SyncPull`, `SyncPush`,
+  `DeleteSyncSpace`, `SavePairing`, `SaveSync`, `ForgetSync`), so an edit
+  made while a request is in flight is merged into the live replica and
+  never lost; `SyncClient::sync` stays as a helper for the server's tests.
+  `update` runs the old reducer, then hands its persistence effects to the
+  replica. Values that were never synced, with a seed stamp of 0, give way
+  to the space's values whatever the device ids, and addon lists join. A
+  deleted space pauses sync until the user pairs again; a busy server is
+  asked again after its `Retry-After`, other failures after a minute.)
 - **Batching:** the record is marked dirty on every local edit. A push
   happens 60 s after the last change, at most once every 5 min while
   playing, and immediately on playback stop, pause or exit (best effort).
@@ -472,6 +483,11 @@ database.
      a swept space left paired devices in conflicts.
 6. Desktop: Settings → Sync (turn on, QR and code, paste a code, server
    URL, change key, leave, last sync status). `cineo://sync/` deep link.
+   Amended 2026-11-27 by the owner: the controls go in Settings → Data, and
+   nothing is pushed on exit (pending edits go out on the next start). In
+   parts: **6a** the core reducer, store and network effects, restore and
+   the tick on the desktop, without UI (done); **6b** the UI; **6c** status
+   and debt docs.
 7. Android: the same screen, the intent filter for `cineo://sync`, and
    pull on foreground.
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named

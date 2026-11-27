@@ -343,6 +343,9 @@ impl Store {
             Effect::DeleteLibraryItem(id) => self.delete_library_item(id)?,
             Effect::ClearLibrary => self.clear_library()?,
             Effect::SaveSettings(settings) => self.save_settings(settings)?,
+            Effect::SavePairing { pairing, device } => self.pair(pairing, *device)?,
+            Effect::SaveSync(changes) => self.save_sync_changes(changes)?,
+            Effect::ForgetSync => self.forget_sync()?,
             _ => return Ok(false),
         }
         Ok(true)

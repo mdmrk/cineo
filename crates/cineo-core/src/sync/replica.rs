@@ -170,7 +170,7 @@ impl Replica {
                 Value::Item(Box::new(item.clone())),
                 now_ms,
             ),
-            Effect::DeleteLibraryItem(id) => {
+            Effect::DeleteLibraryItem(id) if self.is_visible(id) => {
                 self.set(RecordName::Item(id.clone()), Value::Deleted, now_ms);
             }
             Effect::ClearLibrary => self.set(RecordName::LibraryCleared, Value::Cleared, now_ms),
@@ -227,6 +227,7 @@ impl Replica {
         self.touch(&remote.name);
         if let Some(local) = self.entries.get_mut(&remote.name)
             && local.record.stamp >= remote.stamp
+            && !(local.seeded && local.record.stamp.physical_ms == 0)
         {
             local.seq = local.seq.max(seq);
             local.dirty = local.record.stamp > remote.stamp;
@@ -357,6 +358,24 @@ impl Replica {
 
     pub const fn born(&self) -> u64 {
         self.born
+    }
+
+    fn is_visible(&self, id: &str) -> bool {
+        let cleared = self.get(&RecordName::LibraryCleared).map(|r| r.stamp);
+        self.get(&RecordName::Item(id.to_owned()))
+            .is_some_and(|record| {
+                matches!(record.value, Value::Item(_))
+                    && cleared.is_none_or(|stamp| record.stamp > stamp)
+            })
+    }
+
+    pub fn seq(&self, name: &RecordName) -> u64 {
+        self.entries.get(name).map_or(0, |entry| entry.seq)
+    }
+
+    pub fn move_to_new_space(&mut self) {
+        self.born = 0;
+        self.start_over();
     }
 
     pub fn flush(&mut self) {

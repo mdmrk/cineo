@@ -9,6 +9,7 @@ mod release;
 mod settings;
 mod state;
 mod streams;
+mod sync;
 mod torrent;
 
 pub use language::Language;
@@ -33,6 +34,10 @@ pub use state::{
 };
 pub use streams::{
     Facts as StreamFacts, Quality, Resolution, StreamSort, Tier, matcher as stream_matcher,
+};
+pub use sync::{
+    PUSH_ATTEMPTS, PulledPage, PushedBatch, RETRY_AFTER_FAILURE_MS, Round, SyncFailure,
+    SyncProblem, SyncState,
 };
 pub use torrent::{
     Buffered, Lookahead, Refill, TorrentFile, TorrentPlayback, TorrentRequest, TorrentStatus,

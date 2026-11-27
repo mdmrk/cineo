@@ -104,7 +104,10 @@ impl Shell {
             | Effect::FetchMeta { .. }
             | Effect::FetchStreams { .. }
             | Effect::FetchSubtitles { .. }
-            | Effect::CheckForUpdate(_)) => {
+            | Effect::CheckForUpdate(_)
+            | Effect::SyncPull { .. }
+            | Effect::SyncPush { .. }
+            | Effect::DeleteSyncSpace(_)) => {
                 if let Some(task) = fetch_task(&self.client, effect) {
                     let tx = self.tx.clone();
                     self.runtime.spawn(async move {
@@ -116,7 +119,10 @@ impl Shell {
             | Effect::SaveLibraryItem(_)
             | Effect::DeleteLibraryItem(_)
             | Effect::ClearLibrary
-            | Effect::SaveSettings(_)) => {
+            | Effect::SaveSettings(_)
+            | Effect::SavePairing { .. }
+            | Effect::SaveSync(_)
+            | Effect::ForgetSync) => {
                 if self.store_tx.send(effect).is_err() {
                     self.state.notice = Some(Notice::StoreClosed);
                 }
