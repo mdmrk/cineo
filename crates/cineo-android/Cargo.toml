@@ -20,7 +20,7 @@ qrcode.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
-uniffi.workspace = true
+uniffi = { workspace = true, features = ["macro-scaffolding"] }
 url.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]

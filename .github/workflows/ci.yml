@@ -38,9 +38,9 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c
+      - uses: taiki-e/install-action@073e1fd0bc889c9aee68dbaaa927cde1b5653a83
         with:
-          tool: cargo-nextest@0.9.152,cargo-deny@0.22.0,taplo@0.10.0,typos@1.52.2,cargo-machete@0.10.1,shellcheck@0.11.0,shfmt@3.14.1
+          tool: cargo-nextest@0.9.152,cargo-deny@0.22.1,taplo@0.10.0,typos@1.52.2,cargo-machete@0.10.1,shellcheck@0.11.0,shfmt@3.14.1
       - &minisign
         run: scripts/release.sh tool "$RUNNER_TEMP/bin" && echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - run: rustup target add wasm32-unknown-unknown
@@ -67,7 +67,7 @@ jobs:
         with:
           workspaces: ${{ env.DEV_DRIVE_WORKSPACE }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c
+      - uses: taiki-e/install-action@073e1fd0bc889c9aee68dbaaa927cde1b5653a83
         with:
           tool: cargo-nextest@0.9.152
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -86,7 +86,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c
+      - uses: taiki-e/install-action@073e1fd0bc889c9aee68dbaaa927cde1b5653a83
         with:
           tool: cargo-nextest@0.9.152
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings

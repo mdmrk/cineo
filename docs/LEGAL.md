@@ -52,8 +52,8 @@ Statements below reflect the maintainers' understanding as of 2026-10-06.
   allowlist.
 - Crate-scoped exceptions for UniFFI (2026-11-03, ADR-0028): `uniffi`,
   `uniffi_bindgen`, `uniffi_core`, `uniffi_internal_macros`,
-  `uniffi_macros`, `uniffi_meta`, `uniffi_pipeline` and `uniffi_udl`
-  0.32.2 are MPL-2.0. `cineo-android` uses them, unmodified, to bind Rust
+  `uniffi_macros`, `uniffi_meta`, `uniffi_parse_rs`, `uniffi_pipeline`
+  and `uniffi_udl` 0.33.0 are MPL-2.0. `cineo-android` uses them, unmodified, to bind Rust
   to Kotlin; `uniffi_bindgen` and `uniffi_udl` only run at build time.
   The same MPL-2.0 terms apply as for `option-ext`: ship the notice and
   point to the source. The Kotlin that `uniffi-bindgen` writes is
@@ -80,7 +80,7 @@ which `cargo deny` does not see (VERIFIED: their POMs or crate manifests,
   `lifecycle-runtime-compose` 2.11.1: Apache-2.0.
 - `kotlinx-coroutines-android` 1.11.0: Apache-2.0.
 - The sync QR scanner (ADR-0043, VERIFIED: their POMs on Maven Central and
-  Google Maven, 2026-11-27): CameraX 1.6.2 (`camera-camera2`,
+  Google Maven, 2026-11-27): CameraX 1.7.0 (`camera-camera2`,
   `camera-lifecycle`, `camera-view`) and the AndroidX and Media3 libraries
   it pulls in, `com.google.zxing:core` 3.5.4, Dagger 2.59, Guava
   33.3.1-android with `failureaccess`, `jsr305` 3.0.2,

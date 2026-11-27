@@ -37,6 +37,7 @@ exceptions = [
     { crate = "uniffi_macros", allow = ["MPL-2.0"] },
     { crate = "uniffi_meta", allow = ["MPL-2.0"] },
     { crate = "uniffi_pipeline", allow = ["MPL-2.0"] },
+    { crate = "uniffi_parse_rs", allow = ["MPL-2.0"] },
     { crate = "uniffi_udl", allow = ["MPL-2.0"] },
     { crate = "epaint_default_fonts", allow = ["OFL-1.1", "Ubuntu-font-1.0"] },
 ]
