@@ -48,9 +48,9 @@ pub(crate) const MIGRATIONS: &[&str] = &[
     CREATE TABLE remote_peer (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         address TEXT NOT NULL,
-        key BLOB NOT NULL,
-        name TEXT NOT NULL
-    ) STRICT;
+        key BLOB NOT NULL
+    ) STRICT;",
+    "ALTER TABLE remote_peer ADD COLUMN name TEXT NOT NULL DEFAULT '';
     CREATE TABLE remote_choice (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         device INTEGER
@@ -108,6 +108,26 @@ pub(crate) fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), 
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn a_phone_paired_before_computer_names_keeps_its_computer() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        migrate(&mut conn, &MIGRATIONS[..7]).unwrap();
+        conn.execute(
+            "INSERT INTO remote_peer (id, address, key) VALUES (1, '192.168.1.20:18765', ?1)",
+            [[4_u8; 16].as_slice()],
+        )
+        .unwrap();
+        conn.execute("INSERT INTO remote_host (id, key) VALUES (1, NULL)", [])
+            .unwrap();
+        let store = crate::Store::init(conn).unwrap();
+        let remote = store.remote().unwrap();
+        let peer = remote.peer.unwrap();
+        assert_eq!(peer.name, "");
+        assert_eq!(peer.peer.address, "192.168.1.20:18765".parse().unwrap());
+        assert_eq!(remote.host, cineo_core::remote::Hosting::Off);
+        assert_eq!(remote.choice, None);
+    }
 
     #[test]
     fn failed_migration_leaves_the_database_at_its_previous_version() {

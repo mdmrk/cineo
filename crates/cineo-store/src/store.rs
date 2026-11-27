@@ -74,7 +74,7 @@ impl Store {
         Self::init(Connection::open_in_memory()?)
     }
 
-    fn init(mut conn: Connection) -> Result<Self, StoreError> {
+    pub(crate) fn init(mut conn: Connection) -> Result<Self, StoreError> {
         conn.busy_timeout(BUSY_TIMEOUT)?;
         migrate(&mut conn, MIGRATIONS)?;
         conn.pragma_update(None, "journal_mode", "WAL")?;
