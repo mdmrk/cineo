@@ -60,7 +60,19 @@ Format:
 - Instead: a burst can get more than 120 requests a minute through (500
   quick requests drew 12 refusals, 2026-11-27); an over-limit request
   gets 429, and the app shows the server as busy and tries again later.
-- Exit: a Durable Object per space, or the paid plan's CPU limits.
+- Exit: a Durable Object per space, or the paid plan's CPU limits. New
+  spaces also cost a 20-bit proof of work, which slows CPUs but not GPUs.
+
+### Sync: a device with a wrong clock cannot sync
+- Where: [handler.rs](../crates/cineo-sync-server/src/handler.rs) (`authenticate`)
+- Gap: a signed request whose time is more than 10 minutes from the
+  server's clock is refused with 401.
+- Why: the time bounds how long a captured request can be replayed
+  (ADR-0043, §4).
+- Instead: sync stops on that device with "the server answered HTTP 401"
+  until its clock is right; nothing is lost locally.
+- Exit: let the client correct its offset from the server's `Date`
+  header and retry once, and word the failure as a clock problem.
 
 ### Subtitles: no video hash or size from the player
 - Where: [playback.rs](../crates/cineo-core/src/app/playback.rs) (`subtitle_groups`)

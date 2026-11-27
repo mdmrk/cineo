@@ -1,13 +1,16 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use cineo_core::sync::protocol::{
-    MAX_BATCH_BYTES, MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_PULL_BYTES, PULL_PAGE_RECORDS,
-    PullPage, PushRequest, PushResponse, Write, parse_conflicts,
+    MAX_BATCH_BYTES, MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_PULL_BYTES, MAX_WORK_BITS,
+    PULL_PAGE_RECORDS, PullPage, PushRequest, PushResponse, Write, parse_conflicts,
+    parse_work_required, request_target,
 };
 use cineo_core::sync::{Outgoing, Pairing, Record, RecordName, Stamp};
 use reqwest::{Method, StatusCode};
 use tracing::{Instrument, info_span, warn};
 use url::{Host, Url};
 
-use super::keys::SpaceKeys;
+use super::keys::{SpaceKeys, find_work};
 use crate::addon_client::{SyncRequest, next_request_id, origin};
 use crate::{AddonClient, FetchError};
 
@@ -156,15 +159,37 @@ impl SyncClient {
             writes: batch.iter().map(|(_, w)| w.clone()).collect(),
         };
         let url = self.url("v1/records")?;
-        let (status, retry_after_s, body) = self
+        let json = request.to_json().into_bytes();
+        let mut reply = self
             .exchange(
                 "push",
                 Method::POST,
-                url,
-                Some(request.to_json().into_bytes()),
+                url.clone(),
+                Some(json.clone()),
                 MAX_PUSH_RESPONSE_BYTES,
+                None,
             )
             .await?;
+        if reply.0 == StatusCode::PRECONDITION_REQUIRED {
+            let bits = parse_work_required(&reply.2)
+                .filter(|bits| *bits <= MAX_WORK_BITS)
+                .ok_or(SyncError::Rejected(reply.0))?;
+            let key = self.keys.public_key();
+            let work = tokio::task::spawn_blocking(move || find_work(&key, bits))
+                .await
+                .map_err(|_| SyncError::Crypto)?;
+            reply = self
+                .exchange(
+                    "push",
+                    Method::POST,
+                    url,
+                    Some(json),
+                    MAX_PUSH_RESPONSE_BYTES,
+                    Some(work),
+                )
+                .await?;
+        }
+        let (status, retry_after_s, body) = reply;
         if status == StatusCode::CONFLICT {
             let names: Vec<(RecordName, u64)> = parse_conflicts(&body)
                 .into_iter()
@@ -213,14 +238,26 @@ impl SyncClient {
         url: Url,
         body: Option<Vec<u8>>,
         limit: usize,
+        work: Option<u64>,
     ) -> Result<(StatusCode, Option<u64>, Vec<u8>), SyncError> {
+        let target = request_target(url.path(), url.query()).ok_or(SyncError::Malformed)?;
+        let now_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+        let authorization = self.keys.authorization(
+            method.as_str(),
+            &target,
+            now_ms,
+            body.as_deref().unwrap_or_default(),
+        );
         let span = info_span!("sync_request", req = next_request_id(), server = %origin(&url), op);
         Ok(self
             .http
             .send(SyncRequest {
                 method,
                 url,
-                bearer: self.keys.token(),
+                authorization,
+                work,
                 body,
                 limit,
             })
@@ -236,7 +273,8 @@ impl SyncClient {
         body: Option<Vec<u8>>,
         limit: usize,
     ) -> Result<Vec<u8>, SyncError> {
-        let (status, retry_after_s, body) = self.exchange(op, method, url, body, limit).await?;
+        let (status, retry_after_s, body) =
+            self.exchange(op, method, url, body, limit, None).await?;
         check(status, retry_after_s, body)
     }
 }

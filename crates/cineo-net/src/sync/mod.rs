@@ -8,4 +8,4 @@ pub use cineo_core::sync::protocol::{
 };
 pub use client::{Pulled, PushOutcome, Pushed, SyncClient, SyncError, server_allowed};
 pub use code::{CodeError, format_code, pairing_link, parse_code, parse_server};
-pub use keys::{BLOB_FORMAT, Sealed, SpaceKeys, new_device, new_key};
+pub use keys::{BLOB_FORMAT, Sealed, SpaceKeys, find_work, new_device, new_key};

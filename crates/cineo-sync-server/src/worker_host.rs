@@ -1,4 +1,4 @@
-use cineo_core::sync::protocol::MAX_BATCH_BYTES;
+use cineo_core::sync::protocol::{MAX_BATCH_BYTES, WORK_BITS, WORK_HEADER};
 use worker::js_sys::{Array, Math, Uint8Array};
 use worker::wasm_bindgen::JsValue;
 use worker::{
@@ -143,11 +143,9 @@ async fn fetch(
         _ => Method::Other,
     };
     let url = req.url()?;
-    let bearer = req
-        .headers()
-        .get("authorization")?
-        .and_then(|v| v.strip_prefix("Bearer ").map(str::to_owned));
-    if let Some(id) = handler::space_id(bearer.as_deref()) {
+    let authorization = req.headers().get("authorization")?;
+    let work = req.headers().get(WORK_HEADER)?;
+    if let Some(id) = handler::claimed_space(authorization.as_deref()) {
         let key: String = id.iter().take(16).map(|b| format!("{b:02x}")).collect();
         if !allowed(&env, REQUESTS, key).await {
             return to_worker(&Response::retry(429, "too many requests", LIMIT_RETRY_S));
@@ -162,13 +160,15 @@ async fn fetch(
         method,
         path: url.path().to_owned(),
         query: url.query().map(str::to_owned),
-        bearer,
+        authorization,
+        work,
         body,
     };
     let ctx = Context {
         now_ms: Date::now().as_millis(),
         nonce: random53(),
         born: random53(),
+        work_bits: WORK_BITS,
     };
     let db = D1Db(env.d1(DATABASE)?);
     let gate = AddressGate { env: &env, ip };

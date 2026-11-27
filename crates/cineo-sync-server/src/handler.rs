@@ -1,9 +1,12 @@
 use std::collections::BTreeMap;
 
 use cineo_core::sync::protocol::{
-    MAX_PULL_BYTES, MAX_SPACE_BYTES, MAX_SPACE_RECORDS, PULL_PAGE_RECORDS, PullPage, PushRequest,
-    PushResponse, WireRecord, conflict_json, decode_token, error_json, info_json,
+    Authorization, MAX_CLOCK_SKEW_MS, MAX_PULL_BYTES, MAX_SPACE_BYTES, MAX_SPACE_RECORDS,
+    PUBLIC_KEY_LEN, PULL_PAGE_RECORDS, PullPage, PushRequest, PushResponse, WireRecord,
+    conflict_json, error_json, info_json, leading_zero_bits, request_target, signed_message,
+    work_message, work_required_json,
 };
+use ed25519_dalek::{Signature, VerifyingKey};
 use sha2::{Digest, Sha256};
 use tracing::warn;
 
@@ -27,7 +30,8 @@ pub struct Request {
     pub method: Method,
     pub path: String,
     pub query: Option<String>,
-    pub bearer: Option<String>,
+    pub authorization: Option<String>,
+    pub work: Option<String>,
     pub body: Vec<u8>,
 }
 
@@ -64,6 +68,7 @@ pub struct Context {
     pub now_ms: u64,
     pub nonce: i64,
     pub born: i64,
+    pub work_bits: u32,
 }
 
 pub(crate) trait Gate {
@@ -147,14 +152,18 @@ pub(crate) async fn handle(
     let result = match (route, request.method) {
         (Route::Info, Method::Get) => return Response::json(200, info_json()).into(),
         (Route::Records, Method::Get | Method::Post) | (Route::Space, Method::Delete) => {
-            let Some(id) = space_id(request.bearer.as_deref()) else {
-                return Response::error(401, "missing or invalid token").into();
+            let Some(key) = authenticate(request, ctx.now_ms) else {
+                return Response::error(401, "missing or invalid signature").into();
             };
+            let id = space_id(&key);
             match request.method {
                 Method::Get => pull(db, &id, request.query.as_deref())
                     .await
                     .map(Outcome::from),
-                Method::Post => push(db, gate, &id, &request.body, ctx).await,
+                Method::Post => {
+                    let work = request.work.as_deref().and_then(|w| w.trim().parse().ok());
+                    push(db, gate, &key, work, &request.body, ctx).await
+                }
                 _ => delete(db, &id, ctx.now_ms).await.map(Outcome::from),
             }
         }
@@ -166,9 +175,45 @@ pub(crate) async fn handle(
     })
 }
 
-pub(crate) fn space_id(bearer: Option<&str>) -> Option<Vec<u8>> {
-    let token = decode_token(bearer?)?;
-    Some(Sha256::digest(token).to_vec())
+fn method_name(method: Method) -> &'static str {
+    match method {
+        Method::Get => "GET",
+        Method::Post => "POST",
+        Method::Delete => "DELETE",
+        Method::Other => "OTHER",
+    }
+}
+
+fn authenticate(request: &Request, now_ms: u64) -> Option<[u8; PUBLIC_KEY_LEN]> {
+    let auth = Authorization::parse(request.authorization.as_deref()?)?;
+    if now_ms.abs_diff(auth.time_ms) > MAX_CLOCK_SKEW_MS {
+        return None;
+    }
+    let target = request_target(&request.path, request.query.as_deref())?;
+    let message = signed_message(
+        method_name(request.method),
+        &target,
+        auth.time_ms,
+        &Sha256::digest(&request.body),
+    );
+    VerifyingKey::from_bytes(&auth.key)
+        .ok()?
+        .verify_strict(&message, &Signature::from_bytes(&auth.signature))
+        .ok()?;
+    Some(auth.key)
+}
+
+fn space_id(key: &[u8; PUBLIC_KEY_LEN]) -> Vec<u8> {
+    Sha256::digest(key).to_vec()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn claimed_space(authorization: Option<&str>) -> Option<Vec<u8>> {
+    Authorization::parse(authorization?).map(|auth| space_id(&auth.key))
+}
+
+fn work_done(key: &[u8; PUBLIC_KEY_LEN], nonce: Option<u64>, bits: u32) -> bool {
+    nonce.is_some_and(|nonce| leading_zero_bits(&Sha256::digest(work_message(key, nonce))) >= bits)
 }
 
 async fn space(db: &impl Db, id: &[u8]) -> Result<Option<Space>, DbError> {
@@ -249,10 +294,12 @@ async fn pull(db: &impl Db, id: &[u8], query: Option<&str>) -> Result<Response, 
 async fn push(
     db: &impl Db,
     gate: &impl Gate,
-    id: &[u8],
+    key: &[u8; PUBLIC_KEY_LEN],
+    work: Option<u64>,
     body: &[u8],
     ctx: Context,
 ) -> Result<Outcome, DbError> {
+    let id: &[u8] = &space_id(key);
     let request = match PushRequest::parse(body) {
         Ok(request) => request,
         Err(err) => return Ok(Response::error(400, &err.to_string()).into()),
@@ -263,6 +310,9 @@ async fn push(
     let existing = space(db, id).await?;
     match existing {
         Some(space) if space.deleted => return Ok(Response::error(410, "space deleted").into()),
+        None if !work_done(key, work, ctx.work_bits) => {
+            return Ok(Response::json(428, work_required_json(ctx.work_bits)).into());
+        }
         None if !gate.may_create().await => {
             return Ok(Response::retry(429, "too many new spaces", CREATE_RETRY_S).into());
         }

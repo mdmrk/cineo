@@ -10,6 +10,7 @@ use cineo_core::addon::{
 };
 use cineo_core::app::{ReleaseError, parse_release};
 use cineo_core::diagnostics::Parsed;
+use cineo_core::sync::protocol::WORK_HEADER;
 use reqwest::dns::{Addrs, Name, Resolve, Resolving};
 use reqwest::{StatusCode, redirect};
 use tracing::{Instrument, debug, info_span, warn};
@@ -230,14 +231,17 @@ impl AddonClient {
 
     pub(crate) async fn send(
         &self,
-        request: SyncRequest<'_>,
+        request: SyncRequest,
     ) -> Result<(StatusCode, Option<u64>, Vec<u8>), FetchError> {
         self.policy.check_url(&request.url)?;
         let mut builder = self
             .http()
             .request(request.method, request.url)
             .header(reqwest::header::ACCEPT, "application/json")
-            .bearer_auth(request.bearer);
+            .header(reqwest::header::AUTHORIZATION, request.authorization);
+        if let Some(work) = request.work {
+            builder = builder.header(WORK_HEADER, work.to_string());
+        }
         if let Some(body) = request.body {
             builder = builder
                 .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -257,10 +261,11 @@ impl AddonClient {
 }
 
 #[derive(Debug)]
-pub(crate) struct SyncRequest<'a> {
+pub(crate) struct SyncRequest {
     pub method: reqwest::Method,
     pub url: Url,
-    pub bearer: &'a str,
+    pub authorization: String,
+    pub work: Option<u64>,
     pub body: Option<Vec<u8>>,
     pub limit: usize,
 }

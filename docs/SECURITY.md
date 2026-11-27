@@ -171,12 +171,23 @@ Sync is off by default.
   4-byte checksum, so a typo is caught before any request
   (`a_mistyped_code_is_rejected`). Its `Debug` output hides it
   (`the_sync_key_is_never_printed`, `the_keys_are_never_printed`).
-- **Derived keys.** HKDF-SHA256 gives a bearer token, an HMAC key for the
-  record names and a ChaCha20-Poly1305 key. The derivation is pinned by
-  vectors computed separately with Python's `hmac` and `hashlib`
+- **Derived keys.** HKDF-SHA256 gives an Ed25519 signing key, an HMAC key
+  for the record names and a ChaCha20-Poly1305 key. The derivation is
+  pinned by vectors computed separately with Python's `hmac` and `hashlib`
+  and, for the public key, `openssl`
   (`derived_keys_match_the_reference_vectors`).
-- **What the server receives.** The token, 16-byte record keys and sealed
-  blobs. Ids, titles, addon URLs and settings never leave the device in
+- **Signed requests.** Every request carries an Ed25519 signature over the
+  method, path, query, time and body hash, checked by the client's tests
+  with an independent verifier
+  (`pull_opens_records_and_skips_unreadable_ones`,
+  `push_sends_sealed_writes_with_their_base_versions`). The server refuses
+  a missing or wrong signature, or one for another query, body, method or
+  key (`records_need_a_valid_signature`), and a time more than 10 minutes
+  from its clock (`a_signed_request_expires_after_ten_minutes`). A captured
+  request can therefore be replayed only within those minutes, and the
+  server's database holds nothing that lets anyone sign.
+- **What the server receives.** The public key, 16-byte record keys and
+  sealed blobs. Ids, titles, addon URLs and settings never leave the device in
   clear (`push_sends_sealed_writes_with_their_base_versions`).
 - **Integrity.** A blob opens only with its key, under its own record key
   and in a known format; a tampered, moved or foreign blob is skipped
@@ -212,10 +223,15 @@ Sync is off by default.
   and uses the camera only while the scanner is open; frames are read in
   memory and not stored. Without the permission, or without a camera
   (`android.hardware.camera.any` is optional), the code is typed.
-- **Server (`cineo-sync-server`).** It stores SHA-256 of the token, never
-  the token, and only sealed blobs under opaque keys
+- **Server (`cineo-sync-server`).** It stores SHA-256 of each space's
+  public key and only sealed blobs under opaque keys
   (`the_server_stores_nothing_readable`). A request without a valid
-  32-byte token is refused (`records_need_a_valid_token`). Malformed
+  signature is refused (`records_need_a_valid_signature`). Creating a
+  space needs a 20-bit proof of work bound to its key; later pushes do not
+  (`only_a_new_space_needs_proof_of_work`), and the client does the work
+  when asked but refuses more than 24 bits
+  (`a_new_space_is_pushed_again_with_the_work_the_server_asks_for`,
+  `too_much_work_is_refused_without_trying`). Malformed
   pushes, more than 64 writes, wrong key sizes, empty or oversized blobs
   and repeated keys are refused (`malformed_pushes_are_refused`); a body
   over 256 KiB is refused before it is read

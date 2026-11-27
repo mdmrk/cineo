@@ -1,17 +1,21 @@
 #![allow(clippy::unwrap_used, reason = "test helpers panic on purpose")]
 
+use cineo_core::sync::SyncKey;
 use cineo_core::sync::protocol::{
     MAX_BATCH_RECORDS, MAX_BLOB_BYTES, MAX_SPACE_BYTES, MAX_SPACE_RECORDS, PullPage, PushRequest,
-    PushResponse, Write, encode,
+    PushResponse, Write, parse_work_required,
 };
+use cineo_net::sync::{SpaceKeys, find_work};
 
 use super::*;
 use crate::native::SqliteDb;
 
 const NOW: u64 = 0;
+const TEST_WORK_BITS: u32 = 4;
+const WORK_BITS_FOR_TEST: u32 = cineo_core::sync::protocol::WORK_BITS;
 
-fn token(n: u8) -> String {
-    encode(&[n; 32])
+fn keys(who: u8) -> SpaceKeys {
+    SpaceKeys::derive(&SyncKey::from_bytes([who; 16])).unwrap()
 }
 
 fn ctx() -> Context {
@@ -19,6 +23,7 @@ fn ctx() -> Context {
         now_ms: NOW,
         nonce: 7,
         born: 41,
+        work_bits: TEST_WORK_BITS,
     }
 }
 
@@ -26,7 +31,7 @@ async fn handle(db: &impl Db, request: &Request, ctx: Context) -> Outcome {
     super::handle(db, &true, request, ctx).await
 }
 
-fn request(method: Method, path: &str, bearer: Option<String>, body: Vec<u8>) -> Request {
+fn unsigned(method: Method, path: &str, body: Vec<u8>) -> Request {
     let (path, query) = match path.split_once('?') {
         Some((path, query)) => (path.to_owned(), Some(query.to_owned())),
         None => (path.to_owned(), None),
@@ -35,8 +40,25 @@ fn request(method: Method, path: &str, bearer: Option<String>, body: Vec<u8>) ->
         method,
         path,
         query,
-        bearer,
+        authorization: None,
+        work: None,
         body,
+    }
+}
+
+fn signed_at(method: Method, path: &str, who: u8, body: Vec<u8>, time_ms: u64) -> Request {
+    let mut request = unsigned(method, path, body);
+    let target = request_target(&request.path, request.query.as_deref()).unwrap_or_default();
+    request.authorization =
+        Some(keys(who).authorization(method_name(method), &target, time_ms, &request.body));
+    request.work = Some(find_work(&keys(who).public_key(), TEST_WORK_BITS).to_string());
+    request
+}
+
+fn request(method: Method, path: &str, who: Option<u8>, body: Vec<u8>) -> Request {
+    match who {
+        Some(who) => signed_at(method, path, who, body, NOW),
+        None => unsigned(method, path, body),
     }
 }
 
@@ -52,7 +74,7 @@ async fn push_as(db: &impl Db, who: u8, writes: Vec<Write>, ctx: Context) -> Out
     let body = PushRequest { writes }.to_json().into_bytes();
     handle(
         db,
-        &request(Method::Post, "/v1/records", Some(token(who)), body),
+        &request(Method::Post, "/v1/records", Some(who), body),
         ctx,
     )
     .await
@@ -68,7 +90,7 @@ async fn pull(db: &impl Db, query: &str) -> Response {
         &request(
             Method::Get,
             &format!("/v1/records?{query}"),
-            Some(token(1)),
+            Some(1),
             Vec::new(),
         ),
         ctx(),
@@ -88,7 +110,7 @@ fn seqs(response: &Response) -> Vec<u64> {
 }
 
 async fn space_row(db: &impl Db, who: u8) -> Vec<SqlValue> {
-    let id = space_id(Some(&token(who))).unwrap();
+    let id = space_id(&keys(who).public_key());
     db.rows(Statement::new(
         "SELECT seq, records, bytes, deleted FROM spaces WHERE id = ?1",
         vec![SqlValue::Blob(id)],
@@ -99,7 +121,7 @@ async fn space_row(db: &impl Db, who: u8) -> Vec<SqlValue> {
 }
 
 #[tokio::test]
-async fn info_needs_no_token_and_states_the_limits() {
+async fn info_needs_no_signature_and_states_the_limits() {
     let db = SqliteDb::open_in_memory().unwrap();
     let response = handle(
         &db,
@@ -113,18 +135,109 @@ async fn info_needs_no_token_and_states_the_limits() {
 }
 
 #[tokio::test]
-async fn records_need_a_valid_token() {
+async fn records_need_a_valid_signature() {
     let db = SqliteDb::open_in_memory().unwrap();
-    for bearer in [None, Some("not base64!".to_owned()), Some(encode(&[1; 31]))] {
-        let response = handle(
-            &db,
-            &request(Method::Get, "/v1/records", bearer.clone(), Vec::new()),
-            ctx(),
-        )
-        .await
-        .response;
-        assert_eq!(response.status, 401, "{bearer:?}");
+    let good = signed_at(Method::Get, "/v1/records?since=0", 1, Vec::new(), NOW);
+    let mut other_query = good.clone();
+    other_query.query = Some("since=5".into());
+    let mut other_body = good.clone();
+    other_body.body = b"{}".to_vec();
+    let mut other_method = good.clone();
+    other_method.method = Method::Post;
+    let mut other_key = good.clone();
+    let stranger = Authorization::parse(
+        keys(2)
+            .authorization("GET", "v1/records?since=0", NOW, &[])
+            .as_str(),
+    )
+    .unwrap();
+    let mut forged = Authorization::parse(good.authorization.as_deref().unwrap()).unwrap();
+    forged.key = stranger.key;
+    other_key.authorization = Some(forged.to_header());
+    let mut garbage = good.clone();
+    garbage.authorization = Some("Bearer abc".into());
+    let unsigned = unsigned(Method::Get, "/v1/records", Vec::new());
+    for (name, request) in [
+        ("no header", unsigned),
+        ("another scheme", garbage),
+        ("another query", other_query),
+        ("another body", other_body),
+        ("another method", other_method),
+        ("another key", other_key),
+    ] {
+        let response = handle(&db, &request, ctx()).await.response;
+        assert_eq!(response.status, 401, "{name}");
     }
+    assert_eq!(handle(&db, &good, ctx()).await.response.status, 200);
+}
+
+#[tokio::test]
+async fn a_signed_request_expires_after_ten_minutes() {
+    let db = SqliteDb::open_in_memory().unwrap();
+    let request = signed_at(Method::Get, "/v1/records", 1, Vec::new(), NOW);
+    for (later_ms, status) in [
+        (0, 200),
+        (MAX_CLOCK_SKEW_MS, 200),
+        (MAX_CLOCK_SKEW_MS + 1, 401),
+    ] {
+        let at = Context {
+            now_ms: NOW + later_ms,
+            ..ctx()
+        };
+        assert_eq!(
+            handle(&db, &request, at).await.response.status,
+            status,
+            "{later_ms}"
+        );
+    }
+    let future = signed_at(
+        Method::Get,
+        "/v1/records",
+        1,
+        Vec::new(),
+        NOW + MAX_CLOCK_SKEW_MS + 1,
+    );
+    assert_eq!(handle(&db, &future, ctx()).await.response.status, 401);
+}
+
+#[tokio::test]
+async fn only_a_new_space_needs_proof_of_work() {
+    let db = SqliteDb::open_in_memory().unwrap();
+    let body = PushRequest {
+        writes: vec![write(1, 0, b"a")],
+    }
+    .to_json()
+    .into_bytes();
+    let strict = Context {
+        work_bits: WORK_BITS_FOR_TEST,
+        ..ctx()
+    };
+    let mut lazy = signed_at(Method::Post, "/v1/records", 1, body.clone(), NOW);
+    lazy.work = None;
+    let refused = handle(&db, &lazy, strict).await.response;
+    assert_eq!(refused.status, 428);
+    assert_eq!(
+        parse_work_required(refused.body.as_bytes()),
+        Some(WORK_BITS_FOR_TEST)
+    );
+    let key = keys(1).public_key();
+    let short = (0..)
+        .find(|n| !work_done(&key, Some(*n), WORK_BITS_FOR_TEST))
+        .unwrap();
+    let mut weak = lazy.clone();
+    weak.work = Some(short.to_string());
+    assert_eq!(handle(&db, &weak, strict).await.response.status, 428);
+    let mut done = lazy.clone();
+    done.work = Some(find_work(&keys(1).public_key(), WORK_BITS_FOR_TEST).to_string());
+    assert_eq!(handle(&db, &done, strict).await.response.status, 200);
+    let next = PushRequest {
+        writes: vec![write(2, 0, b"b")],
+    }
+    .to_json()
+    .into_bytes();
+    let mut again = signed_at(Method::Post, "/v1/records", 1, next, NOW);
+    again.work = None;
+    assert_eq!(handle(&db, &again, strict).await.response.status, 200);
 }
 
 #[tokio::test]
@@ -133,14 +246,10 @@ async fn unknown_paths_and_methods_are_refused_and_a_prefix_is_allowed() {
     let status = |method, path: &'static str| {
         let db = &db;
         async move {
-            handle(
-                db,
-                &request(method, path, Some(token(1)), Vec::new()),
-                ctx(),
-            )
-            .await
-            .response
-            .status
+            handle(db, &request(method, path, Some(1), Vec::new()), ctx())
+                .await
+                .response
+                .status
         }
     };
     assert_eq!(status(Method::Get, "/v2/records").await, 404);
@@ -231,7 +340,7 @@ async fn spaces_are_separate() {
     seqs(&push(&db, vec![write(1, 0, b"a")]).await);
     let other = handle(
         &db,
-        &request(Method::Get, "/v1/records", Some(token(2)), Vec::new()),
+        &request(Method::Get, "/v1/records", Some(2), Vec::new()),
         ctx(),
     )
     .await
@@ -301,7 +410,7 @@ async fn malformed_pushes_are_refused() {
     ] {
         let response = handle(
             &db,
-            &request(Method::Post, "/v1/records", Some(token(1)), body.clone()),
+            &request(Method::Post, "/v1/records", Some(1), body.clone()),
             ctx(),
         )
         .await
@@ -319,7 +428,7 @@ async fn malformed_pushes_are_refused() {
 async fn a_full_space_refuses_more_but_takes_replacements() {
     let db = SqliteDb::open_in_memory().unwrap();
     seqs(&push(&db, vec![write(1, 0, b"aa")]).await);
-    let id = space_id(Some(&token(1))).unwrap();
+    let id = space_id(&keys(1).public_key());
     db.batch(vec![Statement::new(
         "UPDATE spaces SET records = ?2, bytes = ?3 WHERE id = ?1",
         vec![
@@ -342,7 +451,7 @@ async fn a_deleted_space_is_gone_and_cannot_come_back() {
     for who in [1, 2] {
         let deleted = handle(
             &db,
-            &request(Method::Delete, "/v1/space", Some(token(who)), Vec::new()),
+            &request(Method::Delete, "/v1/space", Some(who), Vec::new()),
             ctx(),
         )
         .await
@@ -350,7 +459,7 @@ async fn a_deleted_space_is_gone_and_cannot_come_back() {
         assert_eq!(deleted.status, 204);
         let pulled = handle(
             &db,
-            &request(Method::Get, "/v1/records", Some(token(who)), Vec::new()),
+            &request(Method::Get, "/v1/records", Some(who), Vec::new()),
             ctx(),
         )
         .await
@@ -383,7 +492,7 @@ async fn push_gated(db: &impl Db, gate: &CountingGate, key: u8) -> Outcome {
     super::handle(
         db,
         gate,
-        &request(Method::Post, "/v1/records", Some(token(1)), body),
+        &request(Method::Post, "/v1/records", Some(1), body),
         ctx(),
     )
     .await
@@ -491,7 +600,7 @@ async fn idle_spaces_and_deletion_markers_are_swept() {
     seqs(&push(&db, vec![write(1, 0, b"a")]).await);
     handle(
         &db,
-        &request(Method::Delete, "/v1/space", Some(token(2)), Vec::new()),
+        &request(Method::Delete, "/v1/space", Some(2), Vec::new()),
         ctx(),
     )
     .await;

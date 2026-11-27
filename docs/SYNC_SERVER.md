@@ -1,12 +1,15 @@
 # Sync server
 
 `cineo-sync-server` stores Cineo's end-to-end encrypted sync data
-(ADR-0043). It sees only a hash of each space's token and sealed records;
-it cannot read titles, progress, addons or settings. This page explains how
-to run your own.
+(ADR-0043). It sees each space's public key and sealed records, checks
+the signature on every request, and cannot read titles, progress, addons
+or settings. This page explains how to run your own.
 
-Status: the server and its tests exist; the app cannot be pointed at a
-server yet (that comes with the Settings screen, ADR-0043 steps 6 and 7).
+Status: the server is deployed as Cineo's default, and the desktop and
+Android apps can be pointed at your own in Settings → Data → Sync server.
+Every device in a space must use the same server. The server's clock must
+be right within a few minutes, because signed requests more than 10
+minutes off are refused.
 
 ## Build and run
 
@@ -22,7 +25,7 @@ cargo build --release -p cineo-sync-server
 | `--trust-forwarded-for` | off | Limit requests by the last address in `X-Forwarded-For` instead of the connecting address. Turn it on only behind a proxy that sets that header, or anyone can choose their own address |
 
 `RUST_LOG` sets the log level (`info` by default). The log never contains
-tokens or record contents.
+signatures, keys or record contents.
 
 ## TLS
 

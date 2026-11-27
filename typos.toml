@@ -16,4 +16,4 @@ seeked = "seeked"
 flate = "flate"
 
 [default]
-extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs", "RW[A-Za-z0-9+/]{54}"]
+extend-ignore-re = ["UPnP", "PNGs?", "UNKNOWNs", "RW[A-Za-z0-9+/]{54}", "\"[A-Za-z0-9_-]{43}\""]

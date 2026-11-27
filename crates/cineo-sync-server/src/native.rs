@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use bytes::Bytes;
-use cineo_core::sync::protocol::MAX_BATCH_BYTES;
+use cineo_core::sync::protocol::{MAX_BATCH_BYTES, WORK_BITS, WORK_HEADER};
 use http_body_util::{BodyExt as _, Full, Limited};
 use hyper::body::Incoming;
 use hyper::header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderValue, RETRY_AFTER};
@@ -222,12 +222,14 @@ async fn respond(
     };
     let path = req.uri().path().to_owned();
     let query = req.uri().query().map(str::to_owned);
-    let bearer = req
-        .headers()
-        .get(AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .map(str::to_owned);
+    let header = |name: &str| {
+        req.headers()
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned)
+    };
+    let authorization = header(AUTHORIZATION.as_str());
+    let work = header(WORK_HEADER);
     let Ok(body) = Limited::new(req.into_body(), MAX_BATCH_BYTES)
         .collect()
         .await
@@ -238,13 +240,15 @@ async fn respond(
         method,
         path,
         query,
-        bearer,
+        authorization,
+        work,
         body: body.to_bytes().to_vec(),
     };
     let ctx = Context {
         now_ms: now,
         nonce: random53(),
         born: random53(),
+        work_bits: WORK_BITS,
     };
     let gate = AddressGate { shared, ip, now };
     let outcome = handler::handle(&*shared.db, &gate, &request, ctx).await;

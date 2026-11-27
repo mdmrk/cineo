@@ -1,10 +1,18 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use data_encoding::BASE64URL_NOPAD;
 use serde_json::{Value as Json, json};
 
 pub const PROTOCOL: u64 = 1;
-pub const TOKEN_LEN: usize = 32;
+pub const PUBLIC_KEY_LEN: usize = 32;
+pub const SIGNATURE_LEN: usize = 64;
+pub const MAX_CLOCK_SKEW_MS: u64 = 10 * 60 * 1000;
+pub const WORK_BITS: u32 = 20;
+pub const MAX_WORK_BITS: u32 = 24;
+pub const WORK_HEADER: &str = "cineo-work";
+const AUTH_SCHEME: &str = "Cineo-Ed25519";
+const REQUEST_CONTEXT: &[u8] = b"cineo-sync-v1 request";
+const WORK_CONTEXT: &[u8] = b"cineo-sync-v1 work";
 pub const RECORD_KEY_LEN: usize = 16;
 pub const MAX_BLOB_BYTES: usize = 32 * 1024;
 pub const MAX_BATCH_RECORDS: usize = 64;
@@ -37,8 +45,88 @@ pub fn decode(text: &str) -> Option<Vec<u8>> {
     BASE64URL_NOPAD.decode(text.as_bytes()).ok()
 }
 
-pub fn decode_token(text: &str) -> Option<[u8; TOKEN_LEN]> {
-    decode(text)?.try_into().ok()
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Authorization {
+    pub key: [u8; PUBLIC_KEY_LEN],
+    pub time_ms: u64,
+    pub signature: [u8; SIGNATURE_LEN],
+}
+
+impl Authorization {
+    pub fn to_header(&self) -> String {
+        format!(
+            "{AUTH_SCHEME} key={}, time={}, sig={}",
+            encode(&self.key),
+            self.time_ms,
+            encode(&self.signature)
+        )
+    }
+
+    pub fn parse(header: &str) -> Option<Self> {
+        let params = header.strip_prefix(AUTH_SCHEME)?.strip_prefix(' ')?;
+        let mut fields = BTreeMap::new();
+        for param in params.split(',') {
+            let (name, value) = param.trim().split_once('=')?;
+            if fields.insert(name, value).is_some() {
+                return None;
+            }
+        }
+        if fields.len() != 3 {
+            return None;
+        }
+        Some(Self {
+            key: decode(fields.get("key")?)?.try_into().ok()?,
+            time_ms: fields.get("time")?.parse().ok()?,
+            signature: decode(fields.get("sig")?)?.try_into().ok()?,
+        })
+    }
+}
+
+pub fn request_target(path: &str, query: Option<&str>) -> Option<String> {
+    let (_, tail) = path.rsplit_once("/v1/")?;
+    Some(match query.filter(|q| !q.is_empty()) {
+        Some(query) => format!("v1/{tail}?{query}"),
+        None => format!("v1/{tail}"),
+    })
+}
+
+pub fn signed_message(method: &str, target: &str, time_ms: u64, body_sha256: &[u8]) -> Vec<u8> {
+    [
+        REQUEST_CONTEXT,
+        b"\n",
+        method.as_bytes(),
+        b"\n",
+        target.as_bytes(),
+        b"\n",
+        time_ms.to_string().as_bytes(),
+        b"\n",
+        encode(body_sha256).as_bytes(),
+    ]
+    .concat()
+}
+
+pub fn work_message(key: &[u8; PUBLIC_KEY_LEN], nonce: u64) -> Vec<u8> {
+    [WORK_CONTEXT, key, &nonce.to_le_bytes()].concat()
+}
+
+pub fn leading_zero_bits(digest: &[u8]) -> u32 {
+    let mut bits = 0;
+    for byte in digest {
+        bits += byte.leading_zeros();
+        if *byte != 0 {
+            break;
+        }
+    }
+    bits
+}
+
+pub fn work_required_json(bits: u32) -> String {
+    json!({ "error": "proof of work required", "work_bits": bits }).to_string()
+}
+
+pub fn parse_work_required(bytes: &[u8]) -> Option<u32> {
+    let json: Json = serde_json::from_slice(bytes).ok()?;
+    u32::try_from(json.get("work_bits")?.as_u64()?).ok()
 }
 
 pub fn encoded_len(bytes: usize) -> usize {

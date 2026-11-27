@@ -126,7 +126,7 @@ sequenceDiagram
   Shell->>Core: Action::Tick(now) / edit / SyncNow
   Core-->>Shell: Effect::SyncPull (pairing, since)
   Shell->>Net: fetch_task
-  Net->>Server: GET /v1/records?since&limit (Bearer token)
+  Net->>Server: GET /v1/records?since&limit (signed request)
   Server-->>Net: sealed records, seq, born
   Net-->>Shell: Action::SyncPulled (opened records)
   Shell->>Core: merge, then library, settings and addon effects
@@ -155,9 +155,15 @@ sequenceDiagram
   for checks; the app does not call it. 410 means the space was deleted,
   429 and 503 mean busy (with `Retry-After`). A space holds at most 10,000
   records and 8 MiB.
-- **What the server gets.** `Authorization: Bearer <token>`, where the
-  token comes from the key through HKDF-SHA256 and the server stores only
-  its SHA-256; record keys, the first 16 bytes of an HMAC of each record
+- **What the server gets.** Each request is signed:
+  `Authorization: Cineo-Ed25519 key=…, time=…, sig=…`, an Ed25519 signature
+  over the method, the path from `v1/` on with its query, the time and the
+  body's SHA-256. The key pair comes from the sync key through HKDF-SHA256;
+  the server identifies the space by SHA-256 of the public key, verifies
+  the signature and refuses a time more than 10 minutes off. A push that
+  would create a space also needs `Cineo-Work`, a proof of work of 20 bits
+  bound to the public key (about 0.5 to 0.9 s on a phone); without it the
+  server answers 428 and the client works and retries once; record keys, the first 16 bytes of an HMAC of each record
   name; and blobs sealed with ChaCha20-Poly1305 under a key derived from
 the sync key, with the format byte and record key as associated data, so a
 blob cannot be moved to another record. It
@@ -232,7 +238,7 @@ synced.
   rewrites one row. Changes saved after `forget_sync` are dropped. Tests:
   the `sync` tests in `crates/cineo-store/tests/store.rs`.
 - `cineo_net::sync` (built): the sync code (`format_code`, `parse_code`),
-  `SpaceKeys` (HKDF-SHA256 to a bearer token, an HMAC key for record names
+  `SpaceKeys` (HKDF-SHA256 to an Ed25519 signing key, an HMAC key for record names
   and a ChaCha20-Poly1305 key, all with `aws-lc-rs`), and `SyncClient`
   (`pull`, `push` in batches of at most 64 records and 256 KiB,
   `delete_space`, and `sync`, which pulls every page, pushes, retries
@@ -244,7 +250,7 @@ synced.
   response bodies, used by both the client and the server.
 - `crates/cineo-sync-server` (both hosts built; the Worker is deployed at
   `cineo-sync.cineo-sync-server.workers.dev`):
-  `handler::handle` decides each answer (token, sizes, quotas, versions)
+  `handler::handle` decides each answer (signature, proof of work, sizes, quotas, versions)
   over a crate-private `Db` trait that runs SQL statements and atomic
   batches, and asks a `Gate` before a push creates a new space (the
   native host's per-address limiter, or the Worker's `NEW_SPACES`

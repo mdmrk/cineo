@@ -27,15 +27,15 @@ async fn start_with(db: SqliteDb, options: ServeOptions) -> String {
     format!("http://{address}/")
 }
 
-fn an_hour_later() -> u64 {
-    system_ms() + 3_600_000
+fn minutes_later() -> u64 {
+    system_ms() + 5 * 60_000
 }
 
 async fn start_later(db: SqliteDb) -> String {
     start_with(
         db,
         ServeOptions {
-            clock: an_hour_later,
+            clock: minutes_later,
             ..ServeOptions::default()
         },
     )

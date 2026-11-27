@@ -4,8 +4,14 @@
     reason = "test helpers panic on purpose"
 )]
 
+use aws_lc_rs::digest::{SHA256, digest};
+use aws_lc_rs::signature::{ED25519, UnparsedPublicKey};
 use cineo_core::addon::ContentType;
 use cineo_core::app::LibraryItem;
+use cineo_core::sync::protocol::{
+    Authorization, MAX_WORK_BITS, WORK_HEADER, leading_zero_bits, request_target, signed_message,
+    work_message, work_required_json,
+};
 use cineo_core::sync::{DeviceId, Outgoing, Pairing, Record, RecordName, Stamp, SyncKey, Value};
 use cineo_net::sync::{
     CodeError, MAX_BATCH_RECORDS, MAX_PULL_BYTES, SpaceKeys, SyncClient, SyncError, format_code,
@@ -19,7 +25,62 @@ use wiremock::{Mock, MockServer, Request, Respond, ResponseTemplate};
 
 const REFERENCE_KEY: [u8; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const REFERENCE_CODE: &str = "AAAQ-EAYE-AUDA-OCAJ-BIFQ-YDIO-B4KA-47NG";
-const REFERENCE_TOKEN: &str = "2aPNnOEGvveIUycd2wY60NlTE3pqP7G_Psu-7o846J8";
+const REFERENCE_PUBLIC_KEY: &str = "HhE7m_bAUoamOUQkRd-V1VEwUHuLyN8suhPyBmu3BT4";
+
+struct SignedBy(&'static str);
+
+impl wiremock::Match for SignedBy {
+    fn matches(&self, request: &Request) -> bool {
+        let Some(auth) = request
+            .headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .and_then(Authorization::parse)
+        else {
+            return false;
+        };
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        let target = request_target(request.url.path(), request.url.query()).unwrap();
+        let message = signed_message(
+            request.method.as_str(),
+            &target,
+            auth.time_ms,
+            digest(&SHA256, &request.body).as_ref(),
+        );
+        BASE64URL_NOPAD.encode(&auth.key) == self.0
+            && now_ms.abs_diff(auth.time_ms) < 60_000
+            && UnparsedPublicKey::new(&ED25519, auth.key)
+                .verify(&message, &auth.signature)
+                .is_ok()
+    }
+}
+
+struct WorkDone(u32);
+
+impl wiremock::Match for WorkDone {
+    fn matches(&self, request: &Request) -> bool {
+        let auth = request
+            .headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .and_then(Authorization::parse);
+        let nonce = request
+            .headers
+            .get(WORK_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok());
+        match (auth, nonce) {
+            (Some(auth), Some(nonce)) => {
+                leading_zero_bits(digest(&SHA256, &work_message(&auth.key, nonce)).as_ref())
+                    >= self.0
+            }
+            _ => false,
+        }
+    }
+}
 
 fn key() -> SyncKey {
     SyncKey::from_bytes(REFERENCE_KEY)
@@ -113,7 +174,10 @@ fn a_mistyped_code_is_rejected() {
 #[test]
 fn derived_keys_match_the_reference_vectors() {
     let keys = SpaceKeys::derive(&key()).unwrap();
-    assert_eq!(keys.token(), REFERENCE_TOKEN);
+    assert_eq!(
+        BASE64URL_NOPAD.encode(&keys.public_key()),
+        REFERENCE_PUBLIC_KEY
+    );
     assert_eq!(
         keys.record_key(&RecordName::Item("tt1".into())),
         [
@@ -210,7 +274,7 @@ async fn pull_opens_records_and_skips_unreadable_ones() {
         .and(path("/base/v1/records"))
         .and(query_param("since", "41"))
         .and(query_param("limit", "500"))
-        .and(header("authorization", format!("Bearer {REFERENCE_TOKEN}")))
+        .and(SignedBy(REFERENCE_PUBLIC_KEY))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
             "records": [
                 sealed_entry(&keys, &record, 42),
@@ -303,11 +367,57 @@ impl Respond for EchoSeqs {
 }
 
 #[tokio::test]
+async fn a_new_space_is_pushed_again_with_the_work_the_server_asks_for() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(SignedBy(REFERENCE_PUBLIC_KEY))
+        .and(WorkDone(12))
+        .respond_with(EchoSeqs)
+        .with_priority(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .respond_with(
+            ResponseTemplate::new(428).set_body_raw(work_required_json(12), "application/json"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let outcome = client(&server)
+        .push(&[outgoing(item_record("tt1", "A"), 0)])
+        .await;
+    assert!(outcome.error.is_none(), "{:?}", outcome.error);
+    assert_eq!(outcome.pushed.len(), 1);
+}
+
+#[tokio::test]
+async fn too_much_work_is_refused_without_trying() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .respond_with(
+            ResponseTemplate::new(428)
+                .set_body_raw(work_required_json(MAX_WORK_BITS + 1), "application/json"),
+        )
+        .expect(1)
+        .mount(&server)
+        .await;
+    let outcome = client(&server)
+        .push(&[outgoing(item_record("tt1", "A"), 0)])
+        .await;
+    assert!(
+        matches!(outcome.error, Some(SyncError::Rejected(status)) if status.as_u16() == 428),
+        "{:?}",
+        outcome.error
+    );
+}
+
+#[tokio::test]
 async fn push_sends_sealed_writes_with_their_base_versions() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/base/v1/records"))
-        .and(header("authorization", format!("Bearer {REFERENCE_TOKEN}")))
+        .and(SignedBy(REFERENCE_PUBLIC_KEY))
         .and(header("content-type", "application/json"))
         .respond_with(EchoSeqs)
         .expect(1)

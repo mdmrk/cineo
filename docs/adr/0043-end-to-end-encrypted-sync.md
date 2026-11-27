@@ -256,9 +256,12 @@ set of records from three devices, including skewed clocks and repeats),
   3.94 MB), mostly CameraX and what it pulls in (VERIFIED, 2026-11-27).
 - **Derivation:** HKDF-SHA256 with the key as IKM and salt
   `"cineo-sync-v1"`, three outputs of 32 bytes:
-  - `info = "token"` → **bearer token**. The server addresses the space by
-    `SHA-256(token)` and stores nothing else about the client. Knowing the
-    token is the only authorization.
+  - `info = "sign"` → the seed of an **Ed25519 key pair**. The server
+    addresses the space by `SHA-256(public key)` and stores nothing else
+    about the client; every request is signed (§4). (Amended 2026-11-27 in
+    step 9: this replaced `info = "token"`, a bearer token sent on every
+    request, so that a captured request stops working after minutes and a
+    copy of the server's database lets nobody write.)
   - `info = "names"` → HMAC key. The server-side record key is
     HMAC-SHA256(names, record name), truncated to 16 bytes, so the server
     never sees meta ids or setting names.
@@ -296,9 +299,20 @@ All requests go through `cineo-net`'s `AddonClient` and `NetPolicy`
 (ADR-0006). The server URL must be `https`, except `http` to this machine
 (`localhost`, `127.0.0.1`, `::1`) for a self-hosted or development server,
 which still needs the private-network opt-in. The client gains POST and
-DELETE with a body cap. `Authorization: Bearer <base64url token>` is sent on every
-request except `/v1/info`. The token, code and key never appear in logs or
-errors.
+DELETE with a body cap. Every request except `/v1/info` carries
+`Authorization: Cineo-Ed25519 key=<public key>, time=<ms>, sig=<signature>`
+(base64url without padding), where the signature covers
+`"cineo-sync-v1 request" LF method LF target LF time LF base64url(SHA-256(body))`,
+and `target` is the path from `v1/` on plus `?query` when there is one, so a
+proxy that adds a path prefix does not break it. The server verifies the
+signature (`ed25519-dalek` 3.0.0, BSD-3-Clause, 2026-07-06, pure Rust so
+that the Worker builds for wasm32; `verify_strict`), refuses a time more
+than 10 minutes from its clock with 401, and derives the space from the
+key. A captured request can be replayed only within that window, where a
+pull returns ciphertext the observer already saw, a push conflicts on its
+`base_seq`, and a delete finds the space already deleted (INFERRED). The
+seed, code and key never appear in logs or errors. (Amended 2026-11-27 in
+step 9; `/v1` changed in place, since no release had shipped sync.)
 
 | Endpoint | Purpose |
 |---|---|
@@ -352,12 +366,22 @@ errors.
   and reading a batch's versions takes 1 + writes),
   space ≤ 10,000 records and ≤ 8 MiB. The client's response cap for sync is
   2 MiB (one pull page).
-- **Abuse limits:** the token is required; a space exists only after a
-  valid write; quotas per space as above. The native host allows 120
+- **Abuse limits:** a signature is required; a space exists only after a
+  valid write; quotas per space as above. A push that would create a space
+  must also carry `Cineo-Work: <nonce>`, a proof of work bound to the
+  public key: `SHA-256("cineo-sync-v1 work" ‖ public key ‖ nonce as 8
+  little-endian bytes)` starts with at least 20 zero bits. Without it the
+  server answers 428 with `work_bits`, and the client finds a nonce off its
+  async threads and retries once; it refuses to work for more than 24 bits.
+  Measured with `aws-lc-rs` SHA-256: 1.2 to 1.9 million hashes a second on
+  the Redmi 9 and 9.6 million on a desktop core, so about 0.5 to 0.9 s and
+  0.1 s on average per new space (VERIFIED, 2026-11-27). It slows anyone
+  creating spaces from ordinary CPUs; it does not stop GPUs, so the rate
+  limits below stay (Consequences). The native host allows 120
   requests a minute and 10 new spaces an hour per IP address (behind a
   proxy, the last `X-Forwarded-For` address, when told to trust it). The
   Worker host uses two Rate Limiting bindings: 120 requests a minute per
-  space (keyed by the token hash, because Cloudflare advises against
+  space (keyed by the hash of the claimed public key, because Cloudflare advises against
   address keys that many users share) and 10 new spaces a minute per
   address (`cf-connecting-ip`; there is no other identity before a space
   exists), asked only when a push would create a space. Their counts are
@@ -377,7 +401,7 @@ errors.
   `spaces(id, seq, records, bytes, touched_ms, deleted, lock) WITHOUT
   ROWID` and `records(space, key, seq, blob, PRIMARY KEY (space, key))
   WITHOUT ROWID`, plus an index on `records(space, seq)`. `id` is
-  SHA-256 of the token.
+  SHA-256 of the space's public key.
 
 ### 5. Where each part lives
 - **Merge, stamps, record model, settings split, push and pull planning:**
@@ -455,8 +479,8 @@ database.
 ### 7. Security and privacy
 - Off by default. Nothing is sent until the user turns sync on or pastes a
   code.
-- **The server sees:** the client IP, request times and sizes, the token
-  hash, the number of records, and opaque 16-byte keys. **It does not
+- **The server sees:** the client IP, request times and sizes, the
+  space's public key, the number of records, and opaque 16-byte keys. **It does not
   see:** titles, ids, progress, addon URLs or settings.
 - A malicious or compromised server can withhold records, delete the space
   or replay an older blob of the same record. It cannot read, forge or move
@@ -518,6 +542,11 @@ database.
    before each action and every 15 seconds instead of every second, so the
    view is not rebuilt each second.)
    **7b.** The in-app QR scanner (§3, amended 2026-11-27).
+9. Signed requests and a proof of work for new spaces (§3, §4, amended
+   2026-11-27 by the owner: in place on `/v1`, no `/v2`). The spaces made
+   with bearer tokens are deleted from the deployed D1 at deploy; paired
+   devices then find an empty space under their new id, start over as
+   after a server that went back, and push everything again.
 8. Raise "Account / cloud sync" in `docs/COMPATIBILITY.md` only with named
    tests. (Done 2026-11-27: Verified, after a desktop and the Redmi 9
    paired by QR code through the deployed Worker.)
