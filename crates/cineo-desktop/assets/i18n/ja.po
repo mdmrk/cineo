@@ -1,0 +1,1803 @@
+# Japanese translations for Cineo.
+msgid ""
+msgstr ""
+"Project-Id-Version: Cineo\n"
+"Report-Msgid-Bugs-To: https://github.com/mdmrk/cineo/issues\n"
+"POT-Creation-Date: 2026-11-27 23:33+0100\n"
+"PO-Revision-Date: 2026-11-28 00:00+0000\n"
+"Last-Translator: Cineo contributors\n"
+"Language-Team: Cineo contributors\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: crates/cineo-desktop/src/app/mod.rs:649
+#, rust-format
+msgid ""
+"On Windows on ARM, the OpenGL that Cineo draws with comes from Microsoft's "
+"OpenCL, OpenGL & Vulkan Compatibility Pack. Install or repair it from the "
+"Microsoft Store, then open Cineo again.\n"
+"\n"
+"Details: {details}\n"
+"\n"
+"Open its Microsoft Store page?"
+msgstr "Windows on ARM では、Cineo が描画に使う OpenGL は Microsoft の「OpenCL、OpenGL、および Vulkan 互換性パック」から提供されます。Microsoft Store からインストールまたは修復してから、Cineo をもう一度開いてください。\n\n詳細: {details}\n\nMicrosoft Store のページを開きますか？"
+
+#: crates/cineo-desktop/src/app/mod.rs:653
+msgid ""
+"Install your graphics card's driver, from its maker or from Windows Update, "
+"then open Cineo again. Remote Desktop and virtual machines need 3D "
+"acceleration turned on."
+msgstr "グラフィックカードのドライバーをメーカーのサイトまたは Windows Update からインストールしてから、Cineo をもう一度開いてください。リモート デスクトップや仮想マシンでは 3D アクセラレーションを有効にする必要があります。"
+
+#: crates/cineo-desktop/src/app/mod.rs:657
+msgid ""
+"Install your graphics card's driver or Mesa, then open Cineo again. Remote "
+"sessions and virtual machines need 3D acceleration turned on."
+msgstr "グラフィックカードのドライバーまたは Mesa をインストールしてから、Cineo をもう一度開いてください。リモートセッションや仮想マシンでは 3D アクセラレーションを有効にする必要があります。"
+
+#: crates/cineo-desktop/src/app/mod.rs:660
+#, rust-format
+msgid ""
+"Cineo needs your graphics driver to draw its window (OpenGL 2 or later), and "
+"this computer only has basic graphics.\n"
+"\n"
+"{remedy}\n"
+"\n"
+"Details: {details}"
+msgstr "Cineo がウィンドウを描画するにはグラフィックドライバー（OpenGL 2 以降）が必要ですが、このコンピューターには基本的なグラフィック機能しかありません。\n\n{remedy}\n\n詳細: {details}"
+
+#: crates/cineo-desktop/src/app/mod.rs:663
+msgid "Cineo cannot open its window"
+msgstr "Cineo のウィンドウを開けません"
+
+#: crates/cineo-desktop/src/app/mod.rs:665
+msgid "Open Microsoft Store"
+msgstr "Microsoft Store を開く"
+
+#: crates/cineo-desktop/src/app/mod.rs:666
+msgid "Close"
+msgstr "閉じる"
+
+#: crates/cineo-desktop/src/i18n.rs:200
+msgid "Arabic"
+msgstr "アラビア語"
+
+#: crates/cineo-desktop/src/i18n.rs:201
+msgid "Bulgarian"
+msgstr "ブルガリア語"
+
+#: crates/cineo-desktop/src/i18n.rs:202
+msgid "Catalan"
+msgstr "カタルーニャ語"
+
+#: crates/cineo-desktop/src/i18n.rs:203
+msgid "Chinese"
+msgstr "中国語"
+
+#: crates/cineo-desktop/src/i18n.rs:204
+msgid "Croatian"
+msgstr "クロアチア語"
+
+#: crates/cineo-desktop/src/i18n.rs:205
+msgid "Czech"
+msgstr "チェコ語"
+
+#: crates/cineo-desktop/src/i18n.rs:206
+msgid "Danish"
+msgstr "デンマーク語"
+
+#: crates/cineo-desktop/src/i18n.rs:207
+msgid "Dutch"
+msgstr "オランダ語"
+
+#: crates/cineo-desktop/src/i18n.rs:208
+msgid "English"
+msgstr "英語"
+
+#: crates/cineo-desktop/src/i18n.rs:209
+msgid "Finnish"
+msgstr "フィンランド語"
+
+#: crates/cineo-desktop/src/i18n.rs:210
+msgid "French"
+msgstr "フランス語"
+
+#: crates/cineo-desktop/src/i18n.rs:211
+msgid "German"
+msgstr "ドイツ語"
+
+#: crates/cineo-desktop/src/i18n.rs:212
+msgid "Greek"
+msgstr "ギリシャ語"
+
+#: crates/cineo-desktop/src/i18n.rs:213
+msgid "Hebrew"
+msgstr "ヘブライ語"
+
+#: crates/cineo-desktop/src/i18n.rs:214
+msgid "Hindi"
+msgstr "ヒンディー語"
+
+#: crates/cineo-desktop/src/i18n.rs:215
+msgid "Hungarian"
+msgstr "ハンガリー語"
+
+#: crates/cineo-desktop/src/i18n.rs:216
+msgid "Indonesian"
+msgstr "インドネシア語"
+
+#: crates/cineo-desktop/src/i18n.rs:217
+msgid "Italian"
+msgstr "イタリア語"
+
+#: crates/cineo-desktop/src/i18n.rs:218
+msgid "Japanese"
+msgstr "日本語"
+
+#: crates/cineo-desktop/src/i18n.rs:219
+msgid "Korean"
+msgstr "韓国語"
+
+#: crates/cineo-desktop/src/i18n.rs:220
+msgid "Norwegian"
+msgstr "ノルウェー語"
+
+#: crates/cineo-desktop/src/i18n.rs:221
+msgid "Persian"
+msgstr "ペルシア語"
+
+#: crates/cineo-desktop/src/i18n.rs:222
+msgid "Polish"
+msgstr "ポーランド語"
+
+#: crates/cineo-desktop/src/i18n.rs:223
+msgid "Portuguese"
+msgstr "ポルトガル語"
+
+#: crates/cineo-desktop/src/i18n.rs:224
+msgid "Romanian"
+msgstr "ルーマニア語"
+
+#: crates/cineo-desktop/src/i18n.rs:225
+msgid "Russian"
+msgstr "ロシア語"
+
+#: crates/cineo-desktop/src/i18n.rs:226
+msgid "Serbian"
+msgstr "セルビア語"
+
+#: crates/cineo-desktop/src/i18n.rs:227
+msgid "Spanish"
+msgstr "スペイン語"
+
+#: crates/cineo-desktop/src/i18n.rs:228
+msgid "Swedish"
+msgstr "スウェーデン語"
+
+#: crates/cineo-desktop/src/i18n.rs:229
+msgid "Thai"
+msgstr "タイ語"
+
+#: crates/cineo-desktop/src/i18n.rs:230
+msgid "Turkish"
+msgstr "トルコ語"
+
+#: crates/cineo-desktop/src/i18n.rs:231
+msgid "Ukrainian"
+msgstr "ウクライナ語"
+
+#: crates/cineo-desktop/src/i18n.rs:232
+msgid "Vietnamese"
+msgstr "ベトナム語"
+
+#: crates/cineo-desktop/src/player/bars.rs:40
+#: crates/cineo-desktop/src/view/detail.rs:68
+msgid "Back"
+msgstr "戻る"
+
+#: crates/cineo-desktop/src/player/bars.rs:122
+#: crates/cineo-desktop/src/player/bars.rs:391
+#: crates/cineo-desktop/src/view/detail.rs:681
+msgid "Play"
+msgstr "再生"
+
+#: crates/cineo-desktop/src/player/bars.rs:124
+msgid "Pause"
+msgstr "一時停止"
+
+#: crates/cineo-desktop/src/player/bars.rs:135
+#: crates/cineo-desktop/src/player/bars.rs:369
+msgid "Next episode"
+msgstr "次のエピソード"
+
+#: crates/cineo-desktop/src/player/bars.rs:147
+#, rust-format
+msgid "Seek back {seconds} seconds"
+msgstr "{seconds} 秒戻る"
+
+#: crates/cineo-desktop/src/player/bars.rs:159
+#, rust-format
+msgid "Seek forward {seconds} seconds"
+msgstr "{seconds} 秒進む"
+
+#: crates/cineo-desktop/src/player/bars.rs:198
+msgid "Exit fullscreen"
+msgstr "全画面表示を終了"
+
+#: crates/cineo-desktop/src/player/bars.rs:200
+#: crates/cineo-desktop/src/settings/keyboard.rs:78
+msgid "Fullscreen"
+msgstr "全画面表示"
+
+#: crates/cineo-desktop/src/player/bars.rs:207
+msgid "Streaming stats"
+msgstr "ストリーミング統計"
+
+#: crates/cineo-desktop/src/player/bars.rs:214
+msgid "Playback speed"
+msgstr "再生速度"
+
+#: crates/cineo-desktop/src/player/bars.rs:220
+#: crates/cineo-desktop/src/settings/mod.rs:65
+msgid "Subtitles"
+msgstr "字幕"
+
+#: crates/cineo-desktop/src/player/bars.rs:226
+#: crates/cineo-desktop/src/settings/mod.rs:66
+msgid "Audio"
+msgstr "音声"
+
+#: crates/cineo-desktop/src/player/bars.rs:244
+msgid "Unmute"
+msgstr "ミュート解除"
+
+#: crates/cineo-desktop/src/player/bars.rs:246
+msgid "Mute"
+msgstr "ミュート"
+
+#: crates/cineo-desktop/src/player/bars.rs:367
+#, rust-format
+msgid "Next episode in {seconds} s"
+msgstr "{seconds} 秒後に次のエピソード"
+
+#: crates/cineo-desktop/src/player/bars.rs:419
+#: crates/cineo-desktop/src/view/mod.rs:375
+msgid "Dismiss"
+msgstr "閉じる"
+
+#: crates/cineo-desktop/src/player/bars.rs:566
+msgid "Position"
+msgstr "再生位置"
+
+#: crates/cineo-desktop/src/player/bars.rs:633
+msgid "Volume"
+msgstr "音量"
+
+#: crates/cineo-desktop/src/player/stats.rs:140
+msgid "Download"
+msgstr "ダウンロード"
+
+#: crates/cineo-desktop/src/player/stats.rs:141
+msgid "Peers"
+msgstr "ピア"
+
+#: crates/cineo-desktop/src/player/stats.rs:143
+#, rust-format
+msgid "{done} of {total}"
+msgstr "{done} / {total}"
+
+#: crates/cineo-desktop/src/player/stats.rs:154
+msgid "Downloaded"
+msgstr "ダウンロード済み"
+
+#: crates/cineo-desktop/src/player/stats.rs:158
+msgid "Network"
+msgstr "ネットワーク"
+
+#: crates/cineo-desktop/src/player/stats.rs:161
+msgid "Buffered"
+msgstr "バッファ済み"
+
+#: crates/cineo-desktop/src/player/stats.rs:165
+msgid "Resolution"
+msgstr "解像度"
+
+#: crates/cineo-desktop/src/player/stats.rs:176
+msgid "Codec"
+msgstr "コーデック"
+
+#: crates/cineo-desktop/src/player/stats.rs:180
+msgid "Software"
+msgstr "ソフトウェア"
+
+#: crates/cineo-desktop/src/player/stats.rs:184
+msgid "Decoder"
+msgstr "デコーダー"
+
+#: crates/cineo-desktop/src/player/stats.rs:187
+msgid "Dropped frames"
+msgstr "ドロップフレーム"
+
+#: crates/cineo-desktop/src/player/tracks.rs:64
+msgctxt "subtitles-off"
+msgid "Off"
+msgstr "オフ"
+
+#: crates/cineo-desktop/src/player/tracks.rs:84
+msgid "No audio tracks"
+msgstr "音声トラックなし"
+
+#: crates/cineo-desktop/src/player/tracks.rs:166
+msgctxt "playback-speed"
+msgid "Normal"
+msgstr "標準"
+
+#: crates/cineo-desktop/src/player/tracks.rs:226
+msgid "Style and delay"
+msgstr "スタイルと遅延"
+
+#: crates/cineo-desktop/src/player/tracks.rs:311
+msgid "Delay"
+msgstr "遅延"
+
+#: crates/cineo-desktop/src/player/tracks.rs:315
+msgid "This video only."
+msgstr "この動画のみ。"
+
+#: crates/cineo-desktop/src/player/tracks.rs:322
+#: crates/cineo-desktop/src/player/tracks.rs:327
+#, rust-format
+msgid "Subtitles {amount} earlier"
+msgstr "字幕を {amount} 早める"
+
+#: crates/cineo-desktop/src/player/tracks.rs:333
+#: crates/cineo-desktop/src/player/tracks.rs:335
+#, rust-format
+msgid "Subtitles {amount} later"
+msgstr "字幕を {amount} 遅らせる"
+
+#: crates/cineo-desktop/src/player/tracks.rs:351
+#, rust-format
+msgid "Subtitle delay {delay}, reset"
+msgstr "字幕の遅延 {delay}、リセット"
+
+#: crates/cineo-desktop/src/player/tracks.rs:392
+#, rust-format
+msgid "Track {number}"
+msgstr "トラック {number}"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:41
+msgctxt "shortcut-search"
+msgid "Search"
+msgstr "検索"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:43
+msgid "Switch page"
+msgstr "ページを切り替え"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:52
+msgid "mouse back"
+msgstr "マウスの戻るボタン"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:54
+msgid "Leave a detail page"
+msgstr "詳細ページを離れる"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:57
+msgid "wheel"
+msgstr "ホイール"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:58
+msgid "Scroll a row sideways"
+msgstr "行を横にスクロール"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:60
+msgid "Space"
+msgstr "スペース"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:60
+msgid "Play or pause"
+msgstr "再生または一時停止"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:63
+msgid "Seek by the seek step"
+msgstr "シーク幅でシーク"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:67
+msgid "Seek by the short seek step"
+msgstr "短いシーク幅でシーク"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:71
+msgid "Volume  ·  mute"
+msgstr "音量  ·  ミュート"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:73
+msgid "Subtitles on or off"
+msgstr "字幕のオン/オフ"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:75
+msgid "Backspace"
+msgstr "Backspace"
+
+#: crates/cineo-desktop/src/settings/keyboard.rs:76
+msgid "Slower or faster  ·  normal speed"
+msgstr "遅く/速く  ·  標準速度"
+
+#: crates/cineo-desktop/src/settings/mod.rs:62
+msgid "Interface"
+msgstr "インターフェース"
+
+#: crates/cineo-desktop/src/settings/mod.rs:63
+msgid "Player"
+msgstr "プレーヤー"
+
+#: crates/cineo-desktop/src/settings/mod.rs:64
+msgid "Languages"
+msgstr "言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:67
+msgid "Torrents"
+msgstr "トレント"
+
+#: crates/cineo-desktop/src/settings/mod.rs:68
+msgid "Data"
+msgstr "データ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:69
+#: crates/cineo-desktop/src/settings/remote.rs:18
+msgid "Remote control"
+msgstr "リモコン"
+
+#: crates/cineo-desktop/src/settings/mod.rs:70
+msgid "Keyboard"
+msgstr "キーボード"
+
+#: crates/cineo-desktop/src/settings/mod.rs:71
+msgid "About"
+msgstr "情報"
+
+#: crates/cineo-desktop/src/settings/mod.rs:138
+#: crates/cineo-desktop/src/view/mod.rs:60
+msgid "Settings"
+msgstr "設定"
+
+#: crates/cineo-desktop/src/settings/mod.rs:173
+msgid "No setting matches your search."
+msgstr "検索に一致する設定はありません。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:196
+msgid "Search settings"
+msgstr "設定を検索"
+
+#: crates/cineo-desktop/src/settings/mod.rs:236
+msgid "Language"
+msgstr "言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:237
+msgid "The language of Cineo's menus and messages."
+msgstr "Cineo のメニューとメッセージの言語。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:246
+msgid "Interface size"
+msgstr "インターフェースのサイズ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:247
+msgid "Makes text, posters and controls larger or smaller."
+msgstr "文字、ポスター、コントロールを大きくまたは小さくします。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:256
+msgid "Start page"
+msgstr "開始ページ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:257
+msgid "Shown when Cineo opens."
+msgstr "Cineo を開いたときに表示されます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:266
+msgid "Open stremio:// and cineo:// links"
+msgstr "stremio:// と cineo:// のリンクを開く"
+
+#: crates/cineo-desktop/src/settings/mod.rs:268
+msgid ""
+"Links to addons and pages open in Cineo. Stremio stops receiving stremio:// "
+"links."
+msgstr "アドオンやページへのリンクを Cineo で開きます。Stremio は stremio:// リンクを受け取らなくなります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:276
+msgid "Use Cineo"
+msgstr "Cineo を使う"
+
+#: crates/cineo-desktop/src/settings/mod.rs:280
+msgid "Done"
+msgstr "完了"
+
+#: crates/cineo-desktop/src/settings/mod.rs:281
+#, rust-format
+msgid "Failed: {detail}"
+msgstr "失敗しました: {detail}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:297
+msgid "Hardware decoding"
+msgstr "ハードウェアデコード"
+
+#: crates/cineo-desktop/src/settings/mod.rs:299
+msgid ""
+"Lets the graphics card decode video, which saves power. Turn it off if "
+"videos show artifacts or a black picture."
+msgstr "グラフィックカードで動画をデコードし、電力を節約します。動画にノイズが出たり画面が真っ黒になったりする場合はオフにしてください。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:307
+msgid "Seek step"
+msgstr "シーク幅"
+
+#: crates/cineo-desktop/src/settings/mod.rs:308
+msgid "How far ←/→ and the seek buttons jump."
+msgstr "←/→ とシークボタンで移動する幅。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:317
+msgid "Short seek step"
+msgstr "短いシーク幅"
+
+#: crates/cineo-desktop/src/settings/mod.rs:318
+msgid "How far Shift+←/→ jump."
+msgstr "Shift+←/→ で移動する幅。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:327
+msgid "Hide controls after"
+msgstr "コントロールを隠すまでの時間"
+
+#: crates/cineo-desktop/src/settings/mod.rs:328
+msgid "Without mouse or key input while playing."
+msgstr "再生中にマウスやキーの操作がない場合。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:337
+msgid "Esc leaves fullscreen first"
+msgstr "Esc でまず全画面表示を終了"
+
+#: crates/cineo-desktop/src/settings/mod.rs:338
+msgid "When off, Esc leaves the player at once."
+msgstr "オフの場合、Esc ですぐにプレーヤーを閉じます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:345
+msgid "Pause when minimized"
+msgstr "最小化時に一時停止"
+
+#: crates/cineo-desktop/src/settings/mod.rs:353
+msgid "Remember volume"
+msgstr "音量を記憶"
+
+#: crates/cineo-desktop/src/settings/mod.rs:354
+msgid "Each video starts at the volume the last one ended with."
+msgstr "各動画は、前の動画が終了したときの音量で始まります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:361
+msgid "Play the next episode automatically"
+msgstr "次のエピソードを自動再生"
+
+#: crates/cineo-desktop/src/settings/mod.rs:363
+msgid ""
+"When an episode ends, the next one plays from the same addon, or its streams "
+"open."
+msgstr "エピソードが終わると、同じアドオンから次のエピソードが再生されるか、そのストリーム一覧が開きます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:371
+msgid "Next episode notice"
+msgstr "次のエピソードの通知"
+
+#: crates/cineo-desktop/src/settings/mod.rs:372
+msgid "How long before the end the next episode is offered."
+msgstr "終了のどれくらい前に次のエピソードを案内するか。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:383
+msgid "Audio language"
+msgstr "音声の言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:384
+msgid "The file's track in this language plays; otherwise its default track."
+msgstr "ファイル内のこの言語のトラックを再生します。なければデフォルトのトラックを再生します。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:391
+msgid "Second audio language"
+msgstr "第 2 音声言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:392
+msgid "Used when the file has no audio in the first."
+msgstr "ファイルに第 1 言語の音声がない場合に使います。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:399
+msgid "Subtitle language"
+msgstr "字幕の言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:401
+msgid ""
+"Turned on when a video starts: from the file if it has them, otherwise from "
+"a subtitles addon."
+msgstr "動画の開始時にオンになります。ファイルに字幕があればそれを、なければ字幕アドオンのものを使います。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:409
+msgid "Second subtitle language"
+msgstr "第 2 字幕言語"
+
+#: crates/cineo-desktop/src/settings/mod.rs:410
+msgid "Used when no subtitle is in the first."
+msgstr "第 1 言語の字幕がない場合に使います。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:420
+msgid "Audio output"
+msgstr "音声出力"
+
+#: crates/cineo-desktop/src/settings/mod.rs:421
+msgid "Stereo mixes surround sound down to two speakers or headphones."
+msgstr "ステレオはサラウンド音声を 2 つのスピーカーやヘッドホン向けにダウンミックスします。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:430
+msgid "Passthrough"
+msgstr "パススルー"
+
+#: crates/cineo-desktop/src/settings/mod.rs:432
+msgid ""
+"Sends Dolby and DTS audio undecoded to a receiver over HDMI or S/PDIF. Leave "
+"off unless your receiver decodes them, or you may hear silence."
+msgstr "Dolby や DTS の音声をデコードせずに HDMI または S/PDIF 経由でレシーバーに送ります。レシーバーがデコードできる場合以外はオフにしてください。音が出なくなることがあります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:443
+msgid "Count as watched at"
+msgstr "視聴済みとみなす位置"
+
+#: crates/cineo-desktop/src/settings/mod.rs:444
+msgid "Watched videos start over and leave Continue Watching."
+msgstr "視聴済みの動画は最初から再生され、「視聴を続ける」から外れます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:452
+msgid "Clear watch history"
+msgstr "視聴履歴を消去"
+
+#: crates/cineo-desktop/src/settings/mod.rs:453
+msgid "Empties the Library and Continue Watching."
+msgstr "ライブラリと「視聴を続ける」を空にします。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:455
+msgid "Clear…"
+msgstr "消去…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:462
+msgid "Reset all settings"
+msgstr "すべての設定をリセット"
+
+#: crates/cineo-desktop/src/settings/mod.rs:463
+msgid "Every setting on this page goes back to its default."
+msgstr "このページのすべての設定がデフォルトに戻ります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:465
+msgid "Reset…"
+msgstr "リセット…"
+
+#: crates/cineo-desktop/src/settings/mod.rs:481
+#: crates/cineo-desktop/src/view/sidebar.rs:82
+#, rust-format
+msgid "Cineo v{version}"
+msgstr "Cineo v{version}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:489
+msgid "Check for updates"
+msgstr "アップデートを確認"
+
+#: crates/cineo-desktop/src/settings/mod.rs:490
+msgid "Asks GitHub once per start whether a newer version exists."
+msgstr "起動ごとに 1 回、新しいバージョンがあるか GitHub に問い合わせます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:507
+msgid "Cineo is free software under the MIT License."
+msgstr "Cineo は MIT ライセンスのフリーソフトウェアです。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:508
+msgid "Made with Rust, egui, mpv and librqbit."
+msgstr "Rust、egui、mpv、librqbit で作られています。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:527
+msgid "Show and play torrent streams"
+msgstr "トレントストリームを表示して再生"
+
+#: crates/cineo-desktop/src/settings/mod.rs:529
+#: crates/cineo-desktop/src/view/mod.rs:494
+msgid ""
+"Torrent streams come from other people's computers. While one plays, your IP "
+"address is visible to the peers and trackers it connects to, and Cineo "
+"uploads the parts it has already downloaded to those peers. Downloaded data "
+"is kept in a local cache. You can turn peer-to-peer streaming off in "
+"Settings."
+msgstr "トレントストリームは他の人のコンピューターから届きます。再生中は、接続先のピアやトラッカーにあなたの IP アドレスが見え、Cineo はダウンロード済みの部分をそれらのピアにアップロードします。ダウンロードしたデータはローカルのキャッシュに保存されます。ピアツーピアのストリーミングは設定でオフにできます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:537
+msgid "Upload to other peers"
+msgstr "他のピアにアップロード"
+
+#: crates/cineo-desktop/src/settings/mod.rs:539
+msgid ""
+"When off, Cineo only downloads. Some peers then send less, so torrents can "
+"be slower. Your IP address is still visible to peers."
+msgstr "オフの場合、Cineo はダウンロードだけを行います。送信量を減らすピアもあるため、トレントが遅くなることがあります。IP アドレスは引き続きピアに見えます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:547
+msgid "Torrent data"
+msgstr "トレントデータ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:549
+msgid ""
+"Cineo keeps only the part around the playback position, up to the size "
+"chosen, in memory or on disk. Seeking back past it downloads that part "
+"again. Nothing is kept as a cache: the data is deleted when playback stops. "
+"Applies from the next torrent you play."
+msgstr "Cineo は再生位置の周辺部分だけを、選んだサイズまでメモリまたはディスクに保持します。それより前に戻ると、その部分をもう一度ダウンロードします。キャッシュとしては何も残らず、再生を停止するとデータは削除されます。次に再生するトレントから適用されます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:559
+msgid "Download limit"
+msgstr "ダウンロード制限"
+
+#: crates/cineo-desktop/src/settings/mod.rs:560
+#: crates/cineo-desktop/src/settings/mod.rs:570
+msgid "Applies from the next torrent you play."
+msgstr "次に再生するトレントから適用されます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:569
+msgid "Upload limit"
+msgstr "アップロード制限"
+
+#: crates/cineo-desktop/src/settings/mod.rs:579
+msgid "Peers per torrent"
+msgstr "トレントごとのピア数"
+
+#: crates/cineo-desktop/src/settings/mod.rs:580
+msgid "More peers can be faster but use more connections."
+msgstr "ピアが多いほど速くなることがありますが、接続数が増えます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:589
+msgid "Find peers through the DHT"
+msgstr "DHT でピアを探す"
+
+#: crates/cineo-desktop/src/settings/mod.rs:590
+msgid "Finds peers without trackers. Off means fewer peers for many torrents."
+msgstr "トラッカーなしでピアを見つけます。オフにすると、多くのトレントでピアが少なくなります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:596
+#: crates/cineo-desktop/src/settings/mod.rs:601
+msgid "Listening port"
+msgstr "待ち受けポート"
+
+#: crates/cineo-desktop/src/settings/mod.rs:598
+msgid ""
+"Peers can connect to Cineo on this port, over TCP and uTP. Forward it on "
+"your router for more peers. If it is taken, a random port is used. Applies "
+"from the next torrent you play."
+msgstr "ピアはこのポートで TCP と uTP を使って Cineo に接続できます。ルーターでポートを転送するとピアが増えます。使用中の場合はランダムなポートを使います。次に再生するトレントから適用されます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:609
+msgid "Allow local network addresses"
+msgstr "ローカルネットワークのアドレスを許可"
+
+#: crates/cineo-desktop/src/settings/mod.rs:611
+msgid ""
+"Lets addons, images and torrent peers on 127.0.0.1 or your home network be "
+"reached, for self-hosted addons. Off is safer. Takes effect after restarting "
+"Cineo."
+msgstr "自前でホストするアドオンのために、127.0.0.1 やホームネットワーク上のアドオン、画像、トレントのピアへの接続を許可します。オフのほうが安全です。Cineo の再起動後に反映されます。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:631
+#, rust-format
+msgid "System ({language})"
+msgstr "システム（{language}）"
+
+#: crates/cineo-desktop/src/settings/mod.rs:638
+msgid "Automatic (surround)"
+msgstr "自動（サラウンド）"
+
+#: crates/cineo-desktop/src/settings/mod.rs:639
+msgid "Stereo"
+msgstr "ステレオ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:645
+#: crates/cineo-desktop/src/settings/mod.rs:669
+msgid "No limit"
+msgstr "制限なし"
+
+#: crates/cineo-desktop/src/settings/mod.rs:656
+#: crates/cineo-desktop/src/settings/mod.rs:657
+#: crates/cineo-desktop/src/settings/mod.rs:658
+#: crates/cineo-desktop/src/settings/mod.rs:659
+#, rust-format
+msgid "In memory, {size}"
+msgstr "メモリ内、{size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:660
+#: crates/cineo-desktop/src/settings/mod.rs:661
+#: crates/cineo-desktop/src/settings/mod.rs:662
+#: crates/cineo-desktop/src/settings/mod.rs:663
+#, rust-format
+msgid "On disk, {size}"
+msgstr "ディスク上、{size}"
+
+#: crates/cineo-desktop/src/settings/mod.rs:697
+#, rust-format
+msgid "{percent} % played"
+msgstr "{percent} % 再生済み"
+
+#: crates/cineo-desktop/src/settings/mod.rs:704
+msgctxt "next-notice-off"
+msgid "Off"
+msgstr "オフ"
+
+#: crates/cineo-desktop/src/settings/mod.rs:710
+#, rust-format
+msgid "{count} s"
+msgstr "{count} 秒"
+
+#: crates/cineo-desktop/src/settings/mod.rs:730
+msgid "None"
+msgstr "なし"
+
+#: crates/cineo-desktop/src/settings/mod.rs:783
+msgid "Reset all settings?"
+msgstr "すべての設定をリセットしますか？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:784
+msgid ""
+"Every setting goes back to its default. Your addons and library are kept."
+msgstr "すべての設定がデフォルトに戻ります。アドオンとライブラリは残ります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:785
+msgid "Reset"
+msgstr "リセット"
+
+#: crates/cineo-desktop/src/settings/mod.rs:789
+msgid "Clear watch history?"
+msgstr "視聴履歴を消去しますか？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:790
+msgid "Every item and its progress leaves the Library. This cannot be undone."
+msgstr "すべての項目とその進行状況がライブラリから削除されます。この操作は元に戻せません。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:791
+msgctxt "clear"
+msgid "Clear"
+msgstr "消去"
+
+#: crates/cineo-desktop/src/settings/mod.rs:795
+msgid "Change the sync key?"
+msgstr "同期キーを変更しますか？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:797
+msgid ""
+"Cineo makes a new code, moves your data to it and deletes the data under the "
+"old code. Your other devices stop syncing until you pair them with the new "
+"code."
+msgstr "Cineo は新しいコードを作成し、データをそこに移して、古いコードのデータを削除します。他のデバイスは、新しいコードでペアリングするまで同期しなくなります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:799
+msgid "Change key"
+msgstr "キーを変更"
+
+#: crates/cineo-desktop/src/settings/mod.rs:803
+msgid "Turn off sync?"
+msgstr "同期をオフにしますか？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:805
+msgid ""
+"This device stops syncing and keeps its library. The data on the server "
+"stays for your other devices."
+msgstr "このデバイスは同期を停止し、ライブラリはそのまま残ります。サーバー上のデータは他のデバイスのために残ります。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:807
+#: crates/cineo-desktop/src/settings/remote.rs:38
+msgid "Turn off"
+msgstr "オフにする"
+
+#: crates/cineo-desktop/src/settings/mod.rs:813
+msgid "Turn off sync and delete the server data?"
+msgstr "同期をオフにしてサーバーのデータを削除しますか？"
+
+#: crates/cineo-desktop/src/settings/mod.rs:815
+msgid ""
+"This device stops syncing and the data on the server is deleted. Your other "
+"devices keep their own copies but stop syncing."
+msgstr "このデバイスは同期を停止し、サーバー上のデータは削除されます。他のデバイスは自分のコピーを保持しますが、同期は停止します。"
+
+#: crates/cineo-desktop/src/settings/mod.rs:817
+msgid "Delete"
+msgstr "削除"
+
+#: crates/cineo-desktop/src/settings/remote.rs:20
+msgid ""
+"Lets Cineo on your phone pause, seek, change the volume and pick tracks of "
+"what plays here. The phone must be on the same network."
+msgstr "スマートフォンの Cineo から、ここで再生中のものの一時停止、シーク、音量変更、トラック選択ができるようにします。スマートフォンは同じネットワークに接続している必要があります。"
+
+#: crates/cineo-desktop/src/settings/remote.rs:24
+msgid "Turn on remote control"
+msgstr "リモコンをオンにする"
+
+#: crates/cineo-desktop/src/settings/remote.rs:34
+msgid "Remote control is on"
+msgstr "リモコンはオンです"
+
+#: crates/cineo-desktop/src/settings/remote.rs:49
+#: crates/cineo-desktop/src/settings/remote.rs:53
+msgid "New code"
+msgstr "新しいコード"
+
+#: crates/cineo-desktop/src/settings/remote.rs:50
+msgid ""
+"Phones paired with the old code stop working until they scan the new one."
+msgstr "古いコードでペアリングしたスマートフォンは、新しいコードをスキャンするまで使えなくなります。"
+
+#: crates/cineo-desktop/src/settings/remote.rs:63
+msgid "Starting…"
+msgstr "起動中…"
+
+#: crates/cineo-desktop/src/settings/remote.rs:65
+#, rust-format
+msgid ""
+"Listening on port {port}. If your phone cannot connect, allow Cineo through "
+"this computer's firewall."
+msgstr "ポート {port} で待ち受け中です。スマートフォンから接続できない場合は、このコンピューターのファイアウォールで Cineo を許可してください。"
+
+#: crates/cineo-desktop/src/settings/remote.rs:69
+msgid ""
+"This computer has no address on a local network. Connect it to the same "
+"network as your phone."
+msgstr "このコンピューターにはローカルネットワーク上のアドレスがありません。スマートフォンと同じネットワークに接続してください。"
+
+#: crates/cineo-desktop/src/settings/remote.rs:73
+#, rust-format
+msgid "The remote control could not start: {detail}"
+msgstr "リモコンを起動できませんでした: {detail}"
+
+#: crates/cineo-desktop/src/settings/remote.rs:87
+msgid "Pair your phone"
+msgstr "スマートフォンをペアリング"
+
+#: crates/cineo-desktop/src/settings/remote.rs:89
+msgid ""
+"Phones that share this computer's sync find it by themselves. Otherwise, in "
+"Cineo on your phone, open Settings → Remote control and scan this QR code, "
+"or enter the address and code. Anyone with the code on this network can "
+"control playback."
+msgstr "このコンピューターと同期を共有しているスマートフォンは自動的に見つけます。それ以外の場合は、スマートフォンの Cineo で 設定 → リモコン を開き、この QR コードをスキャンするか、アドレスとコードを入力してください。このネットワーク上でコードを知っている人は誰でも再生を操作できます。"
+
+#: crates/cineo-desktop/src/settings/remote.rs:93
+msgid "Remote control QR code"
+msgstr "リモコンの QR コード"
+
+#: crates/cineo-desktop/src/settings/remote.rs:95
+msgid "Name"
+msgstr "名前"
+
+#: crates/cineo-desktop/src/settings/remote.rs:96
+msgid "Address"
+msgstr "アドレス"
+
+#: crates/cineo-desktop/src/settings/remote.rs:97
+msgid "Code"
+msgstr "コード"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:27
+msgctxt "subtitle-size"
+msgid "Size"
+msgstr "サイズ"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:36
+msgid "Font"
+msgstr "フォント"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:46
+msgid "Bold"
+msgstr "太字"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:54
+msgid "Text color"
+msgstr "文字の色"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:65
+msgid "Text opacity"
+msgstr "文字の不透明度"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:74
+msgid "Outline"
+msgstr "縁取り"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:75
+msgid "Not drawn when there is a background."
+msgstr "背景がある場合は表示されません。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:84
+msgid "Background"
+msgstr "背景"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:95
+msgid "Raise from the bottom"
+msgstr "下からの高さ"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:96
+msgid "Percent of the picture's height."
+msgstr "映像の高さに対する割合（%）。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:104
+msgid "Keep the look of styled subtitles"
+msgstr "スタイル付き字幕の見た目を維持"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:106
+msgid ""
+"Styled (ASS) subtitles, common for anime, bring their own fonts, colors and "
+"positions. When off, the settings above replace them."
+msgstr "アニメでよく使われるスタイル付き（ASS）字幕は、独自のフォント、色、位置を持っています。オフにすると、上の設定で置き換えます。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:139
+msgid "Subtitles look like this."
+msgstr "字幕はこのように表示されます。"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:174
+msgid "PREVIEW"
+msgstr "プレビュー"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:182
+msgid "Sans-serif"
+msgstr "サンセリフ"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:183
+msgid "Serif"
+msgstr "セリフ"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:184
+msgid "Monospace"
+msgstr "等幅"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:190
+msgid "White"
+msgstr "白"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:191
+msgid "Yellow"
+msgstr "黄"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:192
+msgid "Cyan"
+msgstr "シアン"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:193
+msgid "Green"
+msgstr "緑"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:199
+msgid "Black"
+msgstr "黒"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:200
+msgid "Gray"
+msgstr "グレー"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:201
+msgid "No outline"
+msgstr "縁取りなし"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:207
+msgid "No background"
+msgstr "背景なし"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:208
+msgid "Black box"
+msgstr "黒いボックス"
+
+#: crates/cineo-desktop/src/settings/subtitles.rs:209
+msgid "Gray box"
+msgstr "グレーのボックス"
+
+#: crates/cineo-desktop/src/settings/sync.rs:37
+msgid "A sync code has 32 letters and digits."
+msgstr "同期コードは 32 文字の英数字です。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:38
+msgid "This code has a typo."
+msgstr "このコードには入力ミスがあります。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:39
+msgid "This is not a sync code."
+msgstr "これは同期コードではありません。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:40
+msgid "The server address must start with https://."
+msgstr "サーバーのアドレスは https:// で始まる必要があります。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:41
+msgid "Cineo could not make a sync key."
+msgstr "Cineo は同期キーを作成できませんでした。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:62
+msgid "Sync"
+msgstr "同期"
+
+#: crates/cineo-desktop/src/settings/sync.rs:64
+msgid ""
+"Keeps your library, progress, addons and most settings the same on your "
+"devices. Everything is encrypted on this device, so the sync server cannot "
+"read it."
+msgstr "ライブラリ、進行状況、アドオン、ほとんどの設定をデバイス間で同じに保ちます。すべてこのデバイス上で暗号化されるため、同期サーバーは内容を読めません。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:68
+msgid "Turn on"
+msgstr "オンにする"
+
+#: crates/cineo-desktop/src/settings/sync.rs:79
+msgid "Pair with a code"
+msgstr "コードでペアリング"
+
+#: crates/cineo-desktop/src/settings/sync.rs:80
+msgid "Enter the sync code shown on your other device, or scan its QR code."
+msgstr "他のデバイスに表示されている同期コードを入力するか、その QR コードをスキャンしてください。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:87
+#: crates/cineo-desktop/src/settings/sync.rs:94
+msgid "Sync server"
+msgstr "同期サーバー"
+
+#: crates/cineo-desktop/src/settings/sync.rs:88
+msgid ""
+"Cineo's own server unless you run your own. Every device must use the same "
+"one."
+msgstr "自分でサーバーを運用しない限り、Cineo 自身のサーバーです。すべてのデバイスで同じサーバーを使う必要があります。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:101
+#: crates/cineo-desktop/src/settings/sync.rs:170
+msgid "Sync code"
+msgstr "同期コード"
+
+#: crates/cineo-desktop/src/settings/sync.rs:103
+msgid "Pair"
+msgstr "ペアリング"
+
+#: crates/cineo-desktop/src/settings/sync.rs:123
+msgid "Syncing…"
+msgstr "同期中…"
+
+#: crates/cineo-desktop/src/settings/sync.rs:128
+msgid ""
+"The sync key was changed on another device. Turn sync off, then pair with "
+"the new code."
+msgstr "同期キーが別のデバイスで変更されました。同期をオフにしてから、新しいコードでペアリングしてください。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:131
+msgid "The sync server is busy. Cineo will try again."
+msgstr "同期サーバーが混雑しています。Cineo が再試行します。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:134
+msgid "the server must use https"
+msgstr "サーバーは https を使う必要があります"
+
+#: crates/cineo-desktop/src/settings/sync.rs:135
+msgid "the server could not be reached"
+msgstr "サーバーに接続できませんでした"
+
+#: crates/cineo-desktop/src/settings/sync.rs:136
+#, rust-format
+msgid "the server answered HTTP {code}"
+msgstr "サーバーが HTTP {code} を返しました"
+
+#: crates/cineo-desktop/src/settings/sync.rs:137
+msgid "the server's answer was unreadable"
+msgstr "サーバーの応答を読み取れませんでした"
+
+#: crates/cineo-desktop/src/settings/sync.rs:138
+msgid "other devices kept changing the same items"
+msgstr "他のデバイスが同じ項目を変更し続けました"
+
+#: crates/cineo-desktop/src/settings/sync.rs:140
+msgid "the server is unavailable"
+msgstr "サーバーを利用できません"
+
+#: crates/cineo-desktop/src/settings/sync.rs:143
+#, rust-format
+msgid "The last sync failed: {detail}."
+msgstr "前回の同期に失敗しました: {detail}。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:148
+msgid "Not synced yet."
+msgstr "まだ同期されていません。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:150
+msgid "Synced just now."
+msgstr "たった今同期しました。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:151
+#, rust-format
+msgid "Synced {minutes} min ago."
+msgstr "{minutes} 分前に同期しました。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:157
+msgid "Sync is on"
+msgstr "同期はオンです"
+
+#: crates/cineo-desktop/src/settings/sync.rs:160
+msgid "Sync now"
+msgstr "今すぐ同期"
+
+#: crates/cineo-desktop/src/settings/sync.rs:172
+msgid ""
+"Scan the QR code or enter this code on your other devices. Anyone with the "
+"code can read your library, including addon addresses, which can contain "
+"keys."
+msgstr "他のデバイスでこの QR コードをスキャンするか、このコードを入力してください。コードを知っている人は誰でもライブラリを読めます。これにはキーを含むことがあるアドオンのアドレスも含まれます。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:176
+msgid "Sync QR code"
+msgstr "同期 QR コード"
+
+#: crates/cineo-desktop/src/settings/sync.rs:181
+msgid "Copy code"
+msgstr "コードをコピー"
+
+#: crates/cineo-desktop/src/settings/sync.rs:190
+msgid "Change sync key"
+msgstr "同期キーを変更"
+
+#: crates/cineo-desktop/src/settings/sync.rs:192
+msgid ""
+"Makes a new code and deletes the data under the old one, for example after "
+"losing a device. Your other devices need the new code."
+msgstr "新しいコードを作成し、古いコードのデータを削除します。デバイスを紛失したときなどに使います。他のデバイスには新しいコードが必要です。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:196
+msgid "Change…"
+msgstr "変更…"
+
+#: crates/cineo-desktop/src/settings/sync.rs:204
+msgid "Turn off sync"
+msgstr "同期をオフにする"
+
+#: crates/cineo-desktop/src/settings/sync.rs:205
+msgid "This device stops syncing and keeps its library."
+msgstr "このデバイスは同期を停止し、ライブラリはそのまま残ります。"
+
+#: crates/cineo-desktop/src/settings/sync.rs:208
+msgid "Turn off and delete…"
+msgstr "オフにして削除…"
+
+#: crates/cineo-desktop/src/settings/sync.rs:211
+msgid "Turn off…"
+msgstr "オフにする…"
+
+#: crates/cineo-desktop/src/view/addons.rs:33
+#: crates/cineo-desktop/src/view/addons.rs:107
+#: crates/cineo-desktop/src/view/addons.rs:251
+#: crates/cineo-desktop/src/view/addons.rs:307
+msgid "Configure"
+msgstr "設定する"
+
+#: crates/cineo-desktop/src/view/addons.rs:42
+#: crates/cineo-desktop/src/view/mod.rs:59
+msgid "Addons"
+msgstr "アドオン"
+
+#: crates/cineo-desktop/src/view/addons.rs:44
+msgid "When two addons return the same item, the one higher in the list wins."
+msgstr "2 つのアドオンが同じ項目を返した場合、リストの上にあるほうが優先されます。"
+
+#: crates/cineo-desktop/src/view/addons.rs:47
+msgid "Install an addon"
+msgstr "アドオンをインストール"
+
+#: crates/cineo-desktop/src/view/addons.rs:64
+#: crates/cineo-desktop/src/view/addons.rs:250
+#: crates/cineo-desktop/src/view/addons.rs:309
+#: crates/cineo-desktop/src/view/mod.rs:480
+msgid "Install"
+msgstr "インストール"
+
+#: crates/cineo-desktop/src/view/addons.rs:72
+msgid "Installing…"
+msgstr "インストール中…"
+
+#: crates/cineo-desktop/src/view/addons.rs:77
+#, rust-format
+msgid "Installed {name}"
+msgstr "{name} をインストールしました"
+
+#: crates/cineo-desktop/src/view/addons.rs:93
+msgctxt "addons-installed"
+msgid "Installed"
+msgstr "インストール済み"
+
+#: crates/cineo-desktop/src/view/addons.rs:95
+#, rust-format
+msgid "Addons: {count}"
+msgstr "アドオン: {count}"
+
+#: crates/cineo-desktop/src/view/addons.rs:99
+msgid "Nothing installed yet."
+msgstr "まだ何もインストールされていません。"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:128
+msgid "Move up"
+msgstr "上へ移動"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:119
+msgid "Move down"
+msgstr "下へ移動"
+
+#: crates/cineo-desktop/src/view/addons.rs:105
+#: crates/cineo-desktop/src/view/addons.rs:288
+msgid "Remove"
+msgstr "削除"
+
+#: crates/cineo-desktop/src/view/addons.rs:145
+msgid "Addon"
+msgstr "アドオン"
+
+#: crates/cineo-desktop/src/view/addons.rs:151
+msgid "Could not load"
+msgstr "読み込めませんでした"
+
+#: crates/cineo-desktop/src/view/addons.rs:156
+#: crates/cineo-desktop/src/view/addons.rs:263
+msgid "Retry"
+msgstr "再試行"
+
+#: crates/cineo-desktop/src/view/addons.rs:196
+msgid "Adult content"
+msgstr "成人向けコンテンツ"
+
+#: crates/cineo-desktop/src/view/addons.rs:199
+msgid "Peer-to-peer"
+msgstr "ピアツーピア"
+
+#: crates/cineo-desktop/src/view/addons.rs:202
+msgid "Needs configuration"
+msgstr "設定が必要"
+
+#: crates/cineo-desktop/src/view/addons.rs:214
+msgid "Discover addons"
+msgstr "アドオンを探す"
+
+#: crates/cineo-desktop/src/view/addons.rs:217
+msgid ""
+"Addons in these lists are made by third parties. Install only those you "
+"trust."
+msgstr "これらのリストのアドオンはサードパーティ製です。信頼できるものだけをインストールしてください。"
+
+#: crates/cineo-desktop/src/view/addons.rs:252
+#: crates/cineo-desktop/src/view/addons.rs:305
+msgctxt "addon-installed"
+msgid "Installed"
+msgstr "インストール済み"
+
+#: crates/cineo-desktop/src/view/addons.rs:268
+msgid "This list is empty."
+msgstr "このリストは空です。"
+
+#: crates/cineo-desktop/src/view/cards.rs:26
+msgid "See all"
+msgstr "すべて表示"
+
+#: crates/cineo-desktop/src/view/cards.rs:44
+msgid "Could not load:"
+msgstr "読み込めませんでした:"
+
+#: crates/cineo-desktop/src/view/cards.rs:49
+msgid "Nothing in this catalog."
+msgstr "このカタログには何もありません。"
+
+#: crates/cineo-desktop/src/view/cards.rs:128
+msgid "Scroll right"
+msgstr "右へスクロール"
+
+#: crates/cineo-desktop/src/view/cards.rs:130
+msgid "Scroll left"
+msgstr "左へスクロール"
+
+#: crates/cineo-desktop/src/view/cards.rs:229
+#: crates/cineo-desktop/src/view/detail.rs:164
+msgid "Remove from favourites"
+msgstr "お気に入りから削除"
+
+#: crates/cineo-desktop/src/view/cards.rs:231
+#: crates/cineo-desktop/src/view/detail.rs:171
+msgid "Add to favourites"
+msgstr "お気に入りに追加"
+
+#: crates/cineo-desktop/src/view/cards.rs:244
+msgid "Remove from continue watching"
+msgstr "「視聴を続ける」から削除"
+
+#: crates/cineo-desktop/src/view/cards.rs:248
+msgid "Remove from library"
+msgstr "ライブラリから削除"
+
+#: crates/cineo-desktop/src/view/cards.rs:277
+msgid "Details"
+msgstr "詳細"
+
+#: crates/cineo-desktop/src/view/detail.rs:126
+msgid "Where to watch"
+msgstr "視聴方法"
+
+#: crates/cineo-desktop/src/view/detail.rs:130
+msgid "No installed addon provides streams for this item."
+msgstr "この作品のストリームを提供するインストール済みアドオンはありません。"
+
+#: crates/cineo-desktop/src/view/detail.rs:163
+msgid "Favourited"
+msgstr "お気に入り済み"
+
+#: crates/cineo-desktop/src/view/detail.rs:170
+msgid "Favourite"
+msgstr "お気に入り"
+
+#: crates/cineo-desktop/src/view/detail.rs:217
+msgid "Directed by"
+msgstr "監督"
+
+#: crates/cineo-desktop/src/view/detail.rs:247
+msgid "Genres"
+msgstr "ジャンル"
+
+#: crates/cineo-desktop/src/view/detail.rs:254
+msgid "Cast"
+msgstr "キャスト"
+
+#: crates/cineo-desktop/src/view/detail.rs:281
+#, rust-format
+msgid "{rating} IMDb"
+msgstr "IMDb {rating}"
+
+#: crates/cineo-desktop/src/view/detail.rs:301
+msgid "Episodes"
+msgstr "エピソード"
+
+#: crates/cineo-desktop/src/view/detail.rs:383
+msgid "Addon order"
+msgstr "アドオンの順序"
+
+#: crates/cineo-desktop/src/view/detail.rs:384
+msgid "Quality"
+msgstr "画質"
+
+#: crates/cineo-desktop/src/view/detail.rs:385
+msgid "Seeders"
+msgstr "シーダー"
+
+#: crates/cineo-desktop/src/view/detail.rs:386
+msgctxt "sort-size"
+msgid "Size"
+msgstr "サイズ"
+
+#: crates/cineo-desktop/src/view/detail.rs:404
+msgid "Search streams"
+msgstr "ストリームを検索"
+
+#: crates/cineo-desktop/src/view/detail.rs:448
+msgid "All"
+msgstr "すべて"
+
+#: crates/cineo-desktop/src/view/detail.rs:474
+msgid "Sort by"
+msgstr "並べ替え"
+
+#: crates/cineo-desktop/src/view/detail.rs:512
+#, rust-format
+msgid "Streams: {count}"
+msgstr "ストリーム: {count}"
+
+#: crates/cineo-desktop/src/view/detail.rs:523
+msgid "No streams"
+msgstr "ストリームなし"
+
+#: crates/cineo-desktop/src/view/detail.rs:557
+msgid "No matching streams"
+msgstr "一致するストリームはありません"
+
+#: crates/cineo-desktop/src/view/detail.rs:561
+#, rust-format
+msgid "Torrent streams hidden: {count} (peer-to-peer is off in Settings)"
+msgstr "非表示のトレントストリーム: {count}（設定でピアツーピアがオフになっています）"
+
+#: crates/cineo-desktop/src/view/detail.rs:752
+msgid "Specials"
+msgstr "特別編"
+
+#: crates/cineo-desktop/src/view/detail.rs:754
+#, rust-format
+msgid "Season {number}"
+msgstr "シーズン {number}"
+
+#: crates/cineo-desktop/src/view/detail.rs:760
+msgid "HTTP"
+msgstr "HTTP"
+
+#: crates/cineo-desktop/src/view/detail.rs:761
+msgid "URL"
+msgstr "URL"
+
+#: crates/cineo-desktop/src/view/detail.rs:762
+msgid "YouTube"
+msgstr "YouTube"
+
+#: crates/cineo-desktop/src/view/detail.rs:763
+msgid "Torrent"
+msgstr "トレント"
+
+#: crates/cineo-desktop/src/view/detail.rs:764
+msgid "External"
+msgstr "外部"
+
+#: crates/cineo-desktop/src/view/detail.rs:765
+msgid "Archive"
+msgstr "アーカイブ"
+
+#: crates/cineo-desktop/src/view/detail.rs:766
+msgid "Usenet"
+msgstr "Usenet"
+
+#: crates/cineo-desktop/src/view/mod.rs:55
+#: crates/cineo-desktop/src/view/pages.rs:33
+msgid "Home"
+msgstr "ホーム"
+
+#: crates/cineo-desktop/src/view/mod.rs:56
+#: crates/cineo-desktop/src/view/pages.rs:50
+msgid "Discover"
+msgstr "ディスカバー"
+
+#: crates/cineo-desktop/src/view/mod.rs:57
+#: crates/cineo-desktop/src/view/pages.rs:134
+msgctxt "page-search"
+msgid "Search"
+msgstr "検索"
+
+#: crates/cineo-desktop/src/view/mod.rs:58
+#: crates/cineo-desktop/src/view/pages.rs:207
+msgid "Library"
+msgstr "ライブラリ"
+
+#: crates/cineo-desktop/src/view/mod.rs:472
+msgid "Install this addon?"
+msgstr "このアドオンをインストールしますか？"
+
+#: crates/cineo-desktop/src/view/mod.rs:473
+msgid "A link asks to install the addon below. Only install addons you trust."
+msgstr "リンクが以下のアドオンのインストールを求めています。信頼できるアドオンだけをインストールしてください。"
+
+#: crates/cineo-desktop/src/view/mod.rs:492
+msgid "Peer-to-peer streaming"
+msgstr "ピアツーピアストリーミング"
+
+#: crates/cineo-desktop/src/view/mod.rs:503
+msgid "Accept and play"
+msgstr "同意して再生"
+
+#: crates/cineo-desktop/src/view/mod.rs:515
+msgid "This addon is already installed"
+msgstr "このアドオンはすでにインストールされています"
+
+#: crates/cineo-desktop/src/view/mod.rs:517
+msgid ""
+"This addon must be configured before it can be installed. Configure it, then "
+"install the link it gives you."
+msgstr "このアドオンはインストールする前に設定が必要です。設定してから、表示されたリンクをインストールしてください。"
+
+#: crates/cineo-desktop/src/view/mod.rs:520
+#, rust-format
+msgid "Invalid addon URL: {detail}"
+msgstr "無効なアドオン URL: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:522
+msgid "No installed addon provides details for this item"
+msgstr "この作品の詳細を提供するインストール済みアドオンはありません"
+
+#: crates/cineo-desktop/src/view/mod.rs:523
+msgid "This catalog does not support that filter"
+msgstr "このカタログはそのフィルターに対応していません"
+
+#: crates/cineo-desktop/src/view/mod.rs:532
+#, rust-format
+msgid "An addon could not be loaded: {detail}"
+msgstr "アドオンを読み込めませんでした: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:538
+#, rust-format
+msgid "Unsupported stream scheme `{scheme}`"
+msgstr "未対応のストリームスキーム `{scheme}`"
+
+#: crates/cineo-desktop/src/view/mod.rs:542
+msgid "Torrent streams are turned off in Settings"
+msgstr "トレントストリームは設定でオフになっています"
+
+#: crates/cineo-desktop/src/view/mod.rs:545
+#, rust-format
+msgid "{kind} streams are not supported yet"
+msgstr "{kind} ストリームにはまだ対応していません"
+
+#: crates/cineo-desktop/src/view/mod.rs:557
+#, rust-format
+msgid "The torrent could not be played: {detail}"
+msgstr "トレントを再生できませんでした: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:564
+#, rust-format
+msgid "The last stream could not be played, pick another one. {reason}"
+msgstr "前のストリームを再生できませんでした。別のものを選んでください。{reason}"
+
+#: crates/cineo-desktop/src/view/mod.rs:571
+msgid "The torrent engine returned an unexpected address"
+msgstr "トレントエンジンが予期しないアドレスを返しました"
+
+#: crates/cineo-desktop/src/view/mod.rs:573
+#, rust-format
+msgid "Could not load the subtitle: {detail}"
+msgstr "字幕を読み込めませんでした: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:577
+#, rust-format
+msgid "Could not save changes: {detail}"
+msgstr "変更を保存できませんでした: {detail}"
+
+#: crates/cineo-desktop/src/view/mod.rs:579
+msgid "Changes can no longer be saved"
+msgstr "変更を保存できなくなりました"
+
+#: crates/cineo-desktop/src/view/mod.rs:580
+msgid "That link cannot be opened by Cineo"
+msgstr "このリンクは Cineo で開けません"
+
+#: crates/cineo-desktop/src/view/pages.rs:24
+msgid "Continue watching"
+msgstr "視聴を続ける"
+
+#: crates/cineo-desktop/src/view/pages.rs:36
+msgid ""
+"No addons installed. Catalogs show up here once you add one by its manifest "
+"URL."
+msgstr "アドオンがインストールされていません。マニフェスト URL でアドオンを追加すると、ここにカタログが表示されます。"
+
+#: crates/cineo-desktop/src/view/pages.rs:38
+msgid "Open Addons"
+msgstr "アドオンを開く"
+
+#: crates/cineo-desktop/src/view/pages.rs:52
+msgid "No installed addon has a browsable catalog."
+msgstr "閲覧できるカタログを持つインストール済みアドオンはありません。"
+
+#: crates/cineo-desktop/src/view/pages.rs:76
+msgid "All genres"
+msgstr "すべてのジャンル"
+
+#: crates/cineo-desktop/src/view/pages.rs:139
+msgid "Search movies and series"
+msgstr "映画とシリーズを検索"
+
+#: crates/cineo-desktop/src/view/pages.rs:194
+msgid "Results come from every installed addon that supports search."
+msgstr "検索に対応するすべてのインストール済みアドオンから結果を表示します。"
+
+#: crates/cineo-desktop/src/view/pages.rs:199
+msgid "No installed addon supports search."
+msgstr "検索に対応するインストール済みアドオンはありません。"
+
+#: crates/cineo-desktop/src/view/pages.rs:214
+msgid "Favourites"
+msgstr "お気に入り"
+
+#: crates/cineo-desktop/src/view/pages.rs:215
+#: crates/cineo-desktop/src/view/pages.rs:222
+#, rust-format
+msgid "Titles: {count}"
+msgstr "作品数: {count}"
+
+#: crates/cineo-desktop/src/view/pages.rs:220
+msgid "Recently played"
+msgstr "最近再生した作品"
+
+#: crates/cineo-desktop/src/view/pages.rs:226
+msgid "Anything you play shows up here."
+msgstr "再生したものはここに表示されます。"
+
+#: crates/cineo-desktop/src/view/pages.rs:252
+msgid "Movies"
+msgstr "映画"
+
+#: crates/cineo-desktop/src/view/pages.rs:253
+msgid "Series"
+msgstr "シリーズ"
+
+#: crates/cineo-desktop/src/view/pages.rs:254
+msgid "Channels"
+msgstr "チャンネル"
+
+#: crates/cineo-desktop/src/view/pages.rs:255
+msgid "TV"
+msgstr "テレビ"
+
+#: crates/cineo-desktop/src/view/pages.rs:258
+#, rust-format
+msgid "{name} {kind}"
+msgstr "{name} {kind}"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:74
+msgid "Loading addons…"
+msgstr "アドオンを読み込み中…"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:114
+msgid "The download failed. Check the connection and try again."
+msgstr "ダウンロードに失敗しました。接続を確認して、もう一度お試しください。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:116
+msgid "The release's signature did not verify, so nothing was installed."
+msgstr "リリースの署名を検証できなかったため、何もインストールされませんでした。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:119
+msgid "A downloaded file did not match its checksum, so nothing was installed."
+msgstr "ダウンロードしたファイルがチェックサムと一致しなかったため、何もインストールされませんでした。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:121
+msgid "Cineo could not replace its executable."
+msgstr "Cineo は実行ファイルを置き換えられませんでした。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:127
+msgid "Cineo keeps working while it downloads."
+msgstr "ダウンロード中も Cineo は使えます。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:155
+#, rust-format
+msgid "Update to v{version}"
+msgstr "v{version} にアップデート"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:156
+msgid "Download and check it; it runs after a restart."
+msgstr "ダウンロードして検証します。再起動後に適用されます。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:161
+#, rust-format
+msgid "Downloading v{version}…"
+msgstr "v{version} をダウンロード中…"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:164
+#, rust-format
+msgid "Downloading v{version}… {percent}%"
+msgstr "v{version} をダウンロード中… {percent}%"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:174
+msgid "Restart to update"
+msgstr "再起動してアップデート"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:175
+#, rust-format
+msgid "Cineo closes and starts v{version}."
+msgstr "Cineo を閉じて v{version} を起動します。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:179
+msgid "Update failed, try again"
+msgstr "アップデートに失敗しました。もう一度お試しください"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:186
+#, rust-format
+msgid "v{version} available"
+msgstr "v{version} が利用可能です"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:187
+msgid "Open the release page to download it."
+msgstr "リリースページを開いてダウンロードしてください。"
+
+#: crates/cineo-desktop/src/view/sidebar.rs:205
+#, rust-format
+msgid "{percent}%"
+msgstr "{percent}%"
+
+#: crates/cineo-desktop/src/view/widgets.rs:44
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: crates/cineo-desktop/src/view/widgets.rs:122
+msgctxt "clear-field"
+msgid "Clear"
+msgstr "クリア"

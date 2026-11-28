@@ -80,7 +80,7 @@ _Last reviewed: 2026-10-13._
 | Playback in the window (libmpv) | Partial | libmpv loaded at runtime, checked against libmpv 0.41 and 0.42; several parts not seen with a real stream. [Details](#playback) |
 | Audio and subtitle track selection | Partial | Audio and Subtitles menus; preferred and second languages. [Details](#audio-and-subtitle-tracks) |
 | Settings (stremio-core `Settings` equivalents) | Partial | Player, subtitle, torrent and interface settings; some Stremio options not offered. [Details](#settings) |
-| Interface language | Supported | Nine languages, from the OS locale or Settings; Chinese not yet seen on screen. [Details](#interface-language) |
+| Interface language | Supported | Eleven languages, from the OS locale or Settings; Chinese, Japanese and Korean not yet seen on screen. [Details](#interface-language) |
 | Desktop text and scrolling | Partial | On egui 0.37.0; none of it seen on a real desktop. [Details](#desktop-text-and-scrolling) |
 | Library | Supported | Recorded on play and persisted; favourites are a Cineo extra. [Details](#library) |
 | Watch progress / continue watching | Supported | Survives restarts; resumes the last stream that played, at the saved position. [Details](#watch-progress) |
@@ -407,13 +407,14 @@ The full evidence for the rows above whose notes do not fit in the table.
 ### Interface language
 
 - English, Spanish (Spain), Spanish (Latin America, `es-419`), Russian,
-  Italian, German, French, Brazilian Portuguese (`pt-BR`) and Simplified
-  Chinese (`zh-CN`).
+  Italian, German, French, Brazilian Portuguese (`pt-BR`), Simplified
+  Chinese (`zh-CN`), Japanese (`ja`) and Korean (`ko`).
 - The default follows the first of the OS's preferred languages that Cineo
   has (`fastframe-i18n`, ADR-0034): Spanish with no region
   or `ES` picks Spain, any other region Latin America; any Portuguese
   locale, `pt-PT` included, picks Brazilian Portuguese; any Chinese locale,
-  `zh-TW` included, picks Simplified Chinese; anything else falls back to
+  `zh-TW` included, picks Simplified Chinese; any Japanese or Korean locale
+  picks Japanese or Korean; anything else falls back to
   English; Settings → Interface → Language overrides it (ADR-0017).
 - Errors and notices from core are typed and worded by the UI.
 - Technical details inside them (HTTP status, mpv or torrent errors) and all
@@ -426,8 +427,8 @@ The full evidence for the rows above whose notes do not fit in the table.
   `arguments_fill_their_placeholders_once`,
   `the_system_tag_picks_a_locale`,
   `every_locale_has_glyphs_in_the_text_fonts`).
-- Chinese text is drawn with a CJK font installed on the system (ADR-0033);
-  not yet seen on screen.
+- Chinese, Japanese and Korean text is drawn with a CJK font installed on
+  the system (ADR-0033); not yet seen on screen.
 
 ### Desktop text and scrolling
 
@@ -889,9 +890,9 @@ local network (ADR-0044). On by default on the desktop.
   order, quality, seeders or size, with quality badges, as on the desktop
   (`streams_can_be_filtered_and_sorted_like_on_the_desktop`; checked by the
   owner on the Redmi 9 with Torrentio, 2026-11-04).
-- The interface is in the desktop's nine languages (English, Spanish for
+- The interface is in the desktop's eleven languages (English, Spanish for
   Spain and Latin America, Brazilian Portuguese, Russian, Italian, German,
-  French and Simplified Chinese), picked from the system language, with no
+  French, Simplified Chinese, Japanese and Korean), picked from the system language, with no
   Language setting (`everyLocaleHasEveryStringWithTheSameArguments`; not yet
   seen on the phone).
 - Binge watching as on the desktop: the player offers the next episode with

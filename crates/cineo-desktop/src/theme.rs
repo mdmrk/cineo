@@ -310,8 +310,15 @@ mod tests {
     }
 
     fn left_to_installed_fonts(locale: crate::i18n::Locale, c: char) -> bool {
-        locale == crate::i18n::Locale::SimplifiedChinese
-            && matches!(c, '\u{3000}'..='\u{303f}' | '\u{4e00}'..='\u{9fff}' | '\u{ff00}'..='\u{ffef}')
+        use crate::i18n::Locale::{Japanese, Korean, SimplifiedChinese};
+        matches!(locale, SimplifiedChinese | Japanese | Korean)
+            && matches!(
+                c,
+                '\u{3000}'..='\u{30ff}'
+                    | '\u{4e00}'..='\u{9fff}'
+                    | '\u{ac00}'..='\u{d7af}'
+                    | '\u{ff00}'..='\u{ffef}'
+            )
     }
 
     #[test]

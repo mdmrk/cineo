@@ -853,7 +853,9 @@ mod tests {
                 "Italiano",
                 "Português do Brasil",
                 "Русский",
+                "日本語",
                 "简体中文",
+                "한국어",
             ]
         );
         assert_eq!(

@@ -384,16 +384,18 @@ Format:
 - Exit: a type filter over the same `addonCatalogs`, and logos through the
   existing image loader.
 
-### Desktop UI: no right-to-left UI languages, and Chinese needs an installed font
+### Desktop UI: no right-to-left UI languages, and CJK needs an installed font
 - Where: [i18n.rs](../crates/cineo-desktop/src/i18n.rs),
   [assets/i18n](../crates/cineo-desktop/assets/i18n)
 - Gap: the UI is offered in English, Spanish (Spain and Latin America),
-  Russian, Italian, German, French, Brazilian Portuguese and Simplified
-  Chinese only. Portugal gets Brazilian Portuguese, and Traditional Chinese
-  systems get Simplified Chinese. Simplified Chinese was translated on
-  2026-11-08 and has not been reviewed by a native speaker.
-  Chinese glyphs are not bundled: without a CJK font installed, Chinese text,
-  and the name of the language in the picker, draw as boxes.
+  Russian, Italian, German, French, Brazilian Portuguese, Simplified
+  Chinese, Japanese and Korean only. Portugal gets Brazilian Portuguese, and
+  Traditional Chinese systems get Simplified Chinese. Simplified Chinese was
+  translated on 2026-11-08, Japanese and Korean on 2026-11-28; none has been
+  reviewed by a native speaker.
+  CJK glyphs are not bundled: without a CJK font installed, Chinese,
+  Japanese and Korean text, and the names of those languages in the picker,
+  draw as boxes.
   Right-to-left languages cannot be added.
   Numbers are formatted the same way in every locale (`1.5`, not `1,5`).
   Counted messages are worded as "label: number" (ADR-0021), although the
@@ -617,14 +619,14 @@ Format:
 
 ### Android: the language follows the system only
 - Where: [res](../android/app/src/main/res) (`values-*/strings.xml`)
-- Gap: the Android UI has the desktop's nine languages, but no Language
+- Gap: the Android UI has the desktop's eleven languages, but no Language
   setting: Android picks the strings from the system language. Its texts
   are a copy of the desktop's translations (`crates/cineo-desktop/assets/i18n/`)
-  plus 24 strings and 2 plurals of its own, translated on 2026-11-05 and
-  not reviewed by a native speaker; nothing keeps the two copies in step.
+  plus strings and plurals of its own, translated on 2026-11-05 (Japanese
+  and Korean on 2026-11-28) and not reviewed by a native speaker; nothing keeps the two copies in step.
 - Why: the desktop's catalogs are compiled into the Rust UI; Android needs
   its own string resources.
-- Instead: a user whose system language is not one of the nine sees
+- Instead: a user whose system language is not one of the eleven sees
   English. `TranslationsTest` checks that every language has every string
   with the same arguments as English.
 - Exit: an in-app language choice (`AppCompatDelegate` locales or Android

@@ -15,6 +15,7 @@ mod catalogs {
         de::Translator as De, es::Translator as Es, es_419::Translator as Es419,
     };
     pub(super) use self::{fr::Translator as Fr, it::Translator as It, pt_br::Translator as PtBr};
+    pub(super) use self::{ja::Translator as Ja, ko::Translator as Ko};
     pub(super) use self::{ru::Translator as Ru, zh_cn::Translator as ZhCn};
 }
 
@@ -30,6 +31,8 @@ pub enum Locale {
     French,
     BrazilianPortuguese,
     SimplifiedChinese,
+    Japanese,
+    Korean,
 }
 
 impl fastframe_i18n::Locale for Locale {
@@ -44,12 +47,14 @@ impl fastframe_i18n::Locale for Locale {
             Self::French => Some(&catalogs::Fr),
             Self::BrazilianPortuguese => Some(&catalogs::PtBr),
             Self::SimplifiedChinese => Some(&catalogs::ZhCn),
+            Self::Japanese => Some(&catalogs::Ja),
+            Self::Korean => Some(&catalogs::Ko),
         }
     }
 }
 
 impl Locale {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 11] = [
         Self::English,
         Self::Spanish,
         Self::LatinAmericanSpanish,
@@ -59,6 +64,8 @@ impl Locale {
         Self::French,
         Self::BrazilianPortuguese,
         Self::SimplifiedChinese,
+        Self::Japanese,
+        Self::Korean,
     ];
 
     pub(crate) fn from_tag(tag: &LanguageTag) -> Option<Self> {
@@ -74,6 +81,8 @@ impl Locale {
             "fr" => Some(Self::French),
             "pt" => Some(Self::BrazilianPortuguese),
             "zh" => Some(Self::SimplifiedChinese),
+            "ja" => Some(Self::Japanese),
+            "ko" => Some(Self::Korean),
             _ => None,
         }
     }
@@ -94,6 +103,8 @@ impl Locale {
             UiLanguage::French => Self::French,
             UiLanguage::BrazilianPortuguese => Self::BrazilianPortuguese,
             UiLanguage::SimplifiedChinese => Self::SimplifiedChinese,
+            UiLanguage::Japanese => Self::Japanese,
+            UiLanguage::Korean => Self::Korean,
         }
     }
 
@@ -108,6 +119,8 @@ impl Locale {
             Self::French => "Français",
             Self::BrazilianPortuguese => "Português do Brasil",
             Self::SimplifiedChinese => "简体中文",
+            Self::Japanese => "日本語",
+            Self::Korean => "한국어",
         }
     }
 
@@ -123,6 +136,8 @@ impl Locale {
             Self::French => include_str!("../assets/i18n/fr.po"),
             Self::BrazilianPortuguese => include_str!("../assets/i18n/pt-BR.po"),
             Self::SimplifiedChinese => include_str!("../assets/i18n/zh-CN.po"),
+            Self::Japanese => include_str!("../assets/i18n/ja.po"),
+            Self::Korean => include_str!("../assets/i18n/ko.po"),
         }
     }
 }
@@ -431,6 +446,12 @@ mod tests {
         set(Locale::SimplifiedChinese);
         assert_eq!(tr!("Settings"), "设置");
         assert_eq!(tr!("Streams: {count}", count = 4), "片源：4");
+        set(Locale::Japanese);
+        assert_eq!(tr!("Settings"), "設定");
+        assert_eq!(tr!("Season {number}", number = 2), "シーズン 2");
+        set(Locale::Korean);
+        assert_eq!(tr!("Settings"), "설정");
+        assert_eq!(tr!("Season {number}", number = 2), "시즌 2");
         set(Locale::English);
         assert_eq!(
             tr!("Installed {name}", name = "Torrentio"),
@@ -462,6 +483,10 @@ mod tests {
         assert_eq!(tag("zh-CN"), Some(Locale::SimplifiedChinese));
         assert_eq!(tag("zh_TW.UTF-8"), Some(Locale::SimplifiedChinese));
         assert_eq!(tag("zh-Hant-HK"), Some(Locale::SimplifiedChinese));
+        assert_eq!(tag("ja_JP.UTF-8"), Some(Locale::Japanese));
+        assert_eq!(tag("ja"), Some(Locale::Japanese));
+        assert_eq!(tag("ko-KR"), Some(Locale::Korean));
+        assert_eq!(tag("ko_KR.UTF-8"), Some(Locale::Korean));
         assert_eq!(tag("en-US"), Some(Locale::English));
         assert_eq!(tag("nl-NL"), None);
         assert_eq!(tag("C"), None);

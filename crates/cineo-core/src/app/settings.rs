@@ -329,7 +329,7 @@ choice! {
 }
 
 choice! {
-    UiLanguage { System = "system", English = "en", Spanish = "es", LatinAmericanSpanish = "es-419", Russian = "ru", Italian = "it", German = "de", French = "fr", BrazilianPortuguese = "pt-BR", SimplifiedChinese = "zh-CN", }
+    UiLanguage { System = "system", English = "en", Spanish = "es", LatinAmericanSpanish = "es-419", Russian = "ru", Italian = "it", German = "de", French = "fr", BrazilianPortuguese = "pt-BR", SimplifiedChinese = "zh-CN", Japanese = "ja", Korean = "ko", }
 }
 
 choice! {
